@@ -1,54 +1,48 @@
-# Hermes Playbook — driving Athena end to end (Phase 6)
+# Hermes Playbook — driving Athena v2 end to end (Phase 8)
 
-Hermes (the NEXUS L2 orchestrator) drives the full planning + execution cycle through
-the Athena MCP verbs. Goal: one Hermes prompt -> a populated `bd` graph -> an autonomous
-Ralph run that closes the queue.
+Hermes (the NEXUS L2 orchestrator) drives the three planning layers through the Athena MCP
+verbs to a populated, dependency-correct bd graph. Execution is **DEFERRED**
+(`ralph/INTERFACE.md`) — Hermes hands off the queue, it does not run it.
 
-## Registration (T6.1 — operator/checkpoint step, NOT applied automatically)
+## Registration (T8.1 — operator/checkpoint step, NOT applied automatically)
 
-Add the `athena` MCP server to the Hermes client config (e.g. `.mcp.json` or the Hermes
-MCP registry). This edits live Hermes config, so it is left to the operator:
+Add the `athena` MCP server to the live Hermes config (edits running infra → operator step):
 
 ```json
-{
-  "mcpServers": {
-    "athena": {
-      "command": "uv",
-      "args": ["run", "python", "-m", "athena_mcp.server"],
-      "cwd": "<repo>/mcp/athena_mcp"
-    }
-  }
-}
+{ "mcpServers": { "athena": {
+  "command": "uv", "args": ["run", "python", "-m", "athena_mcp.server"],
+  "cwd": "<repo>/mcp/athena_mcp" } } }
 ```
 
-Verify with the MCP inspector / Hermes tool list that `planner_*` verbs appear.
+## Flow — `ATHENA_SPECKIT=on` (primary, 3-layer)
 
-## Flow (T6.2)
+1. **`planner_align(intent)`** — CRISP question → research (ticket hidden) → design → structure,
+   under tier gates. AUTONOMOUS: Hermes answers Question-stage forks from project policy —
+   never hang on "magic words".
+2. **`planner_spec(intent)`** — seed Spec-Kit (phase-by-phase from CRISP, `speckit/seed.md`):
+   specify → clarify → plan → tasks → **analyze**. `analyze` is a DENSE consistency gate.
+3. **`planner_validate(tasks.md)`** — format + completeness; loop back on failure.
+4. **`planner_compile(tasks.md, apply=True)`** — deterministic, idempotent bd graph.
+5. **`planner_report()`** for progress; **`planner_replan(trigger)`** on discovered-from /
+   analyze failure.
+6. **`planner_export_ready()`** — hand the queue to the (deferred) executor. **STOP here** —
+   this is the scope boundary.
 
-1. **`planner_align(intent, repo_path)`** — runs Question -> Research (ticket hidden) ->
-   Design -> Structure under tier gates. AUTONOMOUS: Hermes answers Question-stage forks
-   from project policy/context — never hang on "magic words".
-2. **`planner_plan(structure_path)`** — emit the canonical `plan.md` (the compiler contract).
-3. **`planner_validate(plan_path)`** — format + completeness gate; loop back to plan on failure.
-4. **`planner_compile(plan_path, apply=True)`** — deterministic, idempotent `bd` graph
-   (epics / issues / dependency edges).
-5. **Loop**: `planner_next()` -> [executor runs the issue via `ralph/loop.sh`] ->
-   `gate.sh` -> `planner_complete(id, gate_passed)`. Repeat until `next()` returns null.
-6. **`planner_report()`** for progress; **`planner_replan(trigger)`** on discovered-from
-   issues / gate failures to backtrack to the right QRSPI stage.
+## Flow — `ATHENA_SPECKIT=off` (2-layer fallback)
+
+`planner_align` → **`planner_plan`** (CRISP `5_plan` → `plan.md`) → `planner_validate` →
+`planner_compile` → `planner_report` → `planner_export_ready`.
+
+## Tier gates
+
+| Artifact | Review |
+|---|---|
+| question / research / design + **analyze** | dense |
+| structure / plan / tasks | spot-check |
+| code (per issue) | DEFERRED — external gate, see `ralph/INTERFACE.md` |
 
 ## Autonomous-mode rules
 
-- Pre-seed design-fork answers in the ticket OR ensure Hermes answers `planner_question`
-  (else the run hangs — RPI failure mode #1).
-- Hard caps so it can't burn the night: `MAX_ITER` (loop.sh), `--max-iterations`
-  (OpenHands), `GATE_TIMEOUT` (gate.sh).
-- External gate only — executor self-report never closes an issue.
-
-## Tier-gate mapping
-
-| Artifact | Review depth |
-|---|---|
-| questions / research / design | dense (alignment — decides if we build the right thing) |
-| structure / plan | spot-check |
-| code (per issue) | `gate.sh` success_check (authoritative) |
+- Pre-seed Question forks or ensure Hermes answers `planner_question` (else hang — RPI bug #1).
+- 3-layer is the most token-heavy; route routine work in `off` mode.
+- Scope ends at the populated graph — **Athena never executes**.
