@@ -10,7 +10,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Pinned versions (§11 — re-confirm before run; bd_client tests catch schema drift)
 # ---------------------------------------------------------------------------
-BEADS_CHANNEL="${BEADS_CHANNEL:-v1}"          # gastownhall/beads — v1.x = stable (Dolt-backed)
+BEADS_REF="${BEADS_REF:-v1.0.4}"              # gastownhall/beads — PINNED tag (re-confirm before run); raw /main/ pipe-to-bash is a hazard
 OPENHANDS_TARGET="${OPENHANDS_TARGET:-V1}"    # software-agent-sdk; V0 monolith superseded Nov 2025
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -27,16 +27,16 @@ install_beads() {
     log "bd present: $(bd version 2>/dev/null || echo 'unknown')"
     return 0
   fi
-  log "installing Beads (channel=${BEADS_CHANNEL}) ..."
-  if have brew; then
-    brew install beads
-  elif have npm; then
-    npm install -g @beads/bd
-  else
-    # official installer script (gastownhall/beads)
-    curl -fsSL https://raw.githubusercontent.com/gastownhall/beads/main/scripts/install.sh | bash
-  fi
-  have bd || die "bd not on PATH after install"
+  have curl || die "curl required to install Beads"
+  # official installer at a PINNED ref — download THEN execute (never blind-pipe a floating /main/)
+  local tmp; tmp="$(mktemp)"
+  log "downloading Beads installer @ ${BEADS_REF} ..."
+  curl -fsSL "https://raw.githubusercontent.com/gastownhall/beads/${BEADS_REF}/scripts/install.sh" -o "$tmp" \
+    || die "could not download beads installer @ ${BEADS_REF}"
+  log "running Beads installer (pinned ${BEADS_REF}; source saved at ${tmp} for inspection)"
+  bash "$tmp"
+  rm -f "$tmp"
+  have bd || die "bd not on PATH (alt: npm i -g @beads/bd@${BEADS_REF#v} | brew install beads)"
 }
 
 init_beads() {
@@ -82,9 +82,10 @@ JSON
 # 3. Executor preflight — OpenHands V1 (primary), Claurst (alt)
 # ---------------------------------------------------------------------------
 check_openhands() {
+  [ "${OPENHANDS_TARGET}" = "V1" ] || warn "OPENHANDS_TARGET=${OPENHANDS_TARGET}: V0 monolith superseded — use V1 (software-agent-sdk)"
   if have openhands; then
     log "openhands present (target ${OPENHANDS_TARGET}, software-agent-sdk)"
-  elif python -c "import openhands" >/dev/null 2>&1; then
+  elif { python3 -c "import openhands" || python -c "import openhands"; } >/dev/null 2>&1; then
     log "openhands python package present"
   else
     warn "OpenHands not found — install software-agent-sdk (V1): pip install openhands"
@@ -96,7 +97,7 @@ check_openhands() {
 main() {
   log "plugin root: ${PLUGIN_ROOT}"
   have git    || die "git required"
-  have python || die "python required"
+  { have python3 || have python; } || die "python3 required"
   install_beads
   init_beads
   register_plugin

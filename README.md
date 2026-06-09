@@ -25,18 +25,22 @@ Full spec: [`athena-final-opus-plan.md`](./athena-final-opus-plan.md).
 ## Layout (§2)
 
 ```
-nexus-athena/
-├── .claude-plugin/plugin.json     # Claude Code plugin manifest
-├── commands/qrspi/                # planning front: 1_question … 5_plan (adapted from vendor)
-├── commands/compile.md            # /athena.compile → plan2beads
-├── agents/                        # documentarian subagents (describe, never propose)
-├── skills/plan-format/SKILL.md    # canonical plan.md contract (§4)
-├── hooks/hooks.json               # SessionStart: bd prime; PreCompact: bd sync
-├── mcp/athena_mcp/                # FastMCP server — verbs for Hermes (§6)
-├── lib/plan2beads.py              # DETERMINISTIC compiler (§5) — working skeleton present
-├── ralph/                         # loop.sh + gate.sh + run_openhands.sh + run_claurst.sh
-├── tests/                         # golden + idempotency + negative + bd-contract
-└── vendor/qrspi/                  # vendored QRSPI templates (pinned commit, see below)
+nexus-athena/                      # [Phase 0 ✓] = built  |  [Phase N] = defined in §9, not yet built
+├── .claude-plugin/plugin.json     # Claude Code plugin manifest                       [Phase 0 ✓]
+├── lib/plan2beads.py              # DETERMINISTIC compiler skeleton (§5)              [Phase 0 ✓ — split in Phase 2]
+├── vendor/qrspi/                  # vendored QRSPI templates @8d71051                 [Phase 0 ✓]
+├── install.sh                     # bd + plugin + MCP + executor setup               [Phase 0 ✓]
+│
+├── skills/plan-format/SKILL.md    # canonical plan.md contract (§4)                   [Phase 1]
+├── lib/plan_parser.py             # plan.md → dataclasses (§4)                        [Phase 2]
+├── lib/bd_client.py               # the only subprocess boundary                      [Phase 2]
+├── tests/                         # golden + idempotency + negative + bd-contract     [Phase 2]
+├── commands/qrspi/                # adapted planning front: 1_question … 5_plan       [Phase 3]
+├── commands/compile.md            # /athena.compile → plan2beads                      [Phase 3]
+├── agents/                        # documentarian subagents (describe, never propose) [Phase 3]
+├── mcp/athena_mcp/                # FastMCP server — verbs for Hermes (§6)            [Phase 4]
+├── hooks/hooks.json               # SessionStart: bd prime; PreCompact: bd sync       [Phase 4]
+└── ralph/                         # loop.sh + gate.sh + run_*.sh (§8)                 [Phase 5]
 ```
 
 ## Vendored QRSPI provenance
