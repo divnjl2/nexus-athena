@@ -32,6 +32,13 @@ def test_cli_seam_compile_pure_ok():
     assert athena.main(["--speckit", "off", "seam", "compile_pure", str(FIX / "valid.md")]) == 0
 
 
+def test_cli_stats(capsys):
+    # done via shakedown loop: claurst@35B self-reported OK but added nothing; gate caught it; repaired here
+    rc = athena.main(["--speckit", "off", "stats", str(FIX / "valid.md")])
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out.strip()) == {"epics": 2, "issues": 2, "tasks": 2}
+
+
 def test_cli_speckit_path(tmp_path):
     out = tmp_path / "plan.md"
     rc = athena.main(["--speckit", "on", "hermes-plan", str(FIX / "speckit_tasks.md"), "-o", str(out)])

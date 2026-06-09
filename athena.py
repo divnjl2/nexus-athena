@@ -56,6 +56,14 @@ def cmd_compile(a) -> int:
     return 0
 
 
+def cmd_stats(a) -> int:
+    plan = parse_source(a.front, speckit=_speckit(a.speckit))
+    res = compile(plan)
+    _emit({"epics": len(res.epic_keys), "issues": res.issue_count,
+           "tasks": sum(len(p.tasks) for p in plan.phases)})
+    return 0
+
+
 def cmd_hermes_plan(a) -> int:
     # Hermes dispatcher execs (no shell). The engine expands ${CEX_HERMES_INPUT_*} only
     # when inputs declare the env: mapping; we ALSO read the env directly so this works
@@ -118,6 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     v = sub.add_parser("validate"); v.add_argument("front"); v.set_defaults(fn=cmd_validate)
     c = sub.add_parser("compile"); c.add_argument("front"); c.set_defaults(fn=cmd_compile)
+    st = sub.add_parser("stats"); st.add_argument("front"); st.set_defaults(fn=cmd_stats)
     h = sub.add_parser("hermes-plan")
     h.add_argument("front", nargs="?", default=""); h.add_argument("-o", "--out", default="")
     h.add_argument("--plan-id", dest="plan_id", default=""); h.add_argument("--created", default="")
