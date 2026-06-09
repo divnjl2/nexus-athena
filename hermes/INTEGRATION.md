@@ -23,9 +23,11 @@ front (tasks.md | plan.md)
    ```bash
    python <ATHENA_REPO>/athena.py seam <name> "$CEX_HERMES_INPUT_FRONT"   # exit 0 = pass
    ```
+   All three wire uniformly (exit 0 = pass, non-0 = fail):
    - `athena_seam_ast_wellformed` → `athena.py seam ast_wellformed <front>`
    - `athena_seam_compile_pure`   → `athena.py seam compile_pure <front>`
-   - `athena_seam_speckit_schema` → run `pytest tests/test_speckit_parser.py -k golden` in the Athena repo
+   - `athena_seam_speckit_schema` → `athena.py seam speckit_schema <front>` (front must parse
+     under the pinned Spec-Kit schema; the repo's `pytest -k golden` guards the schema itself)
 3. Provide the per-task executor workflow **`ATHENA_TASK`** (each emitted task binds to it):
    it receives `inputs: {success_check, title, files, autonomy, phase}` and must (a) do the
    work (route `autonomy:high` → OpenHands, else Claurst — see `ralph/INTERFACE.md`), then

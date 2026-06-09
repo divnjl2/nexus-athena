@@ -11,9 +11,17 @@ classification:
   risk: MEDIUM
   autonomy: human-in-loop        # operator reviews the master plan before PLAN_RUN executes it
 inputs:
-  front: ""                      # REQUIRED — tasks.md (speckit on) or plan.md (off)
-  out: ""                        # REQUIRED — master-plan .md path; PLAN_RUN then consumes it
-  speckit: "auto"                # on | off | auto (ATHENA_SPECKIT)
+  # env: mapping is REQUIRED for the engine to set CEX_HERMES_INPUT_* and expand
+  # ${CEX_HERMES_INPUT_*} in script.cmd (the dispatcher exec's — no shell expansion).
+  front:                         # tasks.md (speckit on) or plan.md (off)
+    env: CEX_HERMES_INPUT_FRONT
+    default: ""
+  out:                           # master-plan .md path; PLAN_RUN then consumes it
+    env: CEX_HERMES_INPUT_OUT
+    default: ""
+  speckit:                       # on | off | auto (ATHENA_SPECKIT)
+    env: CEX_HERMES_INPUT_SPECKIT
+    default: "auto"
 outputs:
   master_plan: "{out}"
 quality_gates:

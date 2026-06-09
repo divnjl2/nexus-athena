@@ -37,3 +37,28 @@ def test_cli_speckit_path(tmp_path):
     rc = athena.main(["--speckit", "on", "hermes-plan", str(FIX / "speckit_tasks.md"), "-o", str(out)])
     assert rc == 0
     assert "task_id: T001" in out.read_text(encoding="utf-8")
+
+
+def test_cli_hermes_plan_compile_error_is_structured(tmp_path, capsys):
+    # empty-slug front: passes ast_wellformed but compile raises -> structured error, exit 1
+    out = tmp_path / "plan.md"
+    rc = athena.main(["--speckit", "off", "hermes-plan", str(FIX / "empty_slug.md"), "-o", str(out)])
+    assert rc == 1
+    assert "error" in json.loads(capsys.readouterr().out.strip())
+    assert not out.exists()
+
+
+def test_cli_seam_speckit_schema_pass_and_fail():
+    assert athena.main(["seam", "speckit_schema", str(FIX / "speckit_tasks.md")]) == 0
+    # a canonical plan.md is NOT a Spec-Kit tasks.md -> schema gate fails closed
+    assert athena.main(["seam", "speckit_schema", str(FIX / "valid.md")]) == 1
+
+
+def test_cli_hermes_plan_reads_env_fallback(tmp_path, monkeypatch):
+    out = tmp_path / "plan.md"
+    monkeypatch.setenv("CEX_HERMES_INPUT_FRONT", str(FIX / "valid.md"))
+    monkeypatch.setenv("CEX_HERMES_INPUT_OUT", str(out))
+    monkeypatch.setenv("CEX_HERMES_INPUT_SPECKIT", "off")
+    rc = athena.main(["hermes-plan"])           # no positional args — must read env
+    assert rc == 0
+    assert "## Tasks" in out.read_text(encoding="utf-8")
