@@ -1,12 +1,10 @@
 """
-Athena MCP verbs — the planning/execution logic behind the MCP tools.
+Athena MCP verbs — the planning logic behind the MCP tools (v2, §7).
 
-Two concrete, testable layers:
-  * compiler-backed: validate / compile_plan  (pure, deterministic, no bd needed)
-  * bd-backed:       next_issue / complete / report  (subprocess to `bd`; `run` injected)
-The QRSPI stage verbs (question..structure, align, replan) return dispatch
-descriptors — the HOST executes the QRSPI command prompt in a fresh context; in
-autonomous mode Hermes answers Question-stage forks (closes RPI failure mode #1).
+Scope ends at a populated bd graph (implement is DEFERRED). Compiler-backed verbs
+(validate/compile) are pure + toggle-aware via lib.frontend. bd-backed verbs
+(export_ready/report) hand off / summarize — they NEVER execute issues. The CRISP stage
+verbs + spec() return dispatch descriptors; the host runs the prompt.
 """
 from __future__ import annotations
 
@@ -15,9 +13,7 @@ import pathlib
 import subprocess
 import sys
 
-# make the repo-root `lib` package importable without installing it.
-# anchor on a sentinel file rather than a fixed parents[N] so moving the package
-# deeper fails loudly instead of importing `lib` from the wrong root.
+# anchor on a sentinel file so moving the package fails loudly, not silently
 _REPO = next(
     (p for p in pathlib.Path(__file__).resolve().parents if (p / "lib" / "plan_parser.py").exists()),
     None,
@@ -27,31 +23,36 @@ if _REPO is None:
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from lib.plan_parser import parse, PlanParseError          # noqa: E402
-from lib.plan2beads import compile, CompileError, _slugify  # noqa: E402
-from lib.bd_client import fetch_existing_keys, execute       # noqa: E402
+from lib.ast import ParseError                                   # noqa: E402
+from lib.frontend import parse_source, speckit_enabled           # noqa: E402
+from lib.plan2beads import compile, CompileError, _slugify       # noqa: E402
+from lib.bd_client import fetch_existing_keys, execute           # noqa: E402
 
 
 def _run(argv: list[str]) -> str:
     return subprocess.run(argv, capture_output=True, text=True, check=True).stdout
 
 
-# --- compiler-backed verbs (pure; no bd) ---------------------------------------
+def _err(e: Exception) -> str:
+    out = getattr(e, "stderr", "") or getattr(e, "stdout", "") or str(e)
+    return (out or "").strip()[:500]
 
-def validate(plan_path: str) -> dict:
-    """Validate plan.md against the canonical format + compile-time checks."""
+
+# --- compiler-backed verbs (pure; toggle-aware) --------------------------------
+
+def validate(front_path: str, *, speckit: bool | None = None) -> dict:
+    """Validate the chosen front (Spec-Kit tasks.md or canonical plan.md) before compiling."""
     try:
-        compile(parse(pathlib.Path(plan_path).read_text(encoding="utf-8")))
-        return {"passed": True, "issues": []}
-    except (PlanParseError, CompileError) as e:
+        compile(parse_source(front_path, speckit=speckit))
+        return {"passed": True, "speckit": speckit_enabled() if speckit is None else speckit, "issues": []}
+    except (ParseError, CompileError) as e:
         return {"passed": False, "issues": [str(e)]}
     except FileNotFoundError:
-        return {"passed": False, "issues": [f"file not found: {plan_path}"]}
+        return {"passed": False, "issues": [f"file not found: {front_path}"]}
 
 
-def compile_plan(plan_path: str, apply: bool = False, *, run=_run) -> dict:
-    """Compile plan.md -> bd commands. Dry-run by default; apply writes the graph."""
-    plan = parse(pathlib.Path(plan_path).read_text(encoding="utf-8"))
+def compile_plan(front_path: str, apply: bool = False, *, speckit: bool | None = None, run=_run) -> dict:
+    plan = parse_source(front_path, speckit=speckit)
     existing = fetch_existing_keys(_slugify(plan.title), run=run) if apply else frozenset()
     res = compile(plan, existing_keys=existing)
     if apply:
@@ -64,31 +65,15 @@ def compile_plan(plan_path: str, apply: bool = False, *, run=_run) -> dict:
     }
 
 
-# --- bd-backed verbs (subprocess; run injected for tests) ----------------------
+# --- bd-backed verbs (hand-off only; implement is DEFERRED) ---------------------
 
-def _err(e: Exception) -> str:
-    out = getattr(e, "stderr", "") or getattr(e, "stdout", "") or str(e)
-    return (out or "").strip()[:500]
-
-
-def next_issue(*, run=_run) -> dict | None:
+def export_ready(*, run=_run) -> dict:
+    """Bridge to the (deferred) executor: return the ready queue. Does NOT execute."""
     try:
-        items = json.loads(run(["bd", "ready", "--json", "--limit", "1"]) or "[]")
+        items = json.loads(run(["bd", "ready", "--json"]) or "[]")
     except subprocess.CalledProcessError as e:
         return {"ok": False, "error": _err(e)}
-    return {"issue": items[0]} if items else None
-
-
-def complete(issue_id: str, gate_passed: bool, log: str = "", *, run=_run) -> dict:
-    try:
-        if gate_passed:
-            run(["bd", "close", issue_id])
-            run(["bd", "sync"])
-        else:
-            run(["bd", "update", issue_id, "--status", "open", "--note", log or "gate failed"])
-    except subprocess.CalledProcessError as e:
-        return {"ok": False, "error": _err(e)}
-    return {"ok": True}
+    return {"ready": items, "count": len(items)}
 
 
 def report(*, run=_run) -> dict:
@@ -98,48 +83,38 @@ def report(*, run=_run) -> dict:
         return {"ok": False, "error": _err(e)}
 
 
-# --- QRSPI stage dispatch (host executes the prompt; metadata only here) --------
+# --- CRISP / Spec-Kit stage dispatch (host executes the prompt) -----------------
 
-_STAGE_ARTIFACT = {
-    "question": "questions.md",
-    "research": "research.md",
-    "design": "design.md",
-    "structure": "structure.md",
-    "plan": "plan.md",
-}
-_STAGE_GATE = {
-    "question": "dense", "research": "dense", "design": "dense",
-    "structure": "spot", "plan": "spot",
-}
+_STAGE_ARTIFACT = {"question": "questions.md", "research": "research.md",
+                   "design": "design.md", "structure": "structure.md", "plan": "plan.md"}
+_STAGE_GATE = {"question": "dense", "research": "dense", "design": "dense",
+               "structure": "spot", "plan": "spot"}
 
 
 def stage(name: str, **inputs) -> dict:
-    """Dispatch descriptor for one QRSPI stage. The host runs the command prompt."""
-    return {
-        "stage": name,
-        "command": f"/qrspi/{name}",
-        "inputs": inputs,
-        "artifact": _STAGE_ARTIFACT.get(name),
-        "tier_gate": _STAGE_GATE.get(name),
-        "note": "host runs the prompt in fresh context; autonomous mode -> Hermes answers forks",
-    }
+    return {"stage": name, "command": f"/crisp.{name}", "inputs": inputs,
+            "artifact": _STAGE_ARTIFACT.get(name), "tier_gate": _STAGE_GATE.get(name),
+            "note": "host runs the prompt in fresh context; autonomous mode -> Hermes answers forks"}
 
 
 def align(intent: str, repo_path: str = ".") -> dict:
-    """Coarse-grained: run alignment stages 1-4 under their tier gates."""
     seq = ["question", "research", "design", "structure"]
-    return {
-        "sequence": seq,
-        "tier_gates": {s: _STAGE_GATE[s] for s in seq},
-        "inputs": {"intent": intent, "repo_path": repo_path},
-        "note": "drives question->research(ticket hidden)->design->structure; Hermes answers Question forks in autonomous mode",
-    }
+    return {"sequence": seq, "tier_gates": {s: _STAGE_GATE[s] for s in seq},
+            "inputs": {"intent": intent, "repo_path": repo_path},
+            "note": "CRISP align 1-4; Hermes answers Question forks in autonomous mode"}
+
+
+def spec(intent: str = "") -> dict:
+    """Spec-Kit pipeline (ATHENA_SPECKIT=on): seed -> specify/clarify/plan/tasks/analyze -> tasks.md."""
+    return {"pipeline": ["specify", "clarify", "plan", "tasks", "analyze"],
+            "artifact": "tasks.md", "tier_gates": {"analyze": "dense"},
+            "inputs": {"intent": intent},
+            "note": "seed Spec-Kit phase-by-phase from CRISP (speckit/seed.md); preset injects success_check"}
 
 
 def replan(trigger: str, context: str = "") -> dict:
-    """Backtrack to the right QRSPI stage inferred from the trigger text."""
     t = trigger.lower()
     for name in ("research", "design", "structure", "plan", "question"):
         if name in t:
             return stage(name, trigger=trigger, context=context)
-    return stage("design", trigger=trigger, context=context)  # default: re-discuss design
+    return stage("design", trigger=trigger, context=context)

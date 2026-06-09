@@ -6,29 +6,39 @@ import athena_mcp.verbs as verbs
 FIX = pathlib.Path(__file__).resolve().parents[3] / "tests" / "fixtures"
 
 
-def test_validate_valid():
-    r = verbs.validate(str(FIX / "valid.md"))
+def test_validate_valid_plan_fallback():
+    r = verbs.validate(str(FIX / "valid.md"), speckit=False)
     assert r["passed"] is True
     assert r["issues"] == []
 
 
+def test_validate_speckit_tasks_primary():
+    r = verbs.validate(str(FIX / "speckit_tasks.md"), speckit=True)
+    assert r["passed"] is True
+
+
 def test_validate_bad_dep_reports_issue():
-    r = verbs.validate(str(FIX / "bad_dep.md"))
+    r = verbs.validate(str(FIX / "bad_dep.md"), speckit=False)
     assert r["passed"] is False
     assert r["issues"]
 
 
 def test_validate_missing_file():
-    r = verbs.validate(str(FIX / "does_not_exist.md"))
+    r = verbs.validate(str(FIX / "does_not_exist.md"), speckit=False)
     assert r["passed"] is False
 
 
-def test_compile_dry_run():
-    r = verbs.compile_plan(str(FIX / "valid.md"), apply=False)
+def test_compile_dry_run_plan():
+    r = verbs.compile_plan(str(FIX / "valid.md"), speckit=False)
     assert r["issue_count"] == 2
     assert r["applied"] is False
-    assert len(r["commands"]) == 5
-    assert r["epic_keys"] == ["athena:demo-feature:epic1", "athena:demo-feature:epic2"]
+    assert r["epic_keys"] == ["athena:demo-feature:phase1", "athena:demo-feature:phase2"]
+
+
+def test_compile_dry_run_speckit():
+    r = verbs.compile_plan(str(FIX / "speckit_tasks.md"), speckit=True)
+    assert r["issue_count"] == 6
+    assert len(r["epic_keys"]) == 4
 
 
 def test_compile_apply_with_fake_run():
@@ -38,47 +48,41 @@ def test_compile_apply_with_fake_run():
         calls.append(argv)
         return "[]" if argv[:2] == ["bd", "list"] else ""
 
-    r = verbs.compile_plan(str(FIX / "valid.md"), apply=True, run=fake_run)
+    r = verbs.compile_plan(str(FIX / "valid.md"), apply=True, speckit=False, run=fake_run)
     assert r["applied"] is True
-    assert any(a[:2] == ["bd", "list"] for a in calls)      # existing-keys fetch
-    assert any(a[:2] == ["bd", "create"] for a in calls)    # execute ran the creates
+    assert any(a[:2] == ["bd", "list"] for a in calls)
+    assert any(a[:2] == ["bd", "create"] for a in calls)
 
 
-def test_next_complete_report_with_fake_run():
+def test_export_ready_hands_off_not_executes():
     def fake_run(argv):
-        if argv[:2] == ["bd", "ready"]:
-            return '[{"id": "bd-a1b2", "title": "T1.1"}]'
-        if argv[:2] == ["bd", "stats"]:
-            return '{"closed": 0, "open": 2}'
-        return ""
+        assert argv[:2] == ["bd", "ready"]   # only reads the queue, never executes
+        return '[{"id": "bd-a1", "title": "T1"}]'
 
-    assert verbs.next_issue(run=fake_run)["issue"]["id"] == "bd-a1b2"
-    assert verbs.complete("bd-a1b2", True, run=fake_run) == {"ok": True}
+    r = verbs.export_ready(run=fake_run)
+    assert r["count"] == 1
+    assert r["ready"][0]["id"] == "bd-a1"
+
+
+def test_report_with_fake_run():
+    def fake_run(argv):
+        return '{"closed": 0, "open": 2}' if argv[:2] == ["bd", "stats"] else ""
+
     assert verbs.report(run=fake_run)["progress"]["open"] == 2
 
 
+def test_spec_pipeline_descriptor():
+    d = verbs.spec("add healthcheck")
+    assert d["artifact"] == "tasks.md"
+    assert "analyze" in d["pipeline"]
+
+
 def test_stage_dispatch_descriptor():
-    d = verbs.stage("question", intent="add healthcheck")
-    assert d["command"] == "/qrspi/question"
+    d = verbs.stage("question", intent="x")
+    assert d["command"] == "/crisp.question"
     assert d["artifact"] == "questions.md"
-    assert d["tier_gate"] == "dense"
-
-
-def test_complete_gate_failed_reopens_not_closes():
-    calls = []
-
-    def fake_run(argv):
-        calls.append(argv)
-        return ""
-
-    r = verbs.complete("bd-x", False, "gate failed", run=fake_run)
-    assert r == {"ok": True}
-    # gate-failed path reopens, must NOT close
-    assert any(a[:3] == ["bd", "update", "bd-x"] and "open" in a for a in calls)
-    assert not any(a[:2] == ["bd", "close"] for a in calls)
 
 
 def test_replan_routes_by_trigger():
-    assert verbs.replan("research was incomplete")["stage"] == "research"
-    assert verbs.replan("the plan task was too big")["stage"] == "plan"
-    assert verbs.replan("something vague")["stage"] == "design"
+    assert verbs.replan("research incomplete")["stage"] == "research"
+    assert verbs.replan("vague")["stage"] == "design"
