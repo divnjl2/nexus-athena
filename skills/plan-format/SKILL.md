@@ -1,0 +1,55 @@
+---
+name: plan-format
+description: Canonical plan.md format — the only contract between QRSPI 5_plan and the deterministic compiler.
+---
+
+# Canonical `plan.md` Format (Athena contract §4)
+
+This is the ONLY contract between the LLM planning front (QRSPI stage `5_plan`) and
+the deterministic compiler (`lib/plan_parser.py` → `lib/plan2beads.py`). The parser
+is strict: any deviation is rejected BEFORE compilation, never "fixed" downstream.
+
+## Format
+
+```markdown
+# Plan: <name>
+## Overview
+<2-4 sentences: goal + desired end state>
+
+## Out of Scope
+- <what we do NOT do>
+
+## Phase 1: <name>
+**Goal:** <one sentence>
+**Depends on:** none                 # or "Phase N"
+### Tasks
+- [ ] T1.1 <atomic task>
+  - success_check: `<executable command, exit 0 = passed>`
+  - files: `path/a.py, path/b.py`
+  - autonomy: high                   # optional: high -> OpenHands, else Claurst
+### Manual Verification
+- <manual steps>
+
+## Phase 2: <...>
+**Depends on:** Phase 1
+...
+```
+
+## Hard parsing rules
+
+- `## Phase N:` -> epic (1-based index N).
+- `T<phase>.<n>` -> child issue under that phase's epic.
+- `**Depends on:** Phase K` -> blocks-edge at epic level; `none` -> no edge.
+- `success_check:` is **mandatory and non-empty**. Missing -> `PlanParseError` (rejected at parse time).
+- `autonomy:` optional -> routing label (`high` -> OpenHands, else Claurst).
+- `files:` -> recorded in the issue body.
+- `## Out of Scope` -> note carried on the plan.
+- Duplicate `T#.#` anywhere in the plan -> `PlanParseError`.
+- `Depends on` referencing a non-existent phase -> `CompileError` (compile time).
+
+## Why strict
+
+The compiler is the freeze line between fuzzy (LLM above) and mechanical (graph
+below). A lenient parser would let a malformed plan compile into a wrong task graph
+that a nightly Ralph run would then faithfully execute. Reject early, loudly — a
+rejected plan is cheap; a wrong graph executed overnight is not.
