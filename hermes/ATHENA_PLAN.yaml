@@ -1,0 +1,50 @@
+id: ATHENA_PLAN
+name: athena.plan.compile_to_master_plan
+domain: meta_orchestration
+trigger:
+  type: manual
+  also:
+    - "manual cli: cex hermes run ATHENA_PLAN --inputs.front=<path> --inputs.out=docs/master_plans/<name>.md"
+classification:
+  change_type: plan_synthesis
+  tier: T2                       # deterministic compile + emit; bounded write of one .md
+  risk: MEDIUM
+  autonomy: human-in-loop        # operator reviews the master plan before PLAN_RUN executes it
+inputs:
+  front: ""                      # REQUIRED — tasks.md (speckit on) or plan.md (off)
+  out: ""                        # REQUIRED — master-plan .md path; PLAN_RUN then consumes it
+  speckit: "auto"                # on | off | auto (ATHENA_SPECKIT)
+outputs:
+  master_plan: "{out}"
+quality_gates:
+  # Athena seams — fail-closed AT the seam (cheap to debug), each gates the next.
+  # Each gate shell-execs `athena.py seam <name> <front>` (exit non-0 = fail). See INTEGRATION.md.
+  - athena_seam_ast_wellformed   # success_check non-empty, deps resolve, NO cycles (compiler gap closed)
+  - athena_seam_compile_pure     # same AST -> same commands (determinism)
+  - athena_seam_speckit_schema   # tasks.md matches the PINNED Spec-Kit schema (golden version-guard)
+acceptance:
+  master_plan_written: true
+  master_plan_parseable_by_plan_runner: true   # frontmatter + ## Tasks parse cleanly
+  every_task_has_success_check: true
+dispatcher: script
+script:
+  cmd:
+    - python
+    - <ATHENA_REPO>/athena.py            # replace <ATHENA_REPO> at install (e.g. C:/Users/пк/Repos/nexus-athena)
+    - --speckit
+    - "${CEX_HERMES_INPUT_SPECKIT}"
+    - hermes-plan
+    - "${CEX_HERMES_INPUT_FRONT}"
+    - "-o"
+    - "${CEX_HERMES_INPUT_OUT}"
+  timeout_s: 120
+escalation:
+  on_seam_ast_wellformed_fail: ABORT — front is malformed (cycle / dup id / missing success_check); fix the front
+  on_seam_speckit_schema_fail: ABORT + spawn_opus — Spec-Kit tasks.md format DRIFTED; re-pin vendor/spec-kit + the golden, do NOT auto-proceed
+  on_failure: notify_operator
+  on_critical: spawn_opus
+metadata:
+  related_module: <ATHENA_REPO>/lib/hermes_plan.py
+  executor: apps/hermes/workflows/PLAN_RUN.yaml      # the master plan is run by the EXISTING PLAN_RUN
+  emoji: 🧭
+  added: 2026-06-09
