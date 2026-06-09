@@ -1,0 +1,19 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.uv/
+
+# qrspi working artifacts (per-task scratch under thoughts/qrspi/<id>/)
+thoughts/
+
+# beads: durable source of truth is the Dolt repo (bd dolt push/pull), NOT git.
+# issues.jsonl is only an export. Keep the local Dolt working dir out of git.
+.beads/
+
+# os / editor
+.DS_Store
+*.swp
+*~

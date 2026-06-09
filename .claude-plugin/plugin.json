@@ -1,0 +1,22 @@
+{
+  "name": "nexus-athena",
+  "description": "Hermes-friendly planner — QRSPI planning front + Beads (bd) durable task-graph, packaged as a Claude Code plugin + MCP server. Deterministically compiles plan.md into bd commands; a Ralph loop executes issues via OpenHands or Claurst.",
+  "version": "0.0.0",
+  "author": {
+    "name": "divnjl2"
+  },
+  "homepage": "https://github.com/divnjl2/nexus-athena",
+  "repository": "https://github.com/divnjl2/nexus-athena",
+  "license": "MIT",
+  "keywords": [
+    "qrspi",
+    "beads",
+    "planner",
+    "hermes",
+    "mcp",
+    "ralph",
+    "openhands",
+    "agentic",
+    "task-graph"
+  ]
+}

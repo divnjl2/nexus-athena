@@ -1,0 +1,15 @@
+{
+  "name": "nexus-athena-local",
+  "description": "Local marketplace for the Athena planner plugin",
+  "owner": {
+    "name": "divnjl2"
+  },
+  "plugins": [
+    {
+      "name": "nexus-athena",
+      "description": "QRSPI planning front + Beads task-graph planner (MCP verbs for Hermes + Ralph loop)",
+      "version": "0.0.0",
+      "source": "."
+    }
+  ]
+}
