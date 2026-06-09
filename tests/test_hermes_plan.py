@@ -61,6 +61,15 @@ def test_render_is_deterministic():
     assert render_master_plan(p, created="2026-06-09") == render_master_plan(p, created="2026-06-09")
 
 
+def test_goal_not_truncated_at_abbreviation_period():
+    # caught in real shakedown: "athena.py" must not end the goal sentence
+    plan = Plan("V", "Add a --version flag to athena.py CLI. Then smoke it.", (),
+                (Phase("phase1", "P", "g", tasks=(Task("T1.1", "x", "true"),)),))
+    md = render_master_plan(plan)
+    assert "Add a --version flag to athena.py CLI." in md
+    assert "to athena.\n" not in md       # the bug: truncated at athena.
+
+
 def test_parallel_marker_emitted():
     plan = Plan("P", "o", (), (
         Phase("phase1", "P", "g", tasks=(Task("T1.1", "a", "true", parallel=True),)),

@@ -19,9 +19,15 @@ deterministic + golden-able.
 from __future__ import annotations
 
 import json
+import re
 
 from lib.ast import Plan, Phase
 from lib.plan2beads import _slugify
+
+
+def _first_sentence(text: str) -> str:
+    # split on a period FOLLOWED BY whitespace — so "athena.py" is not a sentence end
+    return re.split(r"(?<=\.)\s", text.strip(), maxsplit=1)[0] if text.strip() else text
 
 
 def _topo_order(phases: tuple[Phase, ...]) -> list[Phase]:
@@ -51,7 +57,7 @@ def render_master_plan(plan: Plan, *, plan_id: str | None = None, owner: str = "
                        created: str = "") -> str:
     """Plan AST -> cex-Hermes master-plan .md (consumed by hermes_plan_runner / PLAN_RUN)."""
     pid = plan_id or _slugify(plan.title)
-    goal = goal or ((plan.overview.split(".")[0].strip() + ".") if plan.overview else plan.title)
+    goal = goal or (_first_sentence(plan.overview) if plan.overview else plan.title)
     acceptance = acceptance or "every task's success_check exits 0"
 
     out: list[str] = ["---", f"plan_id: {pid}"]

@@ -1,0 +1,52 @@
+id: ATHENA_TASK
+name: athena.task.execute_one
+domain: meta_orchestration
+trigger:
+  type: manual
+classification:
+  change_type: code_task
+  tier: T2                       # writes code for one task; external gate decides done
+  risk: MEDIUM
+  autonomy: human-in-loop
+dispatcher: claurst              # operator-chosen executor. NOTE: needs a reachable LLM backend.
+claurst_timeout_s: 600
+inputs:
+  title:
+    description: "What to implement (exactly one Athena task)"
+    env: CEX_HERMES_INPUT_title
+    default: ""
+  success_check:
+    description: "Executable command; exit 0 = task done. THE authoritative external gate."
+    env: CEX_HERMES_INPUT_success_check
+    default: ""
+  files:
+    description: "Comma-separated files the task may touch"
+    env: CEX_HERMES_INPUT_files
+    default: ""
+  phase:
+    description: "Source Athena phase key (provenance)"
+    env: CEX_HERMES_INPUT_phase
+    default: ""
+brief: |
+  Implement EXACTLY this task and nothing else:
+  ${CEX_HERMES_INPUT_title}
+  Files you may touch: ${CEX_HERMES_INPUT_files}
+  Done means this command exits 0: ${CEX_HERMES_INPUT_success_check}
+  Do not expand scope. New out-of-scope findings: note them, do NOT implement.
+outputs:
+  artifact_pattern: apps/hermes/data/cluster_runs.jsonl
+quality_gates:
+  - athena_task_success_check    # EXTERNAL gate: run inputs.success_check; exit 0 = pass (authoritative)
+acceptance:
+  success_check_exit_zero: true  # claurst self-report does NOT count; the gate decides
+escalation:
+  on_failure: notify_operator
+  on_critical: spawn_opus
+metadata:
+  rationale: |
+    Per-task executor for Athena master-plans (emitted by ATHENA_PLAN; each task binds
+    workflow: ATHENA_TASK). Executor = claurst (operator choice 2026-06-09). The
+    success_check is the authoritative external gate — claurst self-report never closes a task.
+  backend_note: "claurst binary healthy 2026-06-09 (v0.0.9); LLM backend lmstudio:9710 was DOWN — confirm a reachable provider before a live code-step."
+  emoji: "tool"
+  added: 2026-06-09

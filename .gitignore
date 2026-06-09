@@ -17,3 +17,6 @@ thoughts/
 .DS_Store
 *.swp
 *~
+
+# local shakedown scratch
+_shakedown/
