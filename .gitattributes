@@ -1,0 +1,7 @@
+# Keep LF on shell/python so scripts stay executable on Windows checkouts.
+# CRLF on a *.sh shebang => "bash\r: bad interpreter".
+* text=auto eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
