@@ -11,18 +11,25 @@ def _read(name: str) -> str:
     return (FIX / name).read_text(encoding="utf-8")
 
 
+def _inline(tasks: str) -> str:
+    return ("# Plan: A\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n" + tasks)
+
+
 def test_parse_valid_structure():
     plan = parse(_read("valid.md"))
     assert plan.title == "Demo Feature"
     assert len(plan.phases) == 2
     p1, p2 = plan.phases
-    assert p1.index == 1 and p1.title == "Endpoint"
+    assert p1.key == "phase1" and p1.title == "Endpoint"
     assert p1.goal == "expose GET /health"
     assert p1.depends_on == ()
-    assert p1.tasks[0].id == "T1.1"
-    assert p1.tasks[0].success_check == "pytest tests/test_health.py -q"
-    assert p1.tasks[0].files == ("app/routes.py",)
-    assert p2.depends_on == (1,)
+    t = p1.tasks[0]
+    assert t.id == "T1.1"
+    assert t.success_check == "pytest tests/test_health.py -q"
+    assert t.files == ("app/routes.py",)
+    assert t.parallel is False
+    assert t.autonomy == "default"
+    assert p2.depends_on == ("phase1",)
     assert "auth on the endpoint" in plan.out_of_scope
 
 
@@ -38,8 +45,7 @@ def test_duplicate_task_id_rejected():
 
 def test_missing_title_rejected():
     with pytest.raises(PlanParseError):
-        parse("## Phase 1: x\n**Goal:** g\n**Depends on:** none\n"
-              "- [ ] T1.1 t\n  - success_check: `true`\n")
+        parse("## Phase 1: x\n**Goal:** g\n**Depends on:** none\n- [ ] T1.1 t\n  - success_check: `true`\n")
 
 
 def test_no_phases_rejected():
@@ -47,29 +53,32 @@ def test_no_phases_rejected():
         parse("# Plan: Empty\n## Overview\nnothing here\n")
 
 
-def test_autonomy_parsed():
-    plan = parse(
-        "# Plan: A\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n"
-        "- [ ] T1.1 t\n  - success_check: `true`\n  - autonomy: high\n"
-    )
+def test_autonomy_high_parsed():
+    plan = parse(_inline("- [ ] T1.1 t\n  - success_check: `true`\n  - autonomy: high\n"))
     assert plan.phases[0].tasks[0].autonomy == "high"
-
-
-def test_bad_dep_parses_but_records_phase_ref():
-    # bad_dep.md is structurally valid at PARSE time (the missing-phase check is
-    # the compiler's job); the parser only records the referenced index.
-    plan = parse(_read("bad_dep.md"))
-    assert plan.phases[0].depends_on == (2,)
 
 
 def test_autonomy_invalid_rejected():
     with pytest.raises(PlanParseError):
-        parse("# Plan: A\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n"
-              "- [ ] T1.1 t\n  - success_check: `true`\n  - autonomy: turbo\n")
+        parse(_inline("- [ ] T1.1 t\n  - success_check: `true`\n  - autonomy: turbo\n"))
+
+
+def test_parallel_marker_parsed():
+    plan = parse(_inline(
+        "- [ ] T1.1 [P] parallel task\n  - success_check: `true`\n"
+        "- [ ] T1.2 seq task\n  - success_check: `true`\n"
+    ))
+    tasks = plan.phases[0].tasks
+    assert tasks[0].parallel is True
+    assert tasks[0].title == "parallel task"   # [P] stripped from title
+    assert tasks[1].parallel is False
 
 
 def test_checked_task_parsed_like_unchecked():
-    # checkbox state is cosmetic; bd owns completion. [x] parses like [ ].
-    plan = parse("# Plan: A\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n"
-                 "- [x] T1.1 done already\n  - success_check: `true`\n")
+    plan = parse(_inline("- [x] T1.1 done already\n  - success_check: `true`\n"))
     assert plan.phases[0].tasks[0].id == "T1.1"
+
+
+def test_bad_dep_parses_records_key():
+    plan = parse(_read("bad_dep.md"))
+    assert plan.phases[0].depends_on == ("phase2",)

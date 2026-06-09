@@ -1,58 +1,32 @@
 """
-Athena plan_parser — strict, deterministic plan.md -> dataclasses.
+Athena plan_parser — strict canonical plan.md -> Plan AST (the FALLBACK front, §2/§6).
 
-Line-oriented state-machine parser. Stdlib only. The canonical plan.md format is
-the only contract with the LLM planning front (see skills/plan-format/SKILL.md);
-any deviation is rejected HERE, before compilation, never "fixed" downstream.
+Used when ATHENA_SPECKIT=off. Emits the shared `lib.ast.Plan`; the compiler knows only
+the AST. Stdlib only, line-oriented state machine. Any deviation is rejected HERE.
+Canonical format documented in skills/plan-format/SKILL.md.
 """
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+
+from lib.ast import Task, Phase, Plan, ParseError
 
 
-class PlanParseError(ValueError):
-    """Canonical format violated — reject BEFORE compilation."""
-
-
-@dataclass(frozen=True)
-class Task:
-    id: str                       # "T1.2" — stable, from the document
-    title: str
-    success_check: str            # mandatory and non-empty
-    files: tuple[str, ...] = ()
-    autonomy: str = ""            # optional routing hint: "high" -> OpenHands
-
-
-@dataclass(frozen=True)
-class Phase:
-    index: int                    # 1-based, from "## Phase N:"
-    title: str
-    goal: str
-    depends_on: tuple[int, ...]   # phase indices
-    tasks: tuple[Task, ...]
-
-
-@dataclass(frozen=True)
-class Plan:
-    title: str
-    overview: str
-    out_of_scope: tuple[str, ...]
-    phases: tuple[Phase, ...]
+class PlanParseError(ParseError):
+    """Canonical plan.md format violated — reject BEFORE compilation."""
 
 
 _PHASE_RE = re.compile(r"^##\s+Phase\s+(\d+):\s*(.+?)\s*$")
-# both `- [ ]` and `- [x]` match: checkbox state is cosmetic, bd owns completion state
+# `- [ ] T1.1 [P] title`  — [P] optional parallel marker; both [ ] and [x] match
 _TASK_RE = re.compile(r"^-\s*\[[ x]\]\s*(T\d+\.\d+)\s+(.+?)\s*$")
 _KV_RE = re.compile(r"^\s+-\s*(success_check|files|autonomy):\s*`?(.+?)`?\s*$")
 _DEP_RE = re.compile(r"^\*\*Depends on:\*\*\s*(.+?)\s*$")
 _GOAL_RE = re.compile(r"^\*\*Goal:\*\*\s*(.+?)\s*$")
-# autonomy is a closed routing vocabulary — reject anything else (argument-injection guard)
-_AUTONOMY_ALLOWED = frozenset({"high", "low", ""})
+_AUTONOMY_ALLOWED = frozenset({"high", "low", "default"})
 
 
 def parse(text: str) -> Plan:
-    """Line-oriented state-machine parser. Deterministic, dependency-free."""
+    """Line-oriented state-machine parser. Deterministic, stdlib-only."""
     lines = text.splitlines()
     title = ""
     overview_lines: list[str] = []
@@ -63,7 +37,7 @@ def parse(text: str) -> Plan:
     cur_idx: int | None = None
     cur_title = ""
     cur_goal = ""
-    cur_deps: tuple[int, ...] = ()
+    cur_deps: tuple[str, ...] = ()
     cur_tasks: list[Task] = []
     cur_task: dict | None = None
 
@@ -73,16 +47,17 @@ def parse(text: str) -> Plan:
             return
         if not cur_task.get("success_check", "").strip():
             raise PlanParseError(f"task {cur_task['id']} missing success_check")
-        autonomy = cur_task.get("autonomy", "").strip()
+        autonomy = cur_task.get("autonomy", "").strip() or "default"
         if autonomy not in _AUTONOMY_ALLOWED:
             raise PlanParseError(
-                f"task {cur_task['id']}: autonomy must be 'high', 'low', or absent (got {autonomy!r})"
+                f"task {cur_task['id']}: autonomy must be high/low/default (got {autonomy!r})"
             )
         cur_tasks.append(Task(
             id=cur_task["id"],
             title=cur_task["title"],
             success_check=cur_task["success_check"],
             files=tuple(f.strip() for f in cur_task.get("files", "").split(",") if f.strip()),
+            parallel=cur_task.get("parallel", False),
             autonomy=autonomy,
         ))
         cur_task = None
@@ -92,7 +67,13 @@ def parse(text: str) -> Plan:
         if cur_idx is None:
             return
         flush_task()
-        phases.append(Phase(cur_idx, cur_title, cur_goal, cur_deps, tuple(cur_tasks)))
+        phases.append(Phase(
+            key=f"phase{cur_idx}",
+            title=cur_title,
+            goal=cur_goal,
+            depends_on=cur_deps,
+            tasks=tuple(cur_tasks),
+        ))
         cur_idx = None
 
     for raw in lines:
@@ -125,14 +106,17 @@ def parse(text: str) -> Plan:
             if md:
                 dep = md.group(1).strip()
                 if dep.lower() != "none":
-                    cur_deps = tuple(
-                        int(x) for x in re.findall(r"Phase\s+(\d+)", dep)
-                    )
+                    cur_deps = tuple(f"phase{x}" for x in re.findall(r"Phase\s+(\d+)", dep))
                 continue
             mt = _TASK_RE.match(raw)
             if mt:
                 flush_task()
-                cur_task = {"id": mt.group(1), "title": mt.group(2)}
+                remainder = mt.group(2)
+                parallel = False
+                if remainder.startswith("[P] "):
+                    parallel = True
+                    remainder = remainder[len("[P] "):].strip()
+                cur_task = {"id": mt.group(1), "title": remainder, "parallel": parallel}
                 continue
             mk = _KV_RE.match(raw)
             if mk and cur_task is not None:

@@ -5,9 +5,12 @@ description: Canonical plan.md format — the only contract between QRSPI 5_plan
 
 # Canonical `plan.md` Format (Athena contract §4)
 
-This is the ONLY contract between the LLM planning front (QRSPI stage `5_plan`) and
-the deterministic compiler (`lib/plan_parser.py` → `lib/plan2beads.py`). The parser
-is strict: any deviation is rejected BEFORE compilation, never "fixed" downstream.
+This is the **fallback** contract (`ATHENA_SPECKIT=off`): the CRISP stage `5_plan` emits
+this, `lib/plan_parser.py` parses it into the shared `lib/ast.py` `Plan`, and
+`lib/plan2beads.py` compiles the AST. (The **primary** path is Spec-Kit `tasks.md` —
+see `skills/speckit-tasks-format/SKILL.md`.) Both parsers emit the same AST, so the
+compiler never changes. The parser is strict: any deviation is rejected BEFORE
+compilation, never "fixed" downstream.
 
 ## Format
 
@@ -23,10 +26,10 @@ is strict: any deviation is rejected BEFORE compilation, never "fixed" downstrea
 **Goal:** <one sentence>
 **Depends on:** none                 # or "Phase N"
 ### Tasks
-- [ ] T1.1 <atomic task>
+- [ ] T1.1 [P] <atomic task>         # [P] optional: parallelizable -> no intra-phase edge
   - success_check: `<executable command, exit 0 = passed>`
   - files: `path/a.py, path/b.py`
-  - autonomy: high                   # optional: high -> OpenHands, else Claurst
+  - autonomy: high                   # optional: high|low|default (default -> no routing label)
 ### Manual Verification
 - <manual steps>
 
