@@ -54,6 +54,19 @@ def test_cli_seam_speckit_schema_pass_and_fail():
     assert athena.main(["seam", "speckit_schema", str(FIX / "valid.md")]) == 1
 
 
+def test_cli_parse_error_is_structured_not_traceback(capsys):
+    # plan.md fed to the speckit parser -> ParseError -> structured fail (exit 1), no traceback
+    rc = athena.main(["--speckit", "on", "seam", "ast_wellformed", str(FIX / "valid.md")])
+    assert rc == 1
+    assert "error" in json.loads(capsys.readouterr().out.strip())
+
+
+def test_cli_validate_missing_file_structured(capsys):
+    rc = athena.main(["--speckit", "off", "validate", str(FIX / "nope.md")])
+    assert rc == 1
+    assert "error" in json.loads(capsys.readouterr().out.strip())
+
+
 def test_cli_hermes_plan_reads_env_fallback(tmp_path, monkeypatch):
     out = tmp_path / "plan.md"
     monkeypatch.setenv("CEX_HERMES_INPUT_FRONT", str(FIX / "valid.md"))

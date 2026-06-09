@@ -21,6 +21,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
+from lib.ast import ParseError                              # noqa: E402
 from lib.frontend import parse_source                       # noqa: E402
 from lib.plan2beads import compile, CompileError, _slugify  # noqa: E402
 from lib.hermes_plan import render_master_plan              # noqa: E402
@@ -125,7 +126,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return args.fn(args)
+    # gates must fail-closed with STRUCTURED output, never a raw traceback
+    try:
+        return args.fn(args)
+    except ParseError as e:
+        _emit({"passed": False, "error": f"parse: {e}"})
+        return 1
+    except FileNotFoundError as e:
+        _emit({"passed": False, "error": f"file: {e}"})
+        return 1
 
 
 if __name__ == "__main__":
