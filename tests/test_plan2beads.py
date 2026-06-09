@@ -39,9 +39,9 @@ def test_idempotent_upsert():
         if i > 0 and c.argv[i - 1] == "--label" and a.startswith(EXTERNAL_KEY_PREFIX)
     )
     second = compile(plan, existing_keys=all_keys)
-    assert [c for c in _cmds(second) if c.split()[:2] == ["bd", "create"]] == []
-    # dependency edges are still emitted (they are not creates)
-    assert any(c.split()[:3] == ["bd", "dep", "add"] for c in _cmds(second))
+    # full replan on an unchanged, fully-present plan is a TRUE no-op:
+    # no creates AND no re-emitted dep edges.
+    assert _cmds(second) == []
 
 
 def test_unresolved_dependency_rejected():
@@ -60,10 +60,23 @@ def test_autonomy_label_emitted():
         "- [ ] T1.1 heavy task\n  - success_check: `true`\n  - autonomy: high\n"
     )
     cmds = _cmds(compile(plan))
-    assert any("autonomy:high" in c for c in cmds)
+    assert any("--label autonomy:high" in c for c in cmds)
 
 
 def test_issue_count_and_epics():
     res = compile(parse(_read("valid.md")))
     assert res.issue_count == 2
     assert res.epic_keys == ("athena:demo-feature:epic1", "athena:demo-feature:epic2")
+
+
+def test_empty_phase_rejected():
+    plan = parse("# Plan: P\n## Overview\no\n## Phase 1: Empty\n**Goal:** g\n**Depends on:** none\n")
+    with pytest.raises(CompileError):
+        compile(plan)
+
+
+def test_empty_slug_rejected():
+    plan = parse("# Plan: ---\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n"
+                 "- [ ] T1.1 t\n  - success_check: `true`\n")
+    with pytest.raises(CompileError):
+        compile(plan)

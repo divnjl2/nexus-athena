@@ -1,7 +1,7 @@
 [
-  "bd create --type epic --title 'Phase 1: Endpoint' --label athena:demo-feature:epic1 --description 'expose GET /health'",
+  "bd create --type epic --title 'Phase 1: Endpoint' --label athena:demo-feature:epic1 --label athena --description 'expose GET /health'",
   "bd create --parent athena:demo-feature:epic1 --title 'T1.1 add /health route' --label athena:demo-feature:T1.1 --label athena --description 'add /health route\n\nsuccess_check: pytest tests/test_health.py -q\nfiles: app/routes.py'",
-  "bd create --type epic --title 'Phase 2: Wire-up' --label athena:demo-feature:epic2 --description 'register route in app'",
+  "bd create --type epic --title 'Phase 2: Wire-up' --label athena:demo-feature:epic2 --label athena --description 'register route in app'",
   "bd create --parent athena:demo-feature:epic2 --title 'T2.1 register blueprint' --label athena:demo-feature:T2.1 --label athena --description 'register blueprint\n\nsuccess_check: curl -sf localhost:8000/health'",
   "bd dep add athena:demo-feature:epic2 --blocked-by athena:demo-feature:epic1"
 ]

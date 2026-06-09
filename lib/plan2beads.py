@@ -69,6 +69,8 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
     # --- hard validation ---
     phase_indices = {ph.index for ph in plan.phases}
     for ph in plan.phases:
+        if not ph.tasks:
+            raise CompileError(f"phase {ph.index} ({ph.title!r}) has no tasks — dangling epic")
         for d in ph.depends_on:
             if d not in phase_indices:
                 raise CompileError(f"phase {ph.index} depends on missing phase {d}")
@@ -77,6 +79,8 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                 raise CompileError(f"task {t.id} missing success_check")
 
     slug = _slugify(plan.title)
+    if not slug:
+        raise CompileError("plan title produces an empty slug — add alphanumeric characters")
     cmds: list[Command] = []
     epic_keys: list[str] = []
     issue_count = 0
@@ -89,7 +93,7 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
             cmds.append(Command((
                 "bd", "create", "--type", "epic",
                 "--title", f"Phase {ph.index}: {ph.title}",
-                "--label", ekey,
+                "--label", ekey, "--label", EXTERNAL_KEY_PREFIX,
                 "--description", ph.goal,
             )))
         for t in ph.tasks:
@@ -108,11 +112,17 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
             cmds.append(Command(tuple(argv)))
 
     # --- dependency edges (epic level), CANONICAL sorted order ---
+    # Emit an edge only when at least one endpoint is newly created this run, so a
+    # full replan (everything already present) is a true no-op — avoids duplicate
+    # `bd dep add` (we do not assume bd makes it idempotent).
     for ph in plan.phases:
+        ekey = _epic_key(slug, ph.index)
         for d in sorted(ph.depends_on):
+            dkey = _epic_key(slug, d)
+            if ekey in existing_keys and dkey in existing_keys:
+                continue
             cmds.append(Command((
-                "bd", "dep", "add", _epic_key(slug, ph.index),
-                "--blocked-by", _epic_key(slug, d),
+                "bd", "dep", "add", ekey, "--blocked-by", dkey,
             )))
 
     return CompileResult(tuple(cmds), tuple(epic_keys), issue_count)

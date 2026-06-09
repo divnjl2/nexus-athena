@@ -60,3 +60,16 @@ def test_bad_dep_parses_but_records_phase_ref():
     # the compiler's job); the parser only records the referenced index.
     plan = parse(_read("bad_dep.md"))
     assert plan.phases[0].depends_on == (2,)
+
+
+def test_autonomy_invalid_rejected():
+    with pytest.raises(PlanParseError):
+        parse("# Plan: A\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n"
+              "- [ ] T1.1 t\n  - success_check: `true`\n  - autonomy: turbo\n")
+
+
+def test_checked_task_parsed_like_unchecked():
+    # checkbox state is cosmetic; bd owns completion. [x] parses like [ ].
+    plan = parse("# Plan: A\n## Overview\no\n## Phase 1: P\n**Goal:** g\n**Depends on:** none\n"
+                 "- [x] T1.1 done already\n  - success_check: `true`\n")
+    assert plan.phases[0].tasks[0].id == "T1.1"

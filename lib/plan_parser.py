@@ -42,10 +42,13 @@ class Plan:
 
 
 _PHASE_RE = re.compile(r"^##\s+Phase\s+(\d+):\s*(.+?)\s*$")
+# both `- [ ]` and `- [x]` match: checkbox state is cosmetic, bd owns completion state
 _TASK_RE = re.compile(r"^-\s*\[[ x]\]\s*(T\d+\.\d+)\s+(.+?)\s*$")
 _KV_RE = re.compile(r"^\s+-\s*(success_check|files|autonomy):\s*`?(.+?)`?\s*$")
 _DEP_RE = re.compile(r"^\*\*Depends on:\*\*\s*(.+?)\s*$")
 _GOAL_RE = re.compile(r"^\*\*Goal:\*\*\s*(.+?)\s*$")
+# autonomy is a closed routing vocabulary — reject anything else (argument-injection guard)
+_AUTONOMY_ALLOWED = frozenset({"high", "low", ""})
 
 
 def parse(text: str) -> Plan:
@@ -70,12 +73,17 @@ def parse(text: str) -> Plan:
             return
         if not cur_task.get("success_check", "").strip():
             raise PlanParseError(f"task {cur_task['id']} missing success_check")
+        autonomy = cur_task.get("autonomy", "").strip()
+        if autonomy not in _AUTONOMY_ALLOWED:
+            raise PlanParseError(
+                f"task {cur_task['id']}: autonomy must be 'high', 'low', or absent (got {autonomy!r})"
+            )
         cur_tasks.append(Task(
             id=cur_task["id"],
             title=cur_task["title"],
             success_check=cur_task["success_check"],
             files=tuple(f.strip() for f in cur_task.get("files", "").split(",") if f.strip()),
-            autonomy=cur_task.get("autonomy", "").strip(),
+            autonomy=autonomy,
         ))
         cur_task = None
 
