@@ -1,0 +1,4 @@
+source: https://github.com/github/spec-kit
+commit: 90832d19bf7dcdaacc86301ea1e3cf85a9377b7d
+vendored: 2026-06-09
+contents: presets/lean/commands/speckit.{specify,plan,tasks}.md

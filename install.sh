@@ -12,6 +12,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 BEADS_REF="${BEADS_REF:-v1.0.4}"              # gastownhall/beads — PINNED tag (re-confirm before run); raw /main/ pipe-to-bash is a hazard
 OPENHANDS_TARGET="${OPENHANDS_TARGET:-V1}"    # software-agent-sdk; V0 monolith superseded Nov 2025
+SPECKIT_REF="${SPECKIT_REF:-90832d19bf7dcdaacc86301ea1e3cf85a9377b7d}"  # github/spec-kit PINNED (schema drift = top risk)
+ATHENA_SPECKIT="${ATHENA_SPECKIT:-on}"        # on = 3-layer (Spec-Kit primary); off = 2-layer fallback
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log()  { printf '[athena] %s\n' "$*"; }
@@ -94,16 +96,36 @@ check_openhands() {
   have claurst && log "claurst present (alt executor)" || warn "claurst not found (optional)"
 }
 
+# ---------------------------------------------------------------------------
+# 2b. Spec-Kit (specify) — layer ② of the 3-layer planner (toggle ATHENA_SPECKIT)
+# ---------------------------------------------------------------------------
+install_speckit() {
+  if [ "${ATHENA_SPECKIT}" = "off" ]; then
+    log "ATHENA_SPECKIT=off — skipping Spec-Kit (2-layer CRISP->graph fallback)"
+    return 0
+  fi
+  if have specify; then
+    log "specify present"
+  elif have uv; then
+    log "installing Spec-Kit (specify) @ ${SPECKIT_REF} via uv tool ..."
+    uv tool install "specify-cli @ git+https://github.com/github/spec-kit.git@${SPECKIT_REF}" \
+      || warn "specify install failed — set ATHENA_SPECKIT=off to use the 2-layer fallback"
+  else
+    warn "uv not found — cannot install Spec-Kit; set ATHENA_SPECKIT=off for the fallback path"
+  fi
+}
+
 main() {
-  log "plugin root: ${PLUGIN_ROOT}"
+  log "plugin root: ${PLUGIN_ROOT} (ATHENA_SPECKIT=${ATHENA_SPECKIT})"
   have git    || die "git required"
   { have python3 || have python; } || die "python3 required"
   install_beads
   init_beads
+  install_speckit
   register_plugin
   register_mcp
   check_openhands
-  log "done. Next: build phases 1-7 (see athena-final-opus-plan.md §9)."
+  log "done. Next: build phases 1-10 (see athena-final-opus-plan-v2.md §8). implement is DEFERRED."
 }
 
 main "$@"
