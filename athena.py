@@ -27,6 +27,8 @@ from lib.plan2beads import compile, CompileError, _slugify  # noqa: E402
 from lib.hermes_plan import render_master_plan              # noqa: E402
 from lib import seams                                       # noqa: E402
 
+__version__ = "0.1.0"                                       # repair: claurst added --version referencing this but never defined it
+
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
@@ -110,6 +112,7 @@ def cmd_seam(a) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="athena")
+    p.add_argument("--version", action="version", version=f"athena {__version__}")
     p.add_argument("--speckit", choices=("on", "off", "auto"), default="auto")
     sub = p.add_subparsers(dest="cmd", required=True)
 
