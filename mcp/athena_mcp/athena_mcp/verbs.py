@@ -15,8 +15,15 @@ import pathlib
 import subprocess
 import sys
 
-# make the repo-root `lib` package importable without installing it
-_REPO = pathlib.Path(__file__).resolve().parents[3]
+# make the repo-root `lib` package importable without installing it.
+# anchor on a sentinel file rather than a fixed parents[N] so moving the package
+# deeper fails loudly instead of importing `lib` from the wrong root.
+_REPO = next(
+    (p for p in pathlib.Path(__file__).resolve().parents if (p / "lib" / "plan_parser.py").exists()),
+    None,
+)
+if _REPO is None:
+    raise RuntimeError("cannot locate repo root containing lib/plan_parser.py")
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
@@ -59,22 +66,36 @@ def compile_plan(plan_path: str, apply: bool = False, *, run=_run) -> dict:
 
 # --- bd-backed verbs (subprocess; run injected for tests) ----------------------
 
+def _err(e: Exception) -> str:
+    out = getattr(e, "stderr", "") or getattr(e, "stdout", "") or str(e)
+    return (out or "").strip()[:500]
+
+
 def next_issue(*, run=_run) -> dict | None:
-    items = json.loads(run(["bd", "ready", "--json", "--limit", "1"]) or "[]")
+    try:
+        items = json.loads(run(["bd", "ready", "--json", "--limit", "1"]) or "[]")
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": _err(e)}
     return {"issue": items[0]} if items else None
 
 
 def complete(issue_id: str, gate_passed: bool, log: str = "", *, run=_run) -> dict:
-    if gate_passed:
-        run(["bd", "close", issue_id])
-        run(["bd", "sync"])
-    else:
-        run(["bd", "update", issue_id, "--status", "open", "--note", log or "gate failed"])
+    try:
+        if gate_passed:
+            run(["bd", "close", issue_id])
+            run(["bd", "sync"])
+        else:
+            run(["bd", "update", issue_id, "--status", "open", "--note", log or "gate failed"])
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": _err(e)}
     return {"ok": True}
 
 
 def report(*, run=_run) -> dict:
-    return {"progress": json.loads(run(["bd", "stats", "--json"]) or "{}")}
+    try:
+        return {"progress": json.loads(run(["bd", "stats", "--json"]) or "{}")}
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": _err(e)}
 
 
 # --- QRSPI stage dispatch (host executes the prompt; metadata only here) --------
@@ -113,3 +134,12 @@ def align(intent: str, repo_path: str = ".") -> dict:
         "inputs": {"intent": intent, "repo_path": repo_path},
         "note": "drives question->research(ticket hidden)->design->structure; Hermes answers Question forks in autonomous mode",
     }
+
+
+def replan(trigger: str, context: str = "") -> dict:
+    """Backtrack to the right QRSPI stage inferred from the trigger text."""
+    t = trigger.lower()
+    for name in ("research", "design", "structure", "plan", "question"):
+        if name in t:
+            return stage(name, trigger=trigger, context=context)
+    return stage("design", trigger=trigger, context=context)  # default: re-discuss design

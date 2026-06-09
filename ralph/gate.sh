@@ -20,7 +20,9 @@ DESC="$(bd show "$ID" --json | jq -r '.description // ""')"
 CHECK="$(printf '%s\n' "$DESC" | sed -n 's/^success_check:[[:space:]]*//p' | head -1)"
 [ -n "$CHECK" ] || { echo "gate: issue $ID has no success_check" >&2; exit 2; }
 
-# optional allowlist: the command's first token must be permitted
+# optional COARSE allowlist: the command's first token must be permitted. Advisory only
+# (a wrapper like `timeout`/`bash` would still pass) — the real defenses are upstream
+# tier-review of plans + routing risky work through the sandboxed executor.
 if [ -n "${GATE_ALLOWLIST:-}" ]; then
   first="${CHECK%%[[:space:]]*}"
   case " $GATE_ALLOWLIST " in

@@ -86,7 +86,7 @@ def planner_report() -> dict:
 @mcp.tool
 def planner_replan(trigger: str, context: str = "") -> dict:
     """Backtrack to the right QRSPI stage given discovered-from issues / gate failures."""
-    return verbs.stage("design", trigger=trigger, context=context)
+    return verbs.replan(trigger, context)
 
 
 if __name__ == "__main__":

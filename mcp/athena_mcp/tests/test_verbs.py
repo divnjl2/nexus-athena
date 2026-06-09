@@ -62,3 +62,23 @@ def test_stage_dispatch_descriptor():
     assert d["command"] == "/qrspi/question"
     assert d["artifact"] == "questions.md"
     assert d["tier_gate"] == "dense"
+
+
+def test_complete_gate_failed_reopens_not_closes():
+    calls = []
+
+    def fake_run(argv):
+        calls.append(argv)
+        return ""
+
+    r = verbs.complete("bd-x", False, "gate failed", run=fake_run)
+    assert r == {"ok": True}
+    # gate-failed path reopens, must NOT close
+    assert any(a[:3] == ["bd", "update", "bd-x"] and "open" in a for a in calls)
+    assert not any(a[:2] == ["bd", "close"] for a in calls)
+
+
+def test_replan_routes_by_trigger():
+    assert verbs.replan("research was incomplete")["stage"] == "research"
+    assert verbs.replan("the plan task was too big")["stage"] == "plan"
+    assert verbs.replan("something vague")["stage"] == "design"
