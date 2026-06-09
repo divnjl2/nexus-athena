@@ -102,3 +102,61 @@ def test_render_mermaid_shows_pass_fail():
     assert "seam.intent" in out
     assert "FAIL" in out
     assert "failnode" in out
+
+
+def test_to_otel_span_dict_schema():
+    r = seams.make_record(seams.seam_intent("x", True), src="Hermes", dst="CRISP",
+                          ts="t", run_id="r1", ts_ns=5)
+    d = r.to_otel_span_dict()
+    assert d["trace_id"] == seams.trace_id_hex("r1") and len(d["trace_id"]) == 32
+    assert len(d["span_id"]) == 16
+    assert d["name"] == "seam.intent"
+    assert d["start_time_unix_nano"] == 5
+    assert d["status"]["code"] == "OK"
+    assert d["attributes"]["athena.run_id"] == "r1"
+    assert d["attributes"]["seam.src"] == "Hermes"
+    assert d["attributes"]["seam.passed"] is True
+
+
+def test_to_otel_span_dict_error_carries_issues():
+    r = seams.make_record(seams.SeamResult("seam.analyze", False, ("inconsistent",)),
+                          src="SpecKit", dst="compile", ts="t", run_id="r1")
+    d = r.to_otel_span_dict()
+    assert d["status"]["code"] == "ERROR"
+    assert "inconsistent" in d["status"]["message"]
+    assert d["attributes"]["seam.issues"] == ["inconsistent"]
+
+
+def test_emit_otel_correlates_run_by_trace_id():
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    exp = InMemorySpanExporter()
+    recs = [
+        seams.make_record(seams.seam_intent("x", True), src="Hermes", dst="CRISP",
+                          ts="t1", run_id="run-abc", ts_ns=1000),
+        seams.make_record(seams.SeamResult("seam.analyze", False, ("inconsistent",)),
+                          src="SpecKit", dst="compile", ts="t2", run_id="run-abc", ts_ns=2000),
+    ]
+    seams.emit_otel(recs, span_processor=SimpleSpanProcessor(exp))
+    spans = exp.get_finished_spans()
+    assert len(spans) == 2
+    # both seams of one run share ONE trace_id — the cross-cut thread
+    assert spans[0].context.trace_id == spans[1].context.trace_id
+    assert spans[0].context.trace_id == int(seams.trace_id_hex("run-abc"), 16)
+    by_name = {s.name: s for s in spans}
+    assert by_name["seam.intent"].status.status_code.name == "OK"
+    assert by_name["seam.analyze"].status.status_code.name == "ERROR"
+    assert by_name["seam.intent"].attributes["athena.run_id"] == "run-abc"
+
+
+def test_emit_otel_distinct_runs_distinct_traces():
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    exp = InMemorySpanExporter()
+    recs = [
+        seams.make_record(seams.seam_intent("a", True), src="H", dst="C", ts="t", run_id="run-1"),
+        seams.make_record(seams.seam_intent("b", True), src="H", dst="C", ts="t", run_id="run-2"),
+    ]
+    seams.emit_otel(recs, span_processor=SimpleSpanProcessor(exp))
+    tids = {s.context.trace_id for s in exp.get_finished_spans()}
+    assert len(tids) == 2   # different runs -> different traces

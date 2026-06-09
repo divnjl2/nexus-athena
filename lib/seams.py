@@ -28,6 +28,16 @@ def _hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+def trace_id_hex(run_id: str) -> str:
+    """128-bit (32-hex) OTel trace_id, deterministic from run_id — correlates one run."""
+    return hashlib.sha256((run_id or "norun").encode("utf-8")).hexdigest()[:32]
+
+
+def span_id_hex(seed: str) -> str:
+    """64-bit (16-hex) OTel span_id, deterministic from a seed."""
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+
+
 @dataclass(frozen=True)
 class SeamResult:
     name: str
@@ -44,15 +54,42 @@ class SeamRecord:
     artifact_hash: str
     src: str
     dst: str
-    ts: str                                       # injected — never time.time() in this module
+    ts: str                                       # injected ISO ts — never time.time() in this module
     context: tuple[tuple[str, str], ...] = ()
+    # --- OTel-span-compatible correlation (all INJECTED; validators stay pure) ---
+    run_id: str = ""                              # one run -> OTel trace_id (the cross-cut thread)
+    span_id: str = ""                             # this seam's 16-hex OTel span id
+    parent_span_id: str = ""                      # 16-hex; run root span (or prev seam)
+    ts_ns: int = 0                                # injected unix-nano start (OTel span timing)
 
     def to_json(self) -> str:
         return json.dumps({
             "name": self.name, "passed": self.passed, "issues": list(self.issues),
             "hash": self.artifact_hash, "src": self.src, "dst": self.dst,
             "ts": self.ts, "context": dict(self.context),
+            "run_id": self.run_id, "span_id": self.span_id,
+            "parent_span_id": self.parent_span_id, "ts_ns": self.ts_ns,
         }, ensure_ascii=False, sort_keys=True)
+
+    def to_otel_span_dict(self) -> dict:
+        """OTel-span-compatible field schema — maps 1:1 onto an OTLP span (trace-ready)."""
+        return {
+            "trace_id": trace_id_hex(self.run_id),
+            "span_id": self.span_id or span_id_hex(f"{self.run_id}:{self.name}:{self.ts}"),
+            "parent_span_id": self.parent_span_id,
+            "name": self.name,
+            "start_time_unix_nano": self.ts_ns,
+            "end_time_unix_nano": self.ts_ns,
+            "status": {"code": "OK" if self.passed else "ERROR",
+                       "message": "" if self.passed else "; ".join(self.issues)},
+            "attributes": {
+                "athena.run_id": self.run_id,
+                "seam.src": self.src, "seam.dst": self.dst,
+                "seam.passed": self.passed, "seam.hash": self.artifact_hash,
+                **({"seam.issues": list(self.issues)} if self.issues else {}),
+                **{f"seam.ctx.{k}": v for k, v in self.context},
+            },
+        }
 
 
 # --- seam validators (pure, fail-closed) ---------------------------------------
@@ -157,9 +194,12 @@ def seam_toggle_equiv(plan_a: Plan, plan_b: Plan) -> SeamResult:
 # --- observability: record (effectful) + render (pure) -------------------------
 
 def make_record(result: SeamResult, *, src: str, dst: str, ts: str,
-                context: dict | None = None) -> SeamRecord:
+                context: dict | None = None, run_id: str = "",
+                parent_span_id: str = "", ts_ns: int = 0) -> SeamRecord:
     ctx = tuple(sorted((str(k), str(v)) for k, v in (context or {}).items()))
-    return SeamRecord(result.name, result.passed, result.issues, result.artifact_hash, src, dst, ts, ctx)
+    span_id = span_id_hex(f"{run_id}:{result.name}:{ts}")
+    return SeamRecord(result.name, result.passed, result.issues, result.artifact_hash,
+                      src, dst, ts, ctx, run_id, span_id, parent_span_id, ts_ns)
 
 
 def record_seam(record: SeamRecord, *, path) -> None:
@@ -186,3 +226,53 @@ def render_mermaid(records: list[SeamRecord]) -> str:
     lines.append("    classDef failnode fill:#fdd,stroke:#c00")
     lines.append("```")
     return "\n".join(lines)
+
+
+def emit_otel(records, *, span_processor=None, tracer_provider=None):
+    """
+    Emit SeamRecords as real OpenTelemetry spans (EFFECTFUL). run_id -> trace_id correlates
+    every seam of one pipeline run into ONE distributed trace — the cross-cut thread that no
+    framework (CRISP files / Spec-Kit analyze / bd db) gives you. Pass span_processor (e.g.
+    otlp_processor(endpoint)) to ship to Jaeger/Tempo, or a tracer_provider directly.
+    Returns the (force-flushed) provider.
+    """
+    from collections import defaultdict
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import (NonRecordingSpan, SpanContext, TraceFlags,
+                                      set_span_in_context)
+    from opentelemetry.trace.status import Status, StatusCode
+
+    provider = tracer_provider
+    if provider is None:
+        provider = TracerProvider()
+        if span_processor is not None:
+            provider.add_span_processor(span_processor)
+    tracer = provider.get_tracer("athena.seams")
+
+    by_run: dict[str, list] = defaultdict(list)
+    for r in records:
+        by_run[r.run_id or "norun"].append(r)
+
+    for run_id, recs in by_run.items():
+        root_ctx = set_span_in_context(NonRecordingSpan(SpanContext(
+            trace_id=int(trace_id_hex(run_id), 16),
+            span_id=int(span_id_hex(f"{run_id}:root"), 16),
+            is_remote=False, trace_flags=TraceFlags(TraceFlags.SAMPLED))))
+        for r in recs:
+            d = r.to_otel_span_dict()
+            span = tracer.start_span(r.name, context=root_ctx, start_time=r.ts_ns or None)
+            for k, v in d["attributes"].items():
+                span.set_attribute(k, v)
+            span.set_status(Status(StatusCode.OK if r.passed else StatusCode.ERROR,
+                                   d["status"]["message"]))
+            span.end(end_time=r.ts_ns or None)
+
+    provider.force_flush()
+    return provider
+
+
+def otlp_processor(endpoint: str = "http://localhost:4317"):
+    """Convenience: a SimpleSpanProcessor wired to an OTLP/gRPC collector (Jaeger/Tempo)."""
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    return SimpleSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True))
