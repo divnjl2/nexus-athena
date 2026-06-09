@@ -1,0 +1,4 @@
+source: https://github.com/matanshavit/qrspi
+commit: 8d710510643ab483708fd127bd7c9b4ca2951f48
+vendored: 2026-06-09
+contents: commands/qrspi/*.md (8) + agents/*.md (4)
