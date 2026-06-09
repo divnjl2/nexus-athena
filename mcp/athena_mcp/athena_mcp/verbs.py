@@ -27,6 +27,11 @@ from lib.ast import ParseError                                   # noqa: E402
 from lib.frontend import parse_source, speckit_enabled           # noqa: E402
 from lib.plan2beads import compile, CompileError, _slugify       # noqa: E402
 from lib.bd_client import fetch_existing_keys, execute           # noqa: E402
+from lib.seams import seam_ast_wellformed, seam_graph_materialized, SeamResult  # noqa: E402
+
+
+def _seam_dict(r: SeamResult) -> dict:
+    return {"name": r.name, "passed": r.passed, "issues": list(r.issues), "hash": r.artifact_hash}
 
 
 def _run(argv: list[str]) -> str:
@@ -44,8 +49,12 @@ def validate(front_path: str, *, speckit: bool | None = None) -> dict:
     """Validate the chosen front (Spec-Kit tasks.md or canonical plan.md) before compiling."""
     sk = speckit_enabled() if speckit is None else bool(speckit)
     try:
-        compile(parse_source(front_path, speckit=speckit))
-        return {"passed": True, "speckit": sk, "issues": []}
+        plan = parse_source(front_path, speckit=speckit)
+        aw = seam_ast_wellformed(plan)          # seam 6 — incl. CYCLE detection
+        if not aw.passed:
+            return {"passed": False, "speckit": sk, "issues": list(aw.issues), "seam": _seam_dict(aw)}
+        compile(plan)
+        return {"passed": True, "speckit": sk, "issues": [], "seam": _seam_dict(aw)}
     except (ParseError, CompileError) as e:
         return {"passed": False, "speckit": sk, "issues": [str(e)]}
     except FileNotFoundError:
@@ -56,14 +65,21 @@ def compile_plan(front_path: str, apply: bool = False, *, speckit: bool | None =
     plan = parse_source(front_path, speckit=speckit)
     existing = fetch_existing_keys(_slugify(plan.title), run=run) if apply else frozenset()
     res = compile(plan, existing_keys=existing)
-    if apply:
-        execute(res, run=run)
-    return {
+    out = {
         "epic_keys": list(res.epic_keys),
         "issue_count": res.issue_count,
         "commands": [str(c) for c in res.commands],
         "applied": apply,
     }
+    if apply:
+        execute(res, run=run)
+        # seam 8 — POST-CONDITION read-back: re-read bd, verify the graph matches the AST
+        try:
+            graph = json.loads(run(["bd", "list", "--label", "athena", "--json"]) or "[]")
+        except subprocess.CalledProcessError:
+            graph = []
+        out["seam"] = _seam_dict(seam_graph_materialized(plan, graph, _slugify(plan.title)))
+    return out
 
 
 # --- bd-backed verbs (hand-off only; implement is DEFERRED) ---------------------

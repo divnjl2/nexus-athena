@@ -1,3 +1,4 @@
+import json
 import pathlib
 
 import athena_mcp.verbs as verbs
@@ -92,3 +93,31 @@ def test_stage_dispatch_descriptor():
 def test_replan_routes_by_trigger():
     assert verbs.replan("research incomplete")["stage"] == "research"
     assert verbs.replan("vague")["stage"] == "design"
+
+
+def test_validate_returns_ast_wellformed_seam():
+    r = verbs.validate(str(FIX / "valid.md"), speckit=False)
+    assert r["passed"] is True
+    assert r["seam"]["name"] == "seam.ast_wellformed"
+    assert r["seam"]["passed"] is True
+
+
+def test_compile_apply_readback_seam_catches_empty_graph():
+    # execute "ran" but the read-back sees nothing -> drift / partial bd failure caught
+    def fake_run(argv):
+        return "[]" if argv[:2] == ["bd", "list"] else ""
+
+    r = verbs.compile_plan(str(FIX / "valid.md"), apply=True, speckit=False, run=fake_run)
+    assert r["applied"] is True
+    assert r["seam"]["name"] == "seam.graph_materialized"
+    assert r["seam"]["passed"] is False
+
+
+def test_compile_apply_readback_seam_passes_on_full_graph():
+    full = [{"labels": [f"athena:demo-feature:{k}"]} for k in ("phase1", "T1.1", "phase2", "T2.1")]
+
+    def fake_run(argv):
+        return json.dumps(full) if argv[:2] == ["bd", "list"] else ""
+
+    r = verbs.compile_plan(str(FIX / "valid.md"), apply=True, speckit=False, run=fake_run)
+    assert r["seam"]["passed"] is True
