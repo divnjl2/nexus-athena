@@ -82,3 +82,8 @@ def test_checked_task_parsed_like_unchecked():
 def test_bad_dep_parses_records_key():
     plan = parse(_read("bad_dep.md"))
     assert plan.phases[0].depends_on == ("phase2",)
+
+
+def test_empty_title_after_marker_rejected():
+    with pytest.raises(PlanParseError):
+        parse(_inline("- [ ] T1.1 [P]\n  - success_check: `true`\n"))

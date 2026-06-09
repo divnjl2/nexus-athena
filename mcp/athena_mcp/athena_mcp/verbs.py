@@ -42,13 +42,14 @@ def _err(e: Exception) -> str:
 
 def validate(front_path: str, *, speckit: bool | None = None) -> dict:
     """Validate the chosen front (Spec-Kit tasks.md or canonical plan.md) before compiling."""
+    sk = speckit_enabled() if speckit is None else bool(speckit)
     try:
         compile(parse_source(front_path, speckit=speckit))
-        return {"passed": True, "speckit": speckit_enabled() if speckit is None else speckit, "issues": []}
+        return {"passed": True, "speckit": sk, "issues": []}
     except (ParseError, CompileError) as e:
-        return {"passed": False, "issues": [str(e)]}
+        return {"passed": False, "speckit": sk, "issues": [str(e)]}
     except FileNotFoundError:
-        return {"passed": False, "issues": [f"file not found: {front_path}"]}
+        return {"passed": False, "speckit": sk, "issues": [f"file not found: {front_path}"]}
 
 
 def compile_plan(front_path: str, apply: bool = False, *, speckit: bool | None = None, run=_run) -> dict:

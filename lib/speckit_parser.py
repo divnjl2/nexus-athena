@@ -31,7 +31,7 @@ _TASK_RE = re.compile(r"^-\s*\[[ x]\]\s*(T\d+)\s+(.+?)\s*$")
 _GOAL_RE = re.compile(r"^\*\*Goal:\*\*\s*(.+?)\s*$")
 _CHECKPOINT_RE = re.compile(r"^\*\*Checkpoint:\*\*\s*`?(.+?)`?\s*$")
 _SC_RE = re.compile(r"^\s+-\s*success_check:\s*`?(.+?)`?\s*$")
-_MARKER_RE = re.compile(r"^\[([^\]]+)\]\s+(.*)$")
+_MARKER_RE = re.compile(r"^\[([^\]]+)\]\s*(.*)$")   # \s* so a bare trailing [P] is still consumed
 _US_RE = re.compile(r"US\d+")
 
 
@@ -91,7 +91,10 @@ def parse(text: str) -> Plan:
                 if mm.group(1).strip() == "P":
                     parallel = True
                 rest = mm.group(2)            # strip [P]/[US1]/[Story] markers from the title
-            cur_task = {"id": mk.group(1), "title": rest.strip(), "parallel": parallel, "sc": ""}
+            task_title = rest.strip()    # NOT `title` — that is the feature title in this scope
+            if not task_title:
+                raise SpecKitParseError(f"task {mk.group(1)}: empty title after stripping markers")
+            cur_task = {"id": mk.group(1), "title": task_title, "parallel": parallel, "sc": ""}
             continue
         ms = _SC_RE.match(raw)
         if ms and cur_task is not None:
@@ -116,6 +119,7 @@ def parse(text: str) -> Plan:
             if td["id"] in seen:
                 raise SpecKitParseError(f"duplicate task id {td['id']}")
             seen.add(td["id"])
+            # autonomy intentionally omitted in Spec-Kit v2 (routing deferred to executor layer)
             tasks.append(Task(id=td["id"], title=td["title"], success_check=sc, parallel=td["parallel"]))
         if tasks:                              # skip narrative-only phases (no dangling epic)
             built.append({**p, "tasks": tuple(tasks)})
@@ -124,8 +128,8 @@ def parse(text: str) -> Plan:
         raise SpecKitParseError("no phases with tasks parsed")
 
     keys = [b["key"] for b in built]
-    blockers = tuple(k for k in keys if k in ("setup", "foundational"))
-    us_keys = tuple(k for k in keys if _US_RE.fullmatch(k))
+    blockers = tuple(dict.fromkeys(k for k in keys if k in ("setup", "foundational")))
+    us_keys = tuple(dict.fromkeys(k for k in keys if _US_RE.fullmatch(k)))   # dedup -> no duplicate deps
 
     phases: list[Phase] = []
     for b in built:

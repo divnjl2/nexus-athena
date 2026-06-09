@@ -113,10 +113,14 @@ def parse(text: str) -> Plan:
                 flush_task()
                 remainder = mt.group(2)
                 parallel = False
-                if remainder.startswith("[P] "):
+                mp = re.match(r"^\[P\]\s*(.*)$", remainder)   # [P] only as the FIRST marker (fallback path)
+                if mp:
                     parallel = True
-                    remainder = remainder[len("[P] "):].strip()
-                cur_task = {"id": mt.group(1), "title": remainder, "parallel": parallel}
+                    remainder = mp.group(1)
+                task_title = remainder.strip()    # NOT `title` — that is the plan title in this scope
+                if not task_title:
+                    raise PlanParseError(f"task {mt.group(1)}: empty title")
+                cur_task = {"id": mt.group(1), "title": task_title, "parallel": parallel}
                 continue
             mk = _KV_RE.match(raw)
             if mk and cur_task is not None:

@@ -62,6 +62,11 @@ def test_missing_title_rejected():
         parse("## Phase 1: Setup\n- [ ] T001 a\n  - success_check: `true`\n")
 
 
+def test_empty_title_after_marker_rejected():
+    with pytest.raises(SpecKitParseError):
+        parse("# Tasks: F\n## Phase 1: Setup\n- [ ] T001 [P]\n  - success_check: `true`\n")
+
+
 def test_golden_ast():
     """Schema VERSION GUARD — parsed AST must equal this frozen expectation. If
     Spec-Kit's tasks.md format drifts, this fails LOUDLY (v2 §10 top risk)."""

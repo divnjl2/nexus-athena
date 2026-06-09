@@ -28,6 +28,12 @@ def test_validate_missing_file():
     assert r["passed"] is False
 
 
+def test_validate_error_keeps_speckit_key():
+    r = verbs.validate(str(FIX / "bad_dep.md"), speckit=False)
+    assert r["passed"] is False
+    assert r["speckit"] is False   # key present on the error path too (no KeyError for callers)
+
+
 def test_compile_dry_run_plan():
     r = verbs.compile_plan(str(FIX / "valid.md"), speckit=False)
     assert r["issue_count"] == 2

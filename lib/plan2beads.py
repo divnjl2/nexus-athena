@@ -64,6 +64,10 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
     Pure function: Plan AST (+ set of already-existing external keys) -> deterministic
     list of bd commands. existing_keys empty on first compile; on replan the effectful
     layer fills it so creates/edges already in the graph are skipped (idempotent upsert).
+
+    Idempotency tracks NODE labels only, not edge presence. If a prior run crashed between
+    node creates and `bd dep add`, a re-run skips the edge (both endpoints already exist) —
+    recover with a manual `bd dep add`. (bd has no edge-existence query to close this.)
     """
     # --- hard validation ---
     phase_keys = {ph.key for ph in plan.phases}
