@@ -177,3 +177,23 @@ def test_emit_otel_honors_parent_chain_and_duration():
     assert s1.end_time == 4000                         # duration honored (not zero-width)
     assert s2.parent.span_id == s1.context.span_id     # r2 chained under r1's REAL SDK span
     assert s1.context.trace_id == s2.context.trace_id  # same run
+
+
+def test_seam_jsonl_to_otel_replay(tmp_path):
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    path = tmp_path / "seams.jsonl"
+    prev = ""
+    for i, ok in enumerate([True, True, False]):
+        rec = seams.make_record(seams.SeamResult(f"seam.s{i}", ok, () if ok else ("boom",)),
+                                src="A", dst="B", ts=f"t{i}", run_id="run-Z",
+                                ts_ns=(i + 1) * 1000, parent_span_id=prev, context={"i": str(i)})
+        seams.record_seam(rec, path=path)
+        prev = rec.span_id
+    recs = seams.load_seams(path)
+    assert len(recs) == 3 and all(r.run_id == "run-Z" for r in recs)
+    exp = InMemorySpanExporter()
+    seams.emit_otel(recs, span_processor=SimpleSpanProcessor(exp))
+    spans = exp.get_finished_spans()
+    assert len({s.context.trace_id for s in spans}) == 1          # whole jsonl -> ONE trace
+    assert any(s.status.status_code.name == "ERROR" for s in spans)

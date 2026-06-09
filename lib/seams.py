@@ -93,6 +93,15 @@ class SeamRecord:
             },
         }
 
+    @classmethod
+    def from_json(cls, line: str) -> "SeamRecord":
+        """Replay a JSONL line back into a SeamRecord (durable solo trace -> emit_otel)."""
+        d = json.loads(line)
+        return cls(d["name"], d["passed"], tuple(d["issues"]), d["hash"], d["src"], d["dst"],
+                   d["ts"], tuple(sorted((str(k), str(v)) for k, v in d["context"].items())),
+                   d.get("run_id", ""), d.get("span_id", ""), d.get("parent_span_id", ""),
+                   d.get("ts_ns", 0), d.get("ts_ns_end", 0))
+
 
 # --- seam validators (pure, fail-closed) ---------------------------------------
 
@@ -210,6 +219,14 @@ def record_seam(record: SeamRecord, *, path) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open("a", encoding="utf-8") as fh:
         fh.write(record.to_json() + "\n")
+
+
+def load_seams(path) -> list:
+    """Read a seams.jsonl back into SeamRecords (durable solo trace -> emit_otel replay)."""
+    p = pathlib.Path(path)
+    if not p.exists():
+        return []
+    return [SeamRecord.from_json(ln) for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip()]
 
 
 def render_mermaid(records: list[SeamRecord]) -> str:
