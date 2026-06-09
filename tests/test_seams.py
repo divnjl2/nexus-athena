@@ -160,3 +160,20 @@ def test_emit_otel_distinct_runs_distinct_traces():
     seams.emit_otel(recs, span_processor=SimpleSpanProcessor(exp))
     tids = {s.context.trace_id for s in exp.get_finished_spans()}
     assert len(tids) == 2   # different runs -> different traces
+
+
+def test_emit_otel_honors_parent_chain_and_duration():
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    exp = InMemorySpanExporter()
+    r1 = seams.make_record(seams.seam_intent("a", True), src="H", dst="C", ts="t1",
+                           run_id="run-x", ts_ns=1000, ts_ns_end=4000)
+    r2 = seams.make_record(seams.seam_intent("b", True), src="C", dst="D", ts="t2",
+                           run_id="run-x", parent_span_id=r1.span_id, ts_ns=5000, ts_ns_end=9000)
+    seams.emit_otel([r1, r2], span_processor=SimpleSpanProcessor(exp))
+    spans = exp.get_finished_spans()
+    s1 = next(s for s in spans if s.start_time == 1000)
+    s2 = next(s for s in spans if s.start_time == 5000)
+    assert s1.end_time == 4000                         # duration honored (not zero-width)
+    assert s2.parent.span_id == s1.context.span_id     # r2 chained under r1's REAL SDK span
+    assert s1.context.trace_id == s2.context.trace_id  # same run
