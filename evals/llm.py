@@ -35,13 +35,18 @@ def _one_call(host, port, model, messages, max_tokens, temperature, timeout):
 
 def chat(prompt: str, *, lane: str = "planner", max_tokens: int = 6000,
          temperature: float = 0.0, timeout: int = 600,
-         system: str | None = None) -> tuple[str, float]:
-    """Return (content, elapsed_seconds). Auto-escalates max_tokens on reasoning truncation.
+         system: str | None = None, strict_finish: bool = True) -> tuple[str, float]:
+    """Return (content, elapsed_seconds).
 
-    A reasoning model that hits the cap (finish_reason=length) NEVER emitted its final
-    answer — the <analysis> prose fills `content` and treating it as the answer scrapes
-    garbage. So on truncation we DOUBLE the budget and retry (up to MAX_TOKENS_CEILING)
-    rather than cap the reasoning. Raises LLMError only if even the ceiling truncates.
+    strict_finish=True (PLANNER / structured JSON): a finish_reason=length means the model
+    never emitted its final answer (the <analysis> prose fills content) — treating that as
+    the answer scrapes garbage. So escalate max_tokens (x2 up to ceiling) and retry; never
+    cap the reasoning. Raise only if even the ceiling truncates.
+
+    strict_finish=False (WORKER / code-gen): truncated output usually still contains a
+    complete function (the code precedes the point the budget ran out), and downstream
+    code-extraction salvages it. One escalation for headroom, then return content as-is
+    rather than fail the whole task — let the gate be the judge.
     """
     host, port, model = LANES[lane]
     messages = []
@@ -55,13 +60,13 @@ def chat(prompt: str, *, lane: str = "planner", max_tokens: int = 6000,
             fr, content = _one_call(host, port, model, messages, budget, temperature, timeout)
         except Exception as e:  # noqa: BLE001 — surface any transport/HTTP error
             raise LLMError(f"{lane} call failed: {e}") from e
-        if fr == "length":
-            if budget >= MAX_TOKENS_CEILING:
-                raise LLMError(
-                    f"{lane} still truncated at ceiling {budget} — reasoning never "
-                    f"reached a final answer")
+        if fr == "length" and budget < MAX_TOKENS_CEILING:
             budget = min(budget * 2, MAX_TOKENS_CEILING)
             continue
+        if fr == "length" and strict_finish:
+            raise LLMError(
+                f"{lane} still truncated at ceiling {budget} — reasoning never "
+                f"reached a final answer")
         if not content:
             raise LLMError(f"{lane} returned empty content (finish_reason={fr})")
         return content.strip(), time.time() - t0

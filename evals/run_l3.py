@@ -234,7 +234,10 @@ def execute_ralph(task_dir: str, intent: str, scens: list[dict], gate_test: str,
              f"Reply with ONLY the complete Python file contents (a function "
              f"eval_rpn(expr: str) -> float). No prose.")
         try:
-            out, dt = chat(p, lane="worker", max_tokens=8000)
+            # Execute on the PLANNER lane (35B/3090): the 9B/3060 "worker" lane is the
+            # bottleneck + contention point (limited KV slots), which stalled the executor.
+            # One strong, already-warm lane is more reliable for a sequential single-run eval.
+            out, dt = chat(p, lane="planner", max_tokens=6000, strict_finish=False)
         except LLMError as e:
             log.append(f"iter{it}: LLM error {e}")
             continue
