@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import shlex
 import subprocess
 import sys
 
@@ -91,7 +92,9 @@ def export_ready(*, run=_run) -> dict:
     """Bridge to the (deferred) executor: return the ready queue. Does NOT execute."""
     try:
         items = json.loads(run(["bd", "ready", "--json"]) or "[]")
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # FileNotFoundError/OSError = bd not on PATH; return the structured error shape
+        # the MCP contract promises rather than throwing through the FastMCP wrapper.
         return {"ok": False, "error": _err(e)}
     return {"ready": items, "count": len(items)}
 
@@ -99,7 +102,9 @@ def export_ready(*, run=_run) -> dict:
 def report(*, run=_run) -> dict:
     try:
         return {"progress": json.loads(run(["bd", "stats", "--json"]) or "{}")}
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # FileNotFoundError/OSError = bd not on PATH; return the structured error shape
+        # the MCP contract promises rather than throwing through the FastMCP wrapper.
         return {"ok": False, "error": _err(e)}
 
 
@@ -117,7 +122,9 @@ def planner_trace_down(spec_version: str, *, run=_run) -> dict:
         design_nodes = json.loads(
             run(["bd", "list", "--label", f"athena:design:", "--json"]) or "[]"
         )
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # FileNotFoundError/OSError = bd not on PATH; return the structured error shape
+        # the MCP contract promises rather than throwing through the FastMCP wrapper.
         return {"ok": False, "error": _err(e)}
     return {
         "spec_version": spec_version,
@@ -135,7 +142,9 @@ def planner_trace_up(task_label: str, *, run=_run) -> dict:
         items = json.loads(
             run(["bd", "list", "--label", task_label, "--json"]) or "[]"
         )
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # FileNotFoundError/OSError = bd not on PATH; return the structured error shape
+        # the MCP contract promises rather than throwing through the FastMCP wrapper.
         return {"ok": False, "error": _err(e)}
     return {"task_label": task_label, "chain": items,
             "note": "traverse .parent fields upward to reach kind:spec node"}
@@ -179,9 +188,21 @@ def planner_verify(scenarios_path: str, *, run=_run) -> dict:
         if not line.startswith("run_cmd:"):
             continue
         cmd = line[len("run_cmd:"):].strip()
+        # run_cmd is LLM-generated; NEVER shell=True (arbitrary command injection).
+        # Tokenize and run shell-less. Reject shell metacharacters outright.
+        if any(ch in cmd for ch in (";", "|", "&", "`", "$", ">", "<", "\n")):
+            results.append({"cmd": cmd, "passed": False, "error": "rejected: shell metachar"})
+            continue
+        try:
+            argv = shlex.split(cmd)
+        except ValueError as e:
+            results.append({"cmd": cmd, "passed": False, "error": f"unparseable: {e}"})
+            continue
+        if not argv:
+            continue
         try:
             proc = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True, timeout=60,
+                argv, shell=False, capture_output=True, text=True, timeout=60,
             )
             results.append({
                 "cmd": cmd,
@@ -191,7 +212,7 @@ def planner_verify(scenarios_path: str, *, run=_run) -> dict:
             })
         except subprocess.TimeoutExpired:
             results.append({"cmd": cmd, "passed": False, "error": "timeout"})
-        except Exception as e:
+        except (FileNotFoundError, OSError) as e:
             results.append({"cmd": cmd, "passed": False, "error": str(e)})
 
     total = len(results)
@@ -220,7 +241,9 @@ def planner_trace_proof(spec_version: str, *, run=_run) -> dict:
         satisfies_edges = json.loads(
             run(["bd", "list", "--label", "satisfies", "--json"]) or "[]"
         )
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # FileNotFoundError/OSError = bd not on PATH; return the structured error shape
+        # the MCP contract promises rather than throwing through the FastMCP wrapper.
         return {"ok": False, "error": _err(e)}
 
     uncovered: list[str] = []
