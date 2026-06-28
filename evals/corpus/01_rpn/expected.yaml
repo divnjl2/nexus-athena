@@ -1,0 +1,29 @@
+# Ground-truth requirements for eval_rpn — the eval's answer key.
+# requirement_recall = |spec requirements matched to these| / |these|.
+# Each maps to a test in gate_test.py (the authoritative, LLM-independent gate).
+#
+# A weak spec that omits e.g. div_by_zero will score low recall AND fail the gate's
+# div_by_zero test, because the executor won't implement what the plan never asked for.
+
+task_id: 01_rpn
+target_symbol: eval_rpn
+target_file: rpn.py
+
+# keywords MUST be distinctive per requirement (no generic words shared across reqs like
+# "raise"/"error") — recall matches on whole words, any distinctive keyword present counts.
+requirements:
+  - id: R1
+    text: "supports the four binary operators + - * /"
+    keywords: ["operator", "operators", "arithmetic", "subtraction", "multiplication", "addition"]
+  - id: R2
+    text: "returns float results, including non-integer division (5 2 / -> 2.5)"
+    keywords: ["float", "non-integer", "decimal", "2.5"]
+  - id: R3
+    text: "raises an error on division by zero"
+    keywords: ["zero", "zerodivision", "zerodivisionerror"]
+  - id: R4
+    text: "raises an error on a malformed expression (too few operands)"
+    keywords: ["malformed", "insufficient", "operands", "invalid"]
+  - id: R5
+    text: "evaluates chained multi-operator expressions (2 3 + 4 * -> 20)"
+    keywords: ["chained", "chain", "stack", "multi-operator", "multiple"]

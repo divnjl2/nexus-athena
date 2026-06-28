@@ -1,0 +1,5 @@
+# Per-run eval artifacts are reproducible + noisy (reasoning model varies run-to-run).
+# Commit the harness + corpus + EVALS.md, not the raw outputs.
+results/
+corpus/*/rpn.py
+__pycache__/
