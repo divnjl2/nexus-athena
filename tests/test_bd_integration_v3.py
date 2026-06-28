@@ -93,11 +93,17 @@ def test_v3_graph_is_idempotent(tmp_path):
 
     execute(compile(plan), run=run)
     slug = _slugify(plan.title)
-    existing = fetch_existing_keys(slug, run=run)
+    count_before = len(json.loads(run(["bd", "list", "--label", "athena", "--json"]) or "[]"))
 
+    existing = fetch_existing_keys(slug, run=run)
     res2 = compile(plan, existing_keys=existing)
     creates = [c for c in res2.commands if str(c).split()[:2] == ["bd", "create"]]
     assert creates == [], "re-compile of unchanged v3 plan must create nothing"
+
+    # re-execute against real bd: the graph must not gain duplicate nodes (or edges)
+    execute(res2, run=run)
+    count_after = len(json.loads(run(["bd", "list", "--label", "athena", "--json"]) or "[]"))
+    assert count_after == count_before, "re-execute must not duplicate nodes"
 
 
 def test_v3_no_bd_related_command_emitted(tmp_path):

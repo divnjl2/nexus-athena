@@ -9,8 +9,11 @@ so nothing here needs a live bd to be unit-tested.
 from __future__ import annotations
 
 import json
+import logging
 
 from lib.plan2beads import CompileResult, EXTERNAL_KEY_PREFIX
+
+_log = logging.getLogger(__name__)
 
 
 def fetch_existing_keys(slug: str, *, run) -> frozenset[str]:
@@ -57,8 +60,12 @@ def execute(result: CompileResult, *, run) -> None:
             for lbl in it.get("labels", []):
                 if iid and lbl.startswith(f"{EXTERNAL_KEY_PREFIX}:"):
                     label_to_id[lbl] = iid
-    except Exception:
-        pass
+    except Exception as exc:
+        # Seeding from the existing graph is best-effort (empty on a fresh repo), but a
+        # non-JSON reply here (auth error, uninitialised repo) would leave label_to_id
+        # empty and make every later `bd dep add` resolve to a bare label and fail
+        # silently — exactly the silent-failure class that hid the v3 edge bugs. Log it.
+        _log.warning("bd_client: could not seed label->id map from existing graph: %s", exc)
 
     def resolve(tok: str) -> str:
         return label_to_id.get(tok, tok)

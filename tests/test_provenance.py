@@ -127,6 +127,25 @@ def test_satisfies_edge_emitted():
     assert satisfies, "satisfies edge (task tracks scenario) must be emitted"
 
 
+def test_task_verifying_multiple_scenarios_emits_each_satisfies():
+    prov = Provenance(spec_version="sp1", scenario_version="sc1")
+    plan = Plan(
+        title="Multi Verify",
+        overview="o",
+        out_of_scope=(),
+        phases=(Phase(key="p1", title="P", goal="g", tasks=(
+            Task("T1.1", "x", "pytest -q", verifies=("S1.1", "S1.2")),
+        )),),
+        provenance=prov,
+        scenarios=(_scenario("S1.1", "R1"), _scenario("S1.2", "R2")),
+    )
+    cmds = _cmds(compile(plan))
+    satisfies = [c for c in cmds if "bd dep add" in c and "--type tracks" in c]
+    assert len(satisfies) == 2, "a task verifying 2 scenarios emits 2 satisfies edges"
+    assert any("scenario:S1.1" in c for c in satisfies)
+    assert any("scenario:S1.2" in c for c in satisfies)
+
+
 def test_unknown_scenario_reference_raises():
     prov = Provenance(spec_version="sp1", scenario_version="sc1")
     plan = Plan(
