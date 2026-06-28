@@ -23,6 +23,7 @@ from evals.swebench.score import fail_to_pass, file_recall, gold_patch_targets
 
 CLAUDE = os.environ.get("CLAUDE_BIN", "claude")
 ATHENA = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
 
 def _prompt(problem_statement: str, hints: str) -> str:
@@ -79,13 +80,33 @@ def run_instance(instance: dict, *, timeout: int = 1800) -> dict:
         "gold_targets": gold_patch_targets(instance["patch"]),
         "file_recall": fr,
         "plan": plan,
-        "note": "behaviour_coverage requires the LLM judge (judge_behaviour_coverage) — held",
+        "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
     }
+
+
+def _save(result: dict) -> str:
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    path = os.path.join(RESULTS_DIR, f"{result['instance_id']}.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=1)
+    return path
 
 
 if __name__ == "__main__":
     import sys
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     offline = "--offline" in sys.argv
-    results = [run_instance(i) for i in load_instances(n, offline=offline)]
+    results = []
+    for inst in load_instances(n, offline=offline):
+        iid = inst["instance_id"]
+        try:
+            r = run_instance(inst)
+        except Exception as e:  # one bad/timed-out instance must not kill the batch
+            r = {"instance_id": iid, "error": f"{type(e).__name__}: {str(e)[:120]}"}
+        path = _save(r)
+        results.append(r)
+        ok = "ERROR" if "error" in r else (
+            f"edge={r['n_edge_cases']} scen={r['n_scenarios']} "
+            f"file_recall={r['file_recall']['recall']:.2f}")
+        print(f"[{len(results)}/{n}] {iid}: {ok} -> {path}", flush=True)
     print(json.dumps(results, ensure_ascii=False, indent=1))

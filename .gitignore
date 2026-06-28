@@ -20,3 +20,6 @@ thoughts/
 
 # local shakedown scratch
 _shakedown/
+
+# swebench eval per-run outputs (regenerate via evals/swebench/run.py)
+evals/swebench/results/
