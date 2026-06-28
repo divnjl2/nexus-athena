@@ -44,7 +44,7 @@ def parse_with_provenance(path: str, *, speckit: bool | None = None,
 
     If no sibling `scenarios.md` exists, the plan is returned unchanged (v2/flat behaviour).
     """
-    from lib.versioning import hash_file
+    from lib.versioning import hash_text
 
     plan = parse_source(path, speckit=speckit)
     front = pathlib.Path(path)
@@ -55,16 +55,21 @@ def parse_with_provenance(path: str, *, speckit: bool | None = None,
     if not scen_path.exists():
         return plan
 
+    # Read each artifact exactly once and hash THAT text, so the parsed content and its
+    # version pin can never diverge (hashing the file separately would re-read it).
+    scen_text = scen_path.read_text(encoding="utf-8")
     from lib.scenario_parser import parse as parse_scenarios
-    scenarios = parse_scenarios(scen_path.read_text(encoding="utf-8"))
+    scenarios = parse_scenarios(scen_text)
 
     # spec_version is REQUIRED for any provenance emission; fall back to the scenarios
     # hash only if spec.md is absent so the edges still resolve.
-    spec_version = hash_file(spec_path) if spec_path.exists() else hash_file(scen_path)
+    spec_version = (hash_text(spec_path.read_text(encoding="utf-8"))
+                    if spec_path.exists() else hash_text(scen_text))
     provenance = Provenance(
         spec_version=spec_version,
-        scenario_version=hash_file(scen_path),
-        design_version=hash_file(design_path) if design_path.exists() else "",
+        scenario_version=hash_text(scen_text),
+        design_version=(hash_text(design_path.read_text(encoding="utf-8"))
+                        if design_path.exists() else ""),
         run_id=run_id,
     )
     return dataclasses.replace(plan, scenarios=scenarios, provenance=provenance)

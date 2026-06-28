@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from lib.ast import ParseError                              # noqa: E402
-from lib.frontend import parse_source                       # noqa: E402
+from lib.frontend import parse_source, parse_with_provenance  # noqa: E402
 from lib.plan2beads import compile, CompileError, _slugify  # noqa: E402
 from lib.hermes_plan import render_master_plan              # noqa: E402
 from lib import seams                                       # noqa: E402
@@ -50,7 +50,9 @@ def cmd_validate(a) -> int:
 
 
 def cmd_compile(a) -> int:
-    plan = parse_source(a.front, speckit=_speckit(a.speckit))
+    # parse_with_provenance attaches sibling spec.md/scenarios.md when present so the
+    # v3.1 provenance edges materialise; it falls back to a flat parse otherwise.
+    plan = parse_with_provenance(a.front, speckit=_speckit(a.speckit))
     res = compile(plan)
     _emit({"epics": len(res.epic_keys), "issues": res.issue_count, "commands": len(res.commands)})
     return 0

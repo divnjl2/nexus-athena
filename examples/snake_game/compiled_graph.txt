@@ -2,10 +2,11 @@
 # nodes: 1 spec + 1 design + 31 scenarios + 8 epics + 27 issues
 # edges: 31 validates (scenario->spec) + 27 tracks (task->scenario) + 26 blocked-by (DAG)
 # total bd commands: 152
+# reproduce: ATHENA_SPECKIT=off python athena.py compile examples/snake_game/plan.md
 
 bd create --title spec:ecb056e80d703975 --label athena:classic-snake-game:spec:ecb056e80d703975 --label athena --label kind:spec --label athena:spec:ecb056e80d703975
 bd create --parent athena:classic-snake-game:spec:ecb056e80d703975 --no-inherit-labels --title design:f152f925c8033091 --label athena:classic-snake-game:design:f152f925c8033091 --label athena --label kind:design --label athena:design:f152f925c8033091
-bd create --title scenario:S1.1 R1.1 --label athena:classic-snake-game:scenario:S1.1 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description New game places the snake Given a new game configured with grid 20×20, initial length 3, heading Right, centered When the game is initialized Then the snake occupies exactly 3 contiguous horizontal cells near the center with the
+bd create --title scenario:S1.1 R1.1 --label athena:classic-snake-game:scenario:S1.1 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description New game places the snake Given a new game configured with grid 20×20, initial length 3, heading Right, centered When the game is initialized Then the snake occupies exactly 3 contiguous horizontal cells near the center with the head as the right-most cell and the heading set to Right.
 
 run_cmd: pytest tests/test_snake_body.py::test_initial_placement -q
 bd dep add athena:classic-snake-game:scenario:S1.1 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
@@ -49,7 +50,7 @@ bd create --title scenario:S4.1 R4.1 --label athena:classic-snake-game:scenario:
 
 run_cmd: pytest tests/test_input.py::test_reverse_rejected -q
 bd dep add athena:classic-snake-game:scenario:S4.1 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
-bd create --title scenario:S4.2 R4.2 --label athena:classic-snake-game:scenario:S4.2 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Chained turns within one tick cannot reverse the snake Given a running game heading Right When the player presses Up then Left within the same tick interval and one tick elapses Then the snake does not reverse onto its neck; the committed heading is Up (the last
+bd create --title scenario:S4.2 R4.2 --label athena:classic-snake-game:scenario:S4.2 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Chained turns within one tick cannot reverse the snake Given a running game heading Right When the player presses Up then Left within the same tick interval and one tick elapses Then the snake does not reverse onto its neck; the committed heading is Up (the last valid non-reversing input relative to the committed Right heading), not Left.
 
 run_cmd: pytest tests/test_input.py::test_chained_turns_no_reverse -q
 bd dep add athena:classic-snake-game:scenario:S4.2 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
@@ -77,11 +78,11 @@ bd create --title scenario:S7.2 R7.2 --label athena:classic-snake-game:scenario:
 
 run_cmd: pytest tests/test_game.py::test_last_inbounds_cell_legal -q
 bd dep add athena:classic-snake-game:scenario:S7.2 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
-bd create --title scenario:S8.1 R8.1 --label athena:classic-snake-game:scenario:S8.1 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Running into the body ends the game Given a snake long enough to curl into itself, positioned so the next head cell is a When one tick elapses Then the game status is GAME_OVER (loss).
+bd create --title scenario:S8.1 R8.1 --label athena:classic-snake-game:scenario:S8.1 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Running into the body ends the game Given a snake long enough to curl into itself, positioned so the next head cell is a body cell that will not vacate this tick When one tick elapses Then the game status is GAME_OVER (loss).
 
 run_cmd: pytest tests/test_game.py::test_self_collision_game_over -q
 bd dep add athena:classic-snake-game:scenario:S8.1 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
-bd create --title scenario:S8.2 R8.2 --label athena:classic-snake-game:scenario:S8.2 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Entering the vacating tail cell is legal (tail-chase) Given a non-growing snake whose head's next cell is the current tail cell (which When one tick elapses Then the move succeeds, the game is still RUNNING, and length is unchanged.
+bd create --title scenario:S8.2 R8.2 --label athena:classic-snake-game:scenario:S8.2 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Entering the vacating tail cell is legal (tail-chase) Given a non-growing snake whose head's next cell is the current tail cell (which vacates this tick) When one tick elapses Then the move succeeds, the game is still RUNNING, and length is unchanged.
 
 run_cmd: pytest tests/test_game.py::test_tail_chase_legal -q
 bd dep add athena:classic-snake-game:scenario:S8.2 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
@@ -97,7 +98,7 @@ bd create --title scenario:S9.3 R9.3 --label athena:classic-snake-game:scenario:
 
 run_cmd: pytest tests/test_game.py::test_gameplay_keys_ignored_after_over -q
 bd dep add athena:classic-snake-game:scenario:S9.3 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
-bd create --title scenario:S10.1 R10.1 --label athena:classic-snake-game:scenario:S10.1 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Restart after game over resets to initial state Given a finished game with score > 0 and a grown snake When the player issues restart Then the status is RUNNING, score is 0, the snake is at initial length/position/heading,
+bd create --title scenario:S10.1 R10.1 --label athena:classic-snake-game:scenario:S10.1 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description Restart after game over resets to initial state Given a finished game with score > 0 and a grown snake When the player issues restart Then the status is RUNNING, score is 0, the snake is at initial length/position/heading, and exactly one food exists.
 
 run_cmd: pytest tests/test_game.py::test_restart_resets_state -q
 bd dep add athena:classic-snake-game:scenario:S10.1 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
@@ -125,7 +126,7 @@ bd create --title scenario:S13.1 R13.1 --label athena:classic-snake-game:scenari
 
 run_cmd: pytest tests/test_input.py::test_last_valid_input_wins -q
 bd dep add athena:classic-snake-game:scenario:S13.1 athena:classic-snake-game:spec:ecb056e80d703975 --type validates
-bd create --title scenario:S13.2 R13.2 --label athena:classic-snake-game:scenario:S13.2 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description A buffered reversal is discarded Given a running game heading Right When the player presses Up then Left within one tick interval and one tick elapses Then the buffered Left (a reversal of the committed Right heading) is discarded and the
+bd create --title scenario:S13.2 R13.2 --label athena:classic-snake-game:scenario:S13.2 --label athena --label kind:scenario --label athena:scenario:3c1ea9f78e0018e0 --description A buffered reversal is discarded Given a running game heading Right When the player presses Up then Left within one tick interval and one tick elapses Then the buffered Left (a reversal of the committed Right heading) is discarded and the snake turns Up.
 
 run_cmd: pytest tests/test_input.py::test_buffered_reversal_discarded -q
 bd dep add athena:classic-snake-game:scenario:S13.2 athena:classic-snake-game:spec:ecb056e80d703975 --type validates

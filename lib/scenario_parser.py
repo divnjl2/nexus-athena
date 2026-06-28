@@ -86,6 +86,12 @@ def parse(text: str) -> tuple[Scenario, ...]:
         if mg:
             gwt.append(f"{mg.group(1).capitalize()} {mg.group(2).strip()}".strip())
             continue
+        # continuation of the previous bullet: a Given/When/Then clause wrapped onto an
+        # indented line with no marker. Append to the last gwt entry so multi-line prose
+        # is not silently truncated (regression: 4/31 snake scenarios cut mid-sentence).
+        if gwt and raw[:1] in (" ", "\t") and raw.strip():
+            gwt[-1] = f"{gwt[-1]} {raw.strip()}"
+            continue
 
     flush()
 

@@ -23,7 +23,6 @@ EXAMPLE = pathlib.Path(__file__).resolve().parents[1] / "examples" / "snake_game
 def _edge_types(res):
     out = {}
     for c in res.commands:
-        s = " ".join(c.argv)
         if "dep" in c.argv and "--type" in c.argv:
             t = c.argv[c.argv.index("--type") + 1]
             out[t] = out.get(t, 0) + 1
@@ -61,6 +60,21 @@ def test_scenario_parser_round_trip():
     assert s11.requirement_key == "R1.1"
     assert s11.run_cmd.startswith("pytest ")
     assert "Given" in s11.gwt_text and "Then" in s11.gwt_text
+
+
+def test_scenario_parser_keeps_multiline_gwt():
+    """Regression: a Given/When/Then clause wrapped onto an indented continuation line
+    must NOT be silently truncated (was cutting 4/31 snake scenarios mid-sentence)."""
+    scen = parse_scenarios((EXAMPLE / "scenarios.md").read_text(encoding="utf-8"))
+    by_id = {s.id: s for s in scen}
+    # S1.1 Then wraps: "...near the center with the\n  head as the right-most cell..."
+    assert "head as the right-most cell and the heading set to Right." in by_id["S1.1"].gwt_text
+    # S4.2 Then wraps onto a second line too
+    assert "valid non-reversing input relative to the committed Right heading" in by_id["S4.2"].gwt_text
+    # no scenario should end on a known truncation fragment
+    for s in scen:
+        assert not s.gwt_text.endswith("with the")
+        assert not s.gwt_text.endswith("(the last")
 
 
 def test_scenario_parser_rejects_empty():

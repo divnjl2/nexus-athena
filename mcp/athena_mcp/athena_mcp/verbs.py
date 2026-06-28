@@ -29,7 +29,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from lib.ast import ParseError                                   # noqa: E402
-from lib.frontend import parse_source, speckit_enabled           # noqa: E402
+from lib.frontend import parse_source, parse_with_provenance, speckit_enabled  # noqa: E402
 from lib.plan2beads import compile, CompileError, _slugify       # noqa: E402
 from lib.bd_client import fetch_existing_keys, execute           # noqa: E402
 from lib.seams import seam_ast_wellformed, seam_graph_materialized, SeamResult  # noqa: E402
@@ -71,7 +71,9 @@ def validate(front_path: str, *, speckit: bool | None = None) -> dict:
 
 
 def compile_plan(front_path: str, apply: bool = False, *, speckit: bool | None = None, run=_run) -> dict:
-    plan = parse_source(front_path, speckit=speckit)
+    # parse_with_provenance attaches sibling spec.md/scenarios.md when present so the
+    # v3.1 provenance edges materialise; it falls back to a flat parse otherwise.
+    plan = parse_with_provenance(front_path, speckit=speckit)
     existing = fetch_existing_keys(_slugify(plan.title), run=run) if apply else frozenset()
     res = compile(plan, existing_keys=existing)
     out = {
