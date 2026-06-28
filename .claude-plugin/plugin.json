@@ -1,7 +1,7 @@
 {
   "name": "nexus-athena",
-  "description": "Hermes-friendly planner — QRSPI planning front + Beads (bd) durable task-graph, packaged as a Claude Code plugin + MCP server. Deterministically compiles plan.md into bd commands; a Ralph loop executes issues via OpenHands or Claurst.",
-  "version": "0.0.0",
+  "description": "Spec-driven planning framework (v3+v3.1), shipped as a Claude Code plugin + a Hermes plugin (hermes/HERMES_PLUGIN.md). Drives Spec-Kit /specify -> CRISP design -> EARS->GWT scenarios -> deterministic compile into a Beads (bd) durable PROVENANCE graph (spec->design->epic->task + verifies/satisfies edges). success_check = requirement proved, not just test-passed. 17 planner_* MCP verbs. Validated by evals/ (real pipeline = 92% mean recall over a 5-task set).",
+  "version": "0.3.1",
   "author": {
     "name": "divnjl2"
   },

@@ -58,6 +58,21 @@ def planner_plan(structure_path: str) -> dict:
     return verbs.stage("plan", structure_path=structure_path)
 
 
+# --- v3.1 scenario harness (EARS->GWT; success_check = requirement proof) ---
+@mcp.tool
+def planner_scenarios(spec_path: str = "spec.md") -> dict:
+    """Derive executable Given-When-Then scenarios from the spec's EARS criteria.
+
+    scenario_version pinned to spec_version; the host runs the prompt (no Gherkin)."""
+    return verbs.planner_scenarios(spec_path)
+
+
+@mcp.tool
+def planner_verify(scenarios_path: str) -> dict:
+    """Run a requirement's scenarios (the harness) -> {total, passed, failed, results}."""
+    return verbs.planner_verify(scenarios_path)
+
+
 # --- compile (layer ③) ---
 @mcp.tool
 def planner_validate(front_path: str) -> dict:
@@ -88,6 +103,25 @@ def planner_replan(trigger: str, context: str = "") -> dict:
 def planner_export_ready() -> dict:
     """Bridge to the (deferred) executor: return `bd ready` — hands off the queue, does NOT execute."""
     return verbs.export_ready()
+
+
+# --- v3 provenance traversal (query the graph, don't guess) ---
+@mcp.tool
+def planner_trace_down(spec_version: str) -> dict:
+    """Traverse derived-from from a spec_version downward — what grew from this requirement."""
+    return verbs.planner_trace_down(spec_version)
+
+
+@mcp.tool
+def planner_trace_up(task_label: str) -> dict:
+    """Traverse up from a task/issue to its spec root — why this code exists."""
+    return verbs.planner_trace_up(task_label)
+
+
+@mcp.tool
+def planner_trace_proof(spec_version: str) -> dict:
+    """Proof axis (v3.1): traverse verifies/satisfies — is requirement X satisfied now + coverage."""
+    return verbs.planner_trace_proof(spec_version)
 
 
 if __name__ == "__main__":
