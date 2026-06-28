@@ -1,0 +1,23 @@
+# Ground-truth requirements for compare_semver — the eval's answer key.
+# Distinctive keywords per requirement (no generic words shared across reqs).
+
+task_id: 05_semver
+target_symbol: compare_semver
+target_file: semver.py
+
+requirements:
+  - id: R1
+    text: "compares MAJOR.MINOR.PATCH numerically, most-significant field first"
+    keywords: ["major", "minor", "patch", "numeric", "field"]
+  - id: R2
+    text: "returns -1, 0, or 1 for less-than / equal / greater-than"
+    keywords: ["-1", "less", "greater", "equal", "ordering"]
+  - id: R3
+    text: "a prerelease version is lower precedence than the same version without one (1.0.0-rc < 1.0.0)"
+    keywords: ["prerelease", "pre-release", "precedence", "rc", "lower"]
+  - id: R4
+    text: "numeric fields compare by integer value, not lexically (1.10.0 > 1.9.0)"
+    keywords: ["integer", "lexical", "numeric comparison", "1.10", "not string"]
+  - id: R5
+    text: "raises an error on a malformed version string"
+    keywords: ["malformed", "invalid version", "invalid format", "not valid semver"]

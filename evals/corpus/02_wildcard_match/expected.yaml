@@ -1,0 +1,23 @@
+# Ground-truth requirements for wildcard_match — the eval's answer key.
+# Distinctive keywords per requirement (no generic words shared across reqs).
+
+task_id: 02_wildcard_match
+target_symbol: wildcard_match
+target_file: wildcard.py
+
+requirements:
+  - id: R1
+    text: "* matches any sequence of characters including the empty sequence"
+    keywords: ["star", "asterisk", "any sequence", "zero or more", "*"]
+  - id: R2
+    text: "? matches exactly one character"
+    keywords: ["question mark", "single character", "exactly one", "?"]
+  - id: R3
+    text: "literal (non-wildcard) characters must match exactly"
+    keywords: ["literal", "exact", "verbatim"]
+  - id: R4
+    text: "match is anchored to the entire text, not a substring"
+    keywords: ["entire", "anchored", "whole", "full match", "full string"]
+  - id: R5
+    text: "empty pattern matches only empty text"
+    keywords: ["empty pattern", "empty text", "empty string"]

@@ -1,0 +1,23 @@
+# Ground-truth requirements for is_balanced — the eval's answer key.
+# Distinctive keywords per requirement (no generic words shared across reqs).
+
+task_id: 04_balanced
+target_symbol: is_balanced
+target_file: balanced.py
+
+requirements:
+  - id: R1
+    text: "every opening bracket has a matching closing bracket of the same type"
+    keywords: ["same type", "corresponding", "matching type", "same kind"]
+  - id: R2
+    text: "brackets must be properly nested (closing order is LIFO / innermost first)"
+    keywords: ["nested", "nesting", "order", "lifo", "innermost", "stack"]
+  - id: R3
+    text: "supports all three bracket pairs () [] {}"
+    keywords: ["parenthes", "square", "curly", "brace", "three"]
+  - id: R4
+    text: "non-bracket characters are ignored"
+    keywords: ["ignore", "non-bracket", "other characters", "skip"]
+  - id: R5
+    text: "the empty string is balanced (returns True)"
+    keywords: ["empty string", "empty input", "empty"]

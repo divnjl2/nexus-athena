@@ -1,0 +1,23 @@
+# Ground-truth requirements for roman_to_int — the eval's answer key.
+# Distinctive keywords per requirement (no generic words shared across reqs).
+
+task_id: 03_roman
+target_symbol: roman_to_int
+target_file: roman.py
+
+requirements:
+  - id: R1
+    text: "maps the seven standard symbols to values (I=1 V=5 X=10 L=50 C=100 D=500 M=1000)"
+    keywords: ["symbol", "i=1", "v=5", "x=10", "m=1000", "numeral value"]
+  - id: R2
+    text: "handles subtractive notation (IV=4, IX=9, XL=40, CM=900)"
+    keywords: ["subtractive", "subtraction", "iv", "ix", "smaller before larger"]
+  - id: R3
+    text: "additively accumulates symbols of non-increasing value (III=3, XXVII=27)"
+    keywords: ["additive", "accumulate", "sum", "add"]
+  - id: R4
+    text: "raises an error on characters that are not valid Roman symbols"
+    keywords: ["invalid character", "unrecognized", "not a valid roman", "illegal"]
+  - id: R5
+    text: "raises an error on empty input"
+    keywords: ["empty input", "empty string", "empty"]
