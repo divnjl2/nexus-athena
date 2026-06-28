@@ -22,16 +22,24 @@ parent-child + related/label conventions.
 | `derived-from` (spec->design) | parent-child: design.parent = spec-node |
 | `derived-from` (design->epic) | parent-child: epic.parent = design-node |
 | `derived-from` (epic->task) | parent-child: task.parent = epic |
-| `refines` (backedge) | `bd related <research-issue> <spec-node> --label refines` + bump spec_version |
-| `verifies` (scenario->spec) | `bd related <scenario> <spec-node> --label verifies` (v3.1) |
-| `satisfies` (task->scenario) | `bd related <task> <scenario> --label satisfies` (v3.1) |
-| `implements` (commit->task) | git commit message with issue ID + `--label implements` (Phase 10, DEFERRED) |
+| `refines` (backedge) | `bd dep add <research-issue> <spec-node> --type supersedes` + bump spec_version |
+| `verifies` (scenario->spec) | `bd dep add <scenario> <spec-node> --type validates` (v3.1) |
+| `satisfies` (task->scenario) | `bd dep add <task> <scenario> --type tracks` (v3.1) |
+| `implements` (commit->task) | git commit message with issue ID (native Beads convention) (Phase 10, DEFERRED) |
+
+> bd v1.0.4 has NO labeled `related` command. Use the native typed-edge form
+> `bd dep add <from> <to> --type <t>` where `<t>` is one of bd's built-in types:
+> `blocks|tracks|related|parent-child|discovered-from|until|caused-by|validates|relates-to|supersedes`.
+> Verified against bd v1.0.4: `validates` (verifies) and `tracks` (satisfies) are
+> non-blocking edges; they do NOT gate `bd ready`. Typed edges between nodes already in
+> a parent-child chain are rejected (deadlock guard) — scenario/task nodes are standalone
+> so verifies/satisfies are safe.
 
 ## Multi-level parent-child
 
-If `bd` supports 3+ levels: spec -> design -> epic -> task (native parent-child).
-If bd only supports 2 levels: spec->design via `related --label derived-from`, rest parent-child.
-Check with `bd --help` before assuming depth.
+VERIFIED against bd v1.0.4: multi-level parent-child works natively via dotted child IDs
+(spec `bd-d76` -> design `bd-d76.1` -> epic `bd-d76.1.1` -> task `bd-d76.1.1.1`).
+spec -> design -> epic -> task is a valid 4-level hierarchy. No 2-level fallback needed.
 
 ## Traversal (query-able via bd)
 

@@ -71,11 +71,23 @@ def execute(result: CompileResult, *, run) -> None:
                 argv += [src[i], resolve(src[i + 1])]; i += 2
             else:
                 argv.append(src[i]); i += 1
-        if argv[:3] == ["bd", "dep", "add"] and len(argv) > 3:   # positional target after `add`
-            argv[3] = resolve(argv[3])
+        if argv[:3] == ["bd", "dep", "add"]:
+            # resolve positional issue refs: arg[3] = subject; optional arg[4] = object
+            # (typed edges `bd dep add <from> <to> --type validates/tracks`). Flag-form
+            # values (--blocked-by/--depends-on) are resolved by the generic pass above.
+            if len(argv) > 3 and not argv[3].startswith("--"):
+                argv[3] = resolve(argv[3])
+            if len(argv) > 4 and not argv[4].startswith("--"):
+                argv[4] = resolve(argv[4])
 
         is_create = argv[:2] == ["bd", "create"]
-        out = run(argv + ["--json"] if is_create else argv)
+        if is_create:
+            # --json MUST come before --description: a multiline --description value
+            # truncates Windows command-line tokenization, so a trailing --json is lost
+            # and bd prints human text instead of JSON -> id capture (and every edge that
+            # needs it) silently fails. Verified against bd v1.0.4 on win32.
+            argv = argv[:2] + ["--json"] + argv[2:]
+        out = run(argv)
         if is_create:
             try:
                 new_id = json.loads(out).get("id", "")

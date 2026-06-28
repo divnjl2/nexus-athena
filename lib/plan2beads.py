@@ -150,6 +150,10 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                 cmds.append(Command((
                     "bd", "create",
                     "--parent", spec_key,
+                    # bd inherits parent labels by default; without this the design node
+                    # would carry kind:spec too and `bd list --label kind:spec` would
+                    # return the whole subtree. Every node carries only its own labels.
+                    "--no-inherit-labels",
                     "--title", f"design:{plan.provenance.design_version}",
                     "--label", design_key,
                     "--label", EXTERNAL_KEY_PREFIX,
@@ -173,10 +177,13 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                     "--label", f"athena:scenario:{plan.provenance.scenario_version}",
                     "--description", f"{sc.gwt_text}\n\nrun_cmd: {sc.run_cmd}",
                 )))
-            # verifies: scenario -> spec-node (skip if both endpoints already exist)
+            # verifies: scenario --[validates]--> spec-node. bd has no labeled "related"
+            # command; the native typed edge for "X verifies/validates Y" is
+            # `bd dep add <scenario> <spec> --type validates` (verified against bd v1.0.4).
+            # skip if both endpoints already exist (idempotent).
             if spec_key is not None and not (skey in existing_keys and spec_key in existing_keys):
                 cmds.append(Command((
-                    "bd", "related", skey, spec_key, "--label", "verifies",
+                    "bd", "dep", "add", skey, spec_key, "--type", "validates",
                 )))
 
     # --- epics + issues, strict document order ---
@@ -191,7 +198,9 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                 desc = f"{ph.goal}\n\ncheckpoint: {ph.checkpoint}"
             create_argv: list[str] = ["bd", "create", "--type", "epic"]
             if epic_parent is not None:
-                create_argv += ["--parent", epic_parent]
+                # provenance mode: epic is parented under design -> suppress label
+                # inheritance so kind:design/kind:spec don't leak onto the epic.
+                create_argv += ["--parent", epic_parent, "--no-inherit-labels"]
             create_argv += [
                 "--title", ph.title,
                 "--label", ekey, "--label", EXTERNAL_KEY_PREFIX,
@@ -209,6 +218,10 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                 "--title", f"{t.id} {t.title}",
                 "--label", tkey, "--label", EXTERNAL_KEY_PREFIX,
             ]
+            if use_provenance:
+                # suppress inherited kind:*/version labels from the epic->design->spec chain
+                # so kind-based queries stay precise. (v2 path leaves output byte-identical.)
+                argv.append("--no-inherit-labels")
             if t.autonomy and t.autonomy != "default":
                 argv += ["--label", f"autonomy:{t.autonomy}"]
             argv += ["--description", _issue_body(t)]
@@ -241,9 +254,11 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                 tkey = _task_key(slug, t)
                 for sid in t.verifies:
                     skey = _scenario_key(slug, sid)
+                    # satisfies: task --[tracks]--> scenario (bd native typed edge;
+                    # task and scenario share no parent-child chain so no hierarchy deadlock).
                     if not (tkey in existing_keys and skey in existing_keys):
                         cmds.append(Command((
-                            "bd", "related", tkey, skey, "--label", "satisfies",
+                            "bd", "dep", "add", tkey, skey, "--type", "tracks",
                         )))
 
     return CompileResult(tuple(cmds), tuple(epic_keys), issue_count)

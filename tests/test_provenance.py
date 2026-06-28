@@ -112,15 +112,19 @@ def test_scenario_node_emitted():
 
 
 def test_verifies_edge_emitted():
+    # verifies maps to bd native `validates` typed edge (scenario -> spec)
     cmds = _cmds(compile(_plan_with_scenarios()))
-    verifies = [c for c in cmds if "verifies" in c and "bd related" in c]
-    assert verifies, "verifies edge (scenario->spec) must be emitted"
+    verifies = [c for c in cmds if "bd dep add" in c and "--type validates" in c]
+    assert verifies, "verifies edge (scenario validates spec) must be emitted"
+    # must NOT use the non-existent `bd related` command
+    assert not any("bd related" in c for c in cmds)
 
 
 def test_satisfies_edge_emitted():
+    # satisfies maps to bd native `tracks` typed edge (task -> scenario)
     cmds = _cmds(compile(_plan_with_scenarios()))
-    satisfies = [c for c in cmds if "satisfies" in c]
-    assert satisfies, "satisfies edge (task->scenario) must be emitted"
+    satisfies = [c for c in cmds if "bd dep add" in c and "--type tracks" in c]
+    assert satisfies, "satisfies edge (task tracks scenario) must be emitted"
 
 
 def test_unknown_scenario_reference_raises():
@@ -154,7 +158,7 @@ def test_task_without_verifies_still_compiles():
     )
     res = compile(plan)
     cmds = _cmds(res)
-    satisfies = [c for c in cmds if "satisfies" in c]
+    satisfies = [c for c in cmds if "bd dep add" in c and "--type tracks" in c]
     assert len(satisfies) == 1, "only T1.2 should produce a satisfies edge"
 
 
