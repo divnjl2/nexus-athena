@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import pathlib
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -39,6 +40,10 @@ def _seam_dict(r: SeamResult) -> dict:
 
 
 def _run(argv: list[str]) -> str:
+    # On Windows, `bd` is an npm `.cmd` wrapper; subprocess can't exec it by bare name
+    # (WinError 2). Resolve to the full bd.CMD path via PATH (shutil.which honors PATHEXT).
+    if argv and argv[0] == "bd":
+        argv = [shutil.which("bd") or "bd", *argv[1:]]
     return subprocess.run(argv, capture_output=True, text=True, check=True).stdout
 
 
