@@ -43,18 +43,44 @@ issue text only; name likely files by basename if implied.
 
 
 def _json_block(text: str):
+    """Largest top-level balanced JSON object, string/escape-aware (a `}` inside a string
+    value must not close the object — the naive scanner dropped whole valid plans)."""
     text = re.sub(r"```(?:json)?|```", "", text)
-    depth = start = -1
-    for i, c in enumerate(text):
-        if c == "{" and depth < 0:
-            depth, start = 0, i
-        if depth >= 0:
-            depth += (c == "{") - (c == "}")
-            if depth == 0 and start >= 0:
-                try:
-                    return json.loads(text[start:i + 1])
-                except json.JSONDecodeError:
-                    depth, start = -1, -1
+    cands, i, n = [], 0, len(text)
+    while i < n:
+        if text[i] != "{":
+            i += 1
+            continue
+        depth, in_str, esc, end = 0, False, False, None
+        for j in range(i, n):
+            c = text[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif c == "\\":
+                    esc = True
+                elif c == '"':
+                    in_str = False
+                continue
+            if c == '"':
+                in_str = True
+            elif c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    end = j
+                    break
+        if end is not None:
+            cands.append(text[i:end + 1])
+            i = end + 1
+        else:
+            i += 1
+    for c in sorted(cands, key=len, reverse=True):
+        try:
+            return json.loads(c)
+        except json.JSONDecodeError:
+            continue
     return None
 
 
@@ -70,16 +96,19 @@ def run_instance(instance: dict, *, timeout: int = 1800) -> dict:
         result_text = env.get("result", raw) if isinstance(env, dict) else raw
     except json.JSONDecodeError:
         result_text = raw
-    plan = _json_block(result_text) or {"edge_cases": [], "scenarios": [], "plan_files": []}
+    parsed = _json_block(result_text)
+    plan = parsed or {"edge_cases": [], "scenarios": [], "plan_files": []}
     fr = file_recall(set(plan.get("plan_files", [])), instance)
     return {
         "instance_id": instance["instance_id"],
         "n_edge_cases": len(plan.get("edge_cases", [])),
         "n_scenarios": len(plan.get("scenarios", [])),
+        "parse_ok": parsed is not None,   # False = agent output had no parseable JSON (diagnose via raw)
         "fail_to_pass": fail_to_pass(instance),
         "gold_targets": gold_patch_targets(instance["patch"]),
         "file_recall": fr,
         "plan": plan,
+        "raw_tail": result_text[-1200:],  # keep the tail so a parse miss is diagnosable
         "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
     }
 
@@ -96,8 +125,14 @@ if __name__ == "__main__":
     import sys
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     offline = "--offline" in sys.argv
+    # --only a,b restricts to specific instance ids (re-run just the failures)
+    only = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), "")
+    only_ids = {x.strip() for x in only.split(",") if x.strip()}
+    insts = load_instances(n, offline=offline)
+    if only_ids:
+        insts = [i for i in insts if i["instance_id"] in only_ids]
     results = []
-    for inst in load_instances(n, offline=offline):
+    for inst in insts:
         iid = inst["instance_id"]
         try:
             r = run_instance(inst)
