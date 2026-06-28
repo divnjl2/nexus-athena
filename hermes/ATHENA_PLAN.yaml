@@ -38,7 +38,7 @@ dispatcher: script
 script:
   cmd:
     - python
-    - <ATHENA_REPO>/athena.py            # replace <ATHENA_REPO> at install (e.g. C:/Users/пк/Repos/nexus-athena)
+    - <ATHENA_REPO>/athena.py            # replace <ATHENA_REPO> at install (e.g. /path/to/nexus-athena)
     - --speckit
     - "${CEX_HERMES_INPUT_SPECKIT}"
     - hermes-plan

@@ -12,7 +12,7 @@ Two surfaces:
 ## 1. Register the MCP server into Hermes
 
 Add to the Hermes instance's MCP config (hermes-agent `mcpServers`, or the cex-ops profile's
-MCP block). `<ATHENA_REPO>` = absolute path (e.g. `C:/Users/пк/Repos/nexus-athena`):
+MCP block). `<ATHENA_REPO>` = absolute path (e.g. `/path/to/nexus-athena`):
 
 ```json
 {

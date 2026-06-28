@@ -1,17 +1,48 @@
-# Athena — Hermes-friendly Planner (v2, 3-layer)
+# Athena — a spec-driven planning framework (v3 + v3.1)
 
-A thin layer over **three** existing third-party repos, producing a populated Beads graph:
+Turn a one-line intent into a **complete, traceable, compilable plan** — and a durable
+**provenance graph** where every task's success check is a *proof that a requirement holds*,
+not just "a test passed."
+
+The pipeline chains existing, proven pieces and adds the deterministic glue between them:
+
+`intent → Spec-Kit /specify → /clarify → CRISP design → EARS→GWT scenarios → /plan → /tasks → compile → Beads graph`
 
 - **① CRISP/QRSPI** — agentic harness: alignment + context discipline (`matanshavit/qrspi`).
 - **② GitHub Spec-Kit** — native deterministic spec: requirements / plan / `tasks.md` (`github/spec-kit`).
 - **③ Beads `bd`** — durable task-graph on Dolt (`gastownhall/beads`).
 
-Packaged as a **Claude Code plugin + MCP server**. **Hermes** (NEXUS L2 orchestrator) drives
-the planning cycle through MCP verbs to a dependency-correct bd graph. **Execution
-(`implement`) is DEFERRED** — see `ralph/INTERFACE.md`; the reference impl lives at git tag
-`v1-full`.
+Shipped as **two plugins** over one core:
 
-Full spec: [`athena-final-opus-plan-v2.md`](./athena-final-opus-plan-v2.md).
+- **Claude Code plugin** — `.claude-plugin/plugin.json` + `commands/` + `skills/`; Claude
+  Code is the canonical agent that executes the Spec-Kit + CRISP slash-commands.
+- **Hermes plugin** — `hermes/` workflows + the **athena MCP** (17 `planner_*` verbs) so an
+  autonomous Hermes swarm can drive the same pipeline. See `hermes/HERMES_PLUGIN.md`.
+
+**Execution (`implement`) is currently DEFERRED** (`ralph/INTERFACE.md`). Closing the
+bidirectional code↔spec loop — `task→commit`, `commit→scenario`, and a version-drift
+detector — is the **v4** roadmap.
+
+### What v3 / v3.1 add over the original
+
+- **v3 — provenance graph.** `spec → design → epic → task` parent chain, each LLM-hop output
+  pinned by a content hash (`spec_version`, `design_version`, `scenario_version`).
+- **v3.1 — executable scenario harness.** One Given-When-Then `Scenario` per EARS criterion;
+  `scenario --verifies(validates)--> spec` and `task --satisfies(tracks)--> scenario` edges,
+  so `success_check = requirement proved`.
+
+### Proof it works
+
+- **126 core tests + 7 v3.1 edge tests green.**
+- **Real-pipeline eval: 0.92 mean recall, coverage 1.0** over a 5-task corpus × 3 runs
+  (answer-key-isolated). See [`evals/`](./evals/).
+- **End-to-end showcase:** [`examples/snake_game/`](./examples/snake_game/) — a 4-sentence
+  "build Snake" intent expanded by the frame into 44 FRs / 24 edge cases / 31 scenarios /
+  8 phases / 27 tasks → a **68-node, 84-edge** bd provenance graph.
+
+Design docs: [v2](./athena-final-opus-plan-v2.md) ·
+[v3](./athena-final-opus-plan-v3.md) ·
+[v3.1 harness](./athena-opus-plan-v3.1-harness.md).
 
 ## What we write vs. vendor (§0)
 

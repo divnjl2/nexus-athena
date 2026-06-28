@@ -18,7 +18,7 @@ front (tasks.md | plan.md)
 ## Drop-in steps (operator / live-Hermes — NOT auto-applied)
 
 1. Copy `ATHENA_PLAN.yaml` → `apps/hermes/workflows/ATHENA_PLAN.yaml`. Replace `<ATHENA_REPO>`
-   with the absolute path (e.g. `C:/Users/пк/Repos/nexus-athena`).
+   with the absolute path (e.g. `/path/to/nexus-athena`).
 2. Register the three seam gates so Hermes can evaluate them. Each is a thin shell-exec of:
    ```bash
    python <ATHENA_REPO>/athena.py seam <name> "$CEX_HERMES_INPUT_FRONT"   # exit 0 = pass
