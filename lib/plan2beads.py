@@ -112,15 +112,20 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
     if not slug:
         raise CompileError("plan title produces an empty slug — add alphanumeric characters")
 
-    # v3.1: validate Task.verifies references exist in plan.scenarios
-    scenario_ids = {s.id for s in plan.scenarios}
-    for ph in plan.phases:
-        for t in ph.tasks:
-            for sid in t.verifies:
-                if sid not in scenario_ids:
-                    raise CompileError(
-                        f"task {t.id} verifies unknown scenario {sid!r}"
-                    )
+    # v3.1: when scenarios are attached, every Task.verifies ref MUST resolve. When no
+    # scenarios are attached (the flat plan.md path), `verifies:` lines are unbound
+    # annotations — not validated and not compiled into edges — so a bare front that
+    # carries scenario ids still compiles. parse_with_provenance() is what attaches the
+    # scenarios and flips this on.
+    if plan.scenarios:
+        scenario_ids = {s.id for s in plan.scenarios}
+        for ph in plan.phases:
+            for t in ph.tasks:
+                for sid in t.verifies:
+                    if sid not in scenario_ids:
+                        raise CompileError(
+                            f"task {t.id} verifies unknown scenario {sid!r}"
+                        )
 
     use_provenance = bool(plan.provenance.spec_version)
 

@@ -19,7 +19,7 @@ class PlanParseError(ParseError):
 _PHASE_RE = re.compile(r"^##\s+Phase\s+(\d+):\s*(.+?)\s*$")
 # `- [ ] T1.1 [P] title`  — [P] optional parallel marker; both [ ] and [x] match
 _TASK_RE = re.compile(r"^-\s*\[[ x]\]\s*(T\d+\.\d+)\s+(.+?)\s*$")
-_KV_RE = re.compile(r"^\s+-\s*(success_check|files|autonomy):\s*`?(.+?)`?\s*$")
+_KV_RE = re.compile(r"^\s+-\s*(success_check|files|autonomy|verifies):\s*`?(.+?)`?\s*$")
 _DEP_RE = re.compile(r"^\*\*Depends on:\*\*\s*(.+?)\s*$")
 _GOAL_RE = re.compile(r"^\*\*Goal:\*\*\s*(.+?)\s*$")
 _AUTONOMY_ALLOWED = frozenset({"high", "low", "default"})
@@ -56,6 +56,11 @@ def parse(text: str) -> Plan:
             id=cur_task["id"],
             title=cur_task["title"],
             success_check=cur_task["success_check"],
+            verifies=tuple(
+                v.strip()
+                for v in re.split(r"[,\s]+", cur_task.get("verifies", "").strip())
+                if v.strip()
+            ),
             files=tuple(f.strip() for f in cur_task.get("files", "").split(",") if f.strip()),
             parallel=cur_task.get("parallel", False),
             autonomy=autonomy,
