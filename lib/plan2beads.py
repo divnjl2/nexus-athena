@@ -1,5 +1,5 @@
 """
-Athena plan2beads — DETERMINISTIC compiler: Plan AST -> bd commands.
+Athena plan2beads — DETERMINISTIC compiler: Plan AST -> bd commands (v3+v3.1).
 
 Invariants (do not break):
   * No LLM calls. Pure AST -> commands transformation.
@@ -7,8 +7,20 @@ Invariants (do not break):
   * Strict deterministic order: document order + explicit sorted() for edges.
   * External keys (athena:<slug>:...) = upsert mechanism over Beads hash-IDs.
 
-Consumes ONLY lib.ast.Plan — it knows nothing about which parser produced it (toggle §6).
-The effectful boundary lives in lib/bd_client.py (the only subprocess site).
+v3 additions (active when plan.provenance.spec_version is non-empty):
+  * spec-node (kind:spec) — idempotent per spec_version
+  * design-node (kind:design) — parent=spec-node, idempotent per design_version
+  * epics get parent=design-node (instead of floating)
+  * derived-from chain: spec -> design -> epic -> task
+
+v3.1 additions (active when plan.scenarios is non-empty):
+  * scenario-node (kind:scenario) per Scenario
+  * verifies edge: scenario -> spec-node
+  * satisfies edge: task -> scenario (for each Task.verifies entry)
+  * CompileError if Task.verifies is non-empty but scenario id not found in plan.scenarios
+
+Backward compat: when provenance.spec_version == "" (v2 plans / tests), spec/design/scenario
+nodes are NOT emitted and epic parent is not set — output is identical to v2.
 """
 from __future__ import annotations
 
@@ -16,7 +28,7 @@ import re
 import shlex
 from dataclasses import dataclass
 
-from lib.ast import Plan, Task  # noqa: F401  (Task used for type hints)
+from lib.ast import Plan, Task, Scenario  # noqa: F401
 
 EXTERNAL_KEY_PREFIX = "athena"
 
@@ -52,10 +64,24 @@ def _task_key(slug: str, t: Task) -> str:
     return f"{EXTERNAL_KEY_PREFIX}:{slug}:{t.id}"
 
 
+def _spec_key(slug: str, spec_version: str) -> str:
+    return f"{EXTERNAL_KEY_PREFIX}:{slug}:spec:{spec_version}"
+
+
+def _design_key(slug: str, design_version: str) -> str:
+    return f"{EXTERNAL_KEY_PREFIX}:{slug}:design:{design_version}"
+
+
+def _scenario_key(slug: str, scenario_id: str) -> str:
+    return f"{EXTERNAL_KEY_PREFIX}:{slug}:scenario:{scenario_id}"
+
+
 def _issue_body(t: Task) -> str:
     lines = [t.title, "", f"success_check: {t.success_check}"]
     if t.files:
         lines.append("files: " + ", ".join(t.files))
+    if t.verifies:
+        lines.append("verifies: " + ", ".join(t.verifies))
     return "\n".join(lines)
 
 
@@ -66,8 +92,7 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
     layer fills it so creates/edges already in the graph are skipped (idempotent upsert).
 
     Idempotency tracks NODE labels only, not edge presence. If a prior run crashed between
-    node creates and `bd dep add`, a re-run skips the edge (both endpoints already exist) —
-    recover with a manual `bd dep add`. (bd has no edge-existence query to close this.)
+    node creates and `bd dep add`, a re-run skips the edge — recover with manual `bd dep add`.
     """
     # --- hard validation ---
     phase_keys = {ph.key for ph in plan.phases}
@@ -87,11 +112,76 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
     if not slug:
         raise CompileError("plan title produces an empty slug — add alphanumeric characters")
 
+    # v3.1: validate Task.verifies references exist in plan.scenarios
+    scenario_ids = {s.id for s in plan.scenarios}
+    for ph in plan.phases:
+        for t in ph.tasks:
+            for sid in t.verifies:
+                if sid not in scenario_ids:
+                    raise CompileError(
+                        f"task {t.id} verifies unknown scenario {sid!r}"
+                    )
+
+    use_provenance = bool(plan.provenance.spec_version)
+
     cmds: list[Command] = []
     epic_keys: list[str] = []
     issue_count = 0
 
+    # --- v3: provenance nodes (spec, design) ---
+    spec_key: str | None = None
+    design_key: str | None = None
+
+    if use_provenance:
+        spec_key = _spec_key(slug, plan.provenance.spec_version)
+        if spec_key not in existing_keys:
+            cmds.append(Command((
+                "bd", "create",
+                "--title", f"spec:{plan.provenance.spec_version}",
+                "--label", spec_key,
+                "--label", EXTERNAL_KEY_PREFIX,
+                "--label", "kind:spec",
+                "--label", f"athena:spec:{plan.provenance.spec_version}",
+            )))
+
+        if plan.provenance.design_version:
+            design_key = _design_key(slug, plan.provenance.design_version)
+            if design_key not in existing_keys:
+                cmds.append(Command((
+                    "bd", "create",
+                    "--parent", spec_key,
+                    "--title", f"design:{plan.provenance.design_version}",
+                    "--label", design_key,
+                    "--label", EXTERNAL_KEY_PREFIX,
+                    "--label", "kind:design",
+                    "--label", f"athena:design:{plan.provenance.design_version}",
+                )))
+
+    # --- v3.1: scenario nodes + verifies edges ---
+    # Guard also on scenario_version: empty scenario_version would produce malformed
+    # "athena:scenario:" label (trailing colon). Scenarios require a pinned version.
+    if use_provenance and plan.scenarios and plan.provenance.scenario_version:
+        for sc in plan.scenarios:
+            skey = _scenario_key(slug, sc.id)
+            if skey not in existing_keys:
+                cmds.append(Command((
+                    "bd", "create",
+                    "--title", f"scenario:{sc.id} {sc.requirement_key}",
+                    "--label", skey,
+                    "--label", EXTERNAL_KEY_PREFIX,
+                    "--label", "kind:scenario",
+                    "--label", f"athena:scenario:{plan.provenance.scenario_version}",
+                    "--description", f"{sc.gwt_text}\n\nrun_cmd: {sc.run_cmd}",
+                )))
+            # verifies: scenario -> spec-node (skip if both endpoints already exist)
+            if spec_key is not None and not (skey in existing_keys and spec_key in existing_keys):
+                cmds.append(Command((
+                    "bd", "related", skey, spec_key, "--label", "verifies",
+                )))
+
     # --- epics + issues, strict document order ---
+    epic_parent = design_key or spec_key  # v3: epics under design; v2: no parent
+
     for ph in plan.phases:
         ekey = _epic_key(slug, ph.key)
         epic_keys.append(ekey)
@@ -99,18 +189,22 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
             desc = ph.goal
             if ph.checkpoint:
                 desc = f"{ph.goal}\n\ncheckpoint: {ph.checkpoint}"
-            cmds.append(Command((
-                "bd", "create", "--type", "epic",
+            create_argv: list[str] = ["bd", "create", "--type", "epic"]
+            if epic_parent is not None:
+                create_argv += ["--parent", epic_parent]
+            create_argv += [
                 "--title", ph.title,
                 "--label", ekey, "--label", EXTERNAL_KEY_PREFIX,
                 "--description", desc,
-            )))
+            ]
+            cmds.append(Command(tuple(create_argv)))
+
         for t in ph.tasks:
             issue_count += 1
             tkey = _task_key(slug, t)
             if tkey in existing_keys:
                 continue
-            argv = [
+            argv: list[str] = [
                 "bd", "create", "--parent", ekey,
                 "--title", f"{t.id} {t.title}",
                 "--label", tkey, "--label", EXTERNAL_KEY_PREFIX,
@@ -120,12 +214,12 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
             argv += ["--description", _issue_body(t)]
             cmds.append(Command(tuple(argv)))
 
-    # --- intra-phase task ordering: sequential (non-[P]) tasks chain; [P] siblings unordered ---
+    # --- intra-phase task ordering: sequential (non-[P]) tasks chain ---
     for ph in plan.phases:
         prev_seq: str | None = None
         for t in ph.tasks:
             if t.parallel:
-                continue  # parallel tasks get no intra-phase edge
+                continue
             tkey = _task_key(slug, t)
             if prev_seq is not None and not (tkey in existing_keys and prev_seq in existing_keys):
                 cmds.append(Command(("bd", "dep", "add", tkey, "--blocked-by", prev_seq)))
@@ -139,5 +233,17 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
             if ekey in existing_keys and dkey in existing_keys:
                 continue
             cmds.append(Command(("bd", "dep", "add", ekey, "--blocked-by", dkey)))
+
+    # --- v3.1: satisfies edges: task -> scenario (skip if both endpoints already exist) ---
+    if use_provenance and plan.scenarios:
+        for ph in plan.phases:
+            for t in ph.tasks:
+                tkey = _task_key(slug, t)
+                for sid in t.verifies:
+                    skey = _scenario_key(slug, sid)
+                    if not (tkey in existing_keys and skey in existing_keys):
+                        cmds.append(Command((
+                            "bd", "related", tkey, skey, "--label", "satisfies",
+                        )))
 
     return CompileResult(tuple(cmds), tuple(epic_keys), issue_count)

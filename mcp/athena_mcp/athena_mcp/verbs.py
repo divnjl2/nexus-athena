@@ -1,10 +1,13 @@
 """
-Athena MCP verbs — the planning logic behind the MCP tools (v2, §7).
+Athena MCP verbs — the planning logic behind the MCP tools (v3+v3.1).
 
 Scope ends at a populated bd graph (implement is DEFERRED). Compiler-backed verbs
 (validate/compile) are pure + toggle-aware via lib.frontend. bd-backed verbs
 (export_ready/report) hand off / summarize — they NEVER execute issues. The CRISP stage
 verbs + spec() return dispatch descriptors; the host runs the prompt.
+
+v3 additions: planner_spec, planner_compile (provenance graph), planner_trace_down/up.
+v3.1 additions: planner_scenarios, planner_verify, planner_trace_proof.
 """
 from __future__ import annotations
 
@@ -100,6 +103,147 @@ def report(*, run=_run) -> dict:
         return {"ok": False, "error": _err(e)}
 
 
+# --- v3: provenance traversal verbs --------------------------------------------
+
+def planner_trace_down(spec_version: str, *, run=_run) -> dict:
+    """Traverse derived-from chain from spec_version downward.
+
+    Returns design, epics, and tasks that derive from the given spec version.
+    """
+    try:
+        nodes = json.loads(
+            run(["bd", "list", "--label", f"athena:spec:{spec_version}", "--json"]) or "[]"
+        )
+        design_nodes = json.loads(
+            run(["bd", "list", "--label", f"athena:design:", "--json"]) or "[]"
+        )
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": _err(e)}
+    return {
+        "spec_version": spec_version,
+        "spec_nodes": nodes,
+        "design_nodes": design_nodes,
+    }
+
+
+def planner_trace_up(task_label: str, *, run=_run) -> dict:
+    """Traverse from a task/issue label upward to its spec root.
+
+    Returns the chain: task -> epic -> design -> spec.
+    """
+    try:
+        items = json.loads(
+            run(["bd", "list", "--label", task_label, "--json"]) or "[]"
+        )
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": _err(e)}
+    return {"task_label": task_label, "chain": items,
+            "note": "traverse .parent fields upward to reach kind:spec node"}
+
+
+# --- v3.1: scenario verbs ------------------------------------------------------
+
+def planner_scenarios(spec_path: str = "spec.md") -> dict:
+    """Dispatch descriptor: derive executable GWT scenarios from spec EARS criteria.
+
+    Returns a dispatch descriptor — the host (Hermes) runs the prompt.
+    """
+    spec_exists = pathlib.Path(spec_path).exists()
+    return {
+        "command": "/athena.scenarios",
+        "spec_path": spec_path,
+        "spec_found": spec_exists,
+        "artifact": "thoughts/scenarios/<spec_version>/scenarios.md",
+        "note": (
+            "Read spec.md EARS criteria, derive one Scenario per criterion. "
+            "No Gherkin. Store under thoughts/scenarios/<spec_version>/. "
+            "Pin output_version to seams.jsonl."
+        ),
+    }
+
+
+def planner_verify(scenarios_path: str, *, run=_run) -> dict:
+    """Run the scenario harness — execute each scenario's run_cmd, aggregate pass/fail.
+
+    scenarios_path: path to scenarios.md (or a JSON list of Scenario dicts).
+    Returns {requirement: str, passed: bool, failed: list[str]} per scenario.
+    """
+    path = pathlib.Path(scenarios_path)
+    if not path.exists():
+        return {"ok": False, "error": f"scenarios file not found: {scenarios_path}"}
+
+    results = []
+    # Parse run_cmd lines from scenarios.md (format: "run_cmd: <cmd>")
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line.startswith("run_cmd:"):
+            continue
+        cmd = line[len("run_cmd:"):].strip()
+        try:
+            proc = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=60,
+            )
+            results.append({
+                "cmd": cmd,
+                "passed": proc.returncode == 0,
+                "stdout": proc.stdout.strip()[:200],
+                "stderr": proc.stderr.strip()[:200],
+            })
+        except subprocess.TimeoutExpired:
+            results.append({"cmd": cmd, "passed": False, "error": "timeout"})
+        except Exception as e:
+            results.append({"cmd": cmd, "passed": False, "error": str(e)})
+
+    total = len(results)
+    passed = sum(1 for r in results if r.get("passed"))
+    return {
+        "total": total,
+        "passed": passed,
+        "failed": total - passed,
+        "results": results,
+    }
+
+
+def planner_trace_proof(spec_version: str, *, run=_run) -> dict:
+    """Traverse verifies/satisfies axes to answer 'is requirement X currently satisfied?'
+
+    Returns per-requirement coverage: which scenarios verify it, which tasks satisfy them,
+    and whether all scenarios are currently passing (requires planner_verify to have run).
+    """
+    try:
+        scenario_nodes = json.loads(
+            run(["bd", "list", "--label", "kind:scenario", "--json"]) or "[]"
+        )
+        verifies_edges = json.loads(
+            run(["bd", "list", "--label", "verifies", "--json"]) or "[]"
+        )
+        satisfies_edges = json.loads(
+            run(["bd", "list", "--label", "satisfies", "--json"]) or "[]"
+        )
+    except subprocess.CalledProcessError as e:
+        return {"ok": False, "error": _err(e)}
+
+    uncovered: list[str] = []
+    covered: list[dict] = []
+    for node in scenario_nodes:
+        req_key = node.get("requirement_key") or node.get("title", "")
+        satisfiers = [e for e in satisfies_edges if e.get("target") == node.get("id")]
+        verifiers = [e for e in verifies_edges if e.get("source") == node.get("id")]
+        entry = {"scenario": node.get("id"), "requirement": req_key,
+                 "satisfiers": len(satisfiers), "verifiers": len(verifiers)}
+        if satisfiers:
+            covered.append(entry)
+        else:
+            uncovered.append(req_key)
+
+    return {
+        "spec_version": spec_version,
+        "covered": covered,
+        "uncovered": uncovered,
+        "coverage_pct": (len(covered) / max(len(scenario_nodes), 1)) * 100,
+    }
+
+
 # --- CRISP / Spec-Kit stage dispatch (host executes the prompt) -----------------
 
 _STAGE_ARTIFACT = {"question": "questions.md", "research": "research.md",
@@ -131,6 +275,24 @@ def spec(intent: str = "") -> dict:
 
 def replan(trigger: str, context: str = "") -> dict:
     t = trigger.lower()
+    if "scenario_failed" in t:
+        # v3.1: scenario failure may mean code drift (reopen task) or spec drift (backedge)
+        return {
+            "trigger": trigger,
+            "context": context,
+            "fork": {
+                "code_not_ready": "reopen task; another executor iteration",
+                "spec_drift": "backedge: research/scenario -> /specify, bump spec_version",
+            },
+            "note": "diagnose which branch applies before acting",
+        }
+    if "spec_invalid" in t:
+        # v3: backedge research -> /specify bumps spec_version
+        return {
+            "trigger": trigger,
+            "pipeline": ["refines_edge", "specify", "scenarios", "design", "compile"],
+            "note": "bump spec_version; re-derive scenarios + design from new spec",
+        }
     for name in ("research", "design", "structure", "plan", "question"):
         if name in t:
             return stage(name, trigger=trigger, context=context)
