@@ -1,0 +1,145 @@
+# Compiled bd provenance graph — Classic Snake Game
+# epics=8 issues=27 commands=61
+
+bd create --type epic --title Geometry, grid & config foundation --label athena:classic-snake-game:phase1 --label athena --description Establish immutable coordinate/direction primitives, grid bounds, and validated config defaults.
+bd create --parent athena:classic-snake-game:phase1 --title T1.1 Implement immutable Coord and Direction with opposite() and orthogonality/delta helpers --label athena:classic-snake-game:T1.1 --label athena --label autonomy:high --description Implement immutable Coord and Direction with opposite() and orthogonality/delta helpers
+
+success_check: pytest tests/test_geometry.py -q
+files: snake/geometry.py, tests/test_geometry.py
+bd create --parent athena:classic-snake-game:phase1 --title T1.2 Implement Grid with width/height, in_bounds(), and all_cells() enumeration --label athena:classic-snake-game:T1.2 --label athena --label autonomy:high --description Implement Grid with width/height, in_bounds(), and all_cells() enumeration
+
+success_check: pytest tests/test_grid.py -q
+files: snake/grid.py, tests/test_grid.py
+bd create --parent athena:classic-snake-game:phase1 --title T1.3 Implement Config defaults (20x20, length 3, heading Right, ~8 ticks/s, food value 1) with min-grid validation --label athena:classic-snake-game:T1.3 --label athena --description Implement Config defaults (20x20, length 3, heading Right, ~8 ticks/s, food value 1) with min-grid validation
+
+success_check: pytest tests/test_config.py -q
+files: snake/config.py, tests/test_config.py
+bd create --type epic --title Snake body & movement --label athena:classic-snake-game:phase2 --label athena --description Represent the snake and implement tick-based advance, tail-drop, and growth.
+bd create --parent athena:classic-snake-game:phase2 --title T2.1 Implement Snake body as an ordered deque + occupancy set with initial centered placement --label athena:classic-snake-game:T2.1 --label athena --label autonomy:high --description Implement Snake body as an ordered deque + occupancy set with initial centered placement
+
+success_check: pytest tests/test_snake_body.py::test_initial_placement -q
+files: snake/snake_body.py, tests/test_snake_body.py
+bd create --parent athena:classic-snake-game:phase2 --title T2.2 Implement advance(direction): append head, pop tail, preserve length on non-eating ticks --label athena:classic-snake-game:T2.2 --label athena --description Implement advance(direction): append head, pop tail, preserve length on non-eating ticks
+
+success_check: pytest tests/test_snake_body.py -q -k "advance or preserves or drops"
+files: snake/snake_body.py, tests/test_snake_body.py
+bd create --parent athena:classic-snake-game:phase2 --title T2.3 Implement grow(): retain tail on the next advance so length increases by one --label athena:classic-snake-game:T2.3 --label athena --description Implement grow(): retain tail on the next advance so length increases by one
+
+success_check: pytest tests/test_snake_body.py::test_grow_increases_length -q
+files: snake/snake_body.py, tests/test_snake_body.py
+bd create --type epic --title Input handling & direction control --label athena:classic-snake-game:phase3 --label athena --description Map keys to directions, reject 180° reversals against the committed heading, and buffer within a tick.
+bd create --parent athena:classic-snake-game:phase3 --title T3.1 Build the key->direction map; ignore unmapped keys and retain heading --label athena:classic-snake-game:T3.1 --label athena --label autonomy:high --description Build the key->direction map; ignore unmapped keys and retain heading
+
+success_check: pytest tests/test_input.py::test_unmapped_key_ignored -q
+files: snake/input.py, tests/test_input.py
+bd create --parent athena:classic-snake-game:phase3 --title T3.2 Apply orthogonal turns on the next tick; pressing the current direction is a no-op --label athena:classic-snake-game:T3.2 --label athena --description Apply orthogonal turns on the next tick; pressing the current direction is a no-op
+
+success_check: pytest tests/test_input.py -q -k "orthogonal_turn or same_direction_noop"
+files: snake/input.py, tests/test_input.py
+bd create --parent athena:classic-snake-game:phase3 --title T3.3 Reject the directly-opposite arrow (180 reversal) checked against the committed heading --label athena:classic-snake-game:T3.3 --label athena --description Reject the directly-opposite arrow (180 reversal) checked against the committed heading
+
+success_check: pytest tests/test_input.py::test_reverse_rejected -q
+files: snake/input.py, tests/test_input.py
+bd create --parent athena:classic-snake-game:phase3 --title T3.4 Buffer multiple inputs per tick: apply last valid, discard buffered reversals (anti two-turn exploit) --label athena:classic-snake-game:T3.4 --label athena --description Buffer multiple inputs per tick: apply last valid, discard buffered reversals (anti two-turn exploit)
+
+success_check: pytest tests/test_input.py -q -k "last_valid_input_wins or buffered_reversal_discarded or chained_turns_no_reverse"
+files: snake/input.py, tests/test_input.py
+bd create --type epic --title Food, growth & scoring --label athena:classic-snake-game:phase4 --label athena --description Spawn food on a random empty cell, maintain the single-food invariant, and score on eating.
+bd create --parent athena:classic-snake-game:phase4 --title T4.1 Implement seeded uniform food spawn over empty (non-snake) cells --label athena:classic-snake-game:T4.1 --label athena --label autonomy:high --description Implement seeded uniform food spawn over empty (non-snake) cells
+
+success_check: pytest tests/test_food.py::test_respawn_on_empty_cell -q
+files: snake/food.py, tests/test_food.py
+bd create --parent athena:classic-snake-game:phase4 --title T4.2 Enforce invariants: food never on the snake; exactly one food during active play --label athena:classic-snake-game:T4.2 --label athena --description Enforce invariants: food never on the snake; exactly one food during active play
+
+success_check: pytest tests/test_food.py::test_single_food_invariant -q
+files: snake/food.py, tests/test_food.py
+bd create --parent athena:classic-snake-game:phase4 --title T4.3 Increment score by the configured food value when the head eats food --label athena:classic-snake-game:T4.3 --label athena --description Increment score by the configured food value when the head eats food
+
+success_check: pytest tests/test_game.py -q -k "eat_increments_score or eat_grows_by_one"
+files: snake/game.py, tests/test_game.py
+bd create --type epic --title Collision, game over & win --label athena:classic-snake-game:phase5 --label athena --description Detect wall and self collisions (with correct tail ordering) and full-grid win.
+bd create --parent athena:classic-snake-game:phase5 --title T5.1 Detect wall collision when the head leaves bounds; allow the last in-bounds cell --label athena:classic-snake-game:T5.1 --label athena --description Detect wall collision when the head leaves bounds; allow the last in-bounds cell
+
+success_check: pytest tests/test_game.py -q -k "wall_collision_game_over or last_inbounds_cell_legal"
+files: snake/game.py, tests/test_game.py
+bd create --parent athena:classic-snake-game:phase5 --title T5.2 Detect self collision; treat the vacating tail cell as empty on non-growing ticks --label athena:classic-snake-game:T5.2 --label athena --description Detect self collision; treat the vacating tail cell as empty on non-growing ticks
+
+success_check: pytest tests/test_game.py -q -k "self_collision_game_over or tail_chase_legal"
+files: snake/game.py, tests/test_game.py
+bd create --parent athena:classic-snake-game:phase5 --title T5.3 Detect win when the snake fills the grid; skip food respawn and display final score --label athena:classic-snake-game:T5.3 --label athena --description Detect win when the snake fills the grid; skip food respawn and display final score
+
+success_check: pytest tests/test_game.py::test_fill_grid_wins -q
+files: snake/game.py, tests/test_game.py
+bd create --type epic --title Game state machine — init, tick, pause, freeze, restart --label athena:classic-snake-game:phase6 --label athena --description Orchestrate the engine across RUNNING/PAUSED/GAME_OVER/WON with deterministic init and restart.
+bd create --parent athena:classic-snake-game:phase6 --title T6.1 Initialize Game: snake, exactly one seeded food, score 0, heading Right, status RUNNING --label athena:classic-snake-game:T6.1 --label athena --label autonomy:high --description Initialize Game: snake, exactly one seeded food, score 0, heading Right, status RUNNING
+
+success_check: pytest tests/test_game.py -q -k "init_one_food_on_empty_cell or init_score_zero or init_heading_right"
+files: snake/game.py, tests/test_game.py
+bd create --parent athena:classic-snake-game:phase6 --title T6.2 Implement tick(): consume pending direction, advance, resolve eat/grow/respawn, continue heading with no input --label athena:classic-snake-game:T6.2 --label athena --description Implement tick(): consume pending direction, advance, resolve eat/grow/respawn, continue heading with no input
+
+success_check: pytest tests/test_game.py::test_tick_continues_same_heading -q
+files: snake/game.py, tests/test_game.py
+bd create --parent athena:classic-snake-game:phase6 --title T6.3 Implement pause toggle: halt ticks while PAUSED; directional input does not move the snake --label athena:classic-snake-game:T6.3 --label athena --description Implement pause toggle: halt ticks while PAUSED; directional input does not move the snake
+
+success_check: pytest tests/test_game.py -q -k "pause_halts_ticks or pause_toggle_resumes or input_while_paused_no_move"
+files: snake/game.py, tests/test_game.py
+bd create --parent athena:classic-snake-game:phase6 --title T6.4 Freeze after game over: ignore ticks and gameplay keys once GAME_OVER/WON --label athena:classic-snake-game:T6.4 --label athena --description Freeze after game over: ignore ticks and gameplay keys once GAME_OVER/WON
+
+success_check: pytest tests/test_game.py -q -k "frozen_after_game_over or gameplay_keys_ignored_after_over"
+files: snake/game.py, tests/test_game.py
+bd create --parent athena:classic-snake-game:phase6 --title T6.5 Implement restart: reset to initial state from game over; ignore restart during active play --label athena:classic-snake-game:T6.5 --label athena --description Implement restart: reset to initial state from game over; ignore restart during active play
+
+success_check: pytest tests/test_game.py -q -k "restart_resets_state or restart_ignored_when_running"
+files: snake/game.py, tests/test_game.py
+bd create --type epic --title Rendering, UI loop & end-to-end integration --label athena:classic-snake-game:phase7 --label athena --description Wire the engine to a keyboard-driven terminal render loop and prove the full playable loop.
+bd create --parent athena:classic-snake-game:phase7 --title T7.1 Implement a pure renderer that draws grid, snake, food, score, and game-over/win banner to a buffer --label athena:classic-snake-game:T7.1 --label athena --description Implement a pure renderer that draws grid, snake, food, score, and game-over/win banner to a buffer
+
+success_check: pytest tests/test_render.py -q -k "render_frame or game_over_shows_score"
+files: snake/render.py, tests/test_render.py
+bd create --parent athena:classic-snake-game:phase7 --title T7.2 Implement the main loop: fixed-interval ticks, non-blocking key polling, pause/restart wiring --label athena:classic-snake-game:T7.2 --label athena --description Implement the main loop: fixed-interval ticks, non-blocking key polling, pause/restart wiring
+
+success_check: python -c "import snake.main"
+files: snake/main.py
+bd create --parent athena:classic-snake-game:phase7 --title T7.3 End-to-end seeded smoke: scripted game eats, dies, shows score, and restarts cleanly --label athena:classic-snake-game:T7.3 --label athena --description End-to-end seeded smoke: scripted game eats, dies, shows score, and restarts cleanly
+
+success_check: pytest tests/test_e2e.py::test_full_game_loop -q
+files: tests/test_e2e.py
+bd create --type epic --title Verification harness & invariant fuzz --label athena:classic-snake-game:phase8 --label athena --description Lock the Success Criteria as automated checks across the whole suite.
+bd create --parent athena:classic-snake-game:phase8 --title T8.1 Add deterministic-replay test: same seed + same input script yields identical states --label athena:classic-snake-game:T8.1 --label athena --description Add deterministic-replay test: same seed + same input script yields identical states
+
+success_check: pytest tests/test_determinism.py::test_seeded_replay_identical -q
+files: tests/test_determinism.py
+bd create --parent athena:classic-snake-game:phase8 --title T8.2 Add fuzz test asserting invariants: no 180 reversal and food never on snake over random play --label athena:classic-snake-game:T8.2 --label athena --description Add fuzz test asserting invariants: no 180 reversal and food never on snake over random play
+
+success_check: pytest tests/test_fuzz.py -q -k "no_reverse or food_never_on_snake"
+files: tests/test_fuzz.py
+bd create --parent athena:classic-snake-game:phase8 --title T8.3 Full suite gate: run the entire test suite green --label athena:classic-snake-game:T8.3 --label athena --description Full suite gate: run the entire test suite green
+
+success_check: pytest -q
+files: tests/
+bd dep add athena:classic-snake-game:T1.2 --blocked-by athena:classic-snake-game:T1.1
+bd dep add athena:classic-snake-game:T1.3 --blocked-by athena:classic-snake-game:T1.2
+bd dep add athena:classic-snake-game:T2.2 --blocked-by athena:classic-snake-game:T2.1
+bd dep add athena:classic-snake-game:T2.3 --blocked-by athena:classic-snake-game:T2.2
+bd dep add athena:classic-snake-game:T3.2 --blocked-by athena:classic-snake-game:T3.1
+bd dep add athena:classic-snake-game:T3.3 --blocked-by athena:classic-snake-game:T3.2
+bd dep add athena:classic-snake-game:T3.4 --blocked-by athena:classic-snake-game:T3.3
+bd dep add athena:classic-snake-game:T4.2 --blocked-by athena:classic-snake-game:T4.1
+bd dep add athena:classic-snake-game:T4.3 --blocked-by athena:classic-snake-game:T4.2
+bd dep add athena:classic-snake-game:T5.2 --blocked-by athena:classic-snake-game:T5.1
+bd dep add athena:classic-snake-game:T5.3 --blocked-by athena:classic-snake-game:T5.2
+bd dep add athena:classic-snake-game:T6.2 --blocked-by athena:classic-snake-game:T6.1
+bd dep add athena:classic-snake-game:T6.3 --blocked-by athena:classic-snake-game:T6.2
+bd dep add athena:classic-snake-game:T6.4 --blocked-by athena:classic-snake-game:T6.3
+bd dep add athena:classic-snake-game:T6.5 --blocked-by athena:classic-snake-game:T6.4
+bd dep add athena:classic-snake-game:T7.2 --blocked-by athena:classic-snake-game:T7.1
+bd dep add athena:classic-snake-game:T7.3 --blocked-by athena:classic-snake-game:T7.2
+bd dep add athena:classic-snake-game:T8.2 --blocked-by athena:classic-snake-game:T8.1
+bd dep add athena:classic-snake-game:T8.3 --blocked-by athena:classic-snake-game:T8.2
+bd dep add athena:classic-snake-game:phase2 --blocked-by athena:classic-snake-game:phase1
+bd dep add athena:classic-snake-game:phase3 --blocked-by athena:classic-snake-game:phase1
+bd dep add athena:classic-snake-game:phase4 --blocked-by athena:classic-snake-game:phase2
+bd dep add athena:classic-snake-game:phase5 --blocked-by athena:classic-snake-game:phase2
+bd dep add athena:classic-snake-game:phase6 --blocked-by athena:classic-snake-game:phase3
+bd dep add athena:classic-snake-game:phase7 --blocked-by athena:classic-snake-game:phase6
+bd dep add athena:classic-snake-game:phase8 --blocked-by athena:classic-snake-game:phase7
