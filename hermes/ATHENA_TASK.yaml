@@ -8,8 +8,8 @@ classification:
   tier: T2                       # writes code for one task; external gate decides done
   risk: MEDIUM
   autonomy: human-in-loop
-dispatcher: claurst              # operator-chosen executor. NOTE: needs a reachable LLM backend.
-claurst_timeout_s: 600
+dispatcher: cluster              # lord pool (ClusterClient.complete) — Hermes's working, whitelisted LLM path
+cluster_timeout_s: 600
 inputs:
   title:
     description: "What to implement (exactly one Athena task)"
@@ -27,26 +27,31 @@ inputs:
     description: "Source Athena phase key (provenance)"
     env: CEX_HERMES_INPUT_phase
     default: ""
+  model:
+    description: "Lord-pool tier. tier:t2 = active 14B workhorse (:8036). NOT tier:t3 (35B disabled)."
+    env: CEX_HERMES_MODEL
+    default: "tier:t2"
 brief: |
   Implement EXACTLY this task and nothing else:
   ${CEX_HERMES_INPUT_title}
   Files you may touch: ${CEX_HERMES_INPUT_files}
   Done means this command exits 0: ${CEX_HERMES_INPUT_success_check}
-  Do not expand scope. New out-of-scope findings: note them, do NOT implement.
+  Output a unified diff for the change. Do not expand scope; new findings -> note, do not implement.
 outputs:
   artifact_pattern: apps/hermes/data/cluster_runs.jsonl
 quality_gates:
   - athena_task_success_check    # EXTERNAL gate: run inputs.success_check; exit 0 = pass (authoritative)
 acceptance:
-  success_check_exit_zero: true  # claurst self-report does NOT count; the gate decides
+  cluster_routed: true
+  success_check_exit_zero: true  # lord-pool self-report does NOT count; the gate decides
 escalation:
   on_failure: notify_operator
   on_critical: spawn_opus
 metadata:
   rationale: |
-    Per-task executor for Athena master-plans (emitted by ATHENA_PLAN; each task binds
-    workflow: ATHENA_TASK). Executor = claurst (operator choice 2026-06-09). The
-    success_check is the authoritative external gate — claurst self-report never closes a task.
-  backend_note: "claurst binary healthy 2026-06-09 (v0.0.9); LLM backend lmstudio:9710 was DOWN — confirm a reachable provider before a live code-step."
-  emoji: "tool"
+    Per-task executor for Athena master-plans (each plan task binds workflow: ATHENA_TASK).
+    Executor = cluster lord pool (operator choice 2026-06-09). claurst deprecated + its LLM
+    path is WFP-blocked from non-whitelisted procs; cluster is Hermes's working path.
+    model=tier:t2 -> active 14B workhorse (:8036). T3/35B (:8035) is disabled — do NOT route there.
+    success_check is the authoritative external gate (lord-pool self-report never closes a task).
   added: 2026-06-09
