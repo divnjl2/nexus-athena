@@ -37,20 +37,28 @@ RESULTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
 
 def _json_block(text: str):
-    """Extract a JSON array/object from a model reply via balanced-bracket scanning.
+    """Extract a JSON array/object from a (reasoning-model) reply via balanced scanning.
 
-    Greedy regex (first '[' .. last ']') breaks when the reply contains an inline
-    example before the real answer. Instead, scan each '['/'{' start and return the
-    LAST top-level structure that parses (the real answer follows any examples/prose).
+    Two traps this avoids:
+      * greedy regex (first '[' .. last ']') concatenates an inline example with the answer;
+      * counting every '{' as a candidate — the objects NESTED inside the answer array are
+        also "parseable", and a naive "return last" picks the trailing inner {R6} instead
+        of the whole array (the bug that made recall look like 0%).
+    So: collect only TOP-LEVEL structures (skip past each captured span so its nested
+    brackets aren't re-scanned), then return the LARGEST that parses — the answer array
+    dwarfs any stray object in the reasoning prose.
     """
     text = re.sub(r"```(?:json)?|```", "", text)
     candidates = []
-    for i, ch in enumerate(text):
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
         if ch not in "[{":
+            i += 1
             continue
         close = "]" if ch == "[" else "}"
-        depth, in_str, esc = 0, False, False
-        for j in range(i, len(text)):
+        depth, in_str, esc, end = 0, False, False, None
+        for j in range(i, n):
             c = text[j]
             if in_str:
                 if esc:
@@ -67,10 +75,14 @@ def _json_block(text: str):
             elif c in "]}":
                 depth -= 1
                 if depth == 0:
-                    if c == close:
-                        candidates.append(text[i:j + 1])
+                    end = j
                     break
-    for cand in reversed(candidates):
+        if end is not None and text[end] == close:
+            candidates.append(text[i:end + 1])
+            i = end + 1          # top-level only: don't re-scan nested brackets
+        else:
+            i += 1
+    for cand in sorted(candidates, key=len, reverse=True):
         try:
             return json.loads(cand)
         except json.JSONDecodeError:
@@ -123,7 +135,7 @@ def hop_spec(intent: str) -> tuple[list[dict], float]:
     p = (f"You are a spec author. From this intent, list the distinct functional "
          f"requirements (what + why, no implementation). Intent:\n\n{intent}\n\n"
          f'Output ONLY a JSON array: [{{"id":"R1","text":"..."}}, ...]. No prose, no fences.')
-    out, dt = chat(p, lane="planner", max_tokens=3000)
+    out, dt = chat(p, lane="planner", max_tokens=9000)
     return _json_block(out), dt
 
 
@@ -132,7 +144,7 @@ def hop_scenarios(reqs: list[dict]) -> tuple[list[dict], float]:
          "verifies it. Requirements:\n" + json.dumps(reqs) + "\n\n"
          'Output ONLY a JSON array: [{"id":"S1","requirement_key":"R1",'
          '"gwt":"Given...When...Then...","run_cmd":"<pytest cmd>"}]. No prose, no fences.')
-    out, dt = chat(p, lane="planner", max_tokens=3500)
+    out, dt = chat(p, lane="planner", max_tokens=9000)
     return _json_block(out), dt
 
 
@@ -141,7 +153,7 @@ def hop_tasks(reqs: list[dict], scens: list[dict]) -> tuple[list[dict], float]:
          "Requirements:\n" + json.dumps(reqs) + "\nScenarios:\n" + json.dumps(scens) + "\n\n"
          'Output ONLY a JSON array: [{"id":"T1","title":"...",'
          '"verifies":["S1"],"success_check":"<cmd>"}]. No prose, no fences.')
-    out, dt = chat(p, lane="planner", max_tokens=3500)
+    out, dt = chat(p, lane="planner", max_tokens=9000)
     return _json_block(out), dt
 
 
@@ -222,7 +234,7 @@ def execute_ralph(task_dir: str, intent: str, scens: list[dict], gate_test: str,
              f"Reply with ONLY the complete Python file contents (a function "
              f"eval_rpn(expr: str) -> float). No prose.")
         try:
-            out, dt = chat(p, lane="worker", max_tokens=4096)
+            out, dt = chat(p, lane="worker", max_tokens=8000)
         except LLMError as e:
             log.append(f"iter{it}: LLM error {e}")
             continue

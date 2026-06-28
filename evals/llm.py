@@ -19,37 +19,52 @@ class LLMError(RuntimeError):
     pass
 
 
-def chat(prompt: str, *, lane: str = "planner", max_tokens: int = 4096,
+MAX_TOKENS_CEILING = 16000   # reasoning headroom; lanes serve ~30k+ ctx
+
+
+def _one_call(host, port, model, messages, max_tokens, temperature, timeout):
+    body = json.dumps({"model": model, "messages": messages,
+                       "max_tokens": max_tokens, "temperature": temperature}).encode()
+    req = urllib.request.Request(
+        f"http://{host}:{port}/v1/chat/completions", data=body,
+        headers={"Content-Type": "application/json"})
+    resp = json.load(urllib.request.urlopen(req, timeout=timeout))
+    ch = resp["choices"][0]
+    return ch.get("finish_reason"), (ch.get("message") or {}).get("content")
+
+
+def chat(prompt: str, *, lane: str = "planner", max_tokens: int = 6000,
          temperature: float = 0.0, timeout: int = 600,
          system: str | None = None) -> tuple[str, float]:
-    """Return (content, elapsed_seconds). Raises LLMError on transport/empty/truncated."""
+    """Return (content, elapsed_seconds). Auto-escalates max_tokens on reasoning truncation.
+
+    A reasoning model that hits the cap (finish_reason=length) NEVER emitted its final
+    answer — the <analysis> prose fills `content` and treating it as the answer scrapes
+    garbage. So on truncation we DOUBLE the budget and retry (up to MAX_TOKENS_CEILING)
+    rather than cap the reasoning. Raises LLMError only if even the ceiling truncates.
+    """
     host, port, model = LANES[lane]
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    body = json.dumps({
-        "model": model, "messages": messages,
-        "max_tokens": max_tokens, "temperature": temperature,
-    }).encode()
-    req = urllib.request.Request(
-        f"http://{host}:{port}/v1/chat/completions", data=body,
-        headers={"Content-Type": "application/json"})
     t0 = time.time()
-    try:
-        resp = json.load(urllib.request.urlopen(req, timeout=timeout))
-    except Exception as e:  # noqa: BLE001 — surface any transport/HTTP error to caller
-        raise LLMError(f"{lane} call failed: {e}") from e
-    ch = resp["choices"][0]
-    content = (ch.get("message") or {}).get("content")
-    if not content:
-        fr = ch.get("finish_reason")
+    budget = max_tokens
+    while True:
+        try:
+            fr, content = _one_call(host, port, model, messages, budget, temperature, timeout)
+        except Exception as e:  # noqa: BLE001 — surface any transport/HTTP error
+            raise LLMError(f"{lane} call failed: {e}") from e
         if fr == "length":
-            raise LLMError(
-                f"{lane} ran out of tokens during reasoning (max_tokens={max_tokens}); "
-                "raise max_tokens — do not cap the reasoning model")
-        raise LLMError(f"{lane} returned empty content (finish_reason={fr})")
-    return content.strip(), time.time() - t0
+            if budget >= MAX_TOKENS_CEILING:
+                raise LLMError(
+                    f"{lane} still truncated at ceiling {budget} — reasoning never "
+                    f"reached a final answer")
+            budget = min(budget * 2, MAX_TOKENS_CEILING)
+            continue
+        if not content:
+            raise LLMError(f"{lane} returned empty content (finish_reason={fr})")
+        return content.strip(), time.time() - t0
 
 
 if __name__ == "__main__":
