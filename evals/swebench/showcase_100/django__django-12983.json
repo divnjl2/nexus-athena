@@ -1,0 +1,141 @@
+{
+ "instance_id": "django__django-12983",
+ "n_edge_cases": 20,
+ "n_scenarios": 17,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_slugify (utils_tests.test_text.TestUtilsText)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/utils/text.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "unescape_string_literal"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/utils/text.py"
+  ],
+  "matched": [
+   "text.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Issue example — combined leading underscores + trailing dashes: slugify('___This is a test ---') == 'this-is-a-test' (underscore is \\w so it survives the [-\\s]+ collapse; only the final strip removes it)",
+   "Leading underscores only: slugify('___This is a test') == 'this-is-a-test'",
+   "Trailing dashes only: slugify('This is a test ---') == 'this-is-a-test'",
+   "Mixed run of dashes AND underscores at both ends stripped: slugify('-_-foo-_-') == 'foo'; slugify('_-_foo') == 'foo'; slugify('foo_-_') == 'foo'",
+   "CONTESTED DESIGN DECISION (per maintainer hint): internal underscores are PRESERVED, not converted to dashes — slugify('hello_world') == 'hello_world', NOT 'hello-world'",
+   "Internal consecutive underscores preserved verbatim, not collapsed (they are \\w, not in [-\\s]): slugify('a___b') == 'a___b'",
+   "All-strippable input collapses to empty string: slugify('___') == '' and slugify('---') == '' and slugify('-_-') == ''",
+   "Empty input returns empty: slugify('') == ''",
+   "Whitespace-only input returns empty with no leftover dash artifact: slugify('   ') == ''",
+   "Leading/trailing ASCII whitespace still removed even though explicit str.strip() is replaced by trailing .strip('-_'): slugify('  hello  ') == 'hello'",
+   "Tab/newline counted as whitespace: slugify('\\tfoo\\n') == 'foo'",
+   "Regression — already-clean input unchanged: slugify('Hello World') == 'hello-world'",
+   "Regression — internal whitespace/dash runs still collapse to one dash: slugify('foo   ---   bar') == 'foo-bar'",
+   "Regression — non-word chars removed + NFKD ASCII fold under default allow_unicode=False: slugify(\"C'est déjà\") == 'cest-deja' (apostrophe dropped)",
+   "allow_unicode=True preserves unicode letters AND strips ends: slugify('___Düsseldorf---', allow_unicode=True) == 'düsseldorf'",
+   "Digits and underscores are word chars and preserved: slugify('123_456') == '123_456'",
+   "Only ASCII hyphen-minus '-' and underscore '_' are stripped — unicode dash variants (em-dash U+2014) are removed by [^\\w\\s-] under default and never reach the strip, so not treated as strippable edge chars",
+   "Idempotency invariant: slugify(slugify(x)) == slugify(x) for all x (output carries no leading/trailing '-' or '_')",
+   "Non-string input still coerced via str() first: slugify(123) == '123' (behavior unaffected)",
+   "Order of operations matters: lowercasing/normalization/collapse happen first, .strip('-_') is applied LAST to the collapsed result — a leading '___' that survives collapse is removed only at this final step"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Leading underscores stripped: slugify('___This is a test') == 'this-is-a-test'"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Trailing dashes stripped: slugify('This is a test ---') == 'this-is-a-test'"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Issue example: combined leading underscores + trailing dashes -> slugify('___This is a test ---') == 'this-is-a-test'"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Mixed dash+underscore runs stripped from both ends: slugify('-_-foo-_-') == 'foo'"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Design decision: internal underscore PRESERVED not converted to dash -> slugify('hello_world') == 'hello_world'"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Internal consecutive underscores preserved verbatim: slugify('a___b') == 'a___b'"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Digits + underscores preserved as word chars: slugify('123_456') == '123_456'"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Regression: already-clean input unchanged: slugify('Hello World') == 'hello-world'"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Regression: internal whitespace/dash runs collapse to single dash: slugify('foo   ---   bar') == 'foo-bar'"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Regression: non-word chars removed + NFKD ASCII fold (default): slugify(\"C'est déjà\") == 'cest-deja'"
+   },
+   {
+    "id": "S3.4",
+    "covers": "Leading/trailing whitespace removed despite explicit str.strip() being dropped: slugify('  hello  ') == 'hello'"
+   },
+   {
+    "id": "S4.1",
+    "covers": "All-strippable input yields empty string: slugify('___') == '' and slugify('---') == ''"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Empty input yields empty string: slugify('') == ''"
+   },
+   {
+    "id": "S4.3",
+    "covers": "Whitespace-only input yields empty string with no dash artifact: slugify('   ') == ''"
+   },
+   {
+    "id": "S5.1",
+    "covers": "allow_unicode=True strips ends while preserving unicode letters: slugify('___Düsseldorf---', allow_unicode=True) == 'düsseldorf'"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Only ASCII '-'/'_' stripped; unicode em-dash removed not stripped under default allow_unicode=False"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Idempotency invariant: slugify(slugify(x)) == slugify(x)"
+   }
+  ],
+  "plan_files": [
+   "text.py",
+   "test_text.py",
+   "utils.txt",
+   "3.0.txt"
+  ]
+ },
+ "raw_tail": "sion: already-clean input unchanged: slugify('Hello World') == 'hello-world'\"},{\"id\":\"S3.2\",\"covers\":\"Regression: internal whitespace/dash runs collapse to single dash: slugify('foo   ---   bar') == 'foo-bar'\"},{\"id\":\"S3.3\",\"covers\":\"Regression: non-word chars removed + NFKD ASCII fold (default): slugify(\\\"C'est déjà\\\") == 'cest-deja'\"},{\"id\":\"S3.4\",\"covers\":\"Leading/trailing whitespace removed despite explicit str.strip() being dropped: slugify('  hello  ') == 'hello'\"},{\"id\":\"S4.1\",\"covers\":\"All-strippable input yields empty string: slugify('___') == '' and slugify('---') == ''\"},{\"id\":\"S4.2\",\"covers\":\"Empty input yields empty string: slugify('') == ''\"},{\"id\":\"S4.3\",\"covers\":\"Whitespace-only input yields empty string with no dash artifact: slugify('   ') == ''\"},{\"id\":\"S5.1\",\"covers\":\"allow_unicode=True strips ends while preserving unicode letters: slugify('___Düsseldorf---', allow_unicode=True) == 'düsseldorf'\"},{\"id\":\"S5.2\",\"covers\":\"Only ASCII '-'/'_' stripped; unicode em-dash removed not stripped under default allow_unicode=False\"},{\"id\":\"S6.1\",\"covers\":\"Idempotency invariant: slugify(slugify(x)) == slugify(x)\"}],\"plan_files\":[\"text.py\",\"test_text.py\",\"utils.txt\",\"3.0.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_slugify",
+    "covered": true,
+    "why": "The plan comprehensively covers all behaviors test_slugify would verify: (1) Issue example '___This is a test ---' -> 'this-is-a-test' (S1.3, edge case), (2) Leading underscores stripped (S1.1), (3) Trailing dashes stripped (S1.2), (4) Mixed dash+underscore runs stripped (S1.4), (5) Internal underscores preserved per design decision (S2.1), (6) Regression tests for existing behavior (S3.1-S3.4), (7) Edge cases like empty/all-strippable input (S4.1-S4.3), (8) Unicode handling (S5.1-S5.2), (9) Idempotency invariant (S6.1). All edge cases also explicitly cover these scenarios."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,153 @@
+{
+ "instance_id": "django__django-13230",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_rss2_feed (syndication_tests.tests.SyndicationFeedTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/syndication/views.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "get_feed"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/syndication/views.py"
+  ],
+  "matched": [
+   "views.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "comments=None passed to add_item()",
+   "comments='' (empty string) passed to add_item()",
+   "comments with only whitespace",
+   "comments with None values in a list",
+   "comments with empty list []",
+   "comments exceeding RSS/Atom spec length limits",
+   "comments with special RSS/Atom reserved characters (<>&\"')",
+   "comments with HTML/script tags (XSS vectors)",
+   "comments with unicode/non-UTF8 characters",
+   "comments with newlines and line breaks",
+   "comments with HTML entities (&amp; &lt; &gt;)",
+   "comments as list vs single string",
+   "comments=None vs comments not provided at all",
+   "comments with very long strings (memory/performance)",
+   "comments with None mixed with valid values in list",
+   "comments with special characters that need escaping",
+   "comments with None as dict value in item_extra_kwargs",
+   "comments with empty dict {}",
+   "comments with None in nested structures",
+   "comments with unicode surrogate pairs"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "feed.add_item() accepts comments argument directly without item_extra_kwargs"
+   },
+   {
+    "id": "S1.2",
+    "covers": "comments argument is passed through to feed item correctly"
+   },
+   {
+    "id": "S1.3",
+    "covers": "backward compatibility: item_extra_kwargs still works for comments"
+   },
+   {
+    "id": "S1.4",
+    "covers": "comments=None is handled gracefully (no error, omitted from output)"
+   },
+   {
+    "id": "S1.5",
+    "covers": "comments='' (empty string) is handled (either included or omitted consistently)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "comments with special characters are properly escaped in RSS/Atom output"
+   },
+   {
+    "id": "S1.7",
+    "covers": "comments with HTML/script tags are escaped to prevent XSS"
+   },
+   {
+    "id": "S1.8",
+    "covers": "comments with unicode characters are encoded correctly"
+   },
+   {
+    "id": "S1.9",
+    "covers": "comments with newlines are preserved or handled appropriately"
+   },
+   {
+    "id": "S1.10",
+    "covers": "comments as list are handled (first item used or all included per spec)"
+   },
+   {
+    "id": "S1.11",
+    "covers": "comments exceeding length limits are truncated or rejected gracefully"
+   },
+   {
+    "id": "S1.12",
+    "covers": "comments argument takes precedence over item_extra_kwargs['comments']"
+   },
+   {
+    "id": "S1.13",
+    "covers": "feedparser comments field is populated from add_item() comments argument"
+   },
+   {
+    "id": "S1.14",
+    "covers": "comments with None values in list are filtered or handled"
+   },
+   {
+    "id": "S1.15",
+    "covers": "comments with empty list [] results in no comments in output"
+   },
+   {
+    "id": "S1.16",
+    "covers": "comments with whitespace only are handled consistently"
+   },
+   {
+    "id": "S1.17",
+    "covers": "comments with HTML entities are preserved or decoded appropriately"
+   },
+   {
+    "id": "S1.18",
+    "covers": "comments with very long strings do not cause memory/performance issues"
+   },
+   {
+    "id": "S1.19",
+    "covers": "comments with special RSS/Atom reserved characters are escaped"
+   },
+   {
+    "id": "S1.20",
+    "covers": "comments=None vs comments not provided produce same result"
+   }
+  ],
+  "plan_files": [
+   "syndication/views.py",
+   "syndication/feeds.py",
+   "syndication/__init__.py"
+  ]
+ },
+ "raw_tail": ",\n{\"id\":\"S1.9\",\"covers\":\"comments with newlines are preserved or handled appropriately\"},\n{\"id\":\"S1.10\",\"covers\":\"comments as list are handled (first item used or all included per spec)\"},\n{\"id\":\"S1.11\",\"covers\":\"comments exceeding length limits are truncated or rejected gracefully\"},\n{\"id\":\"S1.12\",\"covers\":\"comments argument takes precedence over item_extra_kwargs['comments']\"},\n{\"id\":\"S1.13\",\"covers\":\"feedparser comments field is populated from add_item() comments argument\"},\n{\"id\":\"S1.14\",\"covers\":\"comments with None values in list are filtered or handled\"},\n{\"id\":\"S1.15\",\"covers\":\"comments with empty list [] results in no comments in output\"},\n{\"id\":\"S1.16\",\"covers\":\"comments with whitespace only are handled consistently\"},\n{\"id\":\"S1.17\",\"covers\":\"comments with HTML entities are preserved or decoded appropriately\"},\n{\"id\":\"S1.18\",\"covers\":\"comments with very long strings do not cause memory/performance issues\"},\n{\"id\":\"S1.19\",\"covers\":\"comments with special RSS/Atom reserved characters are escaped\"},\n{\"id\":\"S1.20\",\"covers\":\"comments=None vs comments not provided produce same result\"}\n],\n\"plan_files\":[\n\"syndication/views.py\",\n\"syndication/feeds.py\",\n\"syndication/__init__.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_rss2_feed",
+    "covered": true,
+    "why": "S1.1 covers the main requirement of accepting comments argument directly in add_item(), S1.2 ensures comments are passed through correctly to feed items, and S1.13 addresses the feedparser comments field population. The test verifies RSS 2.0 feed generation with comments, which is directly addressed by these scenarios."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

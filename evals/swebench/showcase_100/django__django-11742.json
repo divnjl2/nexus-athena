@@ -1,0 +1,134 @@
+{
+ "instance_id": "django__django-11742",
+ "n_edge_cases": 16,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_choices_in_max_length (invalid_models_tests.test_ordinary_fields.CharFieldTests)",
+  "test_choices_named_group (invalid_models_tests.test_ordinary_fields.CharFieldTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "is_value"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Longest choice value's length strictly exceeds max_length → must emit a check error (fields.E009)",
+   "Choice value length exactly equals max_length → inclusive boundary, no error",
+   "Only the stored value (first element of each 2-tuple) is measured; the human-readable label (second element) is ignored even when far longer than max_length",
+   "Grouped/optgroup choices: the check must descend into nested option lists and measure inner option values, not the group/category name",
+   "A group/category name longer than max_length while all inner option values fit → no error",
+   "max_length is None (TextField, IntegerField, etc.) → skip the check entirely, never emit E009",
+   "No choices declared (choices None/empty, or empty after normalization) → skip the check, no error and no crash",
+   "Non-string choice values (ints, Decimals, enum members) → cast via str() before measuring length to avoid TypeError on len()",
+   "Multiple values exceed max_length → emit a single E009 that reports the longest value's length, not one error per offending choice",
+   "Unicode/multibyte values measured by Python string length (code points), consistent with CharField max_length semantics — not byte length",
+   "Empty-string ('') or zero-length values always fit any positive max_length → no error",
+   "Malformed choices structure must not crash the new check; structural validity stays owned by fields.E004/E005 and the max_length check is guarded/skipped when choices are invalid",
+   "Invalid/non-positive/non-int max_length must not raise inside the check (no traceback); coordinate with the existing positive-integer check (fields.E121) to avoid spurious or duplicate errors",
+   "Error message includes the offending length (e.g. '(31 characters)') so the user learns the minimum max_length needed; attached with obj=field and id='fields.E009'",
+   "Lazy/translatable values (gettext_lazy promises) used as stored values are resolved via str() before measuring",
+   "Check surfaces through manage.py check and the makemigrations/migrate check path (lives on Field.check()), and applies to all max_length-bearing subclasses (CharField, SlugField, FilePathField, etc.)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "A choice value longer than max_length raises exactly one fields.E009 error"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Several values exceed max_length → single E009 reporting the longest value's length, not one per choice"
+   },
+   {
+    "id": "S2.1",
+    "covers": "All choice values shorter than max_length → no E009 error"
+   },
+   {
+    "id": "S3.1",
+    "covers": "A value whose length exactly equals max_length is accepted (inclusive boundary, no error)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Long human-readable label with a short stored value → no error (label is ignored, only value measured)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Grouped/optgroup choices: an inner option value longer than max_length raises E009 (check descends into groups)"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Grouped choices where the group name exceeds max_length but all inner values fit → no error (group name ignored)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Field with no max_length (TextField/IntegerField) and long choices → check skipped, no E009"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Field with choices None/empty → check skipped, no error and no crash"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Non-string choice values (e.g. ints/Decimals) measured via str(); overflow still raises E009 without TypeError"
+   },
+   {
+    "id": "S8.1",
+    "covers": "E009 message includes the longest value's character count and binds obj=field, id='fields.E009'"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Malformed/invalid choices structure does not crash the max_length check; E004/E005 still own structure, no spurious E009 traceback"
+   },
+   {
+    "id": "S10.2",
+    "covers": "Invalid/non-positive/non-int max_length does not raise inside the check; coordinates with E121, no duplicate/spurious error"
+   },
+   {
+    "id": "S11.1",
+    "covers": "Unicode/multibyte value counted by code points; len==max_length fits → no error (byte length not used)"
+   },
+   {
+    "id": "S12.1",
+    "covers": "Empty-string choice value with positive max_length → no error"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "tests/invalid_models_tests/test_ordinary_fields.py",
+   "docs/ref/checks.txt"
+  ]
+ },
+ "raw_tail": " exceeds max_length but all inner values fit → no error (group name ignored)\"},{\"id\":\"S6.1\",\"covers\":\"Field with no max_length (TextField/IntegerField) and long choices → check skipped, no E009\"},{\"id\":\"S6.2\",\"covers\":\"Field with choices None/empty → check skipped, no error and no crash\"},{\"id\":\"S7.1\",\"covers\":\"Non-string choice values (e.g. ints/Decimals) measured via str(); overflow still raises E009 without TypeError\"},{\"id\":\"S8.1\",\"covers\":\"E009 message includes the longest value's character count and binds obj=field, id='fields.E009'\"},{\"id\":\"S10.1\",\"covers\":\"Malformed/invalid choices structure does not crash the max_length check; E004/E005 still own structure, no spurious E009 traceback\"},{\"id\":\"S10.2\",\"covers\":\"Invalid/non-positive/non-int max_length does not raise inside the check; coordinates with E121, no duplicate/spurious error\"},{\"id\":\"S11.1\",\"covers\":\"Unicode/multibyte value counted by code points; len==max_length fits → no error (byte length not used)\"},{\"id\":\"S12.1\",\"covers\":\"Empty-string choice value with positive max_length → no error\"}],\"plan_files\":[\"django/db/models/fields/__init__.py\",\"tests/invalid_models_tests/test_ordinary_fields.py\",\"docs/ref/checks.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_choices_in_max_length",
+    "covered": true,
+    "why": "S1.1 covers choice values longer than max_length raising E009; S2.1 covers values within max_length producing no error; S3.1 covers exact boundary case; edge cases explicitly state longest value exceeding max_length must emit E009 and exact equality is inclusive"
+   },
+   {
+    "test": "test_choices_named_group",
+    "covered": true,
+    "why": "S5.1 covers grouped choices where inner option values longer than max_length raise E009; S5.2 covers group names exceeding max_length while inner values fit producing no error; edge cases explicitly state check descends into nested option lists and ignores group/category names"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

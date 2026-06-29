@@ -1,0 +1,108 @@
+{
+ "instance_id": "django__django-12184",
+ "driver": "local",
+ "n_edge_cases": 15,
+ "n_scenarios": 10,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_re_path_with_missing_optional_parameter (urlpatterns.tests.SimplifiedURLTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/urls/resolvers.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "match"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/urls/resolvers.py"
+  ],
+  "matched": [
+   "resolvers.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Optional named group with nested parentheses not matched (URL /module/)",
+   "Optional named group with nested parentheses matched (URL /module/html)",
+   "Optional named group without nested parentheses not matched",
+   "Optional named group without nested parentheses matched",
+   "Multiple optional named groups in sequence",
+   "Optional named group followed by required path segment",
+   "Optional named group at end of pattern with trailing slash",
+   "Optional named group at end of pattern without trailing slash",
+   "View with default parameter value for optional group",
+   "View without default parameter value for optional group",
+   "Optional group matching None vs not being passed at all",
+   "Nested optional groups (optional group inside another optional group)",
+   "Optional group with empty match possibility",
+   "URL pattern with both optional named and unnamed groups",
+   "Backward compatibility with Django 2.2 behavior"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "View receives correct arguments when optional named group with nested parentheses is NOT matched"
+   },
+   {
+    "id": "S1.2",
+    "covers": "View receives correct arguments when optional named group with nested parentheses IS matched"
+   },
+   {
+    "id": "S1.3",
+    "covers": "View default parameter value is used when optional group is not matched"
+   },
+   {
+    "id": "S1.4",
+    "covers": "No TypeError when accessing URL without optional parameter"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Optional named group without nested parentheses still works correctly"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Multiple optional named groups are handled correctly"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Trailing slash handling works with optional named groups"
+   },
+   {
+    "id": "S1.8",
+    "covers": "View without default parameter receives None for unmatched optional group"
+   },
+   {
+    "id": "S1.9",
+    "covers": "URL resolver correctly identifies which groups were matched vs not matched"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Backward compatibility maintained for Django 2.2 working patterns"
+   }
+  ],
+  "plan_files": [
+   "django/urls/resolvers.py",
+   "django/urls/conf.py",
+   "django/urls/__init__.py"
+  ]
+ },
+ "raw_tail": "  },\n    {\n      \"id\": \"S1.2\",\n      \"covers\": \"View receives correct arguments when optional named group with nested parentheses IS matched\"\n    },\n    {\n      \"id\": \"S1.3\",\n      \"covers\": \"View default parameter value is used when optional group is not matched\"\n    },\n    {\n      \"id\": \"S1.4\",\n      \"covers\": \"No TypeError when accessing URL without optional parameter\"\n    },\n    {\n      \"id\": \"S1.5\",\n      \"covers\": \"Optional named group without nested parentheses still works correctly\"\n    },\n    {\n      \"id\": \"S1.6\",\n      \"covers\": \"Multiple optional named groups are handled correctly\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"Trailing slash handling works with optional named groups\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"View without default parameter receives None for unmatched optional group\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"URL resolver correctly identifies which groups were matched vs not matched\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"Backward compatibility maintained for Django 2.2 working patterns\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/urls/resolvers.py\",\n    \"django/urls/conf.py\",\n    \"django/urls/__init__.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_re_path_with_missing_optional_parameter",
+    "covered": true,
+    "why": "S1.1 explicitly covers 'optional named group with nested parentheses is NOT matched', S1.4 covers 'No TypeError when accessing URL without optional parameter', and S1.3 covers default parameter usage. The edge case 'Optional named group with nested parentheses not matched (URL /module/)' is exactly the failing scenario from the issue."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

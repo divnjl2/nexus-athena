@@ -1,0 +1,123 @@
+{
+ "instance_id": "astropy__astropy-14995",
+ "n_edge_cases": 20,
+ "n_scenarios": 13,
+ "fail_to_pass": [
+  "astropy/nddata/mixins/tests/test_ndarithmetic.py::test_nddata_bitmask_arithmetic"
+ ],
+ "gold_targets": {
+  "files": [
+   "astropy/nddata/mixins/ndarithmetic.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_arithmetic_mask"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "astropy/nddata/mixins/ndarithmetic.py"
+  ],
+  "matched": [
+   "ndarithmetic.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "self has int bitmask, operand is NDData with mask=None, handle_mask=np.bitwise_or → output should be deepcopy(self.mask), not bitwise_or(int, None) which raises the reported TypeError",
+   "self has int bitmask, operand is a scalar constant (multiply(1.)) → operand carries no mask → output should be deepcopy(self.mask), no TypeError",
+   "self.mask is None, operand has a mask → output should be deepcopy(operand.mask) (already worked in 5.3, must stay)",
+   "both operands have no mask (or both None) → output mask is None",
+   "both operands have masks → output = handle_mask(self.mask, operand.mask, **mask_kwds)",
+   "commutativity: nd_mask.multiply(nd_nomask) and nd_nomask.multiply(nd_mask) should yield the same mask (currently only one direction works)",
+   "boolean mask propagated through one-sided case should remain a numpy bool ndarray, not an object-dtype array containing None (the multiply(1.).mask → [[True,None,...]] bug)",
+   "integer/bitmask values should be preserved bit-for-bit, never coerced to boolean truthiness",
+   "handle_mask=np.bitwise_or should never receive a None operand in the one-sided case (short-circuit before invocation)",
+   "handle_mask=np.logical_or (the default) one-sided case should also return the present mask cleanly, no None entries",
+   "handle_mask=None → output mask is None regardless of operand masks (existing behavior preserved)",
+   "custom handle_mask callable with extra mask kwds should not be invoked when one operand lacks a mask",
+   "all four arithmetic ops (add, subtract, multiply, divide) and any NDArithmeticMixin caller behave identically for the one-sided mask",
+   "returned mask should be a deepcopy so mutating the result does not mutate either operand's mask (no aliasing)",
+   "operand that is an NDData with mask explicitly set to None vs attribute absent — both treated as 'no mask'",
+   "self has no mask and operand is a pure scalar → output mask None (no spurious mask)",
+   "parity with v5.2: legacy one-sided propagation semantics restored, no silent behavior change / no missing deprecation",
+   "masks of differing/broadcastable shapes: when only one mask is present its own shape is preserved untouched (no broadcast attempted against the maskless operand)",
+   "regression guard: existing both-mask and both-None tests still pass after the change",
+   "new locking test for the int-bitmask + bitwise_or one-sided case so the regression cannot silently return"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "self has int bitmask, operand has no mask, handle_mask=np.bitwise_or → output mask == deepcopy(self.mask), no TypeError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "self has int bitmask, operand is scalar constant 1.0, handle_mask=np.bitwise_or → output mask == self.mask"
+   },
+   {
+    "id": "S1.3",
+    "covers": "self has no mask, operand has mask → output mask == deepcopy(operand.mask)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "neither operand has a mask → output mask is None"
+   },
+   {
+    "id": "S1.5",
+    "covers": "both operands have int masks, handle_mask=np.bitwise_or → output mask == np.bitwise_or(self.mask, operand.mask)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "commutativity: nd_mask.multiply(nd_nomask) equals nd_nomask.multiply(nd_mask) for the resulting mask"
+   },
+   {
+    "id": "S3.1",
+    "covers": "boolean mask + maskless operand → output mask is numpy bool ndarray (dtype=bool), contains no None, not object dtype"
+   },
+   {
+    "id": "S3.2",
+    "covers": "integer bitmask preserved exactly through one-sided propagation, never coerced to bool"
+   },
+   {
+    "id": "S4.1",
+    "covers": "handle_mask is never invoked with a None argument in the one-sided case for any callable (no TypeError)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "handle_mask=None → output mask is None even when both operands have masks"
+   },
+   {
+    "id": "S5.1",
+    "covers": "add/subtract/multiply/divide all propagate a one-sided mask identically"
+   },
+   {
+    "id": "S6.1",
+    "covers": "returned mask is a deepcopy — mutating it does not alter self.mask or operand.mask"
+   },
+   {
+    "id": "S7.1",
+    "covers": "v5.2 parity: one-sided mask propagation matches legacy behavior, existing test suite still green"
+   }
+  ],
+  "plan_files": [
+   "ndarithmetic.py",
+   "test_ndarithmetic.py",
+   "nddata.py",
+   "CHANGES.rst"
+  ]
+ },
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "astropy/nddata/mixins/tests/test_ndarithmetic.py::test_nddata_bitmask_arithmetic",
+    "covered": true,
+    "why": "S1.1/S1.2/S1.5 and edge cases directly cover one-sided int-bitmask propagation with handle_mask=np.bitwise_or: existing mask deepcopied to output, no TypeError, and both-mask case uses bitwise_or — exactly what the bitmask arithmetic test asserts."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

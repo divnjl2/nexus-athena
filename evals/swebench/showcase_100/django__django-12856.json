@@ -1,0 +1,127 @@
+{
+ "instance_id": "django__django-12856",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_unique_constraint_pointing_to_m2m_field (invalid_models_tests.test_models.ConstraintsTests)",
+  "test_unique_constraint_pointing_to_missing_field (invalid_models_tests.test_models.ConstraintsTests)",
+  "test_unique_constraint_pointing_to_non_local_field (invalid_models_tests.test_models.ConstraintsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/base.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_check_constraints"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/base.py"
+  ],
+  "matched": [
+   "base.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "UniqueConstraint with a field name that doesn't exist on the model",
+   "UniqueConstraint with multiple non-existent field names",
+   "UniqueConstraint with empty fields list (no fields specified)",
+   "UniqueConstraint with None as a field name",
+   "UniqueConstraint with duplicate field names in the same constraint",
+   "UniqueConstraint with a field that exists only on a parent model (inherited)",
+   "UniqueConstraint with a field from a related model (not on this model)",
+   "UniqueConstraint with field name as string vs Field object reference",
+   "UniqueConstraint with case mismatch in field name (case-sensitive)",
+   "UniqueConstraint defined in parent class referencing child's non-existent field",
+   "CheckConstraint with non-existent field (mentioned as potential same bug)",
+   "UniqueConstraint with field that will be added later in model definition",
+   "UniqueConstraint with field name that conflicts with reserved names",
+   "Multiple UniqueConstraints where some have invalid fields and some valid"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "UniqueConstraint with valid existing fields passes system checks without error"
+   },
+   {
+    "id": "S1.2",
+    "covers": "UniqueConstraint with one non-existent field raises models.E012 error"
+   },
+   {
+    "id": "S1.3",
+    "covers": "UniqueConstraint with multiple non-existent fields raises models.E012 with all invalid field names listed"
+   },
+   {
+    "id": "S1.4",
+    "covers": "UniqueConstraint with empty fields list passes without error (valid no-op constraint)"
+   },
+   {
+    "id": "S1.5",
+    "covers": "UniqueConstraint with duplicate field names passes (redundant but valid)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "UniqueConstraint with field from parent model passes (field exists on model via inheritance)"
+   },
+   {
+    "id": "S1.7",
+    "covers": "UniqueConstraint with field from related model raises models.E012"
+   },
+   {
+    "id": "S1.8",
+    "covers": "unique_together with non-existent field raises models.E012 (existing behavior preserved)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "CheckConstraint with non-existent field raises models.E012 (same fix applied)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Error message format matches unique_together's E012 format for consistency"
+   },
+   {
+    "id": "S1.11",
+    "covers": "System check runs during makemigrations and catches invalid UniqueConstraint"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Multiple UniqueConstraints on same model - only invalid ones raise errors"
+   }
+  ],
+  "plan_files": [
+   "constraints.py",
+   "models.py",
+   "base.py"
+  ]
+ },
+ "raw_tail": "nt with empty fields list passes without error (valid no-op constraint)\"\n    },\n    {\n      \"id\": \"S1.5\",\n      \"covers\": \"UniqueConstraint with duplicate field names passes (redundant but valid)\"\n    },\n    {\n      \"id\": \"S1.6\",\n      \"covers\": \"UniqueConstraint with field from parent model passes (field exists on model via inheritance)\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"UniqueConstraint with field from related model raises models.E012\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"unique_together with non-existent field raises models.E012 (existing behavior preserved)\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"CheckConstraint with non-existent field raises models.E012 (same fix applied)\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"Error message format matches unique_together's E012 format for consistency\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"System check runs during makemigrations and catches invalid UniqueConstraint\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Multiple UniqueConstraints on same model - only invalid ones raise errors\"\n    }\n  ],\n  \"plan_files\": [\n    \"constraints.py\",\n    \"models.py\",\n    \"base.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_unique_constraint_pointing_to_m2m_field",
+    "covered": false,
+    "why": "Plan covers non-existent fields (S1.2) and related model fields (S1.7), but M2M fields are a distinct case - they exist on the model but shouldn't be used in UniqueConstraints. No scenario explicitly addresses M2M field validation."
+   },
+   {
+    "test": "test_unique_constraint_pointing_to_missing_field",
+    "covered": true,
+    "why": "S1.2 directly covers 'UniqueConstraint with one non-existent field raises models.E012 error'. Edge case 'UniqueConstraint with a field name that doesn't exist on the model' also covers this."
+   },
+   {
+    "test": "test_unique_constraint_pointing_to_non_local_field",
+    "covered": true,
+    "why": "S1.7 covers 'UniqueConstraint with field from related model raises models.E012'. Edge case 'UniqueConstraint with a field from a related model (not on this model)' also addresses non-local fields."
+   }
+  ],
+  "covered": 2,
+  "total": 3,
+  "ratio": 0.6666666666666666
+ }
+}

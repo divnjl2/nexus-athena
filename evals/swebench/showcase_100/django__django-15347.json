@@ -1,0 +1,136 @@
+{
+ "instance_id": "django__django-15347",
+ "n_edge_cases": 16,
+ "n_scenarios": 17,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "A message's extra_tags attribute is correctly preserved when retrieved"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/messages/storage/cookie.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "default"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/messages/storage/cookie.py"
+  ],
+  "matched": [
+   "cookie.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "extra_tags=='' must round-trip to '' (the core bug: '' currently decodes to None)",
+   "extra_tags is None must stay None after round-trip — fix must not coerce None into '' (no over-correction)",
+   "non-empty extra_tags (e.g. 'tag1 tag2') must remain unchanged — happy path must not regress",
+   "whitespace-only extra_tags (' ') is truthy and already worked; must continue to round-trip exactly",
+   "Unicode / multi-byte extra_tags must survive JSON encode/decode unchanged",
+   "empty message body '' alongside extra_tags=='' — both empty strings must be preserved (message field is unconditional, but assert it)",
+   "compact-encoding invariant: when extra_tags is None the encoder must still OMIT it (legacy 4-element list), only appending when it is not None — fix must keep payload compact for None",
+   "encoded payload length: '' → 5-element list (extra_tags present); None → 4-element list (absent)",
+   "legacy/old payloads written by the buggy (pre-fix) encoder are 4-element with no extra_tags; decoder must still decode them to extra_tags=None without raising (backward compatibility for cookies/sessions in flight)",
+   "all three built-in backends share MessageEncoder/MessageDecoder (cookie.py): cookie, session, fallback must each preserve '' end-to-end",
+   "standard API defaults extra_tags='' (messages.debug/info/success/warning/error) — a message added via these and serialized across a redirect must keep ''",
+   "SafeData message (mark_safe) combined with extra_tags=='' — the is_safedata flag AND the '' must both be preserved",
+   "a list of multiple messages, each with extra_tags=='', must all round-trip to '' (decoder recursion over message lists)",
+   "downstream membership tests like `{% if x not in message.extra_tags %}` must not raise TypeError after deserialization — value is '' (a string), never None",
+   "level and message fields are unaffected by the extra_tags fix and must remain intact",
+   "idempotency: encode→decode→encode must be stable for '', None, and non-empty extra_tags"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Message(extra_tags='') encoded then decoded yields extra_tags=='' (not None)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Message added via standard API (default extra_tags='') preserves '' after a serialize/deserialize redirect cycle"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Message(extra_tags=None) round-trips to None — no regression, None not coerced to ''"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Message(extra_tags='tag1 tag2') round-trips with extra_tags unchanged"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Whitespace-only extra_tags ' ' round-trips exactly (truthy path unaffected)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Unicode extra_tags round-trips byte-for-byte"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Encoder omits extra_tags for None → 4-element compact payload"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Encoder appends extra_tags for '' → 5-element payload (presence-based, not truthiness-based)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Legacy 4-element payload (pre-fix, no extra_tags) decodes to extra_tags=None without error (backward compatibility)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "CookieStorage end-to-end set→get preserves extra_tags==''"
+   },
+   {
+    "id": "S6.2",
+    "covers": "SessionStorage end-to-end set→get preserves extra_tags=='' (same encoder/decoder path)"
+   },
+   {
+    "id": "S6.3",
+    "covers": "FallbackStorage end-to-end set→get preserves extra_tags==''"
+   },
+   {
+    "id": "S7.1",
+    "covers": "SafeData message with extra_tags=='' preserves both the is_safedata flag and the '' after round-trip"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Empty message body '' with extra_tags=='' — both empty strings preserved"
+   },
+   {
+    "id": "S8.1",
+    "covers": "After round-trip, `'x' not in decoded.extra_tags` evaluates without TypeError (value is '' string, not None)"
+   },
+   {
+    "id": "S9.1",
+    "covers": "A list of multiple messages each with extra_tags=='' all decode to '' (recursive decode)"
+   },
+   {
+    "id": "S9.2",
+    "covers": "Idempotent re-encode: encode→decode→encode is stable for '', None, and non-empty extra_tags"
+   }
+  ],
+  "plan_files": [
+   "cookie.py",
+   "test_cookie.py",
+   "base.py"
+  ]
+ },
+ "raw_tail": "ompact payload\"},{\"id\":\"S4.2\",\"covers\":\"Encoder appends extra_tags for '' → 5-element payload (presence-based, not truthiness-based)\"},{\"id\":\"S5.1\",\"covers\":\"Legacy 4-element payload (pre-fix, no extra_tags) decodes to extra_tags=None without error (backward compatibility)\"},{\"id\":\"S6.1\",\"covers\":\"CookieStorage end-to-end set→get preserves extra_tags==''\"},{\"id\":\"S6.2\",\"covers\":\"SessionStorage end-to-end set→get preserves extra_tags=='' (same encoder/decoder path)\"},{\"id\":\"S6.3\",\"covers\":\"FallbackStorage end-to-end set→get preserves extra_tags==''\"},{\"id\":\"S7.1\",\"covers\":\"SafeData message with extra_tags=='' preserves both the is_safedata flag and the '' after round-trip\"},{\"id\":\"S7.2\",\"covers\":\"Empty message body '' with extra_tags=='' — both empty strings preserved\"},{\"id\":\"S8.1\",\"covers\":\"After round-trip, `'x' not in decoded.extra_tags` evaluates without TypeError (value is '' string, not None)\"},{\"id\":\"S9.1\",\"covers\":\"A list of multiple messages each with extra_tags=='' all decode to '' (recursive decode)\"},{\"id\":\"S9.2\",\"covers\":\"Idempotent re-encode: encode→decode→encode is stable for '', None, and non-empty extra_tags\"}],\"plan_files\":[\"cookie.py\",\"test_cookie.py\",\"base.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "A message's extra_tags attribute is correctly preserved when retrieved",
+    "covered": true,
+    "why": "S1.1 directly tests that Message(extra_tags='') encoded then decoded yields extra_tags=='' (not None), which is the core bug fix. Additionally covered by S1.2 (standard API default), S6.1-6.3 (end-to-end storage backends), and edge case 'extra_tags=='' must round-trip to '' (the core bug: '' currently decodes to None)'"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

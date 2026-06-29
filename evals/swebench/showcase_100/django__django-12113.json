@@ -1,0 +1,155 @@
+{
+ "instance_id": "django__django-12113",
+ "driver": "local",
+ "n_edge_cases": 16,
+ "n_scenarios": 22,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_custom_test_name (backends.sqlite.test_creation.TestDbSignatureTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/backends/sqlite3/creation.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "test_db_signature"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/backends/sqlite3/creation.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "TEST['NAME'] is empty string",
+   "TEST['NAME'] is None or not set",
+   "TEST['NAME'] same as NAME (collision)",
+   "TEST['NAME'] same across multiple database aliases",
+   "TEST['NAME'] contains special characters",
+   "TEST['NAME'] contains path separators",
+   "TEST['NAME'] is relative vs absolute path",
+   "Multiple databases with different TEST['NAME'] values",
+   "TEST['NAME'] changes between test runs",
+   "Concurrent test runs with same TEST['NAME']",
+   "Migration state changes with persistent TEST['NAME']",
+   "TEST['NAME'] with --keepdb flag",
+   "TEST['NAME'] without --keepdb flag",
+   "Default database vs other database aliases",
+   "TEST['NAME'] with existing database file",
+   "TEST['NAME'] pointing to non-existent directory"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "test_db_signature() includes TEST['NAME'] in signature calculation when TEST['NAME'] is set"
+   },
+   {
+    "id": "S1.2",
+    "covers": "test_db_signature() produces different signatures for different TEST['NAME'] values"
+   },
+   {
+    "id": "S1.3",
+    "covers": "test_db_signature() produces same signature when TEST['NAME'] is unchanged"
+   },
+   {
+    "id": "S1.4",
+    "covers": "test_db_signature() handles empty TEST['NAME'] gracefully"
+   },
+   {
+    "id": "S1.5",
+    "covers": "test_db_signature() handles missing TEST['NAME'] (falls back to NAME)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "test_db_signature() produces unique signatures for different database aliases with same TEST['NAME']"
+   },
+   {
+    "id": "S1.7",
+    "covers": "test_db_signature() handles TEST['NAME'] with special characters"
+   },
+   {
+    "id": "S1.8",
+    "covers": "test_db_signature() handles TEST['NAME'] with path separators"
+   },
+   {
+    "id": "S1.9",
+    "covers": "test_db_signature() handles relative vs absolute TEST['NAME'] paths"
+   },
+   {
+    "id": "S2.1",
+    "covers": "MultiDatabaseTests.setUpTestData() completes without database locked error when TEST['NAME'] is configured"
+   },
+   {
+    "id": "S2.2",
+    "covers": "MultiDatabaseTests.setUpTestData() works with --keepdb flag when TEST['NAME'] is configured"
+   },
+   {
+    "id": "S2.3",
+    "covers": "MultiDatabaseTests.setUpTestData() works with multiple database aliases each with TEST['NAME']"
+   },
+   {
+    "id": "S2.4",
+    "covers": "MultiDatabaseTests.setUpTestData() works when TEST['NAME'] differs from NAME"
+   },
+   {
+    "id": "S2.5",
+    "covers": "MultiDatabaseTests.setUpTestData() works when TEST['NAME'] is same as NAME"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Test database is not recreated unnecessarily when TEST['NAME'] is configured and --keepdb is used"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Test database is recreated when TEST['NAME'] changes between test runs"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Test database is recreated when migrations change and TEST['NAME'] is configured"
+   },
+   {
+    "id": "S3.4",
+    "covers": "Test database cleanup works correctly when TEST['NAME'] is configured and --keepdb is not used"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Database operations complete without locking when TEST['NAME'] is configured for default database"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Database operations complete without locking when TEST['NAME'] is configured for non-default database"
+   },
+   {
+    "id": "S4.3",
+    "covers": "Database operations complete without locking when TEST['NAME'] is configured for multiple databases"
+   },
+   {
+    "id": "S4.4",
+    "covers": "Database operations complete without locking when TEST['NAME'] is configured and tests run in parallel"
+   }
+  ],
+  "plan_files": [
+   "django/db/backends/sqlite3/base.py",
+   "tests/backends/sqlite/test_creation.py",
+   "tests/admin_views/test_multidb.py"
+  ]
+ },
+ "raw_tail": " differs from NAME\"},{\"id\":\"S2.5\",\"covers\":\"MultiDatabaseTests.setUpTestData() works when TEST['NAME'] is same as NAME\"},{\"id\":\"S3.1\",\"covers\":\"Test database is not recreated unnecessarily when TEST['NAME'] is configured and --keepdb is used\"},{\"id\":\"S3.2\",\"covers\":\"Test database is recreated when TEST['NAME'] changes between test runs\"},{\"id\":\"S3.3\",\"covers\":\"Test database is recreated when migrations change and TEST['NAME'] is configured\"},{\"id\":\"S3.4\",\"covers\":\"Test database cleanup works correctly when TEST['NAME'] is configured and --keepdb is not used\"},{\"id\":\"S4.1\",\"covers\":\"Database operations complete without locking when TEST['NAME'] is configured for default database\"},{\"id\":\"S4.2\",\"covers\":\"Database operations complete without locking when TEST['NAME'] is configured for non-default database\"},{\"id\":\"S4.3\",\"covers\":\"Database operations complete without locking when TEST['NAME'] is configured for multiple databases\"},{\"id\":\"S4.4\",\"covers\":\"Database operations complete without locking when TEST['NAME'] is configured and tests run in parallel\"}], \"plan_files\":[\"django/db/backends/sqlite3/base.py\",\"tests/backends/sqlite/test_creation.py\",\"tests/admin_views/test_multidb.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_custom_test_name",
+    "covered": true,
+    "why": "S1.1 explicitly covers that test_db_signature() includes TEST['NAME'] in signature calculation when TEST['NAME'] is set, which is the core behavior test_custom_test_name verifies. Additionally, S1.2 covers that different TEST['NAME'] values produce different signatures, and edge cases like 'TEST['NAME'] is None or not set' and 'TEST['NAME'] same as NAME (collision)' further validate the signature handling for custom test names."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

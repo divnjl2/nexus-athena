@@ -1,0 +1,139 @@
+{
+ "instance_id": "django__django-14238",
+ "n_edge_cases": 20,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_issubclass_of_autofield (model_fields.test_autofield.AutoFieldInheritanceTests)",
+  "test_default_auto_field_setting_bigautofield_subclass (model_options.test_default_pk.TestDefaultPK)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__instancecheck__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "DEFAULT_AUTO_FIELD set to a direct subclass of BigAutoField (the reported crash) must be accepted and django.setup() must succeed",
+   "DEFAULT_AUTO_FIELD set to a direct subclass of SmallAutoField must be accepted",
+   "Transitive/multi-level subclass (subclass of a subclass of BigAutoField, e.g. MyBig->MyBigger) must be accepted",
+   "Diamond/mixin inheritance: class inheriting from a custom mixin AND BigAutoField must still resolve as an AutoField",
+   "Direct subclass of AutoField must continue to be accepted (no regression)",
+   "Literal BigAutoField / SmallAutoField dotted paths must still be accepted",
+   "A non-AutoField field (CharField/IntegerField or subclass thereof) must still raise ValueError with the exact message 'Primary key '<path>' referred by <source> must subclass AutoField.'",
+   "A non-Field / arbitrary object as DEFAULT_AUTO_FIELD must still be rejected with the same ValueError",
+   "issubclass(MySubclass, AutoField) must return True via AutoFieldMeta.__subclasscheck__ (membership identity check replaced by issubclass)",
+   "isinstance(MySubclass_instance, AutoField) must return True — symmetry with __instancecheck__ preserved, no regression",
+   "__subclasscheck__ must not infinitely recurse: issubclass(subclass, self._subclasses) targets Big/SmallAutoField which use plain `type`, not AutoFieldMeta",
+   "Validation path is shared: global DEFAULT_AUTO_FIELD setting, AppConfig.default_auto_field, and per-model Meta.default_auto_field must all accept custom subclasses (only the error-message `source` differs)",
+   "Existing ValueError wording/translations must be unchanged for genuinely invalid values",
+   "The custom subclass must actually function as the model PK (get_internal_type/column type, deconstruct/serialize into migrations as the auto-created PK)",
+   "W042 auto-created-primary-key system check must still behave correctly when a custom default PK class is configured",
+   "Abstract custom AutoField subclass (abstract=True) used only as a base must still satisfy the subclass check",
+   "Custom field defined in the same models module being imported when the check fires (import-time ordering)",
+   "Unset/None DEFAULT_AUTO_FIELD must still fall back to AutoField (regression guard)",
+   "Invalid dotted path must still raise its own import error, not be masked by the subclass check",
+   "__subclasscheck__/__instancecheck__ run on every model class creation — issubclass vs membership must not introduce a measurable perf regression"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Direct subclass of AutoField is accepted as DEFAULT_AUTO_FIELD and used as the model PK (no regression)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "DEFAULT_AUTO_FIELD = subclass of BigAutoField: django.setup() succeeds, MyModel._meta.pk is the custom field (reported crash fixed)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "DEFAULT_AUTO_FIELD = subclass of SmallAutoField is accepted and used as PK"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Transitive subclass (subclass of a subclass of BigAutoField) is accepted as DEFAULT_AUTO_FIELD"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Mixin/diamond inheritance combining a custom mixin with BigAutoField resolves as an AutoField"
+   },
+   {
+    "id": "S5.1",
+    "covers": "DEFAULT_AUTO_FIELD = non-AutoField field (e.g. IntegerField/CharField subclass) raises ValueError with the exact existing message"
+   },
+   {
+    "id": "S5.2",
+    "covers": "DEFAULT_AUTO_FIELD = arbitrary non-Field object raises the same ValueError (rejection preserved)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "issubclass(custom_Big_subclass, AutoField) returns True via AutoFieldMeta.__subclasscheck__"
+   },
+   {
+    "id": "S6.2",
+    "covers": "isinstance(custom_subclass_instance, AutoField) returns True — symmetry with issubclass preserved"
+   },
+   {
+    "id": "S7.1",
+    "covers": "issubclass(BigAutoField, AutoField) and issubclass(SmallAutoField, AutoField) still return True"
+   },
+   {
+    "id": "S8.1",
+    "covers": "issubclass(AutoField, AutoField) returns True and a plain AutoField still works as PK"
+   },
+   {
+    "id": "S9.1",
+    "covers": "__subclasscheck__ terminates (no infinite recursion) for an unrelated class and returns False"
+   },
+   {
+    "id": "S10.1",
+    "covers": "AppConfig.default_auto_field set to a custom Big/SmallAutoField subclass is accepted (app-level source in error message path)"
+   },
+   {
+    "id": "S10.2",
+    "covers": "Per-model Meta.default_auto_field set to a custom subclass is accepted"
+   },
+   {
+    "id": "S11.1",
+    "covers": "Custom-subclass PK deconstructs/serializes correctly into a migration and round-trips its internal type/column"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "django/db/models/options.py",
+   "tests/model_options/test_default_pk.py",
+   "tests/model_fields/test_autofield.py"
+  ]
+ },
+ "raw_tail": " object raises the same ValueError (rejection preserved)\"},{\"id\":\"S6.1\",\"covers\":\"issubclass(custom_Big_subclass, AutoField) returns True via AutoFieldMeta.__subclasscheck__\"},{\"id\":\"S6.2\",\"covers\":\"isinstance(custom_subclass_instance, AutoField) returns True — symmetry with issubclass preserved\"},{\"id\":\"S7.1\",\"covers\":\"issubclass(BigAutoField, AutoField) and issubclass(SmallAutoField, AutoField) still return True\"},{\"id\":\"S8.1\",\"covers\":\"issubclass(AutoField, AutoField) returns True and a plain AutoField still works as PK\"},{\"id\":\"S9.1\",\"covers\":\"__subclasscheck__ terminates (no infinite recursion) for an unrelated class and returns False\"},{\"id\":\"S10.1\",\"covers\":\"AppConfig.default_auto_field set to a custom Big/SmallAutoField subclass is accepted (app-level source in error message path)\"},{\"id\":\"S10.2\",\"covers\":\"Per-model Meta.default_auto_field set to a custom subclass is accepted\"},{\"id\":\"S11.1\",\"covers\":\"Custom-subclass PK deconstructs/serializes correctly into a migration and round-trips its internal type/column\"}],\"plan_files\":[\"django/db/models/fields/__init__.py\",\"django/db/models/options.py\",\"tests/model_options/test_default_pk.py\",\"tests/model_fields/test_autofield.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_issubclass_of_autofield",
+    "covered": true,
+    "why": "S6.1, S6.2, S7.1, S8.1 and edge case 'issubclass(MySubclass, AutoField) must return True via AutoFieldMeta.__subclasscheck__' directly cover the issubclass behavior for AutoField subclasses including BigAutoField/SmallAutoField subclasses"
+   },
+   {
+    "test": "test_default_auto_field_setting_bigautofield_subclass",
+    "covered": true,
+    "why": "S2.1 explicitly covers 'DEFAULT_AUTO_FIELD = subclass of BigAutoField: django.setup() succeeds, MyModel._meta.pk is the custom field (reported crash fixed)' which is exactly the reported crash scenario this test validates"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

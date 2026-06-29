@@ -1,0 +1,130 @@
+{
+ "instance_id": "django__django-15695",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 16,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_rename_index_unnamed_index (migrations.test_operations.OperationTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "database_forwards"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "matched": [
+   "models.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Unnamed index renamed to new name, then reversed, then renamed again (original bug case)",
+   "Named index renamed to another name (should work correctly)",
+   "Unnamed index renamed, reversed multiple times in a row",
+   "Index name collision: target name already exists in database",
+   "Empty string as old_index_name or new_index_name",
+   "None as old_index_name or new_index_name",
+   "Multiple RenameIndex operations in sequence on same index",
+   "RenameIndex on index that doesn't exist",
+   "RenameIndex where old and new names are identical",
+   "Cross-database behavior differences (PostgreSQL vs MySQL vs SQLite)",
+   "Index with special characters in name",
+   "Very long index names approaching database limits",
+   "RenameIndex in migration with other operations",
+   "Unnamed index from unique_together vs unnamed index from other sources"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "RenameIndex forwards on unnamed index generates and applies new name correctly"
+   },
+   {
+    "id": "S1.2",
+    "covers": "RenameIndex backwards on unnamed index restores the old auto-generated name (not a no-op)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Re-applying RenameIndex after reversing it does not crash (idempotency)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "RenameIndex forwards on already-named index renames it correctly"
+   },
+   {
+    "id": "S1.5",
+    "covers": "RenameIndex backwards on already-named index restores original name correctly"
+   },
+   {
+    "id": "S1.6",
+    "covers": "RenameIndex with old_index_name == new_index_name is a no-op (no error)"
+   },
+   {
+    "id": "S1.7",
+    "covers": "RenameIndex on non-existent index raises appropriate error"
+   },
+   {
+    "id": "S1.8",
+    "covers": "RenameIndex deconstruct() returns correct parameters for unnamed index case"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Multiple consecutive RenameIndex operations on same unnamed index work correctly"
+   },
+   {
+    "id": "S1.10",
+    "covers": "RenameIndex backwards followed by forwards multiple times maintains consistency"
+   },
+   {
+    "id": "S1.11",
+    "covers": "SchemaEditor._create_index_name() generates consistent names for same index definition"
+   },
+   {
+    "id": "S1.12",
+    "covers": "RenameIndex handles empty string index names appropriately"
+   },
+   {
+    "id": "S1.13",
+    "covers": "RenameIndex works correctly when index name already exists (collision handling)"
+   },
+   {
+    "id": "S1.14",
+    "covers": "RenameIndex preserves index properties (unique, columns, etc.) during rename"
+   },
+   {
+    "id": "S1.15",
+    "covers": "RenameIndex works with indexes created by unique_together constraint"
+   },
+   {
+    "id": "S1.16",
+    "covers": "RenameIndex works with indexes created by other mechanisms (indexes meta option, etc.)"
+   }
+  ],
+  "plan_files": [
+   "models.py",
+   "schema.py"
+  ]
+ },
+ "raw_tail": "dy-named index restores original name correctly\"},{\"id\":\"S1.6\",\"covers\":\"RenameIndex with old_index_name == new_index_name is a no-op (no error)\"},{\"id\":\"S1.7\",\"covers\":\"RenameIndex on non-existent index raises appropriate error\"},{\"id\":\"S1.8\",\"covers\":\"RenameIndex deconstruct() returns correct parameters for unnamed index case\"},{\"id\":\"S1.9\",\"covers\":\"Multiple consecutive RenameIndex operations on same unnamed index work correctly\"},{\"id\":\"S1.10\",\"covers\":\"RenameIndex backwards followed by forwards multiple times maintains consistency\"},{\"id\":\"S1.11\",\"covers\":\"SchemaEditor._create_index_name() generates consistent names for same index definition\"},{\"id\":\"S1.12\",\"covers\":\"RenameIndex handles empty string index names appropriately\"},{\"id\":\"S1.13\",\"covers\":\"RenameIndex works correctly when index name already exists (collision handling)\"},{\"id\":\"S1.14\",\"covers\":\"RenameIndex preserves index properties (unique, columns, etc.) during rename\"},{\"id\":\"S1.15\",\"covers\":\"RenameIndex works with indexes created by unique_together constraint\"},{\"id\":\"S1.16\",\"covers\":\"RenameIndex works with indexes created by other mechanisms (indexes meta option, etc.)\"}], \"plan_files\":[\"models.py\",\"schema.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_rename_index_unnamed_index",
+    "covered": true,
+    "why": "S1.3 covers re-applying RenameIndex after reversing without crash; S1.10 covers backwards-then-forwards consistency; edge case 'Unnamed index renamed to new name, then reversed, then renamed again (original bug case)' explicitly matches the bug scenario"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

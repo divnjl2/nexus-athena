@@ -1,0 +1,33 @@
+{
+ "instance_id": "django__django-14667",
+ "driver": "local",
+ "n_edge_cases": 0,
+ "n_scenarios": 0,
+ "parse_ok": false,
+ "fail_to_pass": [
+  "test_defer_only_chaining (defer.tests.DeferTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "add_deferred_loading"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [],
+  "scenarios": [],
+  "plan_files": []
+ },
+ "raw_tail": "planner returned empty content (finish_reason=length)",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge"
+}

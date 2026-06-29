@@ -1,0 +1,125 @@
+{
+ "instance_id": "django__django-15388",
+ "n_edge_cases": 21,
+ "n_scenarios": 13,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_non_template_changed_in_template_directory (template_tests.test_autoreloader.TemplateReloadTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/template/autoreload.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "watch_for_template_changes"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/template/autoreload.py"
+  ],
+  "matched": [
+   "autoreload.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "A .py file inside a directory registered as a template dir (core repro: BASE_DIR added to TEMPLATES[0]['DIRS']) must still trigger a server reload",
+   "settings.py itself lives in the project root, now a template dir — saving it must reload",
+   "With BASE_DIR in DIRS the whole project tree is a template dir, so a .py change ANYWHERE (not just settings.py) must reload — bug is not scoped to settings",
+   "Editing a real template file (.html/.txt) inside a template dir must NOT restart the server — only reset_loaders() runs (preserve existing hot-reload optimization, avoid regression)",
+   "A .py change OUTSIDE any template dir must keep reloading exactly as before (no behaviour change for normal projects)",
+   "Non-.py, non-template file change outside template dirs still triggers reload (template_changed returns None)",
+   "The .py suffix short-circuit must run BEFORE the get_template_directories() loop so notify_file_changed -> trigger_reload proceeds",
+   "Multiple backends: DIRS aggregated across DjangoTemplates AND Jinja2 engines — fix must hold regardless of backend",
+   "APP_DIRS=True app templates/ subdirs are also template dirs — a .py inside such an app must reload",
+   "Suffix case-sensitivity: Path.suffix is case-preserving; '.PY'/'.Py' on case-insensitive filesystems (Windows/macOS) won't equal '.py' — known limitation to note",
+   "Related suffixes .pyc/.pyi/.pyx/.pyw are NOT caught by == '.py' — confirm intended scope (autoreloader watches .py)",
+   "Compound suffixes: foo.html.py -> suffix '.py' (reloads); foo.py.html -> suffix '.html' (template path) — Path.suffix sees only the last component",
+   "A genuine template authored as .py (rare) now triggers a full reload instead of a loader reset — acceptable, document as side effect",
+   "Files with no suffix (Makefile, Procfile) inside a template dir fall through to the loop -> loader reset, no reload (unchanged)",
+   "file_path must be an absolute Path; 'template_dir in file_path.parents' relies on normalized absolute paths — relative/symlinked paths could miss the check",
+   "i18n .po/.mo changes are handled by a separate translation_file_changed listener — the .py short-circuit must not alter i18n reload behaviour",
+   "reset_loaders() must NOT run for .py changes (server restarts anyway; loaders rebuilt fresh) — avoid redundant work",
+   "Exactly one path is taken for .py: return None -> reload, no loader reset (no double-handling)",
+   "Regression guard: existing assertion that an .html edit in a template dir suppresses reload must still pass",
+   "Empty DIRS (default new project) — behaviour identical to pre-fix for all file types",
+   "Signal wiring (dispatch_uid, receiver registration) unchanged — fix is a guard clause only"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "BASE_DIR added to TEMPLATES[0]['DIRS']; saving settings.py (a .py inside the template dir) triggers a server reload"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Project root is a template dir; a .py change anywhere in the tree makes template_changed return None so trigger_reload fires"
+   },
+   {
+    "id": "S2.1",
+    "covers": "An .html template file inside a template dir changes -> template_changed returns True, no server reload"
+   },
+   {
+    "id": "S2.2",
+    "covers": "On an .html change in a template dir, reset_loaders() is invoked (template hot-reload preserved)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Normal project (empty DIRS); a .py file outside any template dir changes -> server reloads (unchanged behaviour)"
+   },
+   {
+    "id": "S3.2",
+    "covers": "A non-.py, non-template file outside template dirs changes -> template_changed returns None and reload fires"
+   },
+   {
+    "id": "S4.1",
+    "covers": "A file with suffix .py located inside a template dir -> template_changed returns None via short-circuit before the dir loop"
+   },
+   {
+    "id": "S4.2",
+    "covers": "A file with suffix .html inside a template dir -> template_changed returns True (suffix discrimination)"
+   },
+   {
+    "id": "S4.3",
+    "covers": "reset_loaders() is NOT called for a .py change inside a template dir (no redundant loader reset before restart)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Jinja2 backend with BASE_DIR in DIRS; a .py change triggers a reload (backend-agnostic fix)"
+   },
+   {
+    "id": "S5.2",
+    "covers": "APP_DIRS=True: a .py file inside an app that owns a templates/ dir still triggers a reload"
+   },
+   {
+    "id": "S6.1",
+    "covers": "i18n .po/.mo change still routes through translation_file_changed unaffected by the .py short-circuit"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Files with no suffix inside a template dir fall through to loader-reset path, no reload (unchanged)"
+   }
+  ],
+  "plan_files": [
+   "django/template/autoreload.py",
+   "tests/template_tests/test_autoreloader.py",
+   "django/utils/autoreload.py"
+  ]
+ },
+ "raw_tail": "> server reloads (unchanged behaviour)\"},{\"id\":\"S3.2\",\"covers\":\"A non-.py, non-template file outside template dirs changes -> template_changed returns None and reload fires\"},{\"id\":\"S4.1\",\"covers\":\"A file with suffix .py located inside a template dir -> template_changed returns None via short-circuit before the dir loop\"},{\"id\":\"S4.2\",\"covers\":\"A file with suffix .html inside a template dir -> template_changed returns True (suffix discrimination)\"},{\"id\":\"S4.3\",\"covers\":\"reset_loaders() is NOT called for a .py change inside a template dir (no redundant loader reset before restart)\"},{\"id\":\"S5.1\",\"covers\":\"Jinja2 backend with BASE_DIR in DIRS; a .py change triggers a reload (backend-agnostic fix)\"},{\"id\":\"S5.2\",\"covers\":\"APP_DIRS=True: a .py file inside an app that owns a templates/ dir still triggers a reload\"},{\"id\":\"S6.1\",\"covers\":\"i18n .po/.mo change still routes through translation_file_changed unaffected by the .py short-circuit\"},{\"id\":\"S6.2\",\"covers\":\"Files with no suffix inside a template dir fall through to loader-reset path, no reload (unchanged)\"}],\"plan_files\":[\"django/template/autoreload.py\",\"tests/template_tests/test_autoreloader.py\",\"django/utils/autoreload.py\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_non_template_changed_in_template_directory",
+    "covered": true,
+    "why": "S1.1, S1.2, S4.1 and edge case 'A .py file inside a directory registered as a template dir must still trigger a server reload' directly cover the test's scenario: a non-template file (.py) changed inside a template directory should trigger reload (template_changed returns None). This is the core bug fix."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

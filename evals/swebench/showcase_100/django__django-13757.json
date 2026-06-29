@@ -1,0 +1,124 @@
+{
+ "instance_id": "django__django-13757",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 14,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_isnull_key (model_fields.test_jsonfield.TestQuerying)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/json.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "process_rhs"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/json.py"
+  ],
+  "matched": [
+   "json.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Key does not exist in JSON object - should match isnull=True",
+   "Key exists with JSON null value - should NOT match isnull=True, should match isnull=False",
+   "Key exists with non-null value (string, number, boolean, array, object) - should NOT match isnull=True",
+   "Empty JSON object {} - no keys exist, isnull=True should match any key lookup",
+   "JSON null at nested level vs top-level key existence",
+   "Key exists but parent object is JSON null",
+   "Multiple keys where some exist and some don't",
+   "Key with empty string vs JSON null vs missing key",
+   "SQLite JSON functions (json_extract, json_type) behavior with null",
+   "Oracle JSON functions (json_value, json_exists) behavior with null",
+   "Combination with other lookups (e.g., value__key__isnull=True AND value__other__exact='test')",
+   "Aggregation queries with isnull lookup",
+   "Annotations using isnull lookup",
+   "QuerySet operations (union, difference) with isnull lookup"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "value__key__isnull=True matches only objects where key does not exist in JSON"
+   },
+   {
+    "id": "S1.2",
+    "covers": "value__key__isnull=True does NOT match objects where key exists with JSON null value"
+   },
+   {
+    "id": "S1.3",
+    "covers": "value__key__isnull=False matches objects where key exists (including JSON null value)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "value__key__isnull=False does NOT match objects where key does not exist"
+   },
+   {
+    "id": "S2.1",
+    "covers": "SQLite: isnull=True uses correct query that excludes JSON null values"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Oracle: isnull=True uses correct query that excludes JSON null values"
+   },
+   {
+    "id": "S2.3",
+    "covers": "PostgreSQL/MySQL/MariaDB: existing correct behavior is preserved"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Empty JSON object: isnull=True matches any key lookup"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Nested key lookup: isnull=True correctly handles nested non-existent keys"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Key with various non-null types (string, number, boolean, array, object) - isnull=True returns no matches"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Combination: value__key__isnull=True AND value__other__exact='test' works correctly"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Negation: NOT value__key__isnull=True equivalent to value__key__isnull=False"
+   },
+   {
+    "id": "S5.1",
+    "covers": "SQLite uses json_type() or equivalent to distinguish missing key from JSON null"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Oracle uses json_exists() or equivalent to distinguish missing key from JSON null"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/lookups.py",
+   "django/db/backends/sqlite3/operations.py",
+   "django/db/backends/oracle/operations.py",
+   "django/db/models/fields/json.py"
+  ]
+ },
+ "raw_tail": "   \"covers\": \"PostgreSQL/MySQL/MariaDB: existing correct behavior is preserved\"\n    },\n    {\n      \"id\": \"S3.1\",\n      \"covers\": \"Empty JSON object: isnull=True matches any key lookup\"\n    },\n    {\n      \"id\": \"S3.2\",\n      \"covers\": \"Nested key lookup: isnull=True correctly handles nested non-existent keys\"\n    },\n    {\n      \"id\": \"S3.3\",\n      \"covers\": \"Key with various non-null types (string, number, boolean, array, object) - isnull=True returns no matches\"\n    },\n    {\n      \"id\": \"S4.1\",\n      \"covers\": \"Combination: value__key__isnull=True AND value__other__exact='test' works correctly\"\n    },\n    {\n      \"id\": \"S4.2\",\n      \"covers\": \"Negation: NOT value__key__isnull=True equivalent to value__key__isnull=False\"\n    },\n    {\n      \"id\": \"S5.1\",\n      \"covers\": \"SQLite uses json_type() or equivalent to distinguish missing key from JSON null\"\n    },\n    {\n      \"id\": \"S5.2\",\n      \"covers\": \"Oracle uses json_exists() or equivalent to distinguish missing key from JSON null\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/db/models/lookups.py\",\n    \"django/db/backends/sqlite3/operations.py\",\n    \"django/db/backends/oracle/operations.py\",\n    \"django/db/models/fields/json.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_isnull_key",
+    "covered": true,
+    "why": "S1.1 directly covers the core behavior: 'value__key__isnull=True matches only objects where key does not exist in JSON'. S1.2 covers the bug fix: 'value__key__isnull=True does NOT match objects where key exists with JSON null value'. The test was modified to use value__j__isnull=True (where j can have JSON null) to verify this exact behavior. S2.1 and S2.2 specifically address the SQLite and Oracle database backends mentioned in the issue. The edge case 'Key exists with JSON null value - should NOT match isnull=True, should match isnull=False' also directly covers this test's assertion."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

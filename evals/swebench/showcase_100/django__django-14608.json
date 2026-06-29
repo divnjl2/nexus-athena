@@ -1,0 +1,134 @@
+{
+ "instance_id": "django__django-14608",
+ "n_edge_cases": 17,
+ "n_scenarios": 11,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "If validate_max is set and max_num is less than TOTAL_FORMS in the",
+  "If validate_min is set and min_num is more than TOTAL_FORMS in the",
+  "test_non_form_errors (forms_tests.tests.test_formsets.FormsFormsetTestCase)",
+  "test_non_form_errors_is_errorlist (admin_views.tests.AdminViewListEditable)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/formsets.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "full_clean"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/formsets.py"
+  ],
+  "matched": [
+   "formsets.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "FormSet.clean() raises a ValidationError (cross-form validation) → the resulting non_form_errors ErrorList must carry the 'nonform' CSS class (errorlist nonform)",
+   "Bound, fully-cleaned FormSet with NO non-form errors → non_form_errors() must still return an ErrorList whose error_class is 'errorlist nonform' (empty default carries the class so a custom ErrorList can branch even when empty)",
+   "Unbound FormSet → non_form_errors() returns an empty ErrorList that still has class 'errorlist nonform' (class is set at the top of full_clean, before the is_bound early-return)",
+   "too_many_forms: validate_max and total forms exceed max_num/absolute_max → the auto-raised ValidationError lands in non_form_errors and must carry 'nonform'",
+   "too_few_forms: validate_min and forms below min_num → the auto-raised ValidationError must carry 'nonform'",
+   "Missing or tampered ManagementForm → any resulting formset-level error surfaced via non_form_errors must also carry 'nonform'",
+   "Rendered output is exactly '<ul class=\"errorlist nonform\">…</ul>' — class order 'errorlist nonform' (not 'nonform errorlist') preserved for stable CSS selectors",
+   "Empty ErrorList renders to '' (no <ul>) yet its .error_class attribute is still 'errorlist nonform' — the attribute and the rendered string are distinct surfaces",
+   "Custom error_class supplied via formset_factory must be instantiated with error_class='nonform' and must not raise (relies on ErrorList's existing error_class kwarg contract)",
+   "No cross-contamination: field errors stay 'errorlist', form non-field errors stay 'errorlist nonfield'; only FormSet-level non-form errors gain 'nonform'",
+   "ModelFormSet / inline formsets (BaseFormSet subclasses) inherit the behaviour automatically with no extra change",
+   "non_form_errors() called before .errors / before full_clean lazily triggers full_clean and still yields the class",
+   "Multiple non-form errors → all rendered inside a single '<ul class=\"errorlist nonform\">' with one <li> per error",
+   "ErrorList builds the class via 'errorlist {}'.format(error_class) → must yield exactly 'errorlist nonform' (single space, no double 'errorlist' prefix)",
+   "Backwards-incompatibility: user templates/tests asserting class=\"errorlist\" for formset non-form errors now see the extra class — must be called out in release notes, and Django's own formset test assertions updated",
+   "as_data()/as_json()/as_text() are unaffected (CSS class is HTML-only); only as_ul()/HTML rendering changes — verify no regression in non-HTML outputs",
+   "i18n: error message strings remain translatable; the 'nonform' class itself is never translated"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "clean() ValidationError → formset.non_form_errors() ErrorList.error_class contains 'nonform'"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Bound valid formset with no non-form errors → non_form_errors().error_class == 'errorlist nonform'"
+   },
+   {
+    "id": "S1.3",
+    "covers": "too_many_forms (validate_max exceeded) → non_form_errors carries 'nonform'"
+   },
+   {
+    "id": "S1.4",
+    "covers": "too_few_forms (validate_min not met) → non_form_errors carries 'nonform'"
+   },
+   {
+    "id": "S1.5",
+    "covers": "str(formset.non_form_errors()) renders '<ul class=\"errorlist nonform\">…</ul>'"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Multiple non-form errors render as one <ul class=\"errorlist nonform\"> with multiple <li>"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Missing/tampered ManagementForm → resulting non-form error carries 'nonform'"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Custom error_class is instantiated with error_class='nonform' so it can distinguish non-form errors from field/non-field errors"
+   },
+   {
+    "id": "S3.1",
+    "covers": "No regression: field errors stay 'errorlist', form non-field errors stay 'errorlist nonfield', no 'nonform' leakage"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Unbound formset → non_form_errors() empty ErrorList still has class 'errorlist nonform'"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Docs document the 'nonform' class alongside 'nonfield', and 4.0 release notes record the rendering change"
+   }
+  ],
+  "plan_files": [
+   "django/forms/formsets.py",
+   "django/forms/utils.py",
+   "tests/forms_tests/tests/test_formsets.py",
+   "docs/topics/forms/formsets.txt",
+   "docs/ref/forms/api.txt",
+   "docs/releases/4.0.txt"
+  ]
+ },
+ "raw_tail": " exceeded) → non_form_errors carries 'nonform'\"},{\"id\":\"S1.4\",\"covers\":\"too_few_forms (validate_min not met) → non_form_errors carries 'nonform'\"},{\"id\":\"S1.5\",\"covers\":\"str(formset.non_form_errors()) renders '<ul class=\\\"errorlist nonform\\\">…</ul>'\"},{\"id\":\"S1.6\",\"covers\":\"Multiple non-form errors render as one <ul class=\\\"errorlist nonform\\\"> with multiple <li>\"},{\"id\":\"S1.7\",\"covers\":\"Missing/tampered ManagementForm → resulting non-form error carries 'nonform'\"},{\"id\":\"S2.1\",\"covers\":\"Custom error_class is instantiated with error_class='nonform' so it can distinguish non-form errors from field/non-field errors\"},{\"id\":\"S3.1\",\"covers\":\"No regression: field errors stay 'errorlist', form non-field errors stay 'errorlist nonfield', no 'nonform' leakage\"},{\"id\":\"S3.2\",\"covers\":\"Unbound formset → non_form_errors() empty ErrorList still has class 'errorlist nonform'\"},{\"id\":\"S4.1\",\"covers\":\"Docs document the 'nonform' class alongside 'nonfield', and 4.0 release notes record the rendering change\"}],\"plan_files\":[\"django/forms/formsets.py\",\"django/forms/utils.py\",\"tests/forms_tests/tests/test_formsets.py\",\"docs/topics/forms/formsets.txt\",\"docs/ref/forms/api.txt\",\"docs/releases/4.0.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "If validate_max is set and max_num is less than TOTAL_FORMS in the",
+    "covered": true,
+    "why": "S1.3 and edge case 'too_many_forms' explicitly cover validate_max exceeded scenario where non_form_errors carries 'nonform'"
+   },
+   {
+    "test": "If validate_min is set and min_num is more than TOTAL_FORMS in the",
+    "covered": true,
+    "why": "S1.4 and edge case 'too_few_forms' explicitly cover validate_min not met scenario where non_form_errors carries 'nonform'"
+   },
+   {
+    "test": "test_non_form_errors (forms_tests.tests.test_formsets.FormsFormsetTestCase)",
+    "covered": true,
+    "why": "S1.1, S1.2, S1.5, S1.6 cover non-form errors rendering with 'nonform' class; edge cases cover clean() ValidationError and multiple errors"
+   },
+   {
+    "test": "test_non_form_errors_is_errorlist (admin_views.tests.AdminViewListEditable)",
+    "covered": true,
+    "why": "S1.2 explicitly checks non_form_errors().error_class == 'errorlist nonform'; edge cases confirm ErrorList is returned with correct error_class attribute"
+   }
+  ],
+  "covered": 4,
+  "total": 4,
+  "ratio": 1.0
+ }
+}

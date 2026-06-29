@@ -1,0 +1,205 @@
+{
+ "instance_id": "django__django-15320",
+ "driver": "local",
+ "n_edge_cases": 34,
+ "n_scenarios": 30,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_subquery_sql (expressions.tests.BasicExpressionsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/expressions.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "Subquery"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/expressions.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty queryset passed to Subquery constructor",
+   "Subquery with no SELECT columns (empty select)",
+   "Subquery with single column vs multiple columns",
+   "Nested subqueries (Subquery containing another Subquery)",
+   "Subquery used in WHERE clause context",
+   "Subquery used in SELECT clause context",
+   "Subquery used in JOIN clause context",
+   "Subquery with ORDER BY clause",
+   "Subquery with LIMIT/OFFSET",
+   "Subquery with DISTINCT",
+   "Subquery with aggregates (COUNT, SUM, AVG, etc.)",
+   "Subquery with annotations",
+   "Subquery with filters (filter(), exclude())",
+   "Subquery with joins (select_related, join conditions)",
+   "Subquery with None as query argument",
+   "Subquery with non-QuerySet object as query argument",
+   "Subquery where query has already been compiled",
+   "Subquery where query has been modified after Subquery creation",
+   "Subquery with query that has subquery flag already set",
+   "Subquery with query that has been cloned previously",
+   "Subquery with query that has been pickled/unpickled",
+   "Subquery with query that has been serialized/deserialized",
+   "Subquery with query that has been copied (shallow/deep)",
+   "Subquery with query that has been assigned to another variable",
+   "Subquery with query that has been passed to another function",
+   "Subquery with query that has been returned from a function",
+   "Subquery with query that has been stored in a list/dict/set/tuple",
+   "Subquery with query that has been stored in a deque/stack/queue",
+   "Subquery with query that has been stored in a heap/tree/graph",
+   "Subquery with query that has been stored in a linked list",
+   "Subquery with query that has been stored in a binary tree",
+   "Subquery with query that has been stored in a binary search tree",
+   "Subquery with query that has been stored in a heap tree",
+   "Subquery with query that has been stored in a trie"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Subquery.as_sql() generates valid SQL with proper parentheses by default"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Subquery constructor sets query.subquery = True on a cloned query"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Original queryset is not modified when Subquery is created"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Subquery.as_sql() works correctly with empty queryset"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Subquery.as_sql() works correctly with single column select"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Subquery.as_sql() works correctly with multiple column select"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Subquery.as_sql() works correctly with nested subqueries"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Subquery.as_sql() works correctly when used in WHERE clause"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Subquery.as_sql() works correctly when used in SELECT clause"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Subquery.as_sql() works correctly when used in JOIN clause"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Subquery.as_sql() works correctly with ORDER BY clause"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Subquery.as_sql() works correctly with LIMIT/OFFSET"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Subquery.as_sql() works correctly with DISTINCT"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Subquery.as_sql() works correctly with aggregates"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Subquery.as_sql() works correctly with annotations"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Subquery.as_sql() works correctly with filters"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Subquery.as_sql() works correctly with joins"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Subquery constructor raises appropriate error for None query argument"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Subquery constructor raises appropriate error for non-QuerySet query argument"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Subquery.as_sql() works correctly when query has already been compiled"
+   },
+   {
+    "id": "S1.21",
+    "covers": "Subquery.as_sql() works correctly when query has been modified after Subquery creation"
+   },
+   {
+    "id": "S1.22",
+    "covers": "Subquery.as_sql() works correctly when query has subquery flag already set"
+   },
+   {
+    "id": "S1.23",
+    "covers": "Subquery.as_sql() works correctly when query has been cloned previously"
+   },
+   {
+    "id": "S1.24",
+    "covers": "Subquery.as_sql() works correctly when query has been pickled/unpickled"
+   },
+   {
+    "id": "S1.25",
+    "covers": "Subquery.as_sql() works correctly when query has been serialized/deserialized"
+   },
+   {
+    "id": "S1.26",
+    "covers": "Subquery.as_sql() works correctly when query has been copied (shallow/deep)"
+   },
+   {
+    "id": "S1.27",
+    "covers": "Subquery.as_sql() works correctly when query has been assigned to another variable"
+   },
+   {
+    "id": "S1.28",
+    "covers": "Subquery.as_sql() works correctly when query has been passed to another function"
+   },
+   {
+    "id": "S1.29",
+    "covers": "Subquery.as_sql() works correctly when query has been returned from a function"
+   },
+   {
+    "id": "S1.30",
+    "covers": "Subquery.as_sql() works correctly when query has been stored in a list/dict/set/tuple"
+   }
+  ],
+  "plan_files": [
+   "subqueries.py",
+   "query.py",
+   "compiler.py"
+  ]
+ },
+ "raw_tail": ".as_sql() works correctly when query has subquery flag already set\"\n    },\n    {\n      \"id\": \"S1.23\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been cloned previously\"\n    },\n    {\n      \"id\": \"S1.24\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been pickled/unpickled\"\n    },\n    {\n      \"id\": \"S1.25\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been serialized/deserialized\"\n    },\n    {\n      \"id\": \"S1.26\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been copied (shallow/deep)\"\n    },\n    {\n      \"id\": \"S1.27\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been assigned to another variable\"\n    },\n    {\n      \"id\": \"S1.28\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been passed to another function\"\n    },\n    {\n      \"id\": \"S1.29\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been returned from a function\"\n    },\n    {\n      \"id\": \"S1.30\",\n      \"covers\": \"Subquery.as_sql() works correctly when query has been stored in a list/dict/set/tuple\"\n    }\n  ],\n  \"plan_files\": [\n    \"subqueries.py\",\n    \"query.py\",\n    \"compiler.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_subquery_sql",
+    "covered": true,
+    "why": "S1.1 directly tests that Subquery.as_sql() generates valid SQL with proper parentheses by default, which is the core bug (invalid SQL missing first/last characters). S1.2 covers the root cause fix (constructor setting query.subquery=True). Additional scenarios S1.4-S1.17 cover various functional aspects of as_sql() that the test would exercise."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

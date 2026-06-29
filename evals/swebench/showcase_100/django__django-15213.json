@@ -1,0 +1,156 @@
+{
+ "instance_id": "django__django-15213",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_aggregate_over_full_expression_annotation (annotations.tests.NonAggregateAnnotationTestCase)",
+  "test_full_expression_annotation (annotations.tests.NonAggregateAnnotationTestCase)",
+  "test_full_expression_annotation_with_aggregation (annotations.tests.NonAggregateAnnotationTestCase)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "formfield"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty IN clause negation: ~Q(pk__in=[]) should evaluate to TRUE (1)",
+   "Empty IN clause without negation: Q(pk__in=[]) should evaluate to FALSE (0)",
+   "Non-empty IN clause: Q(pk__in=[1,2]) should generate proper IN clause",
+   "Non-empty IN clause negation: ~Q(pk__in=[1,2]) should generate proper NOT IN clause",
+   "Double negation: ~~Q(pk__in=[]) should evaluate to FALSE (0)",
+   "Empty IN combined with AND: Q(pk__in=[]) & Q(other=1) should evaluate to FALSE",
+   "Empty IN combined with OR: Q(pk__in=[]) | Q(other=1) should evaluate to Q(other=1)",
+   "Negated empty IN combined with AND: ~Q(pk__in=[]) & Q(other=1) should evaluate to Q(other=1)",
+   "Negated empty IN combined with OR: ~Q(pk__in=[]) | Q(other=1) should evaluate to TRUE",
+   "Multiple empty IN clauses: Q(pk__in=[]) & Q(name__in=[]) should evaluate to FALSE",
+   "Multiple negated empty IN clauses: ~Q(pk__in=[]) & ~Q(name__in=[]) should evaluate to TRUE",
+   "Empty IN in filter() context: queryset.filter(pk__in=[]) should return empty",
+   "Empty IN negation in filter(): queryset.filter(~Q(pk__in=[])) should return all",
+   "Different field types: name__in=[], id__in=[], custom_field__in=[]",
+   "ExpressionWrapper with various output_field types: BooleanField, IntegerField, etc.",
+   "Database-specific behavior: SQLite, PostgreSQL, MySQL, Oracle",
+   "Empty IN in subquery context",
+   "Empty IN in annotation aggregation context",
+   "None value handling: Q(pk__in=None) vs Q(pk__in=[])",
+   "Duplicate values in non-empty list: Q(pk__in=[1,1,2])"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "ExpressionWrapper(Q(pk__in=[]), BooleanField()) generates SELECT 0 AS foo (already working)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "ExpressionWrapper(~Q(pk__in=[]), BooleanField()) generates SELECT 1 AS foo (currently broken - generates SELECT AS foo)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "QuerySet.filter(~Q(pk__in=[])) returns all rows without syntax error"
+   },
+   {
+    "id": "S1.4",
+    "covers": "QuerySet.filter(pk__in=[]) returns empty queryset without error"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Double negation ~~Q(pk__in=[]) evaluates to FALSE (0)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Q(pk__in=[]) & Q(other=1) evaluates to FALSE (empty IN short-circuits AND)"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Q(pk__in=[]) | Q(other=1) evaluates to Q(other=1) (empty IN is identity for OR)"
+   },
+   {
+    "id": "S1.8",
+    "covers": "~Q(pk__in=[]) & Q(other=1) evaluates to Q(other=1) (TRUE AND X = X)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "~Q(pk__in=[]) | Q(other=1) evaluates to TRUE (TRUE OR X = TRUE)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Non-empty IN clause Q(pk__in=[1,2]) generates proper IN (1,2) clause"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Non-empty IN negation ~Q(pk__in=[1,2]) generates proper NOT IN (1,2) clause"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Multiple empty INs Q(pk__in=[]) & Q(name__in=[]) evaluates to FALSE"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Multiple negated empty INs ~Q(pk__in=[]) & ~Q(name__in=[]) evaluates to TRUE"
+   },
+   {
+    "id": "S1.14",
+    "covers": "ExpressionWrapper with IntegerField output_field works correctly for empty IN cases"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Empty IN clause works correctly in subquery context"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Empty IN clause works correctly across different database backends (SQLite, PostgreSQL, MySQL)"
+   },
+   {
+    "id": "S1.17",
+    "covers": "annotate() with ExpressionWrapper(~Q(pk__in=[])) returns all rows with foo=TRUE"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Empty IN with different field types (pk, name, custom_field) all handle negation correctly"
+   }
+  ],
+  "plan_files": [
+   "where.py",
+   "query_utils.py",
+   "lookups.py",
+   "expressions.py"
+  ]
+ },
+ "raw_tail": "entity for OR)\"},{\"id\":\"S1.8\",\"covers\":\"~Q(pk__in=[]) & Q(other=1) evaluates to Q(other=1) (TRUE AND X = X)\"},{\"id\":\"S1.9\",\"covers\":\"~Q(pk__in=[]) | Q(other=1) evaluates to TRUE (TRUE OR X = TRUE)\"},{\"id\":\"S1.10\",\"covers\":\"Non-empty IN clause Q(pk__in=[1,2]) generates proper IN (1,2) clause\"},{\"id\":\"S1.11\",\"covers\":\"Non-empty IN negation ~Q(pk__in=[1,2]) generates proper NOT IN (1,2) clause\"},{\"id\":\"S1.12\",\"covers\":\"Multiple empty INs Q(pk__in=[]) & Q(name__in=[]) evaluates to FALSE\"},{\"id\":\"S1.13\",\"covers\":\"Multiple negated empty INs ~Q(pk__in=[]) & ~Q(name__in=[]) evaluates to TRUE\"},{\"id\":\"S1.14\",\"covers\":\"ExpressionWrapper with IntegerField output_field works correctly for empty IN cases\"},{\"id\":\"S1.15\",\"covers\":\"Empty IN clause works correctly in subquery context\"},{\"id\":\"S1.16\",\"covers\":\"Empty IN clause works correctly across different database backends (SQLite, PostgreSQL, MySQL)\"},{\"id\":\"S1.17\",\"covers\":\"annotate() with ExpressionWrapper(~Q(pk__in=[])) returns all rows with foo=TRUE\"},{\"id\":\"S1.18\",\"covers\":\"Empty IN with different field types (pk, name, custom_field) all handle negation correctly\"}], \"plan_files\":[\"where.py\",\"query_utils.py\",\"lookups.py\",\"expressions.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_aggregate_over_full_expression_annotation",
+    "covered": true,
+    "why": "Edge case 'Empty IN in annotation aggregation context' and S1.14 cover ExpressionWrapper with various output_field types in aggregation scenarios"
+   },
+   {
+    "test": "test_full_expression_annotation",
+    "covered": true,
+    "why": "S1.1 and S1.2 directly cover ExpressionWrapper(Q(pk__in=[])) and ExpressionWrapper(~Q(pk__in=[])) generating correct SELECT statements; S1.17 covers annotate() with ExpressionWrapper(~Q(pk__in=[]))"
+   },
+   {
+    "test": "test_full_expression_annotation_with_aggregation",
+    "covered": true,
+    "why": "Edge case 'Empty IN in annotation aggregation context' and S1.14 cover ExpressionWrapper with various output_field types combined with aggregation operations"
+   }
+  ],
+  "covered": 3,
+  "total": 3,
+  "ratio": 1.0
+ }
+}

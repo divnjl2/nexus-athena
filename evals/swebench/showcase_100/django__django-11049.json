@@ -1,0 +1,135 @@
+{
+ "instance_id": "django__django-11049",
+ "n_edge_cases": 15,
+ "n_scenarios": 16,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_invalid_string (model_fields.test_durationfield.TestValidation)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "DurationField"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "\"14:00\" parses as MM:ss = 14 minutes (00:14:00), NOT 14 hours — the motivating bug the corrected format literal must describe",
+   "Seconds are mandatory: a bare integer like \"30\" is the minimal valid input and means 30 seconds",
+   "Hours are only accepted when BOTH minutes and seconds follow (HH:MM:ss); the regex lookahead (?=\\d+:\\d+) makes an \"HH:ss\" two-group form impossible — any two-group value is always MM:ss",
+   "Three colon groups \"1:14:00\" => hours:minutes:seconds; this is the only way to express hours",
+   "Optional days prefix: \"4 1:14:00\" => days=4; also the \"N days,\"/\"N day,\" textual variant is accepted",
+   "Optional microseconds \".uuuuuu\" suffix (1–6 digits) attaches to seconds only; >6 fractional digits are truncated, and a fraction with no integer seconds (\".5\") is invalid",
+   "Negative/sign handling: \"-30\", \"-1 1:00:00\" parse as negative durations; sign placement relative to days",
+   "Empty string / whitespace-only / None: must yield 'invalid' (or None when blank+null allowed), never an unhandled crash",
+   "Too many colon groups \"1:2:3:4\" or non-numeric \"abc\" => ValidationError that must carry the corrected format literal",
+   "Out-of-range days raise the separate 'overflow' message — must NOT be conflated with the 'invalid' format message",
+   "ISO-8601 (\"PT14M\", \"P3DT4H\") and Postgres-interval (\"3 days 04:00:00\") inputs parse via separate regexes; the format literal documents only the colon grammar, so the message is intentionally silent about them",
+   "Literal-drift risk: the wrong string \"[HH:[MM:]]ss[.uuuuuu]\" appears in the model field error message (and docs); every copy must be updated to \"[[HH:]MM:]ss[.uuuuuu]\" with none of the old literal remaining anywhere",
+   "i18n: changing the msgid re-fuzzes existing .po translations across all locales; the bracketed format must survive gettext untouched",
+   "Adding a default help_text injects an always-on translatable string into every form using DurationField — decide default-vs-opt-in and translation cost",
+   "Bug exists in all Django versions supporting DurationField => fix must be backported to all supported branches, keeping the literal identical across them"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Invalid model DurationField value raises a ValidationError whose message states the corrected format exactly: [DD] [[HH:]MM:]ss[.uuuuuu]"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Regression guard: the old incorrect literal [HH:[MM:]]ss[.uuuuuu] no longer appears in the error message or anywhere in the codebase/docs"
+   },
+   {
+    "id": "S2.1",
+    "covers": "\"14:00\" parses to timedelta(minutes=14) (==00:14:00) — leading two-group is minutes, proving the corrected grammar (motivating bug)"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Bare \"30\" parses to 30 seconds — seconds are mandatory and a single group is the minimal valid form"
+   },
+   {
+    "id": "S2.3",
+    "covers": "\"1:14:00\" parses to 1h14m00s — hours are present only when two trailing colon-groups follow (HH:MM:ss)"
+   },
+   {
+    "id": "S2.4",
+    "covers": "A two-group value \"1:30\" is minutes:seconds, never hours:seconds — confirms HH:ss is unrepresentable per the corrected format"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Optional days prefix: \"4 1:15:30\" yields days=4 plus the H:M:S remainder"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Optional microseconds suffix: \"30.500000\"/\"1:00.5\" parses fractional seconds; >6 digits truncated; fraction without integer seconds rejected"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Sign/negative handling: \"-30\" and \"-1 1:00:00\" parse as negative durations"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Empty/blank/whitespace-only input resolves to invalid (or None when blank allowed) without crashing"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Non-numeric garbage \"abc\" raises ValidationError carrying the corrected format message"
+   },
+   {
+    "id": "S4.3",
+    "covers": "Too many colon groups \"1:2:3:4\" is rejected as invalid and surfaces the corrected format message"
+   },
+   {
+    "id": "S4.4",
+    "covers": "Out-of-range days raise the distinct 'overflow' message, not the 'invalid' format message"
+   },
+   {
+    "id": "S4.5",
+    "covers": "ISO-8601 and Postgres-interval inputs still parse unchanged; the format literal documents only the colon grammar (regression guard)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Form DurationField exposes a default help_text describing the corrected format (issue's secondary ask)"
+   },
+   {
+    "id": "S5.2",
+    "covers": "i18n consistency: the corrected literal is a single translatable msgid shared across model error message, docs, and any help_text — stale translations re-fuzzed, no literal drift"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "django/forms/fields.py",
+   "django/utils/dateparse.py",
+   "tests/model_fields/test_durationfield.py",
+   "tests/forms_tests/field_tests/test_durationfield.py",
+   "tests/utils_tests/test_dateparse.py",
+   "docs/ref/models/fields.txt"
+  ]
+ },
+ "raw_tail": "tespace-only input resolves to invalid (or None when blank allowed) without crashing\"},{\"id\":\"S4.2\",\"covers\":\"Non-numeric garbage \\\"abc\\\" raises ValidationError carrying the corrected format message\"},{\"id\":\"S4.3\",\"covers\":\"Too many colon groups \\\"1:2:3:4\\\" is rejected as invalid and surfaces the corrected format message\"},{\"id\":\"S4.4\",\"covers\":\"Out-of-range days raise the distinct 'overflow' message, not the 'invalid' format message\"},{\"id\":\"S4.5\",\"covers\":\"ISO-8601 and Postgres-interval inputs still parse unchanged; the format literal documents only the colon grammar (regression guard)\"},{\"id\":\"S5.1\",\"covers\":\"Form DurationField exposes a default help_text describing the corrected format (issue's secondary ask)\"},{\"id\":\"S5.2\",\"covers\":\"i18n consistency: the corrected literal is a single translatable msgid shared across model error message, docs, and any help_text — stale translations re-fuzzed, no literal drift\"}],\"plan_files\":[\"django/db/models/fields/__init__.py\",\"django/forms/fields.py\",\"django/utils/dateparse.py\",\"tests/model_fields/test_durationfield.py\",\"tests/forms_tests/field_tests/test_durationfield.py\",\"tests/utils_tests/test_dateparse.py\",\"docs/ref/models/fields.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_invalid_string",
+    "covered": true,
+    "why": "S1.1 directly covers invalid DurationField input raising ValidationError with corrected format message [DD] [[HH:]MM:]ss[.uuuuuu]; S4.2 and S4.3 cover specific invalid string cases (non-numeric garbage, too many colon groups) that must carry the corrected format message; edge cases confirm the corrected literal must appear in ValidationError for invalid inputs"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

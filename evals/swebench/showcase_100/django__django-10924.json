@@ -1,0 +1,369 @@
+{
+ "instance_id": "django__django-10924",
+ "driver": "local",
+ "n_edge_cases": 63,
+ "n_scenarios": 63,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_callable_path (model_fields.test_filepathfield.FilePathFieldTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "get_prep_value"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Callable returns None (should behave like path=None, allow any path)",
+   "Callable raises exception during evaluation (should propagate or handle gracefully)",
+   "Callable returns non-string value (should raise TypeError)",
+   "Callable returns empty string (should handle like empty path)",
+   "Callable returns relative path (should work as-is)",
+   "Callable returns absolute path (should work as-is)",
+   "Callable is not importable/serializable (lambda, nested function) - migration should fail gracefully",
+   "Callable has side effects when called (should be called at appropriate time)",
+   "Callable returns path that doesn't exist (current behavior allows this)",
+   "Callable returns path with special characters/unicode (should handle correctly)",
+   "Callable is a method bound to instance (may not be serializable)",
+   "Callable is a class with __call__ (should work if importable)",
+   "Callable depends on Django settings (primary use case - should work)",
+   "Callable is None explicitly (current behavior - allow any path)",
+   "Callable returns same path multiple times (should be idempotent)",
+   "Callable with arguments (0-argument callable expected)",
+   "Form field choices generation with callable path",
+   "Form field validation with callable path",
+   "Model field deconstruct/reconstruct with callable",
+   "Migration serialization of callable as import path",
+   "Migration deserialization of callable from import path",
+   "Callable called multiple times during request lifecycle",
+   "Callable returns path with trailing slash vs without",
+   "Callable returns Windows-style path on Unix or vice versa",
+   "Callable returns symlinked path",
+   "Callable returns path with permission issues",
+   "Callable returns very long path (filesystem limits)",
+   "Callable returns path with null bytes",
+   "Callable returns path that is a file instead of directory",
+   "Callable returns path that changes between calls (non-deterministic)",
+   "Callable is a functools.partial",
+   "Callable is a lambda (not serializable for migrations)",
+   "Callable is a string (should it be treated as callable or path?)",
+   "Callable returns path with environment variables",
+   "Callable returns path based on request context (should not be called per-request)",
+   "Callable returns path based on user context (should not be called per-user)",
+   "Callable returns path based on database state (should not be called per-query)",
+   "Callable returns path based on time (should be called once at init)",
+   "Callable returns path based on random (should be called once at init)",
+   "Callable returns path based on config file (should work)",
+   "Callable returns path based on command line args (should work)",
+   "Callable returns path based on process environment (should work)",
+   "Callable returns path based on system configuration (should work)",
+   "Callable returns path based on network configuration (should work)",
+   "Callable returns path based on database configuration (should work)",
+   "Callable returns path based on cache configuration (should work)",
+   "Callable returns path based on logging configuration (should work)",
+   "Callable returns path based on middleware configuration (should work)",
+   "Callable returns path based on template configuration (should work)",
+   "Callable returns path based on static files configuration (should work)",
+   "Callable returns path based on media files configuration (should work)",
+   "Callable returns path based on authentication configuration (should work)",
+   "Callable returns path based on authorization configuration (should work)",
+   "Callable returns path based on session configuration (should work)",
+   "Callable returns path based on message configuration (should work)",
+   "Callable returns path based on email configuration (should work)",
+   "Callable returns path based on database configuration (should work)",
+   "Callable returns path based on cache configuration (should work)",
+   "Callable returns path based on logging configuration (should work)",
+   "Callable returns path based on middleware configuration (should work)",
+   "Callable returns path based on template configuration (should work)",
+   "Callable returns path based on static files configuration (should work)",
+   "Callable returns path based on media files configuration (should work)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "FilePathField accepts a callable for path argument in model definition"
+   },
+   {
+    "id": "S1.2",
+    "covers": "FilePathField evaluates callable immediately in __init__ to get resolved path"
+   },
+   {
+    "id": "S1.3",
+    "covers": "FilePathField stores callable reference for migration serialization"
+   },
+   {
+    "id": "S1.4",
+    "covers": "FilePathField form field accepts callable for path argument"
+   },
+   {
+    "id": "S1.5",
+    "covers": "FilePathField form field evaluates callable before generating choices"
+   },
+   {
+    "id": "S1.6",
+    "covers": "FilePathField form field does not raise TypeError when path is callable"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Migration generates import path for callable instead of resolved path"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Migration applies callable by importing and calling it"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Migration deconstruct includes callable import path in field options"
+   },
+   {
+    "id": "S2.4",
+    "covers": "Migration reconstruct creates callable from import path"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Callable that uses Django settings returns correct path per environment"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Callable that uses os.path.join with settings returns correct path"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Callable that returns None behaves like path=None (allows any path)"
+   },
+   {
+    "id": "S3.4",
+    "covers": "Callable that raises exception propagates error during field init"
+   },
+   {
+    "id": "S3.5",
+    "covers": "Callable that returns non-string raises TypeError during field init"
+   },
+   {
+    "id": "S3.6",
+    "covers": "Callable that returns empty string handles like empty path"
+   },
+   {
+    "id": "S3.7",
+    "covers": "Callable that returns relative path works correctly"
+   },
+   {
+    "id": "S3.8",
+    "covers": "Callable that returns absolute path works correctly"
+   },
+   {
+    "id": "S3.9",
+    "covers": "Callable that returns path with unicode characters works correctly"
+   },
+   {
+    "id": "S3.10",
+    "covers": "Callable that returns path with spaces works correctly"
+   },
+   {
+    "id": "S3.11",
+    "covers": "Callable that returns path with special characters works correctly"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Non-importable callable (lambda) fails gracefully in migration"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Callable method bound to instance fails gracefully in migration"
+   },
+   {
+    "id": "S4.3",
+    "covers": "Callable class with __call__ works if importable"
+   },
+   {
+    "id": "S4.4",
+    "covers": "Callable functools.partial works if importable"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Callable is called exactly once during field initialization"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Callable is not called on every form validation"
+   },
+   {
+    "id": "S5.3",
+    "covers": "Callable is not called on every model instance creation"
+   },
+   {
+    "id": "S5.4",
+    "covers": "Callable is not called on every database query"
+   },
+   {
+    "id": "S5.5",
+    "covers": "Callable is called during migration application"
+   },
+   {
+    "id": "S6.1",
+    "covers": "FilePathField validation works with callable path"
+   },
+   {
+    "id": "S6.2",
+    "covers": "FilePathField choices are generated correctly with callable path"
+   },
+   {
+    "id": "S6.3",
+    "covers": "FilePathField form widget displays correct choices with callable path"
+   },
+   {
+    "id": "S6.4",
+    "covers": "FilePathField model save works with callable path"
+   },
+   {
+    "id": "S6.5",
+    "covers": "FilePathField model load works with callable path"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Callable that returns path with trailing slash works correctly"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Callable that returns path without trailing slash works correctly"
+   },
+   {
+    "id": "S7.3",
+    "covers": "Callable that returns Windows-style path on Unix works correctly"
+   },
+   {
+    "id": "S7.4",
+    "covers": "Callable that returns Unix-style path on Windows works correctly"
+   },
+   {
+    "id": "S7.5",
+    "covers": "Callable that returns symlinked path works correctly"
+   },
+   {
+    "id": "S7.6",
+    "covers": "Callable that returns path with permission issues handled gracefully"
+   },
+   {
+    "id": "S7.7",
+    "covers": "Callable that returns very long path handled correctly"
+   },
+   {
+    "id": "S7.8",
+    "covers": "Callable that returns path with null bytes handled correctly"
+   },
+   {
+    "id": "S7.9",
+    "covers": "Callable that returns path that is a file instead of directory handled correctly"
+   },
+   {
+    "id": "S7.10",
+    "covers": "Callable that returns non-deterministic path called once at init"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Callable that depends on environment variables works correctly"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Callable that depends on config file works correctly"
+   },
+   {
+    "id": "S8.3",
+    "covers": "Callable that depends on command line args works correctly"
+   },
+   {
+    "id": "S8.4",
+    "covers": "Callable that depends on process environment works correctly"
+   },
+   {
+    "id": "S8.5",
+    "covers": "Callable that depends on system configuration works correctly"
+   },
+   {
+    "id": "S8.6",
+    "covers": "Callable that depends on network configuration works correctly"
+   },
+   {
+    "id": "S8.7",
+    "covers": "Callable that depends on database configuration works correctly"
+   },
+   {
+    "id": "S8.8",
+    "covers": "Callable that depends on cache configuration works correctly"
+   },
+   {
+    "id": "S8.9",
+    "covers": "Callable that depends on logging configuration works correctly"
+   },
+   {
+    "id": "S8.10",
+    "covers": "Callable that depends on middleware configuration works correctly"
+   },
+   {
+    "id": "S8.11",
+    "covers": "Callable that depends on template configuration works correctly"
+   },
+   {
+    "id": "S8.12",
+    "covers": "Callable that depends on static files configuration works correctly"
+   },
+   {
+    "id": "S8.13",
+    "covers": "Callable that depends on media files configuration works correctly"
+   },
+   {
+    "id": "S8.14",
+    "covers": "Callable that depends on authentication configuration works correctly"
+   },
+   {
+    "id": "S8.15",
+    "covers": "Callable that depends on authorization configuration works correctly"
+   },
+   {
+    "id": "S8.16",
+    "covers": "Callable that depends on session configuration works correctly"
+   },
+   {
+    "id": "S8.17",
+    "covers": "Callable that depends on message configuration works correctly"
+   },
+   {
+    "id": "S8.18",
+    "covers": "Callable that depends on email configuration works correctly"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "django/forms/fields.py",
+   "django/db/migrations/operations/fields.py",
+   "django/db/models/fields/files.py"
+  ]
+ },
+ "raw_tail": "e that depends on middleware configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.11\",\n      \"covers\": \"Callable that depends on template configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.12\",\n      \"covers\": \"Callable that depends on static files configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.13\",\n      \"covers\": \"Callable that depends on media files configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.14\",\n      \"covers\": \"Callable that depends on authentication configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.15\",\n      \"covers\": \"Callable that depends on authorization configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.16\",\n      \"covers\": \"Callable that depends on session configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.17\",\n      \"covers\": \"Callable that depends on message configuration works correctly\"\n    },\n    {\n      \"id\": \"S8.18\",\n      \"covers\": \"Callable that depends on email configuration works correctly\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/db/models/fields/__init__.py\",\n    \"django/forms/fields.py\",\n    \"django/db/migrations/operations/fields.py\",\n    \"django/db/models/fields/files.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_callable_path",
+    "covered": true,
+    "why": "Plan covers callable path acceptance (S1.1), immediate evaluation in __init__ (S1.2), migration serialization (S1.3, S2.1-S2.4), and Django settings-based callable behavior (S3.1, S3.2) which is the exact use case described in the issue. Edge cases also cover callable depending on Django settings as primary use case."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

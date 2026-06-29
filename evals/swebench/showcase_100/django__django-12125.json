@@ -1,0 +1,147 @@
+{
+ "instance_id": "django__django-12125",
+ "n_edge_cases": 20,
+ "n_scenarios": 17,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_serialize_nested_class (migrations.test_writer.WriterTests)",
+  "test_serialize_numbers (migrations.test_writer.WriterTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "serialize"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "matched": [
+   "serializer.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "One-level field subclass nested in a plain (non-Model) class must serialize to module.Outer.Inner, not module.Inner",
+   "Field subclass nested inside a Model serializes with full enclosing qualname",
+   "Enum subclass nested in a Model and referenced via a field kwarg (enum=State) must serialize the TYPE reference as module.Model.State — TypeSerializer.__name__→__qualname__ fix (serializer.py ~L266)",
+   "serializer_factory routes a bare Enum subclass type to TypeSerializer (not the member EnumSerializer); that path was the unfixed one",
+   "Enum MEMBER serialization (EnumSerializer, commit 6452112) must keep using the enum class __qualname__ — no regression",
+   "TypeSerializer (class path) and EnumSerializer (member path) must agree on the same nested enclosing prefix",
+   "Arbitrary-depth nesting A.B.C → module.A.B.C",
+   "Top-level class: __qualname__ == __name__, output byte-identical — no migration churn",
+   "Builtin type (int/str) still serializes with no module prefix (builtins branch unaffected)",
+   "Generated import line must stay `import <module>` (the module is importable; the dotted attribute path is not) — never `from module import Outer.Inner`",
+   "Serialized path must round-trip / be executable: resolve via import + attribute chain, eliminating the runtime 'module has no member X' error",
+   "Local class (defined in a function) carries `<locals>` in __qualname__ and is unimportable → must raise a clear ValueError, not emit a broken path",
+   "Lambdas / any __qualname__ containing '<' are rejected",
+   "Special-case types models.Model and type(None) serialize unchanged",
+   "Cross-module nested reference: othermodule.Outer.Inner with `import othermodule`",
+   "models.Choices / models.IntegerChoices nested in a model (Django 3.0 common pattern) serializes correctly",
+   "Third-party field (enumfields.EnumField) whose kwarg references a nested enum produces the correct enclosing path",
+   "makemigrations run twice on the nested-enum model produces no spurious migration (deconstruct path is now stable AND re-importable)",
+   "Nested class whose name collides with a top-level symbol is disambiguated by qualname",
+   "No-regression for pre-existing serialized references to top-level field subclasses"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Field subclass declared as inner class of a plain object (Outer.Inner) serializes to module.Outer.Inner"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Field subclass nested inside a Model serializes with its full enclosing qualname"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Enum nested in a Model, referenced via field kwarg enum=State, serializes the type as module.Model.State (TypeSerializer uses __qualname__)"
+   },
+   {
+    "id": "S2.2",
+    "covers": "serializer_factory dispatches a bare Enum subclass type to TypeSerializer and the rendered path includes the enclosing class"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Enum member value serializes via EnumSerializer using the enum class __qualname__ (no regression from commit 6452112)"
+   },
+   {
+    "id": "S3.2",
+    "covers": "TypeSerializer class path and EnumSerializer member path share an identical enclosing prefix for the same nested enum"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Three-level nested class A.B.C serializes to module.A.B.C (arbitrary nesting depth)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Top-level class serializes to module.ClassName with byte-identical output (no churn regression)"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Builtin type serializes with no module prefix (builtins branch preserved)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Generated import for a nested type is `import <module>`, never an invalid `from module import Outer.Inner`"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Serialized nested path round-trips: it resolves back to the original class via import + attribute chain"
+   },
+   {
+    "id": "S7.2",
+    "covers": "End-to-end repro — makemigrations on a model with a nested EnumField yields an importable migration with no 'module has no member' error"
+   },
+   {
+    "id": "S8.1",
+    "covers": "A class with `<locals>` in __qualname__ (defined inside a function) raises ValueError instead of emitting an unimportable path"
+   },
+   {
+    "id": "S8.2",
+    "covers": "A lambda / qualname containing '<' is rejected with a clear serialization error"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Special-case models.Model still serializes to the literal 'models.Model'"
+   },
+   {
+    "id": "S9.2",
+    "covers": "Special-case type(None) still serializes to 'type(None)'"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Running makemigrations twice on the nested-enum model produces no second migration (idempotent, stable deconstruct)"
+   }
+  ],
+  "plan_files": [
+   "django/db/migrations/serializer.py",
+   "tests/migrations/test_writer.py",
+   "django/db/models/fields/__init__.py",
+   "django/db/migrations/operations/models.py"
+  ]
+ },
+ "raw_tail": "builtins branch preserved)\"},{\"id\":\"S6.1\",\"covers\":\"Generated import for a nested type is `import <module>`, never an invalid `from module import Outer.Inner`\"},{\"id\":\"S7.1\",\"covers\":\"Serialized nested path round-trips: it resolves back to the original class via import + attribute chain\"},{\"id\":\"S7.2\",\"covers\":\"End-to-end repro — makemigrations on a model with a nested EnumField yields an importable migration with no 'module has no member' error\"},{\"id\":\"S8.1\",\"covers\":\"A class with `<locals>` in __qualname__ (defined inside a function) raises ValueError instead of emitting an unimportable path\"},{\"id\":\"S8.2\",\"covers\":\"A lambda / qualname containing '<' is rejected with a clear serialization error\"},{\"id\":\"S9.1\",\"covers\":\"Special-case models.Model still serializes to the literal 'models.Model'\"},{\"id\":\"S9.2\",\"covers\":\"Special-case type(None) still serializes to 'type(None)'\"},{\"id\":\"S10.1\",\"covers\":\"Running makemigrations twice on the nested-enum model produces no second migration (idempotent, stable deconstruct)\"}],\"plan_files\":[\"django/db/migrations/serializer.py\",\"tests/migrations/test_writer.py\",\"django/db/models/fields/__init__.py\",\"django/db/migrations/operations/models.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_serialize_nested_class",
+    "covered": true,
+    "why": "S1.1 explicitly covers field subclass as inner class (Outer.Inner) serializing to module.Outer.Inner, which is the exact behavior this test verifies. Also covered by edge case 'One-level field subclass nested in a plain (non-Model) class must serialize to module.Outer.Inner, not module.Inner'."
+   },
+   {
+    "test": "test_serialize_numbers",
+    "covered": true,
+    "why": "S5.2 explicitly covers 'Builtin type serializes with no module prefix (builtins branch preserved)' which handles numeric types. Also covered by edge case 'Builtin type (int/str) still serializes with no module prefix (builtins branch unaffected)' ensuring no regression for basic type serialization."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

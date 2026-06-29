@@ -1,0 +1,111 @@
+{
+ "instance_id": "django__django-14534",
+ "n_edge_cases": 14,
+ "n_scenarios": 11,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "If auto_id is provided when initializing the form, the generated ID in",
+  "test_iterable_boundfield_select (forms_tests.tests.test_forms.FormsTestCase)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/boundfield.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "template_name"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/boundfield.py"
+  ],
+  "matched": [
+   "boundfield.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Custom auto_id with '%s' (e.g. auto_id='custom_%s') on CheckboxSelectMultiple — label 'for' ids must follow the custom format, the core bug [VERIFIED: opt0 id_for_label=custom_f_0]",
+   "Default auto_id='id_%s' — output must stay 'id_<name>_<index>' (regression guard) [VERIFIED: id_f_0]",
+   "auto_id=False or '' — subwidget attrs has no 'id' key; must return None, NOT raise KeyError (forces .get('id') over ['id']) [VERIFIED: .get->None; naive ['id']->KeyError]",
+   "auto_id truthy but no '%s' placeholder — id collapses to bare html_name then '_<index>'; old reconstruction wrongly prefixes 'id_'",
+   "Grouped choices / optgroups produce composite indices like '0_1' — id_for_label must equal the actual input id [VERIFIED: custom_g_0_1 match]",
+   "Multiple options — each subwidget id must be unique and paired to its own input id (base + '_' + index) [VERIFIED: opt0/1/2]",
+   "First option index 0 — ensure not dropped/falsy-mishandled [VERIFIED]",
+   "Explicit widget attrs={'id': ...} overriding auto_id — subwidget ids and labels must derive from that explicit id",
+   "RadioSelect (another ChoiceWidget subclass), not just CheckboxSelectMultiple — same code path [VERIFIED: custom_r_1]",
+   "BoundField.id_for_label and single-widget fields (TextInput) must remain unchanged [VERIFIED: custom_t]",
+   "id_for_label must stay a @property so template '{{ widget.id_for_label }}' access keeps working [VERIFIED: is property=True]",
+   "End-to-end: rendered <label for> must equal rendered <input id> [VERIFIED: label-for==input ids]",
+   "html_name with pre-existing underscores must not be double-prefixed [UNVERIFIED]",
+   "Regression test must fail on current code and pass after the change [VERIFIED fail-before: old impl->id_f_0 under custom auto_id]"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "BoundWidget.id_for_label returns self.data['attrs'].get('id') (the rendered subwidget id), not 'id_%s_%s' % (name, index)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Form with auto_id='custom_%s' + CheckboxSelectMultiple: subwidgets[0].id_for_label == 'custom_f_0'"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Custom auto_id without '%s' (truthy bare): subwidget id_for_label matches actual input id"
+   },
+   {
+    "id": "S2.3",
+    "covers": "RadioSelect with custom auto_id also honors the custom format (ChoiceWidget subclass coverage)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Default auto_id='id_%s': subwidgets[0].id_for_label == 'id_f_0' (backward compatibility, no regression)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "auto_id=False: id_for_label returns None without raising KeyError when attrs has no 'id'"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Multiple checkbox options: each subwidget yields a distinct id_for_label equal to its own rendered input id across all indices"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Grouped/optgroup choices: composite-index subwidget id_for_label matches the actual input id (e.g. custom_g_0_1)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Field widget with explicit attrs={'id': 'x'}: subwidget id_for_label derives from the explicit id, overriding auto_id"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Single-widget field (TextInput) and BoundField.id_for_label remain unchanged — no collateral behaviour change"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Rendered HTML invariant: <label for> equals <input id> for each CheckboxSelectMultiple option under custom auto_id (end-to-end)"
+   }
+  ],
+  "plan_files": [
+   "django/forms/boundfield.py",
+   "tests/forms_tests/tests/test_forms.py",
+   "django/forms/widgets.py"
+  ]
+ },
+ "raw_tail": "id\"},{\"id\":\"S2.3\",\"covers\":\"RadioSelect with custom auto_id also honors the custom format (ChoiceWidget subclass coverage)\"},{\"id\":\"S3.1\",\"covers\":\"Default auto_id='id_%s': subwidgets[0].id_for_label == 'id_f_0' (backward compatibility, no regression)\"},{\"id\":\"S4.1\",\"covers\":\"auto_id=False: id_for_label returns None without raising KeyError when attrs has no 'id'\"},{\"id\":\"S5.1\",\"covers\":\"Multiple checkbox options: each subwidget yields a distinct id_for_label equal to its own rendered input id across all indices\"},{\"id\":\"S6.1\",\"covers\":\"Grouped/optgroup choices: composite-index subwidget id_for_label matches the actual input id (e.g. custom_g_0_1)\"},{\"id\":\"S7.1\",\"covers\":\"Field widget with explicit attrs={'id': 'x'}: subwidget id_for_label derives from the explicit id, overriding auto_id\"},{\"id\":\"S8.1\",\"covers\":\"Single-widget field (TextInput) and BoundField.id_for_label remain unchanged — no collateral behaviour change\"},{\"id\":\"S8.2\",\"covers\":\"Rendered HTML invariant: <label for> equals <input id> for each CheckboxSelectMultiple option under custom auto_id (end-to-end)\"}],\"plan_files\":[\"django/forms/boundfield.py\",\"tests/forms_tests/tests/test_forms.py\",\"django/forms/widgets.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_iterable_boundfield_select",
+    "covered": true,
+    "why": "S2.1 directly tests custom auto_id='custom_%s' with CheckboxSelectMultiple where subwidgets[0].id_for_label == 'custom_f_0', which is the exact behavior the bug fix must produce. Additionally, S1.1 covers the core fix (returning self.data['attrs'].get('id') instead of hardcoded format), S2.2-S2.3 cover related variants, and the edge case 'Custom auto_id with %s on CheckboxSelectMultiple' explicitly verifies this scenario [VERIFIED: opt0 id_for_label=custom_f_0]."
+   }
+  ],
+  "covered": 1,
+  "total": 2,
+  "ratio": 0.5
+ }
+}

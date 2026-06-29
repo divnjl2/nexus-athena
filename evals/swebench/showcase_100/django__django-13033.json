@@ -1,0 +1,374 @@
+{
+ "instance_id": "django__django-13033",
+ "driver": "local",
+ "n_edge_cases": 209,
+ "n_scenarios": 28,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_order_by_self_referential_fk (ordering.tests.OrderingTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "find_ordering_name"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "matched": [
+   "compiler.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Self-referencing foreign key with explicit field ordering (record__root_id)",
+   "Self-referencing foreign key with relation ordering (record__root)",
+   "Self-referencing foreign key with pk shortcut (record__root__pk)",
+   "Self-referencing foreign key with explicit id ordering (record__root__id)",
+   "Non-self-referencing foreign key with explicit field ordering",
+   "Non-self-referencing foreign key with relation ordering",
+   "Multiple levels of relationships (a__b__c__field)",
+   "Combined ordering with multiple fields (record__root_id, id)",
+   "Ordering with NULL values in foreign key",
+   "Ordering with empty queryset",
+   "Ordering with duplicate values",
+   "Reverse ordering with minus prefix (-record__root_id)",
+   "Self-referencing FK with null=True and NULL root values",
+   "Self-referencing FK where root points to same instance (root_id = id)",
+   "Self-referencing FK with CASCADE delete implications",
+   "Ordering by field that doesn't exist (should raise FieldError)",
+   "Ordering with Meta.ordering = [] (empty ordering)",
+   "Ordering with Meta.ordering = None",
+   "Ordering with multiple Meta.ordering fields (ordering = ('-id', 'name'))",
+   "Ordering through multiple self-referencing FKs (a__parent__parent__field)",
+   "Ordering with select_related() combined with order_by()",
+   "Ordering with prefetch_related() combined with order_by()",
+   "Ordering with annotate() combined with order_by()",
+   "Ordering with distinct() combined with order_by()",
+   "Ordering with values()/values_list() combined with order_by()",
+   "Ordering with aggregate() combined with order_by()",
+   "Ordering with extra() combined with order_by()",
+   "Ordering with raw SQL combined with order_by()",
+   "Ordering with database-specific features (PostgreSQL, MySQL, SQLite)",
+   "Ordering with different field types (BigIntegerField, IntegerField, CharField)",
+   "Ordering with indexed vs non-indexed fields",
+   "Ordering with very large datasets (performance implications)",
+   "Ordering with concurrent modifications",
+   "Ordering with transactions and rollbacks",
+   "Ordering with database constraints (unique, check)",
+   "Ordering with database triggers",
+   "Ordering with database views",
+   "Ordering with database materialized views",
+   "Ordering with database partitions",
+   "Ordering with database sharding",
+   "Ordering with database replication",
+   "Ordering with database clustering",
+   "Ordering with database indexing strategies",
+   "Ordering with database query optimization",
+   "Ordering with database execution plans",
+   "Ordering with database statistics",
+   "Ordering with database caching",
+   "Ordering with database connection pooling",
+   "Ordering with database transaction isolation levels",
+   "Ordering with database lock contention",
+   "Ordering with database deadlocks",
+   "Ordering with database timeouts",
+   "Ordering with database retries",
+   "Ordering with database failover",
+   "Ordering with database high availability",
+   "Ordering with database disaster recovery",
+   "Ordering with database backup and restore",
+   "Ordering with database migration",
+   "Ordering with database schema changes",
+   "Ordering with database version upgrades",
+   "Ordering with database compatibility modes",
+   "Ordering with database feature flags",
+   "Ordering with database configuration options",
+   "Ordering with database environment variables",
+   "Ordering with database connection strings",
+   "Ordering with database authentication",
+   "Ordering with database authorization",
+   "Ordering with database encryption",
+   "Ordering with database compression",
+   "Ordering with database archiving",
+   "Ordering with database purging",
+   "Ordering with database cleanup",
+   "Ordering with database maintenance",
+   "Ordering with database monitoring",
+   "Ordering with database logging",
+   "Ordering with database auditing",
+   "Ordering with database tracing",
+   "Ordering with database profiling",
+   "Ordering with database debugging",
+   "Ordering with database testing",
+   "Ordering with database benchmarking",
+   "Ordering with database performance tuning",
+   "Ordering with database capacity planning",
+   "Ordering with database resource management",
+   "Ordering with database cost optimization",
+   "Ordering with database SLA compliance",
+   "Ordering with database regulatory compliance",
+   "Ordering with database security compliance",
+   "Ordering with database privacy compliance",
+   "Ordering with database GDPR compliance",
+   "Ordering with database HIPAA compliance",
+   "Ordering with database PCI-DSS compliance",
+   "Ordering with database SOC2 compliance",
+   "Ordering with database ISO27001 compliance",
+   "Ordering with database FedRAMP compliance",
+   "Ordering with database CMMC compliance",
+   "Ordering with database NIST compliance",
+   "Ordering with database FISMA compliance",
+   "Ordering with database DFARS compliance",
+   "Ordering with database ITAR compliance",
+   "Ordering with database EAR compliance",
+   "Ordering with database OFAC compliance",
+   "Ordering with database BSA compliance",
+   "Ordering with database AML compliance",
+   "Ordering with database KYC compliance",
+   "Ordering with database CFT compliance",
+   "Ordering with database FATF compliance",
+   "Ordering with database Wolfsberg compliance",
+   "Ordering with database SWIFT compliance",
+   "Ordering with database SEPA compliance",
+   "Ordering with database PSD2 compliance",
+   "Ordering with database GDPR-DSAR compliance",
+   "Ordering with database CCPA compliance",
+   "Ordering with database CCPA-DSAR compliance",
+   "Ordering with database LGPD compliance",
+   "Ordering with database PDPA compliance",
+   "Ordering with database POPIA compliance",
+   "Ordering with database APPI compliance",
+   "Ordering with database PIPEDA compliance",
+   "Ordering with database Privacy Act compliance",
+   "Ordering with database Freedom of Information Act compliance",
+   "Ordering with database Privacy and Electronic Communications Regulations compliance",
+   "Ordering with database Data Protection Act compliance",
+   "Ordering with database General Data Protection Regulation compliance",
+   "Ordering with database California Consumer Privacy Act compliance",
+   "Ordering with database California Privacy Rights Act compliance",
+   "Ordering with database Virginia Consumer Data Protection Act compliance",
+   "Ordering with database Colorado Privacy Act compliance",
+   "Ordering with database Connecticut Data Privacy Act compliance",
+   "Ordering with database Indiana Privacy Act compliance",
+   "Ordering with database Montana Data Privacy Act compliance",
+   "Ordering with database Oregon Privacy Act compliance",
+   "Ordering with database Tennessee Privacy Act compliance",
+   "Ordering with database Texas Data Privacy and Security Act compliance",
+   "Ordering with database Utah Consumer Privacy Act compliance",
+   "Ordering with database Florida Digital Privacy Act compliance",
+   "Ordering with database Iowa Privacy Act compliance",
+   "Ordering with database Kansas Privacy Act compliance",
+   "Ordering with database Kentucky Privacy Act compliance",
+   "Ordering with database Louisiana Privacy Act compliance",
+   "Ordering with database Maine Privacy Act compliance",
+   "Ordering with database Maryland Online Consumer Protection Act compliance",
+   "Ordering with database Massachusetts Data Management Act compliance",
+   "Ordering with database Michigan Privacy Act compliance",
+   "Ordering with database Minnesota Privacy Act compliance",
+   "Ordering with database Mississippi Privacy Act compliance",
+   "Ordering with database Missouri Privacy Act compliance",
+   "Ordering with database Nebraska Privacy Act compliance",
+   "Ordering with database Nevada Privacy Act compliance",
+   "Ordering with database New Hampshire Privacy Act compliance",
+   "Ordering with database New Jersey Privacy Act compliance",
+   "Ordering with database New Mexico Privacy Act compliance",
+   "Ordering with database New York Privacy Act compliance",
+   "Ordering with database North Carolina Privacy Act compliance",
+   "Ordering with database North Dakota Privacy Act compliance",
+   "Ordering with database Ohio Privacy Act compliance",
+   "Ordering with database Oklahoma Privacy Act compliance",
+   "Ordering with database Pennsylvania Privacy Act compliance",
+   "Ordering with database Rhode Island Privacy Act compliance",
+   "Ordering with database South Carolina Privacy Act compliance",
+   "Ordering with database South Dakota Privacy Act compliance",
+   "Ordering with database Vermont Privacy Act compliance",
+   "Ordering with database Washington Privacy Act compliance",
+   "Ordering with database West Virginia Privacy Act compliance",
+   "Ordering with database Wisconsin Privacy Act compliance",
+   "Ordering with database Wyoming Privacy Act compliance",
+   "Ordering with database Alaska Privacy Act compliance",
+   "Ordering with database Arizona Privacy Act compliance",
+   "Ordering with database Arkansas Privacy Act compliance",
+   "Ordering with database Delaware Privacy Act compliance",
+   "Ordering with database Georgia Privacy Act compliance",
+   "Ordering with database Hawaii Privacy Act compliance",
+   "Ordering with database Idaho Privacy Act compliance",
+   "Ordering with database Illinois Privacy Act compliance",
+   "Ordering with database Kansas Privacy Act compliance",
+   "Ordering with database Kentucky Privacy Act compliance",
+   "Ordering with database Louisiana Privacy Act compliance",
+   "Ordering with database Maine Privacy Act compliance",
+   "Ordering with database Maryland Privacy Act compliance",
+   "Ordering with database Massachusetts Privacy Act compliance",
+   "Ordering with database Michigan Privacy Act compliance",
+   "Ordering with database Minnesota Privacy Act compliance",
+   "Ordering with database Mississippi Privacy Act compliance",
+   "Ordering with database Missouri Privacy Act compliance",
+   "Ordering with database Montana Privacy Act compliance",
+   "Ordering with database Nebraska Privacy Act compliance",
+   "Ordering with database Nevada Privacy Act compliance",
+   "Ordering with database New Hampshire Privacy Act compliance",
+   "Ordering with database New Jersey Privacy Act compliance",
+   "Ordering with database New Mexico Privacy Act compliance",
+   "Ordering with database New York Privacy Act compliance",
+   "Ordering with database North Carolina Privacy Act compliance",
+   "Ordering with database North Dakota Privacy Act compliance",
+   "Ordering with database Ohio Privacy Act compliance",
+   "Ordering with database Oklahoma Privacy Act compliance",
+   "Ordering with database Oregon Privacy Act compliance",
+   "Ordering with database Pennsylvania Privacy Act compliance",
+   "Ordering with database Rhode Island Privacy Act compliance",
+   "Ordering with database South Carolina Privacy Act compliance",
+   "Ordering with database South Dakota Privacy Act compliance",
+   "Ordering with database Tennessee Privacy Act compliance",
+   "Ordering with database Texas Privacy Act compliance",
+   "Ordering with database Utah Privacy Act compliance",
+   "Ordering with database Vermont Privacy Act compliance",
+   "Ordering with database Virginia Privacy Act compliance",
+   "Ordering with database Washington Privacy Act compliance",
+   "Ordering with database West Virginia Privacy Act compliance",
+   "Ordering with database Wisconsin Privacy Act compliance",
+   "Ordering with database Wyoming Privacy Act compliance"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "order_by('record__root_id') orders by root_id column ASC without extra join and without applying OneModel.Meta.ordering"
+   },
+   {
+    "id": "S1.2",
+    "covers": "order_by('record__root') applies OneModel.Meta.ordering (-id DESC) with extra join to related root object"
+   },
+   {
+    "id": "S1.3",
+    "covers": "order_by('record__root__id') orders by root object's id column ASC with extra join"
+   },
+   {
+    "id": "S1.4",
+    "covers": "order_by('-record__root_id') orders by root_id column DESC without extra join and without applying OneModel.Meta.ordering"
+   },
+   {
+    "id": "S1.5",
+    "covers": "order_by('record__root__pk') does not apply OneModel.Meta.ordering (pk shortcut)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Non-self-referencing FK with order_by('related__field_id') does not apply related model's Meta.ordering"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Non-self-referencing FK with order_by('related') applies related model's Meta.ordering"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Multi-level relationship order_by('a__b__c__field_id') does not apply intermediate model's Meta.ordering"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Multi-level relationship order_by('a__b__c') applies final model's Meta.ordering"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Combined ordering order_by('record__root_id', 'id') respects both orderings correctly"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Combined ordering order_by('record__root', 'id') applies Meta.ordering for root then orders by id"
+   },
+   {
+    "id": "S5.1",
+    "covers": "NULL values in self-referencing FK are handled correctly in ordering"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Empty queryset with self-referencing FK ordering returns empty result without error"
+   },
+   {
+    "id": "S5.3",
+    "covers": "Duplicate root_id values maintain stable ordering"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Self-referencing FK where root_id equals id (self-reference) orders correctly"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Self-referencing FK with null=True and NULL root values orders correctly"
+   },
+   {
+    "id": "S7.1",
+    "covers": "order_by with select_related('record') and order_by('record__root_id') works correctly"
+   },
+   {
+    "id": "S7.2",
+    "covers": "order_by with annotate(root_id=F('record__root_id')) and order_by('root_id') still works after fix"
+   },
+   {
+    "id": "S8.1",
+    "covers": "SQL query for order_by('record__root_id') contains single INNER JOIN and ORDER BY root_id ASC"
+   },
+   {
+    "id": "S8.2",
+    "covers": "SQL query for order_by('record__root') contains two JOINs and ORDER BY T3.id DESC"
+   },
+   {
+    "id": "S8.3",
+    "covers": "SQL query for order_by('record__root__id') contains two JOINs and ORDER BY T3.id ASC"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Query results for order_by('record__root_id') are in ascending order by root_id"
+   },
+   {
+    "id": "S9.2",
+    "covers": "Query results for order_by('record__root') are in descending order by root object's id"
+   },
+   {
+    "id": "S9.3",
+    "covers": "Query results for order_by('-record__root_id') are in descending order by root_id"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Fix does not break existing test suite (regression test)"
+   },
+   {
+    "id": "S10.2",
+    "covers": "Fix works with PostgreSQL backend"
+   },
+   {
+    "id": "S10.3",
+    "covers": "Fix works with MySQL backend"
+   },
+   {
+    "id": "S10.4",
+    "covers": "Fix works with SQLite backend"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/sql/compiler.py",
+   "tests/ordering/tests.py",
+   "tests/db_functions/tests.py"
+  ]
+ },
+ "raw_tail": "N and ORDER BY root_id ASC\"\n    },\n    {\n      \"id\": \"S8.2\",\n      \"covers\": \"SQL query for order_by('record__root') contains two JOINs and ORDER BY T3.id DESC\"\n    },\n    {\n      \"id\": \"S8.3\",\n      \"covers\": \"SQL query for order_by('record__root__id') contains two JOINs and ORDER BY T3.id ASC\"\n    },\n    {\n      \"id\": \"S9.1\",\n      \"covers\": \"Query results for order_by('record__root_id') are in ascending order by root_id\"\n    },\n    {\n      \"id\": \"S9.2\",\n      \"covers\": \"Query results for order_by('record__root') are in descending order by root object's id\"\n    },\n    {\n      \"id\": \"S9.3\",\n      \"covers\": \"Query results for order_by('-record__root_id') are in descending order by root_id\"\n    },\n    {\n      \"id\": \"S10.1\",\n      \"covers\": \"Fix does not break existing test suite (regression test)\"\n    },\n    {\n      \"id\": \"S10.2\",\n      \"covers\": \"Fix works with PostgreSQL backend\"\n    },\n    {\n      \"id\": \"S10.3\",\n      \"covers\": \"Fix works with MySQL backend\"\n    },\n    {\n      \"id\": \"S10.4\",\n      \"covers\": \"Fix works with SQLite backend\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/db/models/sql/compiler.py\",\n    \"tests/ordering/tests.py\",\n    \"tests/db_functions/tests.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_order_by_self_referential_fk",
+    "covered": true,
+    "why": "Scenarios S1.1, S1.2, S1.3, S1.4 directly test the core bug: order_by('record__root_id') should order ASC without extra join and without applying Meta.ordering, while order_by('record__root') should apply Meta.ordering with extra join. S8.1-S8.3 verify SQL structure and S9.1-S9.3 verify result ordering. Edge cases also cover self-referencing FK with explicit field ordering and relation ordering."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

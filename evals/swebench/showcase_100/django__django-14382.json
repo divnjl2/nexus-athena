@@ -1,0 +1,114 @@
+{
+ "instance_id": "django__django-14382",
+ "driver": "local",
+ "n_edge_cases": 15,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_trailing_slash_in_target_app_directory_name (admin_scripts.tests.StartApp)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/management/templates.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "handle"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/management/templates.py"
+  ],
+  "matched": [
+   "templates.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Single trailing slash: 'directory/'",
+   "Multiple trailing slashes: 'directory//'",
+   "Path with trailing slash: 'path/to/directory/'",
+   "No trailing slash (regression): 'directory'",
+   "Only slashes: '/' or '//'",
+   "Relative path with slash: './directory/'",
+   "Absolute path with slash: '/tmp/directory/'",
+   "Windows backslash: 'directory\\' or 'directory\\\\'",
+   "Trailing whitespace after slash: 'directory/ '",
+   "Valid identifier with slash: 'myapp/'",
+   "Invalid identifier with slash: '123invalid/'",
+   "Empty string input",
+   "Unicode directory name with slash: '名前/'",
+   "Directory already exists with trailing slash",
+   "App name validation still works independently"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "startapp with trailing slash creates app successfully"
+   },
+   {
+    "id": "S1.2",
+    "covers": "startapp with multiple trailing slashes creates app successfully"
+   },
+   {
+    "id": "S1.3",
+    "covers": "startapp with path containing trailing slash creates app in correct location"
+   },
+   {
+    "id": "S1.4",
+    "covers": "startapp without trailing slash still works (regression test)"
+   },
+   {
+    "id": "S1.5",
+    "covers": "startapp with invalid identifier and trailing slash fails with appropriate error"
+   },
+   {
+    "id": "S1.6",
+    "covers": "startapp with only slashes fails with appropriate error"
+   },
+   {
+    "id": "S1.7",
+    "covers": "startapp with relative path and trailing slash works"
+   },
+   {
+    "id": "S1.8",
+    "covers": "startapp with absolute path and trailing slash works"
+   },
+   {
+    "id": "S1.9",
+    "covers": "startapp validates app name independently of directory name"
+   },
+   {
+    "id": "S1.10",
+    "covers": "startapp handles Windows-style backslash separators"
+   },
+   {
+    "id": "S1.11",
+    "covers": "startapp with existing directory and trailing slash handles correctly"
+   },
+   {
+    "id": "S1.12",
+    "covers": "startapp with unicode directory name and trailing slash works"
+   }
+  ],
+  "plan_files": [
+   "templates.py"
+  ]
+ },
+ "raw_tail": "tory already exists with trailing slash\",\n\"App name validation still works independently\"\n],\n\"scenarios\":[\n{\"id\":\"S1.1\",\"covers\":\"startapp with trailing slash creates app successfully\"},\n{\"id\":\"S1.2\",\"covers\":\"startapp with multiple trailing slashes creates app successfully\"},\n{\"id\":\"S1.3\",\"covers\":\"startapp with path containing trailing slash creates app in correct location\"},\n{\"id\":\"S1.4\",\"covers\":\"startapp without trailing slash still works (regression test)\"},\n{\"id\":\"S1.5\",\"covers\":\"startapp with invalid identifier and trailing slash fails with appropriate error\"},\n{\"id\":\"S1.6\",\"covers\":\"startapp with only slashes fails with appropriate error\"},\n{\"id\":\"S1.7\",\"covers\":\"startapp with relative path and trailing slash works\"},\n{\"id\":\"S1.8\",\"covers\":\"startapp with absolute path and trailing slash works\"},\n{\"id\":\"S1.9\",\"covers\":\"startapp validates app name independently of directory name\"},\n{\"id\":\"S1.10\",\"covers\":\"startapp handles Windows-style backslash separators\"},\n{\"id\":\"S1.11\",\"covers\":\"startapp with existing directory and trailing slash handles correctly\"},\n{\"id\":\"S1.12\",\"covers\":\"startapp with unicode directory name and trailing slash works\"}\n],\n\"plan_files\":[\"templates.py\"]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_trailing_slash_in_target_app_directory_name",
+    "covered": true,
+    "why": "S1.1 directly covers this: 'startapp with trailing slash creates app successfully' - the test name indicates it verifies that providing a trailing slash in the target directory name (e.g., 'directory/') doesn't cause the 'not a valid app directory' error, which is exactly what S1.1 describes. The edge case 'Single trailing slash: directory/' also explicitly covers this scenario."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

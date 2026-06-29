@@ -1,0 +1,119 @@
+{
+ "instance_id": "django__django-11179",
+ "n_edge_cases": 16,
+ "n_scenarios": 13,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_fast_delete_instance_set_pk_none (delete.tests.FastDeleteTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/deletion.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "delete"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/deletion.py"
+  ],
+  "matched": [
+   "deletion.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Single-object fast path early-returns the count BEFORE the pk-reset loop — root cause; fix belongs inside `if self.can_fast_delete(instance):`, AFTER `delete_batch`, BEFORE the early `return`.",
+   "Use `model._meta.pk.attname` (mirroring L324-326), not a blanket `instance.pk = None` — so a OneToOneField/explicit primary_key whose attname is `<name>_id`, or a differently-named PK field, gets the correct underlying attribute cleared.",
+   "Ordering matters: `delete_batch([instance.pk], using)` must read the PK value BEFORE it is nulled; nulling first would build `DELETE ... WHERE pk IS NULL` and remove no row.",
+   "A DELETE that raises (inside `transaction.mark_for_rollback_on_error()`) must leave the PK intact — pk is only nulled after the delete succeeds, so a failed delete does not corrupt the instance.",
+   "Custom / non-auto PKs (UUIDField or CharField primary_key, user-assigned natural keys) are also nulled — Django clears pk regardless of whether it was auto-generated.",
+   "Parity: the non-fast (has-dependencies) path already nulls pk at L324-326; the fix only closes the fast-path gap, and both paths must end with pk == None.",
+   "`field_updates` (L320-323) is intentionally NOT replicated in the fast path — it is empty for fast-deletable objects because collect()'s SET branch isn't reached under `can_fast_delete`; adding it would be dead code (maintainer-confirmed).",
+   "Fast-deletable implies no pre_delete/post_delete receivers and no cascades, so no signals fire — the fix must only reset pk and must not introduce any signal sends.",
+   "Only the PK attribute is reset; every other field value on the instance must remain unchanged after delete.",
+   "Re-saving a fast-deleted instance must INSERT a new row with a fresh PK, not UPDATE a now-nonexistent row (the downstream behaviour the pk-reset enables).",
+   "Multi-database: the pk reset must occur for deletes executed on a non-default `using` alias.",
+   "Proxy models (sharing the concrete table) taking the fast path must clear the concrete model's pk attname.",
+   "Bulk `QuerySet.filter(...).delete()` is out of scope — it has no loaded in-memory instance to mutate — and must remain unaffected (no regression).",
+   "Double-delete: after the fix, a second `.delete()` on the now pk=None instance still raises the pre-existing `ValueError` ('... can't be deleted because its <pk> attribute is set to None') — guard unchanged.",
+   "Return value `(total_count, {model_label: count})` must be unchanged; clearing pk is a pure side effect.",
+   "Regression-coverage gap: the fast-delete branch lacked a 'pk is None' assertion that the non-fast branch had — that is how the regression (bc7dd84 → 1ffddfc) slipped; the new test must assert pk is None specifically on the fast-delete path."
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Deleting a single instance with no dependencies (fast path) sets its primary-key attribute to None after .delete()"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Fast-path delete still returns (count, {model_label: count}) unchanged"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Fast-path delete on a non-default database (`using` alias) still clears the pk"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Regression parity: deleting an instance WITH dependencies (non-fast path) continues to clear pk to None"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Proxy model instance fast-deleted clears the concrete model's pk attname"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Model whose PK attname differs from the `pk` alias (OneToOne/explicit primary_key with `_id` attname) has the correct attname cleared, proving use of model._meta.pk.attname"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Model with a custom non-auto PK (UUID/CharField primary_key) has its pk attribute cleared after fast delete"
+   },
+   {
+    "id": "S4.1",
+    "covers": "DELETE is executed with the original PK before nulling, so the row is actually removed (setattr is after delete_batch)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "A DELETE that raises leaves the instance's pk intact (pk not nulled on failure)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Re-saving a fast-deleted instance performs an INSERT with a fresh pk, not an UPDATE"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Fast delete fires no post_delete signal and leaves all non-pk field values unchanged"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Bulk QuerySet.delete() is unaffected — no in-memory instance pk is touched (out of scope)"
+   },
+   {
+    "id": "S6.3",
+    "covers": "A second .delete() on the now-pk-None instance raises the existing ValueError guard"
+   }
+  ],
+  "plan_files": [
+   "deletion.py",
+   "tests.py"
+  ]
+ },
+ "raw_tail": "path) continues to clear pk to None\"},{\"id\":\"S2.2\",\"covers\":\"Proxy model instance fast-deleted clears the concrete model's pk attname\"},{\"id\":\"S3.1\",\"covers\":\"Model whose PK attname differs from the `pk` alias (OneToOne/explicit primary_key with `_id` attname) has the correct attname cleared, proving use of model._meta.pk.attname\"},{\"id\":\"S3.2\",\"covers\":\"Model with a custom non-auto PK (UUID/CharField primary_key) has its pk attribute cleared after fast delete\"},{\"id\":\"S4.1\",\"covers\":\"DELETE is executed with the original PK before nulling, so the row is actually removed (setattr is after delete_batch)\"},{\"id\":\"S4.2\",\"covers\":\"A DELETE that raises leaves the instance's pk intact (pk not nulled on failure)\"},{\"id\":\"S5.1\",\"covers\":\"Re-saving a fast-deleted instance performs an INSERT with a fresh pk, not an UPDATE\"},{\"id\":\"S6.1\",\"covers\":\"Fast delete fires no post_delete signal and leaves all non-pk field values unchanged\"},{\"id\":\"S6.2\",\"covers\":\"Bulk QuerySet.delete() is unaffected — no in-memory instance pk is touched (out of scope)\"},{\"id\":\"S6.3\",\"covers\":\"A second .delete() on the now-pk-None instance raises the existing ValueError guard\"}],\"plan_files\":[\"deletion.py\",\"tests.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_fast_delete_instance_set_pk_none",
+    "covered": true,
+    "why": "Scenario S1.1 explicitly covers 'Deleting a single instance with no dependencies (fast path) sets its primary-key attribute to None after .delete()' which directly matches the test's purpose. The edge cases further confirm this is the core fix being addressed."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

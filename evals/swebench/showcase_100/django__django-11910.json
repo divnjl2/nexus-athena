@@ -1,0 +1,135 @@
+{
+ "instance_id": "django__django-11910",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_rename_referenced_primary_key (migrations.test_autodetector.AutodetectorTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "generate_altered_fields"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "matched": [
+   "autodetector.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Multiple ForeignKeys pointing to the same renamed primary key",
+   "ForeignKey with explicit to_field already set to the primary key",
+   "ForeignKey without explicit to_field (defaults to primary key)",
+   "Renaming a non-primary key field that a ForeignKey points to via to_field",
+   "Cascading renames (field renamed multiple times in sequence)",
+   "ForeignKey with null=True and blank=True",
+   "ForeignKey with different on_delete behaviors (CASCADE, SET_NULL, etc.)",
+   "Self-referencing ForeignKeys",
+   "ForeignKey in a related model that hasn't been migrated yet",
+   "Empty model (no fields except primary key)",
+   "Model with only a primary key",
+   "Primary key with custom field type (not CharField)",
+   "Primary key with db_column different from field name",
+   "ForeignKey pointing to a field that will be deleted (not just renamed)",
+   "Concurrent migrations affecting the same models",
+   "OneToOneField and ManyToManyField with renamed primary key",
+   "ForeignKey with through model pointing to renamed primary key",
+   "Proxy models with renamed primary key",
+   "Abstract models with renamed primary key",
+   "Multi-table inheritance with renamed primary key"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Basic case: ForeignKey without explicit to_field pointing to renamed primary key should not generate AlterField with to_field set to old name"
+   },
+   {
+    "id": "S1.2",
+    "covers": "ForeignKey with explicit to_field pointing to renamed primary key should update to_field to new name"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Multiple ForeignKeys pointing to the same renamed primary key should all be updated correctly"
+   },
+   {
+    "id": "S1.4",
+    "covers": "ForeignKey pointing to renamed non-primary key field should update to_field correctly"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Self-referencing ForeignKey with renamed primary key should work correctly"
+   },
+   {
+    "id": "S1.6",
+    "covers": "ForeignKey with various on_delete options should handle primary key rename correctly"
+   },
+   {
+    "id": "S1.7",
+    "covers": "ForeignKey with null=True and blank=True should handle primary key rename correctly"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Primary key with custom field type (e.g., UUIDField, AutoField) should handle rename correctly"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Primary key with db_column different from field name should handle rename correctly"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Multiple renames in sequence should update ForeignKey to_field correctly each time"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Rename followed by other field operations should not cause conflicts"
+   },
+   {
+    "id": "S1.12",
+    "covers": "OneToOneField with renamed primary key should update correctly"
+   },
+   {
+    "id": "S1.13",
+    "covers": "ManyToManyField with renamed primary key should update correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Through model ForeignKey pointing to renamed primary key should update correctly"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Multi-table inheritance with renamed primary key should update all related ForeignKeys"
+   }
+  ],
+  "plan_files": [
+   "fields.py",
+   "autodetector.py",
+   "related.py",
+   "base.py",
+   "state.py"
+  ]
+ },
+ "raw_tail": "handle primary key rename correctly\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"Primary key with custom field type (e.g., UUIDField, AutoField) should handle rename correctly\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"Primary key with db_column different from field name should handle rename correctly\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"Multiple renames in sequence should update ForeignKey to_field correctly each time\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Rename followed by other field operations should not cause conflicts\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"OneToOneField with renamed primary key should update correctly\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"ManyToManyField with renamed primary key should update correctly\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Through model ForeignKey pointing to renamed primary key should update correctly\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Multi-table inheritance with renamed primary key should update all related ForeignKeys\"\n    }\n  ],\n  \"plan_files\": [\n    \"fields.py\",\n    \"autodetector.py\",\n    \"related.py\",\n    \"base.py\",\n    \"state.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_rename_referenced_primary_key",
+    "covered": true,
+    "why": "S1.1 directly covers the core bug: ForeignKey without explicit to_field pointing to renamed primary key should not generate AlterField with to_field set to old name. S1.2 covers the case with explicit to_field. Edge cases also include 'ForeignKey without explicit to_field (defaults to primary key)' and 'ForeignKey with explicit to_field already set to the primary key'."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

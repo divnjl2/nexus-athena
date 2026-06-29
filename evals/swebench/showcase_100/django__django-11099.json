@@ -1,0 +1,155 @@
+{
+ "instance_id": "django__django-11099",
+ "n_edge_cases": 19,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_ascii_validator (auth_tests.test_validators.UsernameValidatorsTests)",
+  "test_unicode_validator (auth_tests.test_validators.UsernameValidatorsTests)",
+  "test_help_text (auth_tests.test_validators.UserAttributeSimilarityValidatorTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/auth/validators.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "ASCIIUsernameValidator"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/auth/validators.py"
+  ],
+  "matched": [
+   "validators.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Single trailing LF \"ryan\\n\": the actual bug — old `^...$` accepts it because Python `$` matches before a final newline; must now be REJECTED by both validators",
+   "Plain valid username \"ryan\": must still be ACCEPTED (primary no-regression check)",
+   "Double trailing newline \"ryan\\n\\n\": already rejected by old regex (`$` only trims ONE \\n, the remaining \\n isn't in the class) — confirm still rejected, proving the fix isn't just trimming one newline",
+   "Interior newline \"ry\\nan\": rejected (\\n not in char class, no MULTILINE) — confirm `\\A...\\Z` keeps rejecting",
+   "Trailing CRLF \"ryan\\r\\n\" and bare CR \"ryan\\r\": already rejected (\\r not in class; `$` doesn't trim \\r) — confirm still rejected",
+   "Trailing tab/space \"ryan\\t\" / \"ryan \": rejected — confirm",
+   "Empty string \"\" and lone newline \"\\n\": `+` requires >=1 valid char — rejected by both",
+   "Whitespace-only \"   \": rejected",
+   "Other vertical/line-terminator chars trailing — \\v(\\x0b), \\f(\\x0c), NEL \\x85, LINE SEP \\u2028, PARA SEP \\u2029: `\\Z` rejects all uniformly; confirm rejected",
+   "UnicodeUsernameValidator accepts valid non-ASCII \"Джон\"/\"rénáta\" (no regression) but rejects \"Джон\\n\" (trailing newline on unicode input)",
+   "ASCIIUsernameValidator must still REJECT non-ASCII letters and non-ASCII digits (e.g. \"héllo\", \"①\", Arabic-Indic digits) — the `flags = re.ASCII` attribute must NOT be touched by the fix",
+   "Anchor correctness: use Python's `\\A` (start) and `\\Z` (true end-of-string), NOT `\\z` (Python has no \\z — it would match a literal 'z') and NOT leave `^`/`$`",
+   "Char-class ordering `[\\w.@+-]` must be preserved with `-` LAST (literal hyphen); reordering (e.g. `@-+`) creates an invalid/incorrect range",
+   "Full valid character set \"a.b@c+d-e_f\" (using \\w, '.', '@', '+', '-', '_') accepted by both",
+   "No spurious DB migration generated: the validator deconstructs by class path with no init args (`regex` is a class attribute), so `makemigrations --check --dry-run` reports no changes — verify this rather than assume",
+   "Existing stored usernames are unaffected — validation runs at input time only; no data migration / backfill needed",
+   "Symmetry: BOTH ASCIIUsernameValidator and UnicodeUsernameValidator must be changed identically, not just one",
+   "`message` and `code` ('invalid') attributes unchanged — only the `regex` string changes",
+   "No ReDoS / performance regression: regex stays linear (single char class + `+`, no nested quantifiers); anchor swap adds no backtracking"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "ASCIIUsernameValidator raises ValidationError for a username with one trailing newline (\"ryan\\n\") — closes the bug"
+   },
+   {
+    "id": "S1.2",
+    "covers": "ASCIIUsernameValidator still accepts a plain valid username (\"ryan\") — no regression"
+   },
+   {
+    "id": "S2.1",
+    "covers": "UnicodeUsernameValidator raises ValidationError for \"ryan\\n\" (trailing newline)"
+   },
+   {
+    "id": "S2.2",
+    "covers": "UnicodeUsernameValidator rejects a valid unicode username followed by a trailing newline (\"Джон\\n\")"
+   },
+   {
+    "id": "S2.3",
+    "covers": "UnicodeUsernameValidator still accepts valid non-ASCII usernames (\"Джон\", \"rénáta\") — no regression"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Both validators reject an interior newline (\"ry\\nan\")"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Both validators reject two trailing newlines (\"ryan\\n\\n\") — proves fix isn't single-newline trimming"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Both validators reject trailing CRLF (\"ryan\\r\\n\") and bare CR (\"ryan\\r\")"
+   },
+   {
+    "id": "S3.4",
+    "covers": "Both validators reject other trailing line/vertical-whitespace terminators (\\v, \\f, \\x85, \\u2028, \\u2029)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Both validators reject the empty string \"\""
+   },
+   {
+    "id": "S4.2",
+    "covers": "Both validators reject a lone newline \"\\n\""
+   },
+   {
+    "id": "S4.3",
+    "covers": "Both validators reject whitespace-only input (\"   \", \"\\t\")"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Both validators accept the full legal character set (\"a.b@c+d-e_f\")"
+   },
+   {
+    "id": "S5.2",
+    "covers": "ASCIIUsernameValidator rejects non-ASCII input (\"héllo\", \"①\") — flags=re.ASCII preserved"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Regex uses Python-correct anchors \\A and \\Z (not \\z, not ^/$): a base string is accepted while the same string + trailing \\n is rejected, for both validators"
+   },
+   {
+    "id": "S7.1",
+    "covers": "`manage.py makemigrations --check --dry-run` reports no changes — validator deconstruction unchanged, no spurious migration"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Parametrized over BOTH validators: each rejects trailing newline — symmetry of the fix"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Validator `message` and `code` ('invalid') remain unchanged; only `regex` differs"
+   }
+  ],
+  "plan_files": [
+   "validators.py",
+   "test_validators.py",
+   "1.11.x.txt"
+  ]
+ },
+ "raw_tail": "{\"id\":\"S3.4\",\"covers\":\"Both validators reject other trailing line/vertical-whitespace terminators (\\\\v, \\\\f, \\\\x85, \\\\u2028, \\\\u2029)\"},{\"id\":\"S4.1\",\"covers\":\"Both validators reject the empty string \\\"\\\"\"},{\"id\":\"S4.2\",\"covers\":\"Both validators reject a lone newline \\\"\\\\n\\\"\"},{\"id\":\"S4.3\",\"covers\":\"Both validators reject whitespace-only input (\\\"   \\\", \\\"\\\\t\\\")\"},{\"id\":\"S5.1\",\"covers\":\"Both validators accept the full legal character set (\\\"a.b@c+d-e_f\\\")\"},{\"id\":\"S5.2\",\"covers\":\"ASCIIUsernameValidator rejects non-ASCII input (\\\"héllo\\\", \\\"①\\\") — flags=re.ASCII preserved\"},{\"id\":\"S6.1\",\"covers\":\"Regex uses Python-correct anchors \\\\A and \\\\Z (not \\\\z, not ^/$): a base string is accepted while the same string + trailing \\\\n is rejected, for both validators\"},{\"id\":\"S7.1\",\"covers\":\"`manage.py makemigrations --check --dry-run` reports no changes — validator deconstruction unchanged, no spurious migration\"},{\"id\":\"S8.1\",\"covers\":\"Parametrized over BOTH validators: each rejects trailing newline — symmetry of the fix\"},{\"id\":\"S9.1\",\"covers\":\"Validator `message` and `code` ('invalid') remain unchanged; only `regex` differs\"}],\"plan_files\":[\"validators.py\",\"test_validators.py\",\"1.11.x.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_ascii_validator",
+    "covered": true,
+    "why": "S1.1 covers the bug fix (rejects 'ryan\\n'), S1.2 covers no-regression (accepts 'ryan'), S5.1/S5.2 cover full character set and ASCII flag preservation, S6.1 covers correct anchor usage"
+   },
+   {
+    "test": "test_unicode_validator",
+    "covered": true,
+    "why": "S2.1/S2.2 cover the bug fix for unicode (rejects 'ryan\\n' and 'Джон\\n'), S2.3 covers no-regression for valid unicode usernames, S5.1 covers full character set, S6.1 covers correct anchor usage"
+   },
+   {
+    "test": "test_help_text",
+    "covered": false,
+    "why": "This test is for UserAttributeSimilarityValidator, a completely different validator not mentioned in the issue or addressed by the plan. The fix only changes ASCIIUsernameValidator and UnicodeUsernameValidator regex patterns."
+   }
+  ],
+  "covered": 2,
+  "total": 3,
+  "ratio": 0.6666666666666666
+ }
+}

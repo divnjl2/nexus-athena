@@ -1,0 +1,127 @@
+{
+ "instance_id": "django__django-10914",
+ "n_edge_cases": 19,
+ "n_scenarios": 13,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_override_file_upload_permissions (test_utils.tests.OverrideSettingsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/conf/global_settings.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "gettext_noop"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/conf/global_settings.py"
+  ],
+  "matched": [
+   "global_settings.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Memory handler path (uploaded file < FILE_UPLOAD_MAX_MEMORY_SIZE, default 2.5MB → InMemoryUploadedFile) previously saved with umask-derived mode; must now resolve to exactly 0o644",
+   "Temporary-file handler path (file ≥ 2.5MB → TemporaryUploadedFile, NamedTemporaryFile+os.rename/file_move_safe) previously yielded 0o600 on some OSes (CentOS/Linux); must now be 0o644",
+   "Size-dependent inconsistency is the core bug: the SAME upload view must produce IDENTICAL final permissions for a small vs a large file",
+   "FILE_UPLOAD_PERMISSIONS=None must restore the prior OS-dependent behavior verbatim (documented escape hatch / 'set to None to restore previous behaviour')",
+   "Explicit non-default values (e.g. 0o600, 0o640) must still be honored exactly, unchanged by this fix",
+   "os.chmod is NOT masked by umask — 0o644 must be applied literally even under a restrictive process umask (behavior change for the formerly umask-governed memory path)",
+   "Setting only governs FileSystemStorage; custom/remote/third-party storage backends must be unaffected",
+   "FileSystemStorage(file_permissions_mode=...) constructor argument must continue to override the global setting",
+   "FILE_UPLOAD_DIRECTORY_PERMISSIONS is deliberately NOT changed (stays None) — non-leaf dirs still use process umask via os.makedirs; no size-dependent inconsistency exists there (out of scope, separate ticket)",
+   "Windows / non-POSIX: os.chmod only toggles the read-only bit; permission-mode assertions must be skipped on win32 and chmod must degrade gracefully",
+   "Already-uploaded/existing files are NOT retroactively re-permissioned — only newly saved files get 0o644; release note must state this",
+   "Overwriting an existing file (allow_overwrite / file_move_safe) must still apply 0o644 to the resulting file",
+   "Octal-int correctness: value is 0o644, not decimal 644 or a string — docs/examples must not introduce the 644-decimal foot-gun",
+   "Symlinked target paths: chmod follows the link to the real file",
+   "Existing file_storage/file_uploads tests that asserted 0o600 (or umask-dependent modes) must be refactored or pin FILE_UPLOAD_PERMISSIONS=None to keep testing legacy behavior",
+   "Deployment-checklist + settings docs must clarify it is the SAVED media files (not merely temp files) that receive the mode — the original doc-confusion the reporter hit",
+   "manage.py check --deploy still does not validate FILE_UPLOAD_PERMISSIONS — explicitly out of scope",
+   "Targeting Django 3.0 (2.2 was in feature freeze) — backwards-incompatible note belongs in releases/3.0.txt, not 2.2.txt",
+   "0o644 is group/world-readable: a security-relevant default change — rationale and the stricter-umask opt-out (None) must be documented"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "global_settings.FILE_UPLOAD_PERMISSIONS default value is 0o644 (was None)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Small file uploaded via memory handler and saved by FileSystemStorage has mode 0o644"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Large file (>FILE_UPLOAD_MAX_MEMORY_SIZE) via temporary-file handler is saved with mode 0o644, not 0o600"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Memory-path and temp-file-path saves of the same content produce identical permissions"
+   },
+   {
+    "id": "S3.1",
+    "covers": "With FILE_UPLOAD_PERMISSIONS=None, prior OS-dependent behavior is restored (temp path→0o600, memory path→umask)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Explicit FILE_UPLOAD_PERMISSIONS=0o600 yields a saved file with mode 0o600"
+   },
+   {
+    "id": "S4.2",
+    "covers": "FileSystemStorage(file_permissions_mode=0o640) constructor arg overrides the global setting"
+   },
+   {
+    "id": "S5.1",
+    "covers": "FILE_UPLOAD_DIRECTORY_PERMISSIONS default remains None; created directories still follow process umask"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Settings reference and deployment checklist are unified and state uploaded media files get 0o644 by default"
+   },
+   {
+    "id": "S7.1",
+    "covers": "releases/3.0.txt contains a backwards-incompatible note including the 'set to None to restore previous behaviour' guidance"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Existing file_storage/file_uploads test suite passes under the new default (legacy-behavior tests pin None)"
+   },
+   {
+    "id": "S9.1",
+    "covers": "On non-POSIX (win32) the permission assertions are skipped and chmod degrades without error"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Non-FileSystemStorage backends are unaffected by the changed default"
+   }
+  ],
+  "plan_files": [
+   "django/conf/global_settings.py",
+   "django/core/files/storage.py",
+   "docs/ref/settings.txt",
+   "docs/howto/deployment/checklist.txt",
+   "docs/releases/3.0.txt",
+   "tests/file_storage/tests.py",
+   "tests/file_uploads/tests.py"
+  ]
+ },
+ "raw_tail": "\"},{\"id\":\"S4.1\",\"covers\":\"Explicit FILE_UPLOAD_PERMISSIONS=0o600 yields a saved file with mode 0o600\"},{\"id\":\"S4.2\",\"covers\":\"FileSystemStorage(file_permissions_mode=0o640) constructor arg overrides the global setting\"},{\"id\":\"S5.1\",\"covers\":\"FILE_UPLOAD_DIRECTORY_PERMISSIONS default remains None; created directories still follow process umask\"},{\"id\":\"S6.1\",\"covers\":\"Settings reference and deployment checklist are unified and state uploaded media files get 0o644 by default\"},{\"id\":\"S7.1\",\"covers\":\"releases/3.0.txt contains a backwards-incompatible note including the 'set to None to restore previous behaviour' guidance\"},{\"id\":\"S8.1\",\"covers\":\"Existing file_storage/file_uploads test suite passes under the new default (legacy-behavior tests pin None)\"},{\"id\":\"S9.1\",\"covers\":\"On non-POSIX (win32) the permission assertions are skipped and chmod degrades without error\"},{\"id\":\"S10.1\",\"covers\":\"Non-FileSystemStorage backends are unaffected by the changed default\"}],\"plan_files\":[\"django/conf/global_settings.py\",\"django/core/files/storage.py\",\"docs/ref/settings.txt\",\"docs/howto/deployment/checklist.txt\",\"docs/releases/3.0.txt\",\"tests/file_storage/tests.py\",\"tests/file_uploads/tests.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_override_file_upload_permissions",
+    "covered": true,
+    "why": "S4.1 covers explicit FILE_UPLOAD_PERMISSIONS values being honored (e.g., 0o600 yields mode 0o600), and the edge case 'Explicit non-default values (e.g. 0o600, 0o640) must still be honored exactly, unchanged by this fix' confirms override functionality is preserved. The test name in OverrideSettingsTests indicates it tests settings override capability, which the plan addresses."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

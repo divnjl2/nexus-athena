@@ -1,0 +1,33 @@
+{
+ "instance_id": "django__django-12700",
+ "driver": "local",
+ "n_edge_cases": 0,
+ "n_scenarios": 0,
+ "parse_ok": false,
+ "fail_to_pass": [
+  "test_cleanse_setting_recurses_in_list_tuples (view_tests.tests.test_debug.ExceptionReporterFilterTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/views/debug.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "cleanse_setting"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/views/debug.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [],
+  "scenarios": [],
+  "plan_files": []
+ },
+ "raw_tail": "t\",\"Tuple containing dict\",\"Set containing dict\",\"String value (should not recurse)\",\"Bytes value (should not recurse)\",\"Deeply nested structure (5+ levels)\",\"Mixed types in same list\",\"Setting that is just a list (not dict)\",\"Setting that is just a string\",\"Setting with no sensitive keys\",\"Circular references (unlikely but possible)\",\"Custom iterable objects\",\"Frozen dict (if applicable)\"], \"scenarios\":[{\"id\":\"S1.1\",\"covers\":\"Top-level dict keys with sensitive names (secret, token, key, password) are masked with asterisks\"},{\"id\":\"S1.2\",\"covers\":\"Non-sensitive top-level dict keys pass through unchanged\"},{\"id\":\"S1.3\",\"covers\":\"Dicts nested inside lists have their sensitive keys masked\"},{\"id\":\"S1.4\",\"covers\":\"Lists nested inside dicts are recursively processed\"},{\"id\":\"S1.5\",\"covers\":\"Lists nested inside lists are recursively processed\"},{\"id\":\"S1.6\",\"covers\":\"Tuples containing dicts are converted to lists with sensitive keys masked\"},{\"id\":\"S1.7\",\"covers\":\"Sets containing dicts are converted to lists with sensitive keys masked\"},{\"id\":\"S1.8\",\"covers\":\"String values are returned as-is without recursion (strings are iterable but should not be traversed)\"},\"plan_files\":[\"debug.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge"
+}

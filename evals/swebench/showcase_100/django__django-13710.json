@@ -1,0 +1,122 @@
+{
+ "instance_id": "django__django-13710",
+ "n_edge_cases": 17,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_verbose_name_inline (admin_inlines.tests.TestVerboseNameInlineForms)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/admin/options.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__init__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/admin/options.py"
+  ],
+  "matched": [
+   "options.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Inline sets verbose_name only, no verbose_name_plural → plural must be DERIVED from inline verbose_name via format_lazy('{}s', verbose_name) (the new behaviour, e.g. 'Author' → 'Authors')",
+   "Inline sets NEITHER verbose_name nor verbose_name_plural → both must keep falling back to model._meta.verbose_name and model._meta.verbose_name_plural respectively; irregular Meta plural (e.g. Meta verbose_name='goose'/verbose_name_plural='geese') must be PRESERVED, not regenerated as 'gooses' (backwards-compat regression guard)",
+   "Inline sets BOTH verbose_name and verbose_name_plural → both honored verbatim; derivation must NOT override an explicitly given plural",
+   "Inline sets verbose_name_plural only (verbose_name is None) → explicit plural honored; verbose_name falls back to model._meta.verbose_name",
+   "Assignment-order trap: verbose_name_plural must be computed BEFORE verbose_name is defaulted from Meta — otherwise the 'neither set' case would wrongly derive plural from the Meta verbose_name + 's' and clobber irregular plurals",
+   "Lazy i18n: inline verbose_name may be a gettext_lazy proxy — derivation must use django.utils.text.format_lazy so the plural stays lazy and resolves under the active per-request locale; must not call str()/coerce eagerly at __init__",
+   "format_lazy must be imported/available in contrib/admin/options.py",
+   "Empty-string verbose_name ('') is `is None`==False → treated as explicitly set → plural becomes 's'; decision/behaviour should be documented",
+   "Non-ASCII verbose_name (e.g. 'café') → derived 'cafés'; naive but intentionally consistent with model Meta Options pluralization limitation",
+   "Naive English '-s' suffix does not handle irregular nouns for the DERIVED case — documented limitation, mirrors Options.verbose_name_plural; user overrides by setting verbose_name_plural explicitly",
+   "Behaviour applies to TabularInline and StackedInline (both subclass InlineModelAdmin, inherit __init__)",
+   "GenericInlineModelAdmin / GenericStackedInline / GenericTabularInline inherit the same __init__ and must get the derived plural too — confirm no override resets it",
+   "Multiple inlines of the same model on one parent admin with different verbose_name each compute their own plural independently — ensure value is set as an instance attribute in __init__, no shared/class-level mutable state leak",
+   "An explicitly-provided lazy verbose_name_plural proxy must be honored verbatim (no coercion)",
+   "Derived plural must actually surface in the admin UI inline group heading (edit_inline/stacked.html, edit_inline/tabular.html consume verbose_name_plural) — verify display, not just the attribute",
+   "Backwards-incompatibility: projects that set only inline verbose_name and relied on the plural coming from model Meta now get a derived plural — requires a release note and docs update",
+   "No downstream code path (formset/heading construction) re-reads model._meta.verbose_name_plural and shadows the derived value"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Inline with verbose_name='Author' and no verbose_name_plural resolves verbose_name_plural to 'Authors' (derived from inline verbose_name)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Derived plural appears in the rendered admin inline group heading (stacked + tabular templates)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Inline with neither attribute set falls back to model Meta for both; irregular Meta verbose_name_plural (e.g. 'geese') is preserved, not regenerated"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Inline verbose_name unset but model Meta verbose_name set → verbose_name from Meta and plural from Meta verbose_name_plural (no derivation)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Inline with both verbose_name and verbose_name_plural set → both honored verbatim, derivation does not override explicit plural"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Inline with verbose_name_plural set but verbose_name unset → explicit plural honored, verbose_name from model Meta"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Inline verbose_name as gettext_lazy → plural built with format_lazy stays lazy and translates under the active language; no eager string coercion at __init__"
+   },
+   {
+    "id": "S5.1",
+    "covers": "TabularInline subclass derives plural from its verbose_name identically"
+   },
+   {
+    "id": "S5.2",
+    "covers": "StackedInline subclass derives plural from its verbose_name identically"
+   },
+   {
+    "id": "S5.3",
+    "covers": "GenericInlineModelAdmin (generic stacked/tabular) inherits the derivation behaviour"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Regression: existing admin_inlines and generic_inline_admin test suites still pass (no change for Meta-only configurations)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Docs (admin reference) and 4.0 release notes describe the new default and the backwards-incompatibility"
+   }
+  ],
+  "plan_files": [
+   "django/contrib/admin/options.py",
+   "tests/admin_inlines/admin.py",
+   "tests/admin_inlines/models.py",
+   "tests/admin_inlines/tests.py",
+   "tests/generic_inline_admin/admin.py",
+   "tests/generic_inline_admin/tests.py",
+   "docs/ref/contrib/admin/index.txt",
+   "docs/releases/4.0.txt"
+  ]
+ },
+ "raw_tail": "xplicit plural\"},{\"id\":\"S3.2\",\"covers\":\"Inline with verbose_name_plural set but verbose_name unset → explicit plural honored, verbose_name from model Meta\"},{\"id\":\"S4.1\",\"covers\":\"Inline verbose_name as gettext_lazy → plural built with format_lazy stays lazy and translates under the active language; no eager string coercion at __init__\"},{\"id\":\"S5.1\",\"covers\":\"TabularInline subclass derives plural from its verbose_name identically\"},{\"id\":\"S5.2\",\"covers\":\"StackedInline subclass derives plural from its verbose_name identically\"},{\"id\":\"S5.3\",\"covers\":\"GenericInlineModelAdmin (generic stacked/tabular) inherits the derivation behaviour\"},{\"id\":\"S6.1\",\"covers\":\"Regression: existing admin_inlines and generic_inline_admin test suites still pass (no change for Meta-only configurations)\"},{\"id\":\"S7.1\",\"covers\":\"Docs (admin reference) and 4.0 release notes describe the new default and the backwards-incompatibility\"}],\"plan_files\":[\"django/contrib/admin/options.py\",\"tests/admin_inlines/admin.py\",\"tests/admin_inlines/models.py\",\"tests/admin_inlines/tests.py\",\"tests/generic_inline_admin/admin.py\",\"tests/generic_inline_admin/tests.py\",\"docs/ref/contrib/admin/index.txt\",\"docs/releases/4.0.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_verbose_name_inline",
+    "covered": true,
+    "why": "S1.1 explicitly covers the core behavior: inline with verbose_name set but no verbose_name_plural derives plural from verbose_name (e.g., 'Author' → 'Authors'). S1.2 covers that the derived plural appears in rendered admin inline group headings. The edge case 'Inline sets verbose_name only, no verbose_name_plural → plural must be DERIVED' directly describes the behavior this test validates."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,138 @@
+{
+ "instance_id": "django__django-14155",
+ "n_edge_cases": 17,
+ "n_scenarios": 14,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_repr (urlpatterns_reverse.tests.ResolverMatchTests)",
+  "test_repr_functools_partial (urlpatterns_reverse.tests.ResolverMatchTests)",
+  "test_resolver_match_on_request (urlpatterns_reverse.tests.ResolverMatchTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/urls/resolvers.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__getitem__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/urls/resolvers.py"
+  ],
+  "matched": [
+   "resolvers.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "functools.partial wrapping a plain function-based view: _func_path must become the underlying module.__name__ (e.g. myapp.views.my_view), never the literal 'functools.partial'",
+   "Nested partials (partial(partial(view))): single-level unwrap leaves func.func still a partial with no __name__, falling back to 'functools.partial' again — must unwrap in a loop until a __name__-bearing callable is reached",
+   "Partial with only positional args bound",
+   "Partial with only keyword args bound",
+   "Partial with both positional and keyword args bound",
+   "Degenerate partial(view) with no bound args/keywords — repr must not raise and must show empty args/keywords",
+   "Partial wrapping a class-based view's .as_view() closure (has generic __name__ 'view') — must resolve without AttributeError",
+   "Partial wrapping a callable instance/object lacking __name__ after unwrap — must fall to the class-based branch using __class__, not crash",
+   "Collision hazard: the partial's bound args/keywords must stay distinct from ResolverMatch.args/kwargs (the URL-captured args) in the repr output",
+   "self.func must keep holding the ORIGINAL partial (view dispatch/__getitem__ depends on it); unwrapping may only affect _func_path/repr",
+   "Non-partial FBV repr must remain byte-identical to pre-fix output (regression guard for code/tests asserting on repr)",
+   "Class-based view (no __name__) repr must remain unchanged",
+   "view_name (used by reverse/admin) derived from _func_path must be correct for partial-wrapped views",
+   "import functools must exist at top of resolvers.py before isinstance check is used",
+   "repr(self.func) must safely render partials carrying large/non-ASCII bound args without throwing",
+   "functools.partialmethod is NOT a functools.partial — out of scope but should not be silently mis-handled if it ever reaches here",
+   "Must not mutate the passed-in partial object (no in-place rebind of args/keywords)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "partial wrapping a function-based view: __repr__ func= reveals the underlying view path, not 'functools.partial'"
+   },
+   {
+    "id": "S1.2",
+    "covers": "_func_path and view_name are computed from the unwrapped underlying function for a partial-wrapped FBV"
+   },
+   {
+    "id": "S2.1",
+    "covers": "partial with bound positional args: __repr__ surfaces the pre-bound positional args"
+   },
+   {
+    "id": "S2.2",
+    "covers": "partial with bound keyword args: __repr__ surfaces the pre-bound keyword args"
+   },
+   {
+    "id": "S2.3",
+    "covers": "partial with both positional and keyword args: __repr__ surfaces both"
+   },
+   {
+    "id": "S2.4",
+    "covers": "partial with no bound args/keywords: __repr__ renders without error"
+   },
+   {
+    "id": "S3.1",
+    "covers": "plain (non-partial) function-based view repr is unchanged vs pre-fix (no regression)"
+   },
+   {
+    "id": "S3.2",
+    "covers": "class-based view repr is unchanged (no regression)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "nested partial (partial of partial) resolves to the innermost named function, never 'functools.partial'"
+   },
+   {
+    "id": "S4.2",
+    "covers": "partial wrapping a CBV .as_view() callable resolves without raising"
+   },
+   {
+    "id": "S4.3",
+    "covers": "partial wrapping a callable lacking __name__ falls to class-based branch without AttributeError"
+   },
+   {
+    "id": "S5.1",
+    "covers": "self.func still holds the original partial so view invocation/__getitem__/dispatch is unaffected"
+   },
+   {
+    "id": "S5.2",
+    "covers": "URL-captured self.args/self.kwargs stay distinct from the partial's bound args/keywords in repr"
+   },
+   {
+    "id": "S6.1",
+    "covers": "functools is imported in resolvers.py so the isinstance(func, functools.partial) check is valid"
+   }
+  ],
+  "plan_files": [
+   "resolvers.py",
+   "tests.py",
+   "views.py",
+   "urls.py"
+  ]
+ },
+ "raw_tail": "rd args: __repr__ surfaces the pre-bound keyword args\"},{\"id\":\"S2.3\",\"covers\":\"partial with both positional and keyword args: __repr__ surfaces both\"},{\"id\":\"S2.4\",\"covers\":\"partial with no bound args/keywords: __repr__ renders without error\"},{\"id\":\"S3.1\",\"covers\":\"plain (non-partial) function-based view repr is unchanged vs pre-fix (no regression)\"},{\"id\":\"S3.2\",\"covers\":\"class-based view repr is unchanged (no regression)\"},{\"id\":\"S4.1\",\"covers\":\"nested partial (partial of partial) resolves to the innermost named function, never 'functools.partial'\"},{\"id\":\"S4.2\",\"covers\":\"partial wrapping a CBV .as_view() callable resolves without raising\"},{\"id\":\"S4.3\",\"covers\":\"partial wrapping a callable lacking __name__ falls to class-based branch without AttributeError\"},{\"id\":\"S5.1\",\"covers\":\"self.func still holds the original partial so view invocation/__getitem__/dispatch is unaffected\"},{\"id\":\"S5.2\",\"covers\":\"URL-captured self.args/self.kwargs stay distinct from the partial's bound args/keywords in repr\"},{\"id\":\"S6.1\",\"covers\":\"functools is imported in resolvers.py so the isinstance(func, functools.partial) check is valid\"}],\"plan_files\":[\"resolvers.py\",\"tests.py\",\"views.py\",\"urls.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_repr",
+    "covered": true,
+    "why": "S3.1 and S3.2 cover plain FBV and CBV repr unchanged (regression tests); edge cases explicitly mention non-partial FBV and CBV repr must remain unchanged"
+   },
+   {
+    "test": "test_repr_functools_partial",
+    "covered": true,
+    "why": "S1.1-S2.4 directly cover partial __repr__ showing underlying function path and bound args/kwargs; S4.1-S4.3 cover nested partials, CBV wrapping, and missing __name__ cases"
+   },
+   {
+    "test": "test_resolver_match_on_request",
+    "covered": true,
+    "why": "S5.1 ensures self.func holds original partial for view dispatch/__getitem__ to work; S5.2 ensures URL-captured args/kwargs stay distinct from partial's bound args in repr"
+   }
+  ],
+  "covered": 3,
+  "total": 3,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,120 @@
+{
+ "instance_id": "django__django-15781",
+ "driver": "local",
+ "n_edge_cases": 19,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "BaseCommand.create_parser() passes kwargs to CommandParser."
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/management/base.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "create_parser"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/management/base.py"
+  ],
+  "matched": [
+   "base.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "formatter_class=None passed explicitly - should fall back to DjangoHelpFormatter",
+   "formatter_class with invalid class (not a Formatter subclass) - should raise TypeError",
+   "formatter_class as empty string - should raise TypeError",
+   "formatter_class as non-callable object - should raise TypeError",
+   "formatter_class that doesn't inherit from argparse.HelpFormatter - should raise TypeError",
+   "formatter_class passed both as kwarg and as instance attribute - kwarg should take precedence",
+   "Empty help string ('') - should display empty description",
+   "None help - should display no description",
+   "Help with only whitespace - should display as-is",
+   "Help with special characters (unicode, emojis) - should preserve correctly",
+   "Very long help text (1000+ lines) - should not cause memory/performance issues",
+   "Help with mixed line endings (\\n, \\r\\n, \\r) - should handle correctly",
+   "Custom formatter that raises exception in __init__ - should propagate error",
+   "Custom formatter without proper format_help method - should raise AttributeError",
+   "Subcommand with custom formatter - should work in nested command context",
+   "Multiple commands with different formatters in same project - each should use its own",
+   "Inheritance: Command subclass overriding create_parser - custom formatter should still work",
+   "formatter_class as string path instead of class - should raise TypeError (not import)",
+   "Help text with leading/trailing newlines - should preserve as specified"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Default behavior preserved - command without custom formatter uses DjangoHelpFormatter and wraps help text"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Custom formatter via kwargs - passing formatter_class in create_parser kwargs uses the custom formatter"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Multi-line help preservation - custom formatter preserves newlines in help text as shown in issue example"
+   },
+   {
+    "id": "S1.4",
+    "covers": "None formatter_class fallback - passing formatter_class=None falls back to DjangoHelpFormatter"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Invalid formatter_class raises TypeError - passing non-class or invalid type raises appropriate error"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Kwargs take precedence - formatter_class in kwargs overrides any instance attribute"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Empty/None help text handled - empty string or None help displays correctly without errors"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Unicode and special characters preserved - help text with unicode, emojis, special chars displays correctly"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Backward compatibility - existing commands without custom formatter work exactly as before"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Subcommand formatter inheritance - subcommands can have their own custom formatters independent of parent"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Custom formatter with DjangoHelpFormatter inheritance - custom formatter can extend DjangoHelpFormatter"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Help output format matches expected - usage line, description, positional arguments formatted correctly with custom formatter"
+   }
+  ],
+  "plan_files": [
+   "django/core/management/base.py",
+   "django/core/management/__init__.py",
+   "tests/core/management/commands/test_custom_formatter.py"
+  ]
+ },
+ "raw_tail": "Kwargs take precedence - formatter_class in kwargs overrides any instance attribute\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"Empty/None help text handled - empty string or None help displays correctly without errors\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"Unicode and special characters preserved - help text with unicode, emojis, special chars displays correctly\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"Backward compatibility - existing commands without custom formatter work exactly as before\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"Subcommand formatter inheritance - subcommands can have their own custom formatters independent of parent\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Custom formatter with DjangoHelpFormatter inheritance - custom formatter can extend DjangoHelpFormatter\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Help output format matches expected - usage line, description, positional arguments formatted correctly with custom formatter\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/core/management/base.py\",\n    \"django/core/management/__init__.py\",\n    \"tests/core/management/commands/test_custom_formatter.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "BaseCommand.create_parser() passes kwargs to CommandParser",
+    "covered": true,
+    "why": "S1.2 explicitly tests 'passing formatter_class in create_parser kwargs uses the custom formatter' - this requires kwargs to be passed to CommandParser. Additionally, S1.6 tests 'formatter_class in kwargs overrides any instance attribute' and the edge case 'formatter_class passed both as kwarg and as instance attribute - kwarg should take precedence' both verify that kwargs are properly forwarded to CommandParser."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

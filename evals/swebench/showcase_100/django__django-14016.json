@@ -1,0 +1,157 @@
+{
+ "instance_id": "django__django-14016",
+ "n_edge_cases": 18,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_combine_and_empty (queries.test_q.QTests)",
+  "test_combine_or_empty (queries.test_q.QTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/query_utils.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_combine"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/query_utils.py"
+  ],
+  "matched": [
+   "query_utils.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty LHS, non-pickleable RHS leaf: Q() | Q(x__in={}.keys()) — the reported crash via OR (mechanism VERIFIED-E2E: deepcopy of a node holding dict_keys raises 'cannot pickle dict_keys object')",
+   "Non-pickleable LHS leaf, empty RHS: Q(x__in={}.keys()) | Q() — right-side empty short-circuit",
+   "Both operands empty: Q() | Q() — must return an empty Q, no crash, no deepcopy",
+   "Both operands non-empty with non-pickleable leaves on both sides",
+   "AND connector hits the same _combine path: Q() & Q(x__in={}.keys()) and Q(x__in={}.keys()) & Q()",
+   "XOR connector (^/__xor__) on Django versions that support it routes through the same _combine and must not crash",
+   "Other non-pickleable leaf types generalize beyond dict_keys: dict_values, dict_items, generators, map/filter/zip/iter objects",
+   "Negated Q with a non-pickleable leaf (~Q(x__in=keys)) combined — the negated flag must be preserved through the copy",
+   "Chained/nested combination: (Q() | Q(x__in=keys)) | Q(y=2) must work end-to-end",
+   "Mutation isolation (VERIFIED-E2E that this is a real trap): the empty-operand short-circuit must shallow-copy the children LIST (children[:]), not alias the reference — proven by experiment where aliasing the list let appending to the result mutate the operand. Shallow copy of structure, shared leaf references, but independent children list",
+   "Subclass preservation: copy must use type(self)/create() so a Q subclass stays its concrete type, not coerced to base Q",
+   "Intended TypeError must be preserved: combining Q with a non-Q, non-conditional object still raises TypeError(other) — only the spurious 'cannot pickle' TypeError is eliminated",
+   "Combining Q with a boolean/conditional expression (Q() | Exists(...)) — the bb0b6e feature path must remain intact",
+   "Legitimate copy.deepcopy(Q(x=1)) and pickling of an all-pickleable Q must still work — VERIFIED-E2E that an all-pickleable node still deepcopies+pickles; change is scoped to _combine's internal copy, not Q.__deepcopy__",
+   "No operand mutation / no side effects from | and & on either side",
+   "Performance: deepcopy->shallow copy is strictly cheaper, no deep recursion regression on large/deeply-nested Q trees",
+   "Resulting combined Q remains usable in QuerySet.filter() — the non-pickleable leaf passes through by reference and the query still builds (lazy view consumption at SQL build time is pre-existing, out of scope)",
+   "Identity of the non-pickleable leaf is preserved by reference (VERIFIED-E2E: children[0] is leaf after shallow copy)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Q() | Q(x__in={}.keys()) returns a valid Q with no TypeError (empty LHS, non-pickleable RHS leaf, OR) — the exact reported repro"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Q(x__in={}.keys()) | Q() returns a valid Q with no TypeError (non-pickleable LHS leaf, empty RHS, OR)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Q() | Q() returns an empty Q with no crash and no deepcopy invoked (both empty, OR)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Q(x__in=d.keys()) | Q(y=1) — both non-empty: result has OR connector with both operands as children and the non-pickleable leaf preserved by reference"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Q() & Q(x__in={}.keys()) does not crash (AND path shares _combine fix)"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Q(x__in={}.keys()) & Q() does not crash (AND, right-empty short-circuit)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Q() ^ Q(x__in={}.keys()) does not crash on versions supporting XOR (__xor__ routes through same _combine)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Empty-operand short-circuit returns an INDEPENDENT copy: mutating the result (e.g. .add()) does not mutate the original operand's children list — requires children[:] not list aliasing (VERIFIED-E2E this is a real failure mode)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "q | Q() returns an independent shallow copy of q (right-empty isolation; children list copied, leaves shared)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Q() | q is structurally equivalent to q — children, connector, and negated flag preserved"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Combining preserves the concrete Q subclass type via type(self)/create(), not coerced to base Q"
+   },
+   {
+    "id": "S6.1",
+    "covers": "~Q(x__in=keys) combined via | or & preserves the negated flag through the copy and does not crash"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Chained combination (Q() | Q(x__in=keys)) | Q(y=2) builds correctly end-to-end"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Generalized non-pickleable leaves — dict_values, dict_items, generator, map/filter/zip — all combine without TypeError"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Legitimate copy.deepcopy(Q(x=1)) of an all-pickleable Q still works (VERIFIED-E2E at mechanism level; fix scoped to _combine, not Q.__deepcopy__)"
+   },
+   {
+    "id": "S8.2",
+    "covers": "pickle.dumps(Q(x=1)) of an all-pickleable Q still succeeds after the change (VERIFIED-E2E at mechanism level)"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Combining Q with a non-Q, non-conditional object still raises the intended TypeError(other)"
+   },
+   {
+    "id": "S9.2",
+    "covers": "Q() | Exists(...) (Q combined with a boolean/conditional expression) still works — bb0b6e feature path intact"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Neither operand is mutated by | or & (no side effects on either side)"
+   },
+   {
+    "id": "S10.2",
+    "covers": "Integration: a Q combined from a non-pickleable-leaf operand is usable in QuerySet.filter() and builds a correct query"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/query_utils.py",
+   "django/utils/tree.py",
+   "tests/queries/test_q.py",
+   "docs/releases/3.2.1.txt"
+  ]
+ },
+ "raw_tail": "e copy and does not crash\"},{\"id\":\"S6.2\",\"covers\":\"Chained combination (Q() | Q(x__in=keys)) | Q(y=2) builds correctly end-to-end\"},{\"id\":\"S7.1\",\"covers\":\"Generalized non-pickleable leaves — dict_values, dict_items, generator, map/filter/zip — all combine without TypeError\"},{\"id\":\"S8.1\",\"covers\":\"Legitimate copy.deepcopy(Q(x=1)) of an all-pickleable Q still works (VERIFIED-E2E at mechanism level; fix scoped to _combine, not Q.__deepcopy__)\"},{\"id\":\"S8.2\",\"covers\":\"pickle.dumps(Q(x=1)) of an all-pickleable Q still succeeds after the change (VERIFIED-E2E at mechanism level)\"},{\"id\":\"S9.1\",\"covers\":\"Combining Q with a non-Q, non-conditional object still raises the intended TypeError(other)\"},{\"id\":\"S9.2\",\"covers\":\"Q() | Exists(...) (Q combined with a boolean/conditional expression) still works — bb0b6e feature path intact\"},{\"id\":\"S10.1\",\"covers\":\"Neither operand is mutated by | or & (no side effects on either side)\"},{\"id\":\"S10.2\",\"covers\":\"Integration: a Q combined from a non-pickleable-leaf operand is usable in QuerySet.filter() and builds a correct query\"}],\"plan_files\":[\"django/db/models/query_utils.py\",\"django/utils/tree.py\",\"tests/queries/test_q.py\",\"docs/releases/3.2.1.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_combine_and_empty",
+    "covered": true,
+    "why": "S2.1 covers Q() & Q(x__in={}.keys()) (empty LHS, non-pickleable RHS, AND) and S2.2 covers Q(x__in={}.keys()) & Q() (non-pickleable LHS, empty RHS, AND). Both scenarios explicitly test the AND path sharing the _combine fix that prevents the 'cannot pickle' TypeError."
+   },
+   {
+    "test": "test_combine_or_empty",
+    "covered": true,
+    "why": "S1.1 covers the exact reported repro Q() | Q(x__in={}.keys()) (empty LHS, non-pickleable RHS, OR). S1.2 covers the reverse case Q(x__in={}.keys()) | Q(). S1.3 covers both empty Q() | Q(). These scenarios directly test the OR combination with empty operands that triggers the deepcopy causing the TypeError."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

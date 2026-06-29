@@ -1,0 +1,148 @@
+{
+ "instance_id": "django__django-12284",
+ "n_edge_cases": 23,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_overriding_inherited_FIELD_display (model_fields.tests.GetFieldDisplayTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "contribute_to_class"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "[VERIFIED-E2E] Core regression: child overrides abstract-base choices adding (\"C\",\"output3\") — get_field_foo_display() for \"C\" returns \"output3\", not raw \"C\"",
+   "[VERIFIED-E2E] No-regression: inherited keys \"A\"/\"B\" still return \"output1\"/\"output2\"",
+   "[SOURCE-ONLY] Child overrides the display TEXT of an existing key — the child's text must win over the base's",
+   "[VERIFIED-E2E] Root cause: guard `if not hasattr(cls,'get_%s_display'%self.name)` walks the MRO, finds the INHERITED auto-method bound to the base field, and skips setattr — fix must test `'get_%s_display'%self.name not in cls.__dict__` (own class only)",
+   "[VERIFIED-E2E] Explicit developer-defined get_FOO_display() on the SAME class as the field is NOT overwritten by the auto partialmethod",
+   "[SOURCE-ONLY] Limitation: explicit get_FOO_display() defined only on a PARENT class is overridden when the child re-declares the field — must be documented",
+   "[VERIFIED-E2E] partialmethod binds to the OVERRIDING field (child field with new flatchoices), not the stale base field",
+   "[VERIFIED-E2E] Value not present in any choices → returns the raw value unchanged",
+   "[VERIFIED-E2E] None/null value → returns None without raising",
+   "[VERIFIED-E2E] Non-string keys, e.g. (0,'foo') → resolve via make_hashable",
+   "[VERIFIED-E2E] Grouped/optgroup nested choices flatten (flatchoices) and resolve nested members",
+   "[SOURCE-ONLY] Unhashable choice values (list/dict) must not raise TypeError — make_hashable wraps them",
+   "[SOURCE-ONLY] choices=None → get_FOO_display attribute is not created; calling raises AttributeError (unchanged)",
+   "[SOURCE-ONLY] Empty choices list [] → no resolvable mapping, returns raw value",
+   "[VERIFIED-E2E] Multi-level abstract chain (A→B→C) each overriding choices — innermost field-owning class wins",
+   "[SOURCE-ONLY] Diamond / multiple abstract parents — the declaring class controls the choices used",
+   "[SOURCE-ONLY] Proxy model (cannot add fields) inherits a correctly-bound get_FOO_display",
+   "[SOURCE-ONLY] Concrete multi-table inheritance cannot redeclare a same-name field (FieldError) — override path is abstract-only; must not regress that FieldError",
+   "[SOURCE-ONLY] Abstract-base field auto-copied to a child without explicit re-declaration must still re-bind to the child's field instance",
+   "[SOURCE-ONLY] Multiple fields with choices on one model — each gets its own correctly-bound display method",
+   "[VERIFIED-E2E] Behaviour is pure class-build-time (contribute_to_class) — reproducible with Model(field='C') instance, no save/DB row needed",
+   "[SOURCE-ONLY] Field-contribution ordering during ModelBase.__new__ must not affect correctness",
+   "[SOURCE-ONLY] Backwards-compat: DB-coerced value type ('0' vs int 0) falls back to raw value via make_hashable + dict.get default"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "[VERIFIED-E2E] Abstract base A overridden by B adding (\"C\",\"output3\"); B(field_foo='C').get_field_foo_display() returns \"output3\""
+   },
+   {
+    "id": "S1.2",
+    "covers": "[VERIFIED-E2E] Inherited values \"A\"/\"B\" on instance of B still return \"output1\"/\"output2\""
+   },
+   {
+    "id": "S1.3",
+    "covers": "[SOURCE-ONLY] Child overriding the display text of an existing key — child's text wins over base's"
+   },
+   {
+    "id": "S2.1",
+    "covers": "[VERIFIED-E2E] Model defines get_foo_display() explicitly on the field-owning class → returns custom value; auto method does not overwrite it"
+   },
+   {
+    "id": "S2.2",
+    "covers": "[SOURCE-ONLY] Explicit get_FOO_display on parent-only class is replaced when child re-declares the field (documented limitation)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "[SOURCE-ONLY] Standalone (non-inherited) model with choices resolves all declared values"
+   },
+   {
+    "id": "S3.2",
+    "covers": "[SOURCE-ONLY] Field with choices=None has no get_FOO_display attribute (AttributeError on call)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "[VERIFIED-E2E] Value absent from choices returns the raw value unchanged"
+   },
+   {
+    "id": "S4.2",
+    "covers": "[VERIFIED-E2E] None/null field value returns None without error"
+   },
+   {
+    "id": "S4.3",
+    "covers": "[VERIFIED-E2E] Integer / non-string choice keys, e.g. (0,'foo'), resolve via make_hashable"
+   },
+   {
+    "id": "S4.4",
+    "covers": "[VERIFIED-E2E] Grouped/optgroup nested choices flatten via flatchoices and resolve nested members"
+   },
+   {
+    "id": "S4.5",
+    "covers": "[SOURCE-ONLY] Unhashable choice values resolve via make_hashable without TypeError"
+   },
+   {
+    "id": "S5.1",
+    "covers": "[VERIFIED-E2E] Multi-level abstract chain (A→B→C) each overriding choices — innermost field-owning class wins"
+   },
+   {
+    "id": "S5.2",
+    "covers": "[SOURCE-ONLY] Diamond / multiple abstract parents — the declaring class's choices control display"
+   },
+   {
+    "id": "S5.3",
+    "covers": "[SOURCE-ONLY] Proxy model inherits a correctly-bound, working get_FOO_display"
+   },
+   {
+    "id": "S5.4",
+    "covers": "[SOURCE-ONLY] Abstract field auto-copied to child without explicit re-declaration still binds to the child's field instance"
+   },
+   {
+    "id": "S5.5",
+    "covers": "[SOURCE-ONLY] Multiple choice-bearing fields on one model each bind to their own display method"
+   },
+   {
+    "id": "S6.1",
+    "covers": "[VERIFIED-E2E] Reproduction without DB: Model(field_foo='C').get_field_foo_display() (no save) returns \"output3\""
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "tests/model_fields/tests.py",
+   "tests/model_inheritance/test_abstract_inheritance.py",
+   "django/db/models/base.py"
+  ]
+ },
+ "raw_tail": "'), resolve via make_hashable\"},{\"id\":\"S4.4\",\"covers\":\"[VERIFIED-E2E] Grouped/optgroup nested choices flatten via flatchoices and resolve nested members\"},{\"id\":\"S4.5\",\"covers\":\"[SOURCE-ONLY] Unhashable choice values resolve via make_hashable without TypeError\"},{\"id\":\"S5.1\",\"covers\":\"[VERIFIED-E2E] Multi-level abstract chain (A→B→C) each overriding choices — innermost field-owning class wins\"},{\"id\":\"S5.2\",\"covers\":\"[SOURCE-ONLY] Diamond / multiple abstract parents — the declaring class's choices control display\"},{\"id\":\"S5.3\",\"covers\":\"[SOURCE-ONLY] Proxy model inherits a correctly-bound, working get_FOO_display\"},{\"id\":\"S5.4\",\"covers\":\"[SOURCE-ONLY] Abstract field auto-copied to child without explicit re-declaration still binds to the child's field instance\"},{\"id\":\"S5.5\",\"covers\":\"[SOURCE-ONLY] Multiple choice-bearing fields on one model each bind to their own display method\"},{\"id\":\"S6.1\",\"covers\":\"[VERIFIED-E2E] Reproduction without DB: Model(field_foo='C').get_field_foo_display() (no save) returns \\\"output3\\\"\"}],\"plan_files\":[\"django/db/models/fields/__init__.py\",\"tests/model_fields/tests.py\",\"tests/model_inheritance/test_abstract_inheritance.py\",\"django/db/models/base.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_overriding_inherited_FIELD_display",
+    "covered": true,
+    "why": "S1.1 directly tests the exact bug scenario: abstract base A overridden by B adding ('C','output3'), verifying B(field_foo='C').get_field_foo_display() returns 'output3'. S1.2 ensures inherited values 'A'/'B' still work. Edge cases cover the core regression (child overrides abstract-base choices), root cause fix (checking cls.__dict__ instead of hasattr), and partialmethod binding to the overriding field with new flatchoices."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

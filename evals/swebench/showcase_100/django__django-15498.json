@@ -1,0 +1,100 @@
+{
+ "instance_id": "django__django-15498",
+ "driver": "local",
+ "n_edge_cases": 10,
+ "n_scenarios": 10,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_was_modified_since_empty_string (view_tests.tests.test_static.StaticUtilsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/views/static.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "was_modified_since"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/views/static.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "empty string \"\" for If-Modified-Since header",
+   "whitespace-only string \"   \" for If-Modified-Since header",
+   "None/missing If-Modified-Since header",
+   "valid RFC 1123 date string",
+   "invalid date format string",
+   "multiple If-Modified-Since headers",
+   "very long date string",
+   "unicode characters in date string",
+   "date string with trailing newline",
+   "date string with leading/trailing spaces"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Empty string for If-Modified-Since header does not raise exception (regression fix)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Empty string for If-Modified-Since header is treated as if header was not present"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Whitespace-only string for If-Modified-Since header is ignored without raising exception"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Valid RFC 1123 date string in If-Modified-Since header works correctly for conditional requests"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Invalid date format in If-Modified-Since header is handled gracefully (ignored or logged, not exception)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Missing/None If-Modified-Since header works as before (no conditional logic applied)"
+   },
+   {
+    "id": "S1.7",
+    "covers": "If-Modified-Since with valid date correctly triggers 304 Not Modified when resource unchanged"
+   },
+   {
+    "id": "S1.8",
+    "covers": "If-Modified-Since with valid date correctly returns 200 OK when resource modified"
+   },
+   {
+    "id": "S1.9",
+    "covers": "If-Modified-Since with empty string does not trigger 304 Not Modified (treated as no header)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Multiple If-Modified-Since headers are handled according to HTTP spec (first value used or combined)"
+   }
+  ],
+  "plan_files": [
+   "headers.py",
+   "request.py"
+  ]
+ },
+ "raw_tail": "\":\"S1.1\",\"covers\":\"Empty string for If-Modified-Since header does not raise exception (regression fix)\"},{\"id\":\"S1.2\",\"covers\":\"Empty string for If-Modified-Since header is treated as if header was not present\"},{\"id\":\"S1.3\",\"covers\":\"Whitespace-only string for If-Modified-Since header is ignored without raising exception\"},{\"id\":\"S1.4\",\"covers\":\"Valid RFC 1123 date string in If-Modified-Since header works correctly for conditional requests\"},{\"id\":\"S1.5\",\"covers\":\"Invalid date format in If-Modified-Since header is handled gracefully (ignored or logged, not exception)\"},{\"id\":\"S1.6\",\"covers\":\"Missing/None If-Modified-Since header works as before (no conditional logic applied)\"},{\"id\":\"S1.7\",\"covers\":\"If-Modified-Since with valid date correctly triggers 304 Not Modified when resource unchanged\"},{\"id\":\"S1.8\",\"covers\":\"If-Modified-Since with valid date correctly returns 200 OK when resource modified\"},{\"id\":\"S1.9\",\"covers\":\"If-Modified-Since with empty string does not trigger 304 Not Modified (treated as no header)\"},{\"id\":\"S1.10\",\"covers\":\"Multiple If-Modified-Since headers are handled according to HTTP spec (first value used or combined)\"}],\"plan_files\":[\"headers.py\",\"request.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_was_modified_since_empty_string",
+    "covered": true,
+    "why": "S1.1 explicitly covers empty string not raising exception (regression fix), S1.2 covers empty string being treated as header not present, and S1.9 covers empty string not triggering 304. Edge case 'empty string \"\" for If-Modified-Since header' also directly addresses this test."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,115 @@
+{
+ "instance_id": "django__django-14411",
+ "n_edge_cases": 15,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "ReadOnlyPasswordHashWidget doesn't contain a for attribute in the"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/auth/forms.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "get_context"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/auth/forms.py"
+  ],
+  "matched": [
+   "forms.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Label must omit the `for` attribute entirely — rendering `for=\"\"` is equally invalid and must NOT be the result",
+   "`id_for_label` must return None (not '' or 0) so `BoundField.label_tag`'s truthiness check skips emitting `for`",
+   "Form with `auto_id=False` (no generated id) must still render a label with no `for` and must not raise",
+   "Explicit `id` supplied via the widget's `attrs` must still be suppressed for the label — the widget is never labelable regardless of id source",
+   "Sibling fields in the same admin form (username, dates, permissions) MUST keep their correct `for` attributes — the change is scoped to this one widget only",
+   "Widget body content must remain unchanged: algorithm/hash summary, the change-password link, and the 'No password set.'/unusable-password message all still render",
+   "Multiple ReadOnlyPasswordHashFields on one page must all drop `for`, with no duplicate-id or stale-pointer concerns",
+   "Subclasses of ReadOnlyPasswordHashWidget inherit the no-`for` behaviour; a subclass that adds a genuine labelable input would need to re-override (document this scope boundary)",
+   "ReadOnlyPasswordHashField used in a custom (non-admin) form must also yield a for-less label — fix belongs on the widget, not the admin template",
+   "label_suffix, custom label text/contents, and any aria/required markup on the label must be preserved; only `for` is removed",
+   "Both rendering paths honour the change: form template `{{ field.label_tag }}` and the admin fieldset / AdminReadonlyField path",
+   "Resulting markup must pass an HTML/accessibility validator — no label `for` pointing at a non-labelable element",
+   "i18n: translated label text is unaffected",
+   "Backwards compat: existing tests asserting the widget's hash-text render output must not break",
+   "A regression test must assert the absence of `for=` so a future refactor can't silently reintroduce it"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Admin user-change form renders the ReadOnlyPasswordHashField label with no `for` attribute"
+   },
+   {
+    "id": "S1.2",
+    "covers": "ReadOnlyPasswordHashWidget.id_for_label(id_) returns None"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Rendered label omits `for` entirely rather than emitting an empty for=\"\""
+   },
+   {
+    "id": "S2.2",
+    "covers": "Label still renders its text content and label_suffix after the fix"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Sibling input fields in the same form keep their correct `for` attributes (scope containment)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Widget still renders the password hash summary and change-password link"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Widget still renders the unusable/no-password placeholder unchanged"
+   },
+   {
+    "id": "S5.1",
+    "covers": "ReadOnlyPasswordHashField in a non-admin custom form also produces a for-less label"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Form with auto_id=False does not crash and produces a label without `for`"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Explicit widget attrs id is suppressed — no `for` appears on the label"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Multiple ReadOnlyPasswordHashFields on one page, none emit `for`"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Regression test asserts absence of `for=` in the rendered UserChangeForm password label"
+   }
+  ],
+  "plan_files": [
+   "forms.py",
+   "boundfield.py",
+   "test_forms.py"
+  ]
+ },
+ "raw_tail": "asswordHashField label with no `for` attribute\"},{\"id\":\"S1.2\",\"covers\":\"ReadOnlyPasswordHashWidget.id_for_label(id_) returns None\"},{\"id\":\"S2.1\",\"covers\":\"Rendered label omits `for` entirely rather than emitting an empty for=\\\"\\\"\"},{\"id\":\"S2.2\",\"covers\":\"Label still renders its text content and label_suffix after the fix\"},{\"id\":\"S3.1\",\"covers\":\"Sibling input fields in the same form keep their correct `for` attributes (scope containment)\"},{\"id\":\"S4.1\",\"covers\":\"Widget still renders the password hash summary and change-password link\"},{\"id\":\"S4.2\",\"covers\":\"Widget still renders the unusable/no-password placeholder unchanged\"},{\"id\":\"S5.1\",\"covers\":\"ReadOnlyPasswordHashField in a non-admin custom form also produces a for-less label\"},{\"id\":\"S6.1\",\"covers\":\"Form with auto_id=False does not crash and produces a label without `for`\"},{\"id\":\"S7.1\",\"covers\":\"Explicit widget attrs id is suppressed — no `for` appears on the label\"},{\"id\":\"S8.1\",\"covers\":\"Multiple ReadOnlyPasswordHashFields on one page, none emit `for`\"},{\"id\":\"S9.1\",\"covers\":\"Regression test asserts absence of `for=` in the rendered UserChangeForm password label\"}],\"plan_files\":[\"forms.py\",\"boundfield.py\",\"test_forms.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "ReadOnlyPasswordHashWidget doesn't contain a for attribute in the",
+    "covered": true,
+    "why": "S1.1 explicitly states 'Admin user-change form renders the ReadOnlyPasswordHashField label with no `for` attribute'. Additionally, S1.2 ensures id_for_label returns None (the mechanism that prevents for attribute), S2.1 ensures for is omitted entirely (not empty), S7.1 ensures explicit id doesn't cause for to appear, S8.1 covers multiple fields, S9.1 is a regression test asserting absence of for=, and multiple edge cases reinforce this requirement."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

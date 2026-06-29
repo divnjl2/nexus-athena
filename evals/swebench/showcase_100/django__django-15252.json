@@ -1,0 +1,130 @@
+{
+ "instance_id": "django__django-15252",
+ "driver": "local",
+ "n_edge_cases": 15,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_migrate_test_setting_false_ensure_schema (backends.base.test_creation.TestDbCreationTests)",
+  "The django_migrations table is not created if there are no migrations"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/executor.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "migrate"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/executor.py"
+  ],
+  "matched": [
+   "executor.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Router returns False for Migration model - should not create Migration table or record anything",
+   "Router returns None for Migration model - router not responsible, proceed normally",
+   "Router returns True for Migration model - normal behavior, create table and record",
+   "Read-only database connection - should not attempt CREATE TABLE (permission error risk)",
+   "Test runner iterating over all database aliases - each should respect router independently",
+   "Models with managed=False on non-default database - should not trigger migration recording there",
+   "Multiple apps with different routing rules - some allowed, some not on same database",
+   "Empty migration (no operations) - should still respect router rules",
+   "Migration already applied - should check router before querying Migration table",
+   "Database connection doesn't exist or is unreachable - should handle gracefully",
+   "record_unapplied() called when Migration table doesn't exist and router disallows it",
+   "applied_migrations() called when Migration table doesn't exist and router disallows it",
+   "MigrationRecorder initialized with database where no migrations are allowed",
+   "Router checks app_label but Migration model is in django_migrations app",
+   "Multiple routers in chain - any returning False should prevent migration recording"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "MigrationRecorder.ensure_schema() checks router.allow_migrate() before creating Migration table"
+   },
+   {
+    "id": "S1.2",
+    "covers": "MigrationRecorder.record_applied() does not attempt to insert when router disallows Migration model"
+   },
+   {
+    "id": "S1.3",
+    "covers": "MigrationRecorder.record_unapplied() does not attempt to delete when router disallows Migration model"
+   },
+   {
+    "id": "S1.4",
+    "covers": "MigrationRecorder.applied_migrations() returns empty set when router disallows Migration model"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Router returning False for Migration model prevents table creation on non-default database"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Router returning None allows normal migration recording behavior"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Router returning True allows normal migration recording behavior"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Read-only database does not cause permission error during migration recording"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Test runner does not create Migration tables on databases where router disallows them"
+   },
+   {
+    "id": "S4.1",
+    "covers": "MigrationRecorder raises appropriate error when attempting to record on disallowed database"
+   },
+   {
+    "id": "S4.2",
+    "covers": "MigrationRecorder gracefully handles missing Migration table when router disallows it"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Multiple database aliases each respect their own router rules independently"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Models with managed=False do not trigger unwanted migration recording on their database"
+   },
+   {
+    "id": "S6.1",
+    "covers": "MigrationRecorder uses correct database connection for router.allow_migrate() check"
+   },
+   {
+    "id": "S6.2",
+    "covers": "MigrationRecorder passes Migration model correctly to router.allow_migrate()"
+   }
+  ],
+  "plan_files": [
+   "django/db/migrations/recorder.py",
+   "django/db/migrations/executor.py",
+   "django/db/migrations/operations/base.py",
+   "django/test/runner.py"
+  ]
+ },
+ "raw_tail": "vers\":\"Router returning None allows normal migration recording behavior\"},\n{\"id\":\"S2.3\",\"covers\":\"Router returning True allows normal migration recording behavior\"},\n{\"id\":\"S3.1\",\"covers\":\"Read-only database does not cause permission error during migration recording\"},\n{\"id\":\"S3.2\",\"covers\":\"Test runner does not create Migration tables on databases where router disallows them\"},\n{\"id\":\"S4.1\",\"covers\":\"MigrationRecorder raises appropriate error when attempting to record on disallowed database\"},\n{\"id\":\"S4.2\",\"covers\":\"MigrationRecorder gracefully handles missing Migration table when router disallows it\"},\n{\"id\":\"S5.1\",\"covers\":\"Multiple database aliases each respect their own router rules independently\"},\n{\"id\":\"S5.2\",\"covers\":\"Models with managed=False do not trigger unwanted migration recording on their database\"},\n{\"id\":\"S6.1\",\"covers\":\"MigrationRecorder uses correct database connection for router.allow_migrate() check\"},\n{\"id\":\"S6.2\",\"covers\":\"MigrationRecorder passes Migration model correctly to router.allow_migrate()\"}\n],\n\"plan_files\":[\n\"django/db/migrations/recorder.py\",\n\"django/db/migrations/executor.py\",\n\"django/db/migrations/operations/base.py\",\n\"django/test/runner.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_migrate_test_setting_false_ensure_schema",
+    "covered": true,
+    "why": "S1.1 explicitly covers ensure_schema() checking router.allow_migrate() before creating Migration table; S2.1 covers router returning False preventing table creation; S3.2 covers test runner respecting router rules"
+   }
+  ],
+  "covered": 1,
+  "total": 2,
+  "ratio": 0.5
+ }
+}

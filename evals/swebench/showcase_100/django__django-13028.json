@@ -1,0 +1,121 @@
+{
+ "instance_id": "django__django-13028",
+ "n_edge_cases": 18,
+ "n_scenarios": 11,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_field_with_filterable (queries.tests.Queries1Tests)",
+  "test_ticket8439 (queries.tests.Queries1Tests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "check_related_objects"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "matched": [
+   "query.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Model instance whose model defines a BooleanField named `filterable` (default False) used as `=` RHS (exact repro: ProductMetaData.objects.filter(metadata_type=instance)) — must NOT raise NotSupportedError and must return correct rows",
+   "Same model-instance RHS with filterable=True (control) — must filter normally",
+   "Model instance exposing `filterable` as a plain attribute/property/descriptor returning a falsy value — must still be a valid filter RHS",
+   "`filterable`-bearing instance combined with other kwargs in the same call (value='Dark Vador', metadata_type=instance) — both lookups apply, no raise",
+   "Same RHS reached via lookups __exact and __in (list of such instances) — per-element checking preserved, no raise",
+   "Genuine non-filterable expression Window() in the filter clause — must STILL raise NotSupportedError with unchanged message 'Window is disallowed in the filter clause.' and unchanged exception class",
+   "Non-filterable expression nested inside Q(...) | Q(...) and inside negation ~Q(...) — still rejected",
+   "Composite/wrapping expression (ExpressionWrapper/Func) containing a non-filterable sub-expression — still rejected via the preserved get_source_expressions() recursion (fix must not drop the recursive call)",
+   "Ordinary filterable expressions F(), Value(), Exists(), Subquery(), OuterRef() (have resolve_expression, filterable defaults True) — remain allowed; no false positive from the new branch",
+   "Plain scalar RHS (str, int, bool, None, Decimal, datetime) — allowed unchanged",
+   "RHS object with resolve_expression but NO `filterable` attribute → getattr default True → allowed",
+   "RHS object with resolve_expression AND filterable=False → still rejected (true-positive retained — the discriminator the fix must keep)",
+   "QuerySet/subquery passed to __in (no top-level resolve_expression) — behavior unchanged, not rejected",
+   "exclude() and Q-objects share build_filter → identical behavior to filter() for all the above",
+   "Error message text and NotSupportedError type unchanged for the genuine guard (no message/type regression)",
+   "hasattr gate is on the hot per-value filter path — use hasattr, not try/except, for O(1) cost",
+   "Pre-existing tests asserting window-function-in-filter raises must still pass (intent of regression 4edad1ddf6 preserved while over-rejection removed)",
+   "Documentation/release note clarifying that filterable=False suppresses only true expressions, not model fields/attributes coincidentally named `filterable`"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "filter(metadata_type=instance) where instance has filterable field == False does not raise NotSupportedError (exact reported repro)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "that same filter returns the correct matching rows (functional correctness, not just absence of exception)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "filterable-bearing model instance works combined with other kwargs and via __exact/__in lookups"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Window() expression (filterable=False) in filter clause still raises NotSupportedError with unchanged message and exception type"
+   },
+   {
+    "id": "S2.2",
+    "covers": "non-filterable expression nested in Q OR / negation is still rejected"
+   },
+   {
+    "id": "S2.3",
+    "covers": "composite expression containing a non-filterable sub-expression still rejected via get_source_expressions recursion"
+   },
+   {
+    "id": "S3.1",
+    "covers": "ordinary expressions F()/Value()/Exists()/OuterRef() (resolve_expression present, filterable default True) remain allowed in filter"
+   },
+   {
+    "id": "S3.2",
+    "covers": "plain scalar values and list-for-__in pass without raising"
+   },
+   {
+    "id": "S4.1",
+    "covers": "object with resolve_expression but no filterable attr is allowed (getattr default True)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "object with resolve_expression and filterable=False is rejected (discriminator retained)"
+   },
+   {
+    "id": "S4.3",
+    "covers": "non-expression object with a falsy filterable attribute is allowed (hasattr gate is the deciding condition)"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/sql/query.py",
+   "tests/queries/tests.py",
+   "tests/queries/models.py",
+   "tests/expressions/tests.py"
+  ]
+ },
+ "raw_tail": "del instance works combined with other kwargs and via __exact/__in lookups\"},{\"id\":\"S2.1\",\"covers\":\"Window() expression (filterable=False) in filter clause still raises NotSupportedError with unchanged message and exception type\"},{\"id\":\"S2.2\",\"covers\":\"non-filterable expression nested in Q OR / negation is still rejected\"},{\"id\":\"S2.3\",\"covers\":\"composite expression containing a non-filterable sub-expression still rejected via get_source_expressions recursion\"},{\"id\":\"S3.1\",\"covers\":\"ordinary expressions F()/Value()/Exists()/OuterRef() (resolve_expression present, filterable default True) remain allowed in filter\"},{\"id\":\"S3.2\",\"covers\":\"plain scalar values and list-for-__in pass without raising\"},{\"id\":\"S4.1\",\"covers\":\"object with resolve_expression but no filterable attr is allowed (getattr default True)\"},{\"id\":\"S4.2\",\"covers\":\"object with resolve_expression and filterable=False is rejected (discriminator retained)\"},{\"id\":\"S4.3\",\"covers\":\"non-expression object with a falsy filterable attribute is allowed (hasattr gate is the deciding condition)\"}],\"plan_files\":[\"django/db/models/sql/query.py\",\"tests/queries/tests.py\",\"tests/queries/models.py\",\"tests/expressions/tests.py\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_field_with_filterable",
+    "covered": true,
+    "why": "S1.1, S1.2, S1.3 and edge case 'Model instance whose model defines a BooleanField named filterable (default False) used as = RHS' directly cover the exact reported repro: filtering with a model instance that has a filterable field set to False must NOT raise NotSupportedError and must return correct rows"
+   },
+   {
+    "test": "test_ticket8439",
+    "covered": true,
+    "why": "S2.1, S2.2, S2.3 and edge case 'Genuine non-filterable expression Window() in the filter clause — must STILL raise NotSupportedError with unchanged message' explicitly preserve the original Window function filter rejection behavior that ticket 8439 introduced"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

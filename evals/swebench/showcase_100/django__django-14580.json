@@ -1,0 +1,102 @@
+{
+ "instance_id": "django__django-14580",
+ "n_edge_cases": 15,
+ "n_scenarios": 9,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_serialize_type_model (migrations.test_writer.WriterTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_format"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "matched": [
+   "serializer.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Concrete model with a custom base/mixin + models.Model in bases (the repro) must add 'from django.db import models'",
+   "Model that also uses django.db.models fields (e.g. a custom MyField) AND has models.Model in bases — import must be deduplicated and emitted exactly once, not twice",
+   "Model with only the default base omits the bases= kwarg entirely and gains no spurious models import (matches maintainer note: bug vanishes without the mixin)",
+   "type(None) special case must keep an empty imports list — no regression that adds an import for it",
+   "Arbitrary non-special-cased type (e.g. app.models.MyField as a class object) must keep its dotted path + 'import <module>' behaviour unchanged",
+   "Bases with multiple custom mixins plus models.Model (MixinA, MixinB, models.Model) still yields a single models import",
+   "Abstract base (MyBaseModel) is collapsed away; the concrete model still gets the correct import",
+   "Generated migration must be not just string-valid but importable/executable (round-trip via safe_exec / migration loader) with no NameError",
+   "Determinism: imports sorted and makemigrations run twice produces byte-identical output (no perpetually-regenerated migration)",
+   "'from django.db import migrations' and 'from django.db import models' coexist/sort without collision or accidental merge breakage",
+   "models.Model serialized outside a bases tuple (e.g. as a field default/option type) also carries its import",
+   "Multi-table inheritance bases=(app.models.Parent,) without models.Model is unaffected — no spurious models import",
+   "Proxy model bases unaffected — models.Model not directly present",
+   "Migration with no operation referencing models.Model adds no models import (scoped strictly to actual usage)",
+   "Migration with several models mixing custom-base and default-base — the models import is added once and covers all"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "TypeSerializer.serialize(models.Model) returns string 'models.Model' together with import 'from django.db import models'"
+   },
+   {
+    "id": "S1.2",
+    "covers": "TypeSerializer.serialize(type(None)) still returns 'type(None)' with an empty imports set (regression guard)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "TypeSerializer.serialize of a non-special-cased custom class still returns its dotted path plus 'import <module>' unchanged"
+   },
+   {
+    "id": "S2.1",
+    "covers": "makemigrations on the MyMixin+MyBaseModel+MyField repro emits 'from django.db import models' in the migration imports"
+   },
+   {
+    "id": "S2.2",
+    "covers": "The generated migration file imports/executes without 'NameError: name models is not defined'"
+   },
+   {
+    "id": "S2.3",
+    "covers": "CreateModel bases of (multiple custom mixins, models.Model) emits exactly one 'from django.db import models'"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Default-base model omits the bases= kwarg and adds no models import on account of bases"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Model using a standard django.db.models field AND a custom base imports models exactly once (deduplicated, no duplicate line)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Running makemigrations twice on unchanged custom-base models yields no new migration (deterministic, sorted imports)"
+   }
+  ],
+  "plan_files": [
+   "django/db/migrations/serializer.py",
+   "tests/migrations/test_writer.py"
+  ]
+ },
+ "raw_tail": " django.db import models'\"},{\"id\":\"S1.2\",\"covers\":\"TypeSerializer.serialize(type(None)) still returns 'type(None)' with an empty imports set (regression guard)\"},{\"id\":\"S1.3\",\"covers\":\"TypeSerializer.serialize of a non-special-cased custom class still returns its dotted path plus 'import <module>' unchanged\"},{\"id\":\"S2.1\",\"covers\":\"makemigrations on the MyMixin+MyBaseModel+MyField repro emits 'from django.db import models' in the migration imports\"},{\"id\":\"S2.2\",\"covers\":\"The generated migration file imports/executes without 'NameError: name models is not defined'\"},{\"id\":\"S2.3\",\"covers\":\"CreateModel bases of (multiple custom mixins, models.Model) emits exactly one 'from django.db import models'\"},{\"id\":\"S3.1\",\"covers\":\"Default-base model omits the bases= kwarg and adds no models import on account of bases\"},{\"id\":\"S3.2\",\"covers\":\"Model using a standard django.db.models field AND a custom base imports models exactly once (deduplicated, no duplicate line)\"},{\"id\":\"S4.1\",\"covers\":\"Running makemigrations twice on unchanged custom-base models yields no new migration (deterministic, sorted imports)\"}],\"plan_files\":[\"django/db/migrations/serializer.py\",\"tests/migrations/test_writer.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_serialize_type_model",
+    "covered": true,
+    "why": "S1.1 explicitly covers TypeSerializer.serialize(models.Model) returning 'models.Model' with import 'from django.db import models', which is exactly what test_serialize_type_model tests based on its name and the issue context"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

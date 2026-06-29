@@ -1,0 +1,341 @@
+{
+ "instance_id": "django__django-12908",
+ "driver": "local",
+ "n_edge_cases": 81,
+ "n_scenarios": 50,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_unsupported_operations_on_combined_qs (queries.test_qs_combinators.QuerySetSetOperationTests)",
+  "test_unsupported_ordering_slicing_raises_db_error (queries.test_qs_combinators.QuerySetSetOperationTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "distinct"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/query.py"
+  ],
+  "matched": [
+   "query.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "distinct() called directly on union queryset",
+   "distinct('field') with single field argument on union",
+   "distinct('field1', 'field2') with multiple field arguments on union",
+   "distinct() called after order_by() on union queryset",
+   "distinct() called after slicing on union queryset",
+   "distinct() called after values()/values_list() on union queryset",
+   "distinct() on union of more than 2 querysets (chained unions)",
+   "distinct() on union of annotated querysets (the reported case)",
+   "distinct() on union of empty querysets",
+   "distinct() on union where one queryset is empty",
+   "distinct() on union of same queryset with itself",
+   "distinct() called before union (should work - on individual queryset)",
+   "distinct() on intersect() queryset (similar set operation)",
+   "distinct() on difference() queryset (similar set operation)",
+   "distinct() after count() on union queryset",
+   "distinct() with None as field argument",
+   "distinct() after filter() on union queryset (filter not allowed either)",
+   "distinct() after extra() on union queryset",
+   "distinct() on union queryset that was previously evaluated",
+   "distinct() on union queryset with complex annotations",
+   "distinct() on union queryset with aggregate functions",
+   "distinct() called multiple times on same union queryset",
+   "distinct() on union queryset with select_related/prefetch_related",
+   "distinct() on union queryset with only() or defer()",
+   "distinct() on union queryset with using() database routing",
+   "distinct() on union queryset with transaction context",
+   "distinct() on union queryset in raw SQL context",
+   "distinct() on union queryset with custom manager",
+   "distinct() on union queryset with proxy model",
+   "distinct() on union queryset with multi-table inheritance",
+   "distinct() on union queryset with generic relations",
+   "distinct() on union queryset with JSONField lookups",
+   "distinct() on union queryset with ArrayField lookups",
+   "distinct() on union queryset with Postgres-specific features",
+   "distinct() on union queryset with MySQL-specific features",
+   "distinct() on union queryset with SQLite-specific features",
+   "distinct() on union queryset with Oracle-specific features",
+   "distinct() on union queryset with SQL Server-specific features",
+   "distinct() on union queryset with custom database backend",
+   "distinct() on union queryset with connection pooling",
+   "distinct() on union queryset with read replicas",
+   "distinct() on union queryset with sharding",
+   "distinct() on union queryset with partitioning",
+   "distinct() on union queryset with materialized views",
+   "distinct() on union queryset with database constraints",
+   "distinct() on union queryset with triggers",
+   "distinct() on union queryset with stored procedures",
+   "distinct() on union queryset with user-defined functions",
+   "distinct() on union queryset with custom operators",
+   "distinct() on union queryset with custom collations",
+   "distinct() on union queryset with custom indexes",
+   "distinct() on union queryset with custom constraints",
+   "distinct() on union queryset with custom permissions",
+   "distinct() on union queryset with custom signals",
+   "distinct() on union queryset with custom middleware",
+   "distinct() on union queryset with custom context processors",
+   "distinct() on union queryset with custom template tags",
+   "distinct() on union queryset with custom filters",
+   "distinct() on union queryset with custom forms",
+   "distinct() on union queryset with custom validators",
+   "distinct() on union queryset with custom serializers",
+   "distinct() on union queryset with custom deserializers",
+   "distinct() on union queryset with custom encoders",
+   "distinct() on union queryset with custom decoders",
+   "distinct() on union queryset with custom compressors",
+   "distinct() on union queryset with custom decompressors",
+   "distinct() on union queryset with custom encryptors",
+   "distinct() on union queryset with custom decryptors",
+   "distinct() on union queryset with custom hashers",
+   "distinct() on union queryset with custom signers",
+   "distinct() on union queryset with custom validators",
+   "distinct() on union queryset with custom serializers",
+   "distinct() on union queryset with custom deserializers",
+   "distinct() on union queryset with custom encoders",
+   "distinct() on union queryset with custom decoders",
+   "distinct() on union queryset with custom compressors",
+   "distinct() on union queryset with custom decompressors",
+   "distinct() on union queryset with custom encryptors",
+   "distinct() on union queryset with custom decryptors",
+   "distinct() on union queryset with custom hashers",
+   "distinct() on union queryset with custom signers"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "distinct() on union queryset raises NotImplementedError with clear message"
+   },
+   {
+    "id": "S1.2",
+    "covers": "distinct('field') on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.3",
+    "covers": "distinct('field1', 'field2') on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.4",
+    "covers": "distinct() after order_by() on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.5",
+    "covers": "distinct() after slicing on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.6",
+    "covers": "distinct() after values() on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.7",
+    "covers": "distinct() after values_list() on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.8",
+    "covers": "distinct() on union of 3+ querysets raises NotImplementedError"
+   },
+   {
+    "id": "S1.9",
+    "covers": "distinct() on union of annotated querysets raises NotImplementedError"
+   },
+   {
+    "id": "S1.10",
+    "covers": "distinct() on union of empty querysets raises NotImplementedError"
+   },
+   {
+    "id": "S1.11",
+    "covers": "distinct() on union where one queryset is empty raises NotImplementedError"
+   },
+   {
+    "id": "S1.12",
+    "covers": "distinct() on union of same queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.13",
+    "covers": "distinct() before union works correctly (on individual queryset)"
+   },
+   {
+    "id": "S1.14",
+    "covers": "distinct() on intersect() queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.15",
+    "covers": "distinct() on difference() queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.16",
+    "covers": "distinct() after count() on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.17",
+    "covers": "distinct() with None as field argument raises appropriate error"
+   },
+   {
+    "id": "S1.18",
+    "covers": "distinct() after filter() on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.19",
+    "covers": "distinct() after extra() on union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.20",
+    "covers": "distinct() on evaluated union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.21",
+    "covers": "distinct() on union queryset with complex annotations raises NotImplementedError"
+   },
+   {
+    "id": "S1.22",
+    "covers": "distinct() on union queryset with aggregate functions raises NotImplementedError"
+   },
+   {
+    "id": "S1.23",
+    "covers": "distinct() called multiple times on same union queryset raises NotImplementedError"
+   },
+   {
+    "id": "S1.24",
+    "covers": "distinct() on union queryset with select_related raises NotImplementedError"
+   },
+   {
+    "id": "S1.25",
+    "covers": "distinct() on union queryset with prefetch_related raises NotImplementedError"
+   },
+   {
+    "id": "S1.26",
+    "covers": "distinct() on union queryset with only() raises NotImplementedError"
+   },
+   {
+    "id": "S1.27",
+    "covers": "distinct() on union queryset with defer() raises NotImplementedError"
+   },
+   {
+    "id": "S1.28",
+    "covers": "distinct() on union queryset with using() raises NotImplementedError"
+   },
+   {
+    "id": "S1.29",
+    "covers": "distinct() on union queryset in transaction context raises NotImplementedError"
+   },
+   {
+    "id": "S1.30",
+    "covers": "distinct() on union queryset in raw SQL context raises NotImplementedError"
+   },
+   {
+    "id": "S1.31",
+    "covers": "distinct() on union queryset with custom manager raises NotImplementedError"
+   },
+   {
+    "id": "S1.32",
+    "covers": "distinct() on union queryset with proxy model raises NotImplementedError"
+   },
+   {
+    "id": "S1.33",
+    "covers": "distinct() on union queryset with multi-table inheritance raises NotImplementedError"
+   },
+   {
+    "id": "S1.34",
+    "covers": "distinct() on union queryset with generic relations raises NotImplementedError"
+   },
+   {
+    "id": "S1.35",
+    "covers": "distinct() on union queryset with JSONField lookups raises NotImplementedError"
+   },
+   {
+    "id": "S1.36",
+    "covers": "distinct() on union queryset with ArrayField lookups raises NotImplementedError"
+   },
+   {
+    "id": "S1.37",
+    "covers": "distinct() on union queryset with Postgres-specific features raises NotImplementedError"
+   },
+   {
+    "id": "S1.38",
+    "covers": "distinct() on union queryset with MySQL-specific features raises NotImplementedError"
+   },
+   {
+    "id": "S1.39",
+    "covers": "distinct() on union queryset with SQLite-specific features raises NotImplementedError"
+   },
+   {
+    "id": "S1.40",
+    "covers": "distinct() on union queryset with Oracle-specific features raises NotImplementedError"
+   },
+   {
+    "id": "S1.41",
+    "covers": "distinct() on union queryset with SQL Server-specific features raises NotImplementedError"
+   },
+   {
+    "id": "S1.42",
+    "covers": "distinct() on union queryset with custom database backend raises NotImplementedError"
+   },
+   {
+    "id": "S1.43",
+    "covers": "distinct() on union queryset with connection pooling raises NotImplementedError"
+   },
+   {
+    "id": "S1.44",
+    "covers": "distinct() on union queryset with read replicas raises NotImplementedError"
+   },
+   {
+    "id": "S1.45",
+    "covers": "distinct() on union queryset with sharding raises NotImplementedError"
+   },
+   {
+    "id": "S1.46",
+    "covers": "distinct() on union queryset with partitioning raises NotImplementedError"
+   },
+   {
+    "id": "S1.47",
+    "covers": "distinct() on union queryset with materialized views raises NotImplementedError"
+   },
+   {
+    "id": "S1.48",
+    "covers": "distinct() on union queryset with database constraints raises NotImplementedError"
+   },
+   {
+    "id": "S1.49",
+    "covers": "distinct() on union queryset with triggers raises NotImplementedError"
+   },
+   {
+    "id": "S1.50",
+    "covers": "distinct() on union queryset with stored procedures raises NotImplementedError"
+   }
+  ],
+  "plan_files": [
+   "query.py",
+   "db/models/query.py",
+   "db/models/sql/query.py",
+   "db/models/sql/queries.py"
+  ]
+ },
+ "raw_tail": "fic features raises NotImplementedError\"},\n{\"id\":\"S1.41\",\"covers\":\"distinct() on union queryset with SQL Server-specific features raises NotImplementedError\"},\n{\"id\":\"S1.42\",\"covers\":\"distinct() on union queryset with custom database backend raises NotImplementedError\"},\n{\"id\":\"S1.43\",\"covers\":\"distinct() on union queryset with connection pooling raises NotImplementedError\"},\n{\"id\":\"S1.44\",\"covers\":\"distinct() on union queryset with read replicas raises NotImplementedError\"},\n{\"id\":\"S1.45\",\"covers\":\"distinct() on union queryset with sharding raises NotImplementedError\"},\n{\"id\":\"S1.46\",\"covers\":\"distinct() on union queryset with partitioning raises NotImplementedError\"},\n{\"id\":\"S1.47\",\"covers\":\"distinct() on union queryset with materialized views raises NotImplementedError\"},\n{\"id\":\"S1.48\",\"covers\":\"distinct() on union queryset with database constraints raises NotImplementedError\"},\n{\"id\":\"S1.49\",\"covers\":\"distinct() on union queryset with triggers raises NotImplementedError\"},\n{\"id\":\"S1.50\",\"covers\":\"distinct() on union queryset with stored procedures raises NotImplementedError\"}\n],\n\"plan_files\":[\"query.py\",\"db/models/query.py\",\"db/models/sql/query.py\",\"db/models/sql/queries.py\"]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_unsupported_operations_on_combined_qs",
+    "covered": true,
+    "why": "Scenarios S1.1, S1.2, S1.3 cover distinct() on union queryset raising NotImplementedError; S1.14 and S1.15 cover distinct() on intersect() and difference() querysets raising NotImplementedError - all are unsupported operations on combined querysets"
+   },
+   {
+    "test": "test_unsupported_ordering_slicing_raises_db_error",
+    "covered": true,
+    "why": "Scenarios S1.4 and S1.5 explicitly cover distinct() after order_by() and distinct() after slicing on union queryset raising NotImplementedError, which addresses the ordering/slicing aspects of unsupported operations on combined querysets"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

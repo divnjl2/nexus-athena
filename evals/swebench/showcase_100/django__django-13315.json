@@ -1,0 +1,114 @@
+{
+ "instance_id": "django__django-13315",
+ "driver": "local",
+ "n_edge_cases": 13,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_limit_choices_to_no_duplicates (model_forms.tests.LimitChoicesToTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/models.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "model_to_dict"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/models.py"
+  ],
+  "matched": [
+   "models.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty result set after limit_choices_to filtering",
+   "No limit_choices_to specified (default behavior)",
+   "Simple limit_choices_to without joins (dictionary form)",
+   "Complex Q object with multiple joins causing duplicates",
+   "Custom model fields with non-comparable types (e.g., PostgreSQL point type)",
+   "Multiple ForeignKey fields on same model with different limit_choices_to",
+   "ModelChoiceField with limit_choices_to",
+   "Calling .get() on queryset after selecting a duplicate option",
+   "Database backend differences (PostgreSQL, MySQL, SQLite)",
+   "ForeignKey with null=True and empty limit_choices_to",
+   "Q object with OR conditions creating duplicate paths",
+   "Many-to-Many relationships through intermediate models",
+   "Performance with large result sets requiring deduplication"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "ForeignKey form field with Q object limit_choices_to involving join produces unique options only"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Selecting any option from deduplicated list and calling .get() does not raise MultipleObjectsReturned"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Custom model fields with non-comparable types (PostgreSQL point) do not cause database errors"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Empty limit_choices_to result set renders empty option list without errors"
+   },
+   {
+    "id": "S1.5",
+    "covers": "ForeignKey without limit_choices_to maintains original behavior (no regression)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Simple dictionary limit_choices_to (no joins) works correctly without unnecessary deduplication"
+   },
+   {
+    "id": "S1.7",
+    "covers": "ModelChoiceField with Q object limit_choices_to produces unique choices"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Multiple ForeignKey fields with different Q object limit_choices_to each deduplicate correctly"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Deduplication works correctly across all supported database backends"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Q object with OR conditions creating multiple join paths produces unique options"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Using .annotate() for deduplication does not break custom field get_db_prep_value"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Form field choices are correctly ordered after deduplication"
+   }
+  ],
+  "plan_files": [
+   "forms/models.py",
+   "forms/widgets.py",
+   "db/models/fields/related.py"
+  ]
+ },
+ "raw_tail": "empty option list without errors\"\n    },\n    {\n      \"id\": \"S1.5\",\n      \"covers\": \"ForeignKey without limit_choices_to maintains original behavior (no regression)\"\n    },\n    {\n      \"id\": \"S1.6\",\n      \"covers\": \"Simple dictionary limit_choices_to (no joins) works correctly without unnecessary deduplication\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"ModelChoiceField with Q object limit_choices_to produces unique choices\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"Multiple ForeignKey fields with different Q object limit_choices_to each deduplicate correctly\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"Deduplication works correctly across all supported database backends\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"Q object with OR conditions creating multiple join paths produces unique options\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Using .annotate() for deduplication does not break custom field get_db_prep_value\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Form field choices are correctly ordered after deduplication\"\n    }\n  ],\n  \"plan_files\": [\n    \"forms/models.py\",\n    \"forms/widgets.py\",\n    \"db/models/fields/related.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_limit_choices_to_no_duplicates",
+    "covered": true,
+    "why": "S1.1 directly addresses the core issue: 'ForeignKey form field with Q object limit_choices_to involving join produces unique options only'. The test name indicates it verifies no duplicates are produced, which is exactly what S1.1 covers. Additionally, S1.7 covers ModelChoiceField (used for ForeignKey in forms) with Q object limit_choices_to producing unique choices, and edge cases like 'Complex Q object with multiple joins causing duplicates' and 'Q object with OR conditions creating duplicate paths' further support coverage of this behavior."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

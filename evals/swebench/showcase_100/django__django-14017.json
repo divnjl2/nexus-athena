@@ -1,0 +1,146 @@
+{
+ "instance_id": "django__django-14017",
+ "driver": "local",
+ "n_edge_cases": 16,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_boolean_expression_combined (expressions.tests.BasicExpressionsTests)",
+  "test_boolean_expression_combined_with_empty_Q (expressions.tests.BasicExpressionsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/query_utils.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__init__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/query_utils.py"
+  ],
+  "matched": [
+   "query_utils.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty Q() combined with Exists on left: Q() & Exists(...)",
+   "Empty Q() combined with Exists on right: Exists(...) & Q()",
+   "Multiple Exists in same expression: Q(...) & Exists(...) & Exists(...)",
+   "Nested Q with Exists: Q(a=1, b=Exists(...))",
+   "Chained operations: Q(...) & Exists(...) | Q(...)",
+   "Q with multiple conditions & Exists: Q(a=1, b=2) & Exists(...)",
+   "Exists & Q with multiple conditions: Exists(...) & Q(a=1, b=2)",
+   "OR operator commutativity: Q(...) | Exists(...) vs Exists(...) | Q(...)",
+   "Empty Q on both sides: Q() & Q()",
+   "Exists with empty queryset: Exists(Model.objects.none())",
+   "Multiple Q objects with Exists: Q(a=1) & Q(b=2) & Exists(...)",
+   "Inverted Q with Exists: ~Q(...) & Exists(...)",
+   "Exists combined with other expressions: Q(...) & Exists(...) & F(...)",
+   "Type checking: non-Q, non-Combinable objects should still raise TypeError",
+   "Result type: Q(...) & Exists(...) should return Q instance",
+   "Query execution: combined expression must execute without errors"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Q(...) & Exists(...) does not raise TypeError and produces valid Q object"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Q(...) | Exists(...) does not raise TypeError and produces valid Q object"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Q(...) & Exists(...) produces equivalent result to Exists(...) & Q(...)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Q(...) | Exists(...) produces equivalent result to Exists(...) | Q(...)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Empty Q() & Exists(...) returns Q containing only the Exists condition"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Exists(...) & empty Q() returns Q containing only the Exists condition"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Q(a=1) & Exists(...) filters correctly in database query"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Q(a=1) | Exists(...) filters correctly in database query"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Chained Q(...) & Exists(...) | Q(...) executes without error"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Chained Q(...) & Exists(...) & Exists(...) executes without error"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Q(...) & non-Q, non-Combinable object still raises TypeError"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Q(...) & F(...) still raises TypeError (F is not combinable with Q via &)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Result of Q(...) & Exists(...) is instance of Q class"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Result of Q(...) | Exists(...) is instance of Q class"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Multiple Q conditions with Exists: Q(a=1, b=2) & Exists(...) works"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Exists with multiple Q: Exists(...) & Q(a=1) & Q(b=2) works"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Inverted Q with Exists: ~Q(a=1) & Exists(...) works"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Exists with inverted Q: Exists(...) & ~Q(a=1) works"
+   }
+  ],
+  "plan_files": [
+   "query_utils.py",
+   "tests.py"
+  ]
+ },
+ "raw_tail": "tabase query\"\n    },\n    {\n      \"id\": \"S4.1\",\n      \"covers\": \"Chained Q(...) & Exists(...) | Q(...) executes without error\"\n    },\n    {\n      \"id\": \"S4.2\",\n      \"covers\": \"Chained Q(...) & Exists(...) & Exists(...) executes without error\"\n    },\n    {\n      \"id\": \"S5.1\",\n      \"covers\": \"Q(...) & non-Q, non-Combinable object still raises TypeError\"\n    },\n    {\n      \"id\": \"S5.2\",\n      \"covers\": \"Q(...) & F(...) still raises TypeError (F is not combinable with Q via &)\"\n    },\n    {\n      \"id\": \"S6.1\",\n      \"covers\": \"Result of Q(...) & Exists(...) is instance of Q class\"\n    },\n    {\n      \"id\": \"S6.2\",\n      \"covers\": \"Result of Q(...) | Exists(...) is instance of Q class\"\n    },\n    {\n      \"id\": \"S7.1\",\n      \"covers\": \"Multiple Q conditions with Exists: Q(a=1, b=2) & Exists(...) works\"\n    },\n    {\n      \"id\": \"S7.2\",\n      \"covers\": \"Exists with multiple Q: Exists(...) & Q(a=1) & Q(b=2) works\"\n    },\n    {\n      \"id\": \"S8.1\",\n      \"covers\": \"Inverted Q with Exists: ~Q(a=1) & Exists(...) works\"\n    },\n    {\n      \"id\": \"S8.2\",\n      \"covers\": \"Exists with inverted Q: Exists(...) & ~Q(a=1) works\"\n    }\n  ],\n  \"plan_files\": [\n    \"query_utils.py\",\n    \"tests.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_boolean_expression_combined",
+    "covered": true,
+    "why": "S1.1, S1.2, S1.3, S1.4, S3.1, S3.2, S6.1, S6.2 cover combining Q and Exists with & and | operators, commutativity, query execution, and return type"
+   },
+   {
+    "test": "test_boolean_expression_combined_with_empty_Q",
+    "covered": true,
+    "why": "S2.1, S2.2 and edge cases 'Empty Q() combined with Exists on left' and 'Empty Q() combined with Exists on right' cover combining empty Q() with Exists"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

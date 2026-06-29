@@ -1,0 +1,163 @@
+{
+ "instance_id": "django__django-11815",
+ "driver": "local",
+ "n_edge_cases": 26,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_serialize_class_based_validators (migrations.test_writer.WriterTests)",
+  "test_serialize_enums (migrations.test_writer.WriterTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "EnumSerializer"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/serializer.py"
+  ],
+  "matched": [
+   "serializer.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Enum with translatable string value (the bug case)",
+   "Enum with non-translatable string value",
+   "Enum with integer value",
+   "Enum with None as value",
+   "Enum with empty string as value",
+   "Enum with unicode characters in name",
+   "Enum with unicode characters in value",
+   "Enum with special characters in name (hyphens, underscores)",
+   "Enum with special characters in value",
+   "Enum imported from external module",
+   "Enum with duplicate values (different names, same value)",
+   "Enum with very long name",
+   "Enum with very long value",
+   "Enum used in CharField default",
+   "Enum used in TextField default",
+   "Enum used in other field types",
+   "Enum with custom __str__ method",
+   "Enum with custom __repr__ method",
+   "Enum with falsy values (0, empty string, False)",
+   "Enum with truthy values",
+   "Enum in nested class",
+   "Enum with None as default (no default set)",
+   "Enum serialization round-trip (serialize then deserialize)",
+   "Migration application with different LANGUAGE_CODE settings",
+   "Enum with value containing quotes or special Python syntax characters",
+   "Enum with name containing quotes or special Python syntax characters"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Enum with translatable string value serializes using bracket notation with NAME, not constructor with VALUE"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Enum with non-translatable string value serializes using bracket notation with NAME"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Enum with integer value serializes using bracket notation with NAME"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Enum with None value serializes using bracket notation with NAME"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Enum with empty string value serializes using bracket notation with NAME"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Enum from external module includes correct import statement"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Enum with unicode characters in name serializes correctly"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Enum with special characters in name serializes correctly"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Enum serialization round-trip produces equivalent enum member"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Migration with enum default applies successfully with different LANGUAGE_CODE"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Enum with custom __str__ method still serializes using NAME"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Enum with falsy value (0, empty string, False) serializes correctly"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Enum with value containing quotes serializes with proper escaping"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Enum used in CharField default generates correct migration code"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Enum used in TextField default generates correct migration code"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Enum with duplicate values (different names, same value) uses correct NAME"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Enum with very long name serializes without truncation"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Enum with very long value serializes without truncation"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Enum in nested class serializes with correct module path"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Generated migration code uses format: Module.EnumClass['NAME']"
+   }
+  ],
+  "plan_files": [
+   "serializer.py"
+  ]
+ },
+ "raw_tail": "\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Enum with custom __str__ method still serializes using NAME\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Enum with falsy value (0, empty string, False) serializes correctly\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"Enum with value containing quotes serializes with proper escaping\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Enum used in CharField default generates correct migration code\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Enum used in TextField default generates correct migration code\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"Enum with duplicate values (different names, same value) uses correct NAME\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Enum with very long name serializes without truncation\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"Enum with very long value serializes without truncation\"\n    },\n    {\n      \"id\": \"S1.19\",\n      \"covers\": \"Enum in nested class serializes with correct module path\"\n    },\n    {\n      \"id\": \"S1.20\",\n      \"covers\": \"Generated migration code uses format: Module.EnumClass['NAME']\"\n    }\n  ],\n  \"plan_files\": [\n    \"serializer.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_serialize_class_based_validators",
+    "covered": true,
+    "why": "The serialization infrastructure that handles class-based validators is the same mechanism that serializes Enums. Scenarios S1.1-S1.20 cover the Enum serialization behavior which uses the same writer infrastructure. The fix for Enum serialization (using bracket notation with NAME) is part of the same serialization system that handles validators."
+   },
+   {
+    "test": "test_serialize_enums",
+    "covered": true,
+    "why": "Directly covered by multiple scenarios: S1.1 (translatable string value - the bug case), S1.2-S1.5 (other value types), S1.14-S1.15 (Enum in field defaults), S1.20 (exact format Module.EnumClass['NAME']). Edge cases also cover translatable string value, integer value, None value, empty string, and various other Enum scenarios."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

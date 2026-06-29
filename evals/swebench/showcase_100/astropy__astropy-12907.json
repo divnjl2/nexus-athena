@@ -1,0 +1,117 @@
+{
+ "instance_id": "astropy__astropy-12907",
+ "n_edge_cases": 13,
+ "n_scenarios": 12,
+ "fail_to_pass": [
+  "astropy/modeling/tests/test_separable.py::test_separable[compound_model6-result6]",
+  "astropy/modeling/tests/test_separable.py::test_separable[compound_model9-result9]"
+ ],
+ "gold_targets": {
+  "files": [
+   "astropy/modeling/separable.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_cstack"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "astropy/modeling/separable.py"
+  ],
+  "matched": [
+   "separable.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Right-operand nesting (the reported case): Pix2Sky_TAN() & (Linear1D & Linear1D) must yield block-diagonal, not a fully-coupled lower-right 2x2 — the core regression the fix targets",
+   "Left-operand nesting: (Linear1D & Linear1D) & Pix2Sky_TAN() must also stay block-diagonal; bug lives in the right-branch of the stack routine, so the symmetric/left case must be explicitly verified to avoid a one-sided fix",
+   "Depth >2: ((a & b) & (c & d)) and longer nest chains — recursion over the CompoundModel tree must preserve every leaf's separability, not just one level",
+   "Flat (non-nested) join must NOT regress: Linear1D & Linear1D stays diagonal; Pix2Sky_TAN & Linear1D & Linear1D keeps its existing block structure",
+   "Nested sub-block that is itself coupled (e.g. Pix2Sky_TAN nested inside the join) must have its True off-diagonal coupling carried up faithfully — fix must preserve arbitrary patterns, not merely re-impose a diagonal",
+   "Mixing join (&) with composition (|) inside a nest: composition genuinely couples, so the fix must not 'over-correct' and wrongly separate a | sub-model",
+   "Models with n_inputs != n_outputs nested in the join (Mapping, Identity, Polynomial2D 2->1): the stacked sub-matrix is non-square, so blindly assigning shapes must handle rectangular blocks without shape-mismatch / broadcasting errors",
+   "The two branches of the stack routine (right operand is a Model vs. right operand is an already-computed ndarray) must both be correct — the ndarray branch is where the '=1' overwrite hides",
+   "Output contract: result shape == (n_outputs, n_inputs) and dtype is boolean, unchanged by the fix",
+   "Single non-compound model unaffected: Pix2Sky_TAN() -> 2x2 all-True; Linear1D() -> [[True]]",
+   "Associativity/grouping invariance: a & (b & c) and (a & b) & c must produce identical matrices",
+   "Off-diagonal False values inside a nested block must survive propagation (no accumulation that flips False->True via summation/OR with the all-ones overwrite)",
+   "Full existing separability test suite and modeling round-trips must continue to pass (no behavioural change for any case that was already correct)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Reported case: separability_matrix(Pix2Sky_TAN() & (Linear1D & Linear1D)) is block-diagonal — nested linear models remain mutually separable"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Left-nested join: separability_matrix((Linear1D & Linear1D) & Pix2Sky_TAN()) preserves correct block structure (symmetric to the bug)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Deep nesting >2 levels: ((a & b) & (c & d)) preserves every leaf model's separability independently"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Grouping invariance: a & (b & c) equals (a & b) & c for the same separability matrix"
+   },
+   {
+    "id": "S2.1",
+    "covers": "No regression on flat join: Linear1D & Linear1D stays diagonal"
+   },
+   {
+    "id": "S2.2",
+    "covers": "No regression on flat three-way: Pix2Sky_TAN & Linear1D & Linear1D keeps its expected block matrix"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Single non-compound models: Pix2Sky_TAN -> full 2x2 True; Linear1D -> [[True]]"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Nested block that is internally coupled (Pix2Sky inside the join) carries its True off-diagonal coupling up unchanged"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Join combined with composition (|) inside a nest still couples the composed sub-model correctly"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Nested Mapping/Identity with n_inputs != n_outputs produces correct rectangular routing without shape errors"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Output contract: matrix shape == (n_outputs, n_inputs) and dtype is boolean for nested compounds"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Regression gate: full astropy.modeling separable test suite passes after the fix"
+   }
+  ],
+  "plan_files": [
+   "separable.py",
+   "test_separable.py",
+   "CHANGES.rst"
+  ]
+ },
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "astropy/modeling/tests/test_separable.py::test_separable[compound_model6-result6]",
+    "covered": true,
+    "why": "Parametrized separability_matrix check on a nested CompoundModel (the bug's core case). S1.1 covers the reported Pix2Sky_TAN() & (Linear1D & Linear1D) block-diagonal expectation, with S2.2/S3.1 covering the flat/coupled comparison cases the parametrized table interleaves."
+   },
+   {
+    "test": "astropy/modeling/tests/test_separable.py::test_separable[compound_model9-result9]",
+    "covered": true,
+    "why": "Another parametrized nested-compound separability case. Covered by S1.1/S1.2 (right- and left-nested joins must stay block-diagonal) and S3.1 (nested coupled block carried up), which together assert the exact correct matrices the fix must produce for nested compounds."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,149 @@
+{
+ "instance_id": "astropy__astropy-7746",
+ "driver": "local",
+ "n_edge_cases": 16,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "astropy/wcs/tests/test_wcs.py::test_zero_size_input"
+ ],
+ "gold_targets": {
+  "files": [
+   "astropy/wcs/wcs.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_array_converter",
+   "_return_single_array"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "astropy/wcs/wcs.py"
+  ],
+  "matched": [
+   "wcs.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty Python lists [] passed as coordinates",
+   "Empty NumPy arrays np.array([]) passed as coordinates",
+   "Empty arrays with shape (0,) vs scalar empty ()",
+   "Empty arrays with different dtypes (int, float, complex)",
+   "Only one empty array when multiple axes expected (e.g., wcs_pix2world([], 0))",
+   "Mixed empty and non-empty arrays (e.g., wcs_pix2world([], [1,2], 0))",
+   "None passed instead of empty array",
+   "Empty arrays with origin=0 vs origin=1",
+   "Empty arrays for 1D WCS (single axis)",
+   "Empty arrays for 2D+ WCS (multiple spatial axes)",
+   "Empty arrays for spectral/temporal axes",
+   "Empty arrays in wcs_world2pix (inverse transformation)",
+   "Empty arrays in wcs.crp2pix and other transformation methods",
+   "Empty arrays with ra_dec_order parameter variations",
+   "Nested empty lists [[]] vs flat empty lists []",
+   "Empty arrays after slicing operations that result in zero elements"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "wcs_pix2world with empty lists returns empty lists without raising InconsistentAxisTypesError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "wcs_pix2world with empty numpy arrays returns empty numpy arrays of same dtype"
+   },
+   {
+    "id": "S1.3",
+    "covers": "wcs_world2pix with empty inputs returns empty outputs (inverse transformation)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Empty array output preserves input array type (list stays list, ndarray stays ndarray)"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Empty array output has shape (0,) matching input shape"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Multi-axis WCS (2D) with all empty arrays returns list of empty arrays"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Empty arrays work with origin=0 and origin=1 parameters"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Empty arrays work with ra_dec_order='input' and ra_dec_order='output'"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Passing None instead of array raises appropriate TypeError (not InconsistentAxisTypesError)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Wrong number of empty arrays (e.g., one when two expected) raises appropriate error"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Mixed empty and non-empty arrays raises appropriate error or handles gracefully"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Empty arrays for spectral axis transformations work correctly"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Empty arrays for temporal axis transformations work correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "_array_converter method handles empty inputs before calling underlying WCS functions"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Empty input does not trigger wcslib C-level validation errors"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Empty arrays preserve float64 dtype for world coordinates"
+   },
+   {
+    "id": "S1.17",
+    "covers": "wcs.crp2pix with empty inputs returns empty outputs"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Empty nested lists [[]] are handled appropriately (flattened or error)"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Empty arrays work with all wcs_pix2world overloads (various argument forms)"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Empty array transformation is O(1) - no unnecessary computation"
+   }
+  ],
+  "plan_files": [
+   "wcs.py",
+   "wcs/wcs.py"
+  ]
+ },
+ "raw_tail": "covers\":\"Passing None instead of array raises appropriate TypeError (not InconsistentAxisTypesError)\"},\n{\"id\":\"S1.10\",\"covers\":\"Wrong number of empty arrays (e.g., one when two expected) raises appropriate error\"},\n{\"id\":\"S1.11\",\"covers\":\"Mixed empty and non-empty arrays raises appropriate error or handles gracefully\"},\n{\"id\":\"S1.12\",\"covers\":\"Empty arrays for spectral axis transformations work correctly\"},\n{\"id\":\"S1.13\",\"covers\":\"Empty arrays for temporal axis transformations work correctly\"},\n{\"id\":\"S1.14\",\"covers\":\"_array_converter method handles empty inputs before calling underlying WCS functions\"},\n{\"id\":\"S1.15\",\"covers\":\"Empty input does not trigger wcslib C-level validation errors\"},\n{\"id\":\"S1.16\",\"covers\":\"Empty arrays preserve float64 dtype for world coordinates\"},\n{\"id\":\"S1.17\",\"covers\":\"wcs.crp2pix with empty inputs returns empty outputs\"},\n{\"id\":\"S1.18\",\"covers\":\"Empty nested lists [[]] are handled appropriately (flattened or error)\"},\n{\"id\":\"S1.19\",\"covers\":\"Empty arrays work with all wcs_pix2world overloads (various argument forms)\"},\n{\"id\":\"S1.20\",\"covers\":\"Empty array transformation is O(1) - no unnecessary computation\"}\n],\n\"plan_files\":[\n\"wcs.py\",\n\"wcs/wcs.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_zero_size_input",
+    "covered": true,
+    "why": "The test name 'test_zero_size_input' directly corresponds to the issue of handling empty inputs. Multiple scenarios cover this: S1.1 (empty lists return empty lists without InconsistentAxisTypesError), S1.2 (empty numpy arrays), S1.3 (inverse transformation), S1.14 (_array_converter handles empty inputs), and S1.15 (no C-level validation errors). Edge cases also explicitly list 'Empty Python lists []' and 'Empty NumPy arrays np.array([])' as covered scenarios."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

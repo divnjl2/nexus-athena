@@ -1,0 +1,116 @@
+{
+ "instance_id": "django__django-13447",
+ "n_edge_cases": 15,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_available_apps (admin_views.test_adminsite.SiteEachContextTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/admin/sites.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_build_app_dict"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/admin/sites.py"
+  ],
+  "matched": [
+   "sites.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Additive change only: existing model-dict keys (name, object_name, perms, admin_url, add_url, view_only) stay unchanged in name/value; only a new 'model' key is added",
+   "The 'model' value is the actual model class, not an instance, not the model-name string, not the ModelAdmin",
+   "Both call sites of _build_app_dict (index and app_index) get updated on rename to build_app_dict, else the index page 500s",
+   "get_app_list (which delegates to the helper) also surfaces the model class so subclasses overriding only get_app_list still benefit",
+   "Backward compatibility: third-party subclasses may override/call the private _build_app_dict; renaming outright breaks them unless the old name stays as alias/shim or the break is explicitly accepted",
+   "Permission filtering unchanged: models the user lacks module/has_perm for stay excluded; the new key appears only on models passing existing perms checks",
+   "app_index with a single app label still builds the dict (with model class) for just that app, and still 404/redirects for an unknown label",
+   "Proxy models resolve to the concrete proxy class as registered, not the base model",
+   "Model registered under a custom AdminSite yields the model class actually registered with that site",
+   "Ordering of models within an app (sorted by 'name') is unaffected by adding the 'model' key",
+   "Empty case: no registered models / user with zero permissions does not raise when building the (empty) list",
+   "Template safety: admin/index.html and admin/app_index.html iterate the model dicts; the non-serializable class object is not rendered/escaped in a way that breaks the page",
+   "Serialization hazard: a consumer JSON-serializing the context now hits a non-JSON-serializable class; document that 'model' is a live class for programmatic (not template-display) use",
+   "Public method signature stays stable (request, label=None) so it is safely callable from custom views",
+   "get_app_list / available_apps used by the nav sidebar keeps working with the enriched dict"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "index view context: every model entry in app_list/available_apps includes its model class"
+   },
+   {
+    "id": "S1.2",
+    "covers": "app_index view context: model dict for the requested app includes the model class"
+   },
+   {
+    "id": "S1.3",
+    "covers": "get_app_list returns each model dict carrying the live model class"
+   },
+   {
+    "id": "S1.4",
+    "covers": "all pre-existing keys (name, object_name, perms, admin_url, add_url, view_only) preserved alongside the new 'model' key"
+   },
+   {
+    "id": "S1.5",
+    "covers": "the 'model' value is the actual class object (identity-equal to the registered model), not an instance or string"
+   },
+   {
+    "id": "S2.1",
+    "covers": "build_app_dict is a public method callable directly from a custom AdminSite subclass / custom admin view"
+   },
+   {
+    "id": "S2.2",
+    "covers": "index and app_index both delegate to the public build_app_dict with no change in rendered output"
+   },
+   {
+    "id": "S2.3",
+    "covers": "backward compatibility for the former private _build_app_dict name (alias/shim) so existing overrides keep working"
+   },
+   {
+    "id": "S3.1",
+    "covers": "permission filtering unchanged: models without perms excluded; permitted models carry the new 'model' key"
+   },
+   {
+    "id": "S3.2",
+    "covers": "proxy model registered in admin resolves to the proxy class in the dict"
+   },
+   {
+    "id": "S3.3",
+    "covers": "app_index with an unknown/unauthorized app label still 404s/redirects (unchanged)"
+   },
+   {
+    "id": "S3.4",
+    "covers": "admin index and app_index templates render correctly with the enriched model dict"
+   }
+  ],
+  "plan_files": [
+   "sites.py",
+   "tests.py",
+   "index.html",
+   "app_index.html"
+  ]
+ },
+ "raw_tail": " model class\"},{\"id\":\"S1.4\",\"covers\":\"all pre-existing keys (name, object_name, perms, admin_url, add_url, view_only) preserved alongside the new 'model' key\"},{\"id\":\"S1.5\",\"covers\":\"the 'model' value is the actual class object (identity-equal to the registered model), not an instance or string\"},{\"id\":\"S2.1\",\"covers\":\"build_app_dict is a public method callable directly from a custom AdminSite subclass / custom admin view\"},{\"id\":\"S2.2\",\"covers\":\"index and app_index both delegate to the public build_app_dict with no change in rendered output\"},{\"id\":\"S2.3\",\"covers\":\"backward compatibility for the former private _build_app_dict name (alias/shim) so existing overrides keep working\"},{\"id\":\"S3.1\",\"covers\":\"permission filtering unchanged: models without perms excluded; permitted models carry the new 'model' key\"},{\"id\":\"S3.2\",\"covers\":\"proxy model registered in admin resolves to the proxy class in the dict\"},{\"id\":\"S3.3\",\"covers\":\"app_index with an unknown/unauthorized app label still 404s/redirects (unchanged)\"},{\"id\":\"S3.4\",\"covers\":\"admin index and app_index templates render correctly with the enriched model dict\"}],\"plan_files\":[\"sites.py\",\"tests.py\",\"index.html\",\"app_index.html\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_available_apps",
+    "covered": true,
+    "why": "S1.1 explicitly covers that index view context's app_list/available_apps includes model class for every model entry. S1.3 covers get_app_list returning model dicts with live model class. Edge cases confirm 'model' key is added to existing model-dict structure and that available_apps used by nav sidebar works with enriched dict."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

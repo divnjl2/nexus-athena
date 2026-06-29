@@ -1,0 +1,114 @@
+{
+ "instance_id": "django__django-15790",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_template_tags_same_library_in_installed_apps_libraries (check_framework.test_templates.CheckTemplateTagLibrariesWithSameName)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/checks/templates.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "check_for_template_tags_with_the_same_name",
+   "check_string_if_invalid_is_string"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/checks/templates.py"
+  ],
+  "matched": [
+   "templates.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Library configured in TEMPLATES['OPTIONS']['libraries'] points to same module as auto-discovered from app templatetags directory",
+   "Library configured in TEMPLATES['OPTIONS']['libraries'] with alias name different from module name",
+   "Two different apps both have template tag module with same name (legitimate conflict)",
+   "Empty TEMPLATES['OPTIONS']['libraries'] configuration",
+   "TEMPLATES['OPTIONS']['libraries'] references non-existent module",
+   "Same library name configured multiple times in TEMPLATES['OPTIONS']['libraries'] dict",
+   "Library in TEMPLATES['OPTIONS']['libraries'] conflicts with auto-discovered module from different app",
+   "Library only exists in TEMPLATES['OPTIONS']['libraries'] (not auto-discoverable via app)",
+   "Multiple libraries in TEMPLATES['OPTIONS']['libraries'], only one conflicts with auto-discovered",
+   "TEMPLATES['OPTIONS']['libraries'] maps same module to different library names",
+   "Template tag module in namespace package (no __init__.py)",
+   "Template tag module raises ImportError during discovery",
+   "Library name collision between two entries in TEMPLATES['OPTIONS']['libraries']",
+   "Library configured in TEMPLATES['OPTIONS']['libraries'] overrides auto-discovered module from same app"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "When a template tag library is added to TEMPLATES['OPTIONS']['libraries'] pointing to a module that is also auto-discovered from an app's templatetags directory, the check should NOT report a duplicate (templates.E003)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "When two different apps each have a template tag module with the same name (e.g., app1.templatags.my_tags and app2.templatags.my_tags), the check SHOULD report templates.E003 with both module paths"
+   },
+   {
+    "id": "S1.3",
+    "covers": "When TEMPLATES['OPTIONS']['libraries'] uses an alias name different from the module name (e.g., 'custom_name': 'app.templatags.my_tags'), the check should use the alias name for conflict detection"
+   },
+   {
+    "id": "S1.4",
+    "covers": "When TEMPLATES['OPTIONS']['libraries'] is empty or not configured, the check should work normally with only auto-discovered libraries"
+   },
+   {
+    "id": "S1.5",
+    "covers": "When TEMPLATES['OPTIONS']['libraries'] references a non-existent module, the check should not crash and should not report templates.E003 for that entry"
+   },
+   {
+    "id": "S1.6",
+    "covers": "When the same library name is configured multiple times in TEMPLATES['OPTIONS']['libraries'] dict (e.g., {'my_tags': 'app1.templatags.my_tags', 'my_tags': 'app2.templatags.my_tags'}), the check SHOULD report templates.E003"
+   },
+   {
+    "id": "S1.7",
+    "covers": "When a library in TEMPLATES['OPTIONS']['libraries'] has the same name as an auto-discovered module from a DIFFERENT app, the check SHOULD report templates.E003 with both sources"
+   },
+   {
+    "id": "S1.8",
+    "covers": "When a library exists ONLY in TEMPLATES['OPTIONS']['libraries'] (not in any app's templatetags), the check should NOT report any error"
+   },
+   {
+    "id": "S1.9",
+    "covers": "When multiple libraries are in TEMPLATES['OPTIONS']['libraries'] and only one conflicts with an auto-discovered module, the check should report templates.E003 only for the conflicting library"
+   },
+   {
+    "id": "S1.10",
+    "covers": "When TEMPLATES['OPTIONS']['libraries'] maps the same module to two different library names (e.g., {'name1': 'app.templatags.my_tags', 'name2': 'app.templatags.my_tags'}), the check should NOT report templates.E003 (different names, same module is valid)"
+   },
+   {
+    "id": "S1.11",
+    "covers": "The error message for templates.E003 should correctly list all unique module paths that provide the conflicting library name, without duplicates"
+   },
+   {
+    "id": "S1.12",
+    "covers": "When a library in TEMPLATES['OPTIONS']['libraries'] points to the same module as an auto-discovered library from the SAME app, they should be treated as the same source (no duplicate)"
+   }
+  ],
+  "plan_files": [
+   "templates.py"
+  ]
+ },
+ "raw_tail": "\"S1.8\",\n      \"covers\": \"When a library exists ONLY in TEMPLATES['OPTIONS']['libraries'] (not in any app's templatetags), the check should NOT report any error\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"When multiple libraries are in TEMPLATES['OPTIONS']['libraries'] and only one conflicts with an auto-discovered module, the check should report templates.E003 only for the conflicting library\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"When TEMPLATES['OPTIONS']['libraries'] maps the same module to two different library names (e.g., {'name1': 'app.templatags.my_tags', 'name2': 'app.templatags.my_tags'}), the check should NOT report templates.E003 (different names, same module is valid)\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"The error message for templates.E003 should correctly list all unique module paths that provide the conflicting library name, without duplicates\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"When a library in TEMPLATES['OPTIONS']['libraries'] points to the same module as an auto-discovered library from the SAME app, they should be treated as the same source (no duplicate)\"\n    }\n  ],\n  \"plan_files\": [\n    \"templates.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_template_tags_same_library_in_installed_apps_libraries",
+    "covered": true,
+    "why": "S1.1 explicitly covers the scenario where a template tag library is added to TEMPLATES['OPTIONS']['libraries'] pointing to a module also auto-discovered from an app's templatetags directory, and states the check should NOT report a duplicate (templates.E003). This directly matches the issue described (false positive duplicate when same module is both auto-discovered and configured). S1.12 also covers this by stating they should be treated as the same source. The edge case 'Library configured in TEMPLATES['OPTIONS']['libraries'] points to same module as auto-discovered from app templatetags directory' further confirms coverage."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

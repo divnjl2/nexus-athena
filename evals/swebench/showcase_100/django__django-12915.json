@@ -1,0 +1,207 @@
+{
+ "instance_id": "django__django-12915",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 31,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_get_async_response (staticfiles_tests.test_handlers.TestASGIStaticFilesHandler)",
+  "test_get_async_response_not_found (staticfiles_tests.test_handlers.TestASGIStaticFilesHandler)",
+  "test_static_file_response (asgi.tests.ASGITest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/staticfiles/handlers.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "get_response"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/staticfiles/handlers.py"
+  ],
+  "matched": [
+   "handlers.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Non-existent static file returns 404",
+   "Directory request returns 403 Forbidden",
+   "Path traversal attempt (../) is blocked",
+   "HEAD request returns headers only without body",
+   "Range request returns partial content with Content-Range header",
+   "File with special characters in filename is served correctly",
+   "Empty file returns 200 with empty body",
+   "Very large file is streamed without loading entirely into memory",
+   "File without read permissions returns 403",
+   "Symlinked file is served correctly",
+   "Request with query string ignores query and serves file",
+   "Cache headers (ETag, Last-Modified, Cache-Control) are set correctly",
+   "Concurrent requests for same file don't cause race conditions",
+   "File modified during request handles gracefully",
+   "Invalid MIME type falls back to application/octet-stream",
+   "Unicode filename encoding is handled correctly",
+   "Request scope without 'path' key is handled gracefully",
+   "ASGI receive/send callbacks are None or invalid",
+   "Static files directory doesn't exist",
+   "Multiple static locations with file in different location"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "get_response_async method exists and is callable on StaticFilesHandlerMixin"
+   },
+   {
+    "id": "S1.2",
+    "covers": "get_response_async returns an async callable that accepts request argument"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Async static file request returns correct file content with 200 status"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Async static file request sets correct Content-Type header based on file extension"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Async static file request sets Content-Length header correctly"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Async request for non-existent file returns 404 Not Found"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Async request for directory returns 403 Forbidden"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Async HEAD request returns headers without sending body content"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Async HEAD request Content-Length matches GET request Content-Length"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Async Range request with valid range returns 206 Partial Content"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Async Range request sets Content-Range header correctly"
+   },
+   {
+    "id": "S5.3",
+    "covers": "Async Range request returns only requested byte range"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Async request with path traversal (../) returns 404 or 403"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Async request cannot access files outside staticfiles directories"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Async request sets ETag header based on file content/hash"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Async request sets Last-Modified header based on file mtime"
+   },
+   {
+    "id": "S7.3",
+    "covers": "Async request sets Cache-Control header appropriately"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Async request for file with special characters in name serves correctly"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Async request handles Unicode filenames correctly"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Async request for empty file returns 200 with empty body and Content-Length: 0"
+   },
+   {
+    "id": "S9.2",
+    "covers": "Async request for large file streams content without memory exhaustion"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Async request with query string ignores query and serves file"
+   },
+   {
+    "id": "S11.1",
+    "covers": "ASGIStaticFilesHandler.__call__ completes without TypeError when get_response_async is called"
+   },
+   {
+    "id": "S11.2",
+    "covers": "Async response follows ASGI HTTP response protocol (send events)"
+   },
+   {
+    "id": "S12.1",
+    "covers": "Async request handles file read errors gracefully with 500 error"
+   },
+   {
+    "id": "S12.2",
+    "covers": "Async request handles permission denied errors with 403 error"
+   },
+   {
+    "id": "S13.1",
+    "covers": "Async request with If-None-Match header returns 304 when ETag matches"
+   },
+   {
+    "id": "S13.2",
+    "covers": "Async request with If-Modified-Since header returns 304 when not modified"
+   },
+   {
+    "id": "S14.1",
+    "covers": "Async request with multiple static locations finds file in correct location"
+   },
+   {
+    "id": "S15.1",
+    "covers": "Async request handles invalid ASGI scope gracefully"
+   },
+   {
+    "id": "S15.2",
+    "covers": "Async request handles None receive/send callbacks gracefully"
+   }
+  ],
+  "plan_files": [
+   "handlers.py"
+  ]
+ },
+ "raw_tail": "ync request with query string ignores query and serves file\"\n    },\n    {\n      \"id\": \"S11.1\",\n      \"covers\": \"ASGIStaticFilesHandler.__call__ completes without TypeError when get_response_async is called\"\n    },\n    {\n      \"id\": \"S11.2\",\n      \"covers\": \"Async response follows ASGI HTTP response protocol (send events)\"\n    },\n    {\n      \"id\": \"S12.1\",\n      \"covers\": \"Async request handles file read errors gracefully with 500 error\"\n    },\n    {\n      \"id\": \"S12.2\",\n      \"covers\": \"Async request handles permission denied errors with 403 error\"\n    },\n    {\n      \"id\": \"S13.1\",\n      \"covers\": \"Async request with If-None-Match header returns 304 when ETag matches\"\n    },\n    {\n      \"id\": \"S13.2\",\n      \"covers\": \"Async request with If-Modified-Since header returns 304 when not modified\"\n    },\n    {\n      \"id\": \"S14.1\",\n      \"covers\": \"Async request with multiple static locations finds file in correct location\"\n    },\n    {\n      \"id\": \"S15.1\",\n      \"covers\": \"Async request handles invalid ASGI scope gracefully\"\n    },\n    {\n      \"id\": \"S15.2\",\n      \"covers\": \"Async request handles None receive/send callbacks gracefully\"\n    }\n  ],\n  \"plan_files\": [\n    \"handlers.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_get_async_response",
+    "covered": true,
+    "why": "S1.1, S1.2, S2.1, S11.1 cover get_response_async existence, callability, and successful async static file serving with 200 status"
+   },
+   {
+    "test": "test_get_async_response_not_found",
+    "covered": true,
+    "why": "S3.1 and edge case 'Non-existent static file returns 404' cover async 404 response for missing static files"
+   },
+   {
+    "test": "test_static_file_response",
+    "covered": true,
+    "why": "S2.1, S2.2, S2.3, S11.2 cover async static file serving with correct content, headers, and ASGI protocol compliance"
+   }
+  ],
+  "covered": 3,
+  "total": 3,
+  "ratio": 1.0
+ }
+}

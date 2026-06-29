@@ -1,0 +1,213 @@
+{
+ "instance_id": "django__django-13158",
+ "driver": "local",
+ "n_edge_cases": 18,
+ "n_scenarios": 35,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_union_none (queries.test_qs_combinators.QuerySetSetOperationTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "clone",
+   "split_exclude"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "matched": [
+   "query.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty queryset combined with non-empty: qs.none().union(other_qs)",
+   "Non-empty combined with empty: qs.union(other_qs.none())",
+   "Multiple levels of combination: q1.union(q2).intersection(q3)",
+   "Chained same operations: q1.union(q2).union(q3)",
+   "Self-combination: qs.union(qs)",
+   "All three operations: union, intersection, difference",
+   "Queryset with no matching objects (naturally empty)",
+   "None as one of the operands in combination",
+   "Combined queryset with ordering applied",
+   "Combined queryset with limit/offset",
+   "Combined queryset with annotations",
+   "Combined queryset with distinct()",
+   "Database backend differences (union vs union_all)",
+   "Combined queryset after filter() or exclude()",
+   "Combined queryset after values()/values_list()",
+   "Empty form submission with combined queryset (original bug)",
+   "Form with partial selection from combined queryset",
+   "Form with all objects selected from combined queryset"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "QuerySet.none() on union returns empty queryset (0 rows)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "QuerySet.none() on intersection returns empty queryset (0 rows)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "QuerySet.none() on difference returns empty queryset (0 rows)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Empty form submission with union queryset adds no objects"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Empty form submission with intersection queryset adds no objects"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Empty form submission with difference queryset adds no objects"
+   },
+   {
+    "id": "S1.7",
+    "covers": "qs.none().union(other_qs) returns other_qs (identity)"
+   },
+   {
+    "id": "S1.8",
+    "covers": "qs.union(other_qs.none()) returns qs (identity)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "qs.none().intersection(other_qs) returns empty queryset"
+   },
+   {
+    "id": "S1.10",
+    "covers": "qs.intersection(other_qs.none()) returns empty queryset"
+   },
+   {
+    "id": "S1.11",
+    "covers": "qs.none().difference(other_qs) returns empty queryset"
+   },
+   {
+    "id": "S1.12",
+    "covers": "qs.difference(other_qs.none()) returns qs (identity)"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Chained operations: q1.union(q2).intersection(q3).none() returns empty"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Chained same ops: q1.union(q2).union(q3).none() returns empty"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Self-combination: qs.union(qs).none() returns empty"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Combined queryset with ordering: qs.union(other).order_by('id').none() returns empty"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Combined queryset with limit: qs.union(other).limit(10).none() returns empty"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Combined queryset with distinct: qs.union(other).distinct().none() returns empty"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Combined queryset after filter: qs.union(other).filter(id__gt=0).none() returns empty"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Combined queryset after exclude: qs.union(other).exclude(id__lt=0).none() returns empty"
+   },
+   {
+    "id": "S1.21",
+    "covers": "Combined queryset with values(): qs.union(other).values('id').none() returns empty list"
+   },
+   {
+    "id": "S1.22",
+    "covers": "Combined queryset with values_list(): qs.union(other).values_list('id').none() returns empty list"
+   },
+   {
+    "id": "S1.23",
+    "covers": "Combined queryset with annotations: qs.union(other).annotate(count=Count('id')).none() returns empty"
+   },
+   {
+    "id": "S1.24",
+    "covers": "Form with partial selection from union queryset saves only selected objects"
+   },
+   {
+    "id": "S1.25",
+    "covers": "Form with all objects selected from union queryset saves all selected objects"
+   },
+   {
+    "id": "S1.26",
+    "covers": "Combined queryset SQL is valid and executable (no syntax errors)"
+   },
+   {
+    "id": "S1.27",
+    "covers": "Combined queryset .exists() returns False after .none()"
+   },
+   {
+    "id": "S1.28",
+    "covers": "Combined queryset .count() returns 0 after .none()"
+   },
+   {
+    "id": "S1.29",
+    "covers": "Combined queryset .first() returns None after .none()"
+   },
+   {
+    "id": "S1.30",
+    "covers": "Combined queryset .last() returns None after .none()"
+   },
+   {
+    "id": "S1.31",
+    "covers": "Combined queryset iteration yields no items after .none()"
+   },
+   {
+    "id": "S1.32",
+    "covers": "Combined queryset with naturally empty base: EmptyQS.union(other).none() returns empty"
+   },
+   {
+    "id": "S1.33",
+    "covers": "Combined queryset preserves model type after .none()"
+   },
+   {
+    "id": "S1.34",
+    "covers": "Combined queryset .none() is chainable: qs.union(other).none().filter(...) works"
+   },
+   {
+    "id": "S1.35",
+    "covers": "Combined queryset .none() returns queryset of same type (not base QuerySet)"
+   }
+  ],
+  "plan_files": [
+   "query.py",
+   "db.py",
+   "forms.py",
+   "fields.py"
+  ]
+ },
+ "raw_tail": "turns empty\"},\n{\"id\":\"S1.24\",\"covers\":\"Form with partial selection from union queryset saves only selected objects\"},\n{\"id\":\"S1.25\",\"covers\":\"Form with all objects selected from union queryset saves all selected objects\"},\n{\"id\":\"S1.26\",\"covers\":\"Combined queryset SQL is valid and executable (no syntax errors)\"},\n{\"id\":\"S1.27\",\"covers\":\"Combined queryset .exists() returns False after .none()\"},\n{\"id\":\"S1.28\",\"covers\":\"Combined queryset .count() returns 0 after .none()\"},\n{\"id\":\"S1.29\",\"covers\":\"Combined queryset .first() returns None after .none()\"},\n{\"id\":\"S1.30\",\"covers\":\"Combined queryset .last() returns None after .none()\"},\n{\"id\":\"S1.31\",\"covers\":\"Combined queryset iteration yields no items after .none()\"},\n{\"id\":\"S1.32\",\"covers\":\"Combined queryset with naturally empty base: EmptyQS.union(other).none() returns empty\"},\n{\"id\":\"S1.33\",\"covers\":\"Combined queryset preserves model type after .none()\"},\n{\"id\":\"S1.34\",\"covers\":\"Combined queryset .none() is chainable: qs.union(other).none().filter(...) works\"},\n{\"id\":\"S1.35\",\"covers\":\"Combined queryset .none() returns queryset of same type (not base QuerySet)\"}\n],\n\"plan_files\":[\n  \"query.py\",\n  \"db.py\",\n  \"forms.py\",\n  \"fields.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_union_none",
+    "covered": true,
+    "why": "S1.1 directly tests that QuerySet.none() on union returns empty queryset (0 rows), which is the core behavior this test validates. Additionally, S1.4 covers the form submission aspect of the original bug, and the edge case 'Empty form submission with combined queryset (original bug)' explicitly addresses the reported issue."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

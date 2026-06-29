@@ -1,0 +1,139 @@
+{
+ "instance_id": "astropy__astropy-14182",
+ "n_edge_cases": 21,
+ "n_scenarios": 16,
+ "fail_to_pass": [
+  "astropy/io/ascii/tests/test_rst.py::test_rst_with_header_rows"
+ ],
+ "gold_targets": {
+  "files": [
+   "astropy/io/ascii/rst.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "RST",
+   "get_fixedwidth_params"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "astropy/io/ascii/rst.py"
+  ],
+  "matched": [
+   "rst.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "header_rows omitted -> defaults to ['name'], output byte-identical to legacy RST (backward compat)",
+   "root cause: RST.__init__ must accept and forward header_rows to FixedWidth.__init__ or _get_writer raises TypeError (the exact failure in the issue)",
+   "RST.write must locate the '=' rule line at index == len(header_rows), not hard-coded lines[1] (regression source for multi-row headers)",
+   "exactly three '=' rule/border lines emitted for any N header rows: top, after-header-block, bottom",
+   "canonical case header_rows=['name','unit'] -> name row then unit row stacked between top and mid border",
+   "reordered header_rows e.g. ['unit','name'] -> rendered in requested order",
+   "duplicate entries e.g. ['name','name'] -> behavior defined (both rendered, no dedup)",
+   "empty header_rows=[] -> degenerate case must be defined (error or borders-only, no header line)",
+   "column with no/None unit -> blank unit cell, column alignment preserved",
+   "unit (or any header) string wider than column name and all data cells -> column AND '=' rules widen to that max width",
+   "column name wider than unit/data -> width driven by name (existing behavior preserved)",
+   "unicode/multibyte unit (e.g. Å, μm) -> width computed by character count, alignment preserved",
+   "arbitrary valid column attributes (dtype, format, description) usable as header rows, parity with fixed_width",
+   "unknown attribute in header_rows -> informative error matching fixed_width, not a bare crash",
+   "zero data rows + header_rows -> still emits all header rows and three borders, no data lines",
+   "single-column table -> borders/rules align to the one column with multi-row header",
+   "masked/missing data values combined with header_rows -> masked placeholder rendered, header block unaffected",
+   "fast_writer=True with header_rows -> clean behavior (RST has no fast writer; must not raise spurious TypeError, falls back)",
+   "RST data/numeric formatting unaffected by added header rows",
+   "delimiter_pad=None and bookend=False RST semantics preserved when header_rows present",
+   "read-back/round-trip of a MULTI-row-header RST table: SimpleRSTHeader/SimpleRSTData assume a single header line -> likely won't round-trip; flagged as out-of-scope risk (issue is write-only) or must be handled"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "RST writer accepts header_rows kwarg without raising TypeError (reproduces and closes the reported bug)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Omitting header_rows yields byte-identical legacy RST output (default ['name'])"
+   },
+   {
+    "id": "S2.1",
+    "covers": "header_rows=['name','unit'] renders name then unit rows stacked between borders, matching the requested layout"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Exactly three '=' border lines are emitted regardless of header-row count"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Rule/border line is located at index == len(header_rows), not hard-coded lines[1]"
+   },
+   {
+    "id": "S2.4",
+    "covers": "Reordered header_rows=['unit','name'] is honored in output order"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Column and '=' rule widths expand to fit a unit/header string wider than name and data"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Column with no unit renders a blank unit cell with alignment preserved"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Arbitrary valid column attribute (dtype/format/description) is rendered as a header row"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Unknown header_rows attribute raises an informative error with parity to fixed_width"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Default-header RST round-trips: reading back recovers original column names (no read regression)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Zero-row table with header_rows still emits all header rows and three borders, no data lines"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Single-column table with header_rows aligns borders/rules to that one column"
+   },
+   {
+    "id": "S6.3",
+    "covers": "Unicode unit (e.g. Å/μm) width computed by character count, alignment preserved"
+   },
+   {
+    "id": "S6.4",
+    "covers": "Masked/missing data values render with placeholder while header rows are unaffected"
+   },
+   {
+    "id": "S7.1",
+    "covers": "fast_writer=True combined with header_rows behaves cleanly (no spurious TypeError; clean fallback)"
+   }
+  ],
+  "plan_files": [
+   "rst.py",
+   "fixedwidth.py",
+   "test_rst.py",
+   "core.py",
+   "ui.py",
+   "14305.feature.rst"
+  ]
+ },
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "astropy/io/ascii/tests/test_rst.py::test_rst_with_header_rows",
+    "covered": true,
+    "why": "S1.1 (RST accepts header_rows without TypeError), S2.1 (header_rows=['name','unit'] renders name then unit rows stacked between borders matching requested layout), S2.2 (exactly three '=' borders), and S2.3 (rule line at index==len(header_rows)) directly anticipate the writer accepting header_rows and emitting the multi-row-header RST layout this test asserts."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

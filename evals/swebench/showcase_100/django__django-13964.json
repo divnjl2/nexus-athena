@@ -1,0 +1,149 @@
+{
+ "instance_id": "django__django-13964",
+ "driver": "local",
+ "n_edge_cases": 18,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_save_fk_after_parent_with_non_numeric_pk_set_on_child (many_to_one.tests.ManyToOneTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/base.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_prepare_related_fields_for_save"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/base.py"
+  ],
+  "matched": [
+   "base.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty string as actual primary key value (CharField pk = '')",
+   "Zero as primary key value (IntegerField pk = 0)",
+   "None as initial FK value before related object save",
+   "Related object saved but then deleted before parent save",
+   "Multiple saves of parent after related object pk changes",
+   "Self-referential foreign key with same logic",
+   "Nullable ForeignKey field behavior",
+   "BooleanField as primary key (edge case)",
+   "Related object pk set via __init__ vs attribute assignment",
+   "Transaction rollback after related save but before parent save",
+   "Concurrent modification of related object pk",
+   "FK to model with auto-increment pk (should already work)",
+   "FK to model with UUID primary key",
+   "FK to model with Decimal primary key",
+   "Empty string vs None distinction in empty_values check",
+   "Related object with pk set to empty string intentionally",
+   "Parent saved multiple times in same transaction",
+   "Related object pk changed after initial save (update scenario)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Parent FK correctly populated when related CharField pk object assigned unsaved, then pk set, then both saved"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Parent FK correctly populated when related object initialized with pk before assignment (regression test - should already work)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Parent FK correctly populated when related IntegerField pk object assigned unsaved, then pk set to non-zero value, then both saved"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Parent FK correctly populated when related IntegerField pk object assigned unsaved, then pk set to 0, then both saved"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Error raised when parent saved with related object that was never saved (no pk)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Parent FK correctly populated when related object pk is empty string (edge case - actual pk value is '')"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Parent FK correctly populated when related object assigned with None, then pk set, then parent saved"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Parent FK correctly populated when related object pk set via __init__ vs attribute assignment (both paths)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Parent FK correctly populated when related object saved multiple times before parent save"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Parent FK correctly populated when parent saved multiple times after related object save"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Parent FK correctly populated for self-referential foreign key with same pattern"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Parent FK correctly populated for nullable ForeignKey with same pattern"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Parent FK correctly populated when related object has UUID primary key"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Parent FK correctly populated when related object has Decimal primary key"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Query by FK field returns correct results after save (product_id='foo')"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Query by related object returns correct results after save (product=order.product)"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Transaction rollback preserves correct state when rolled back after related save but before parent save"
+   },
+   {
+    "id": "S1.18",
+    "covers": "No ForeignKeyViolation when related object properly saved before parent save"
+   },
+   {
+    "id": "S1.19",
+    "covers": "FK field value matches related object pk after both saves complete"
+   },
+   {
+    "id": "S1.20",
+    "covers": "FK field not overwritten when related object pk changes after parent already saved"
+   }
+  ],
+  "plan_files": [
+   "base.py"
+  ]
+ },
+ "raw_tail": "parent save\"},{\"id\":\"S1.10\",\"covers\":\"Parent FK correctly populated when parent saved multiple times after related object save\"},{\"id\":\"S1.11\",\"covers\":\"Parent FK correctly populated for self-referential foreign key with same pattern\"},{\"id\":\"S1.12\",\"covers\":\"Parent FK correctly populated for nullable ForeignKey with same pattern\"},{\"id\":\"S1.13\",\"covers\":\"Parent FK correctly populated when related object has UUID primary key\"},{\"id\":\"S1.14\",\"covers\":\"Parent FK correctly populated when related object has Decimal primary key\"},{\"id\":\"S1.15\",\"covers\":\"Query by FK field returns correct results after save (product_id='foo')\"},{\"id\":\"S1.16\",\"covers\":\"Query by related object returns correct results after save (product=order.product)\"},{\"id\":\"S1.17\",\"covers\":\"Transaction rollback preserves correct state when rolled back after related save but before parent save\"},{\"id\":\"S1.18\",\"covers\":\"No ForeignKeyViolation when related object properly saved before parent save\"},{\"id\":\"S1.19\",\"covers\":\"FK field value matches related object pk after both saves complete\"},{\"id\":\"S1.20\",\"covers\":\"FK field not overwritten when related object pk changes after parent already saved\"}], \"plan_files\":[\"base.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_save_fk_after_parent_with_non_numeric_pk_set_on_child",
+    "covered": true,
+    "why": "S1.1 directly covers the exact bug scenario: CharField pk object assigned unsaved, then pk set, then both saved. This matches the test name's description of 'non_numeric_pk_set_on_child' and the issue's reproduction steps."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

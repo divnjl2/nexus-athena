@@ -1,0 +1,116 @@
+{
+ "instance_id": "django__django-11039",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_sqlmigrate_for_non_transactional_databases (migrations.test_commands.MigrateTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/management/commands/sqlmigrate.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "handle"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/management/commands/sqlmigrate.py"
+  ],
+  "matched": [
+   "sqlmigrate.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Database with can_rollback_ddl=False but migration.atomic=True: should NOT wrap in BEGIN/COMMIT",
+   "Database with can_rollback_ddl=True but migration.atomic=False: should NOT wrap in BEGIN/COMMIT",
+   "Database with can_rollback_ddl=True and migration.atomic=True: SHOULD wrap in BEGIN/COMMIT",
+   "Database with can_rollback_ddl=False and migration.atomic=False: should NOT wrap in BEGIN/COMMIT",
+   "Empty migration (no operations): should produce minimal output without unnecessary transaction wrapping",
+   "Migration with only non-transactional operations (e.g., data migrations): should respect atomic flag",
+   "Multiple databases with different can_rollback_ddl capabilities: each should be handled independently",
+   "SQLite in-memory database: may have limited transactional DDL support",
+   "MySQL with MyISAM tables: does not support transactional DDL",
+   "Database connection features object is None or missing can_rollback_ddl attribute",
+   "Migration with dependencies: transaction wrapping should consider dependency chain",
+   "sqlmigrate with --fake flag: transaction behavior should be consistent",
+   "sqlmigrate with --plan flag: transaction wrapping should be shown in plan output",
+   "Database in read-only mode: should handle gracefully without transaction errors"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "When migration.atomic=True and connection.features.can_rollback_ddl=True, sqlmigrate output is wrapped in BEGIN/COMMIT"
+   },
+   {
+    "id": "S1.2",
+    "covers": "When migration.atomic=True and connection.features.can_rollback_ddl=False, sqlmigrate output is NOT wrapped in BEGIN/COMMIT"
+   },
+   {
+    "id": "S1.3",
+    "covers": "When migration.atomic=False and connection.features.can_rollback_ddl=True, sqlmigrate output is NOT wrapped in BEGIN/COMMIT"
+   },
+   {
+    "id": "S1.4",
+    "covers": "When migration.atomic=False and connection.features.can_rollback_ddl=False, sqlmigrate output is NOT wrapped in BEGIN/COMMIT"
+   },
+   {
+    "id": "S2.1",
+    "covers": "sqlmigrate correctly reads connection.features.can_rollback_ddl from the database connection"
+   },
+   {
+    "id": "S2.2",
+    "covers": "sqlmigrate handles the case where can_rollback_ddl attribute is missing or None gracefully"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Test mocks connection.features.can_rollback_ddl to False and verifies no BEGIN/COMMIT wrapping"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Test uses an existing non-atomic migration test as a template for the new test"
+   },
+   {
+    "id": "S4.1",
+    "covers": "sqlmigrate with --database flag respects the specified database's can_rollback_ddl setting"
+   },
+   {
+    "id": "S4.2",
+    "covers": "sqlmigrate output format remains consistent regardless of transaction wrapping decision"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Empty migration produces valid output without transaction wrapping issues"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Migration with only CreateModel operations respects the transaction wrapping logic"
+   }
+  ],
+  "plan_files": [
+   "django/db/migrations/executor.py",
+   "django/core/management/commands/sqlmigrate.py",
+   "django/db/backends/base/features.py",
+   "tests/migrations/test_commands.py"
+  ]
+ },
+ "raw_tail": "om the database connection\"\n    },\n    {\n      \"id\": \"S2.2\",\n      \"covers\": \"sqlmigrate handles the case where can_rollback_ddl attribute is missing or None gracefully\"\n    },\n    {\n      \"id\": \"S3.1\",\n      \"covers\": \"Test mocks connection.features.can_rollback_ddl to False and verifies no BEGIN/COMMIT wrapping\"\n    },\n    {\n      \"id\": \"S3.2\",\n      \"covers\": \"Test uses an existing non-atomic migration test as a template for the new test\"\n    },\n    {\n      \"id\": \"S4.1\",\n      \"covers\": \"sqlmigrate with --database flag respects the specified database's can_rollback_ddl setting\"\n    },\n    {\n      \"id\": \"S4.2\",\n      \"covers\": \"sqlmigrate output format remains consistent regardless of transaction wrapping decision\"\n    },\n    {\n      \"id\": \"S5.1\",\n      \"covers\": \"Empty migration produces valid output without transaction wrapping issues\"\n    },\n    {\n      \"id\": \"S5.2\",\n      \"covers\": \"Migration with only CreateModel operations respects the transaction wrapping logic\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/db/migrations/executor.py\",\n    \"django/core/management/commands/sqlmigrate.py\",\n    \"django/db/backends/base/features.py\",\n    \"tests/migrations/test_commands.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_sqlmigrate_for_non_transactional_databases",
+    "covered": true,
+    "why": "S1.2 explicitly covers the case where migration.atomic=True and can_rollback_ddl=False resulting in NO BEGIN/COMMIT wrapping. S3.1 directly describes the test behavior: 'Test mocks connection.features.can_rollback_ddl to False and verifies no BEGIN/COMMIT wrapping'. The edge case 'Database with can_rollback_ddl=False but migration.atomic=True: should NOT wrap in BEGIN/COMMIT' also covers this. The test name indicates it tests non-transactional databases (can_rollback_ddl=False), and the plan's scenarios comprehensively cover this exact behavior."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

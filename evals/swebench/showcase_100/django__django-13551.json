@@ -1,0 +1,133 @@
+{
+ "instance_id": "django__django-13551",
+ "n_edge_cases": 15,
+ "n_scenarios": 14,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "Updating the user email address invalidates the token.",
+  "test_token_with_different_secret (auth_tests.test_tokens.TokenGeneratorTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/auth/tokens.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_make_hash_value",
+   "_make_token_with_timestamp"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/auth/tokens.py"
+  ],
+  "matched": [
+   "tokens.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "User model has no email field at all (custom AbstractBaseUser) — gen/check should use get_email_field_name() + getattr(user, field, '') and not raise AttributeError",
+   "Email field present but value is None vs empty string '' — normalize ('' or getattr(...) or '') so both behave identically and don't break str concatenation in the hash",
+   "Custom EMAIL_FIELD name (renamed/relocated email column) — read get_email_field_name(), never a hardcoded 'email'",
+   "Pre-fix tokens (hash without email) all invalidated on deploy — in-flight reset links break; behaviour change documented in release notes",
+   "Email changed then reverted to original before token use → hash recomputes to original, token valid again within timeout window",
+   "Email-only case/whitespace change (Foo@x vs foo@x) changes the hash and invalidates the token — interacts with email normalization",
+   "Unicode / IDN / non-ASCII email addresses hash deterministically and consistently (stable encoding) at gen and check time",
+   "Subclasses / third-party generators (allauth, DRF) overriding _make_hash_value won't inherit the fix — backward-compat of the overridable seam",
+   "last_login is None (user never logged in) — existing timestamp path still works once email is appended",
+   "Field-boundary ambiguity in the concatenated hash (email colliding with pk/timestamp text) — ordering/format keeps components unambiguous",
+   "Email mutated in-request but not yet saved — hash uses the in-memory instance value, which may diverge from the persisted DB value",
+   "check_token still returns False (not raise) for malformed tokens, unknown users, or missing email field — robustness preserved",
+   "Changing email invalidates ALL outstanding tokens for that user simultaneously (relative-timestamp semantics unchanged)",
+   "No extra DB query introduced — email read from the already-loaded user instance, not refetched",
+   "Factoring token-hash generation onto the model (à la get_session_auth_hash()) must not break existing PasswordResetTokenGenerator API/signature for current callers"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Issue a reset token, change the user's email, then use the token → token is REJECTED"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Change email then revert to the original value before token use → token accepted again within the timeout (documented consequence)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Issue a reset token and do NOT change email → token ACCEPTED within its validity window"
+   },
+   {
+    "id": "S3.1",
+    "covers": "User model with no email field → token generation and check_token both succeed without raising"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Email field value is None/empty → no crash; gen and check consistent (treated as empty string)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Unicode/IDN email address → token generates and validates deterministically"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Custom EMAIL_FIELD name → hash uses get_email_field_name(), not hardcoded 'email'; email-change invalidation still works"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Email differs only by case/whitespace from issuance → token rejected (email folded verbatim into hash)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Regression: changing the user's password still invalidates an outstanding token"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Regression: token still expires after PASSWORD_RESET_TIMEOUT regardless of email state"
+   },
+   {
+    "id": "S5.3",
+    "covers": "Regression: changing last_login still invalidates an outstanding token"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Backward-compat: pre-fix token (hash without email) rejected after the upgrade for an unchanged user"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Subclass overriding _make_hash_value continues to function (overridable seam preserved)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "check_token returns False (does not raise) for a malformed token or a user missing an email field"
+   }
+  ],
+  "plan_files": [
+   "tokens.py",
+   "base_user.py",
+   "test_tokens.py",
+   "models.py",
+   "forms.py",
+   "release_notes.txt"
+  ]
+ },
+ "raw_tail": "d check consistent (treated as empty string)\"},{\"id\":\"S3.3\",\"covers\":\"Unicode/IDN email address → token generates and validates deterministically\"},{\"id\":\"S4.1\",\"covers\":\"Custom EMAIL_FIELD name → hash uses get_email_field_name(), not hardcoded 'email'; email-change invalidation still works\"},{\"id\":\"S4.2\",\"covers\":\"Email differs only by case/whitespace from issuance → token rejected (email folded verbatim into hash)\"},{\"id\":\"S5.1\",\"covers\":\"Regression: changing the user's password still invalidates an outstanding token\"},{\"id\":\"S5.2\",\"covers\":\"Regression: token still expires after PASSWORD_RESET_TIMEOUT regardless of email state\"},{\"id\":\"S5.3\",\"covers\":\"Regression: changing last_login still invalidates an outstanding token\"},{\"id\":\"S6.1\",\"covers\":\"Backward-compat: pre-fix token (hash without email) rejected after the upgrade for an unchanged user\"},{\"id\":\"S6.2\",\"covers\":\"Subclass overriding _make_hash_value continues to function (overridable seam preserved)\"},{\"id\":\"S7.1\",\"covers\":\"check_token returns False (does not raise) for a malformed token or a user missing an email field\"}],\"plan_files\":[\"tokens.py\",\"base_user.py\",\"test_tokens.py\",\"models.py\",\"forms.py\",\"release_notes.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "Updating the user email address invalidates the token.",
+    "covered": true,
+    "why": "S1.1 directly tests: issue token → change email → token REJECTED. Also supported by S1.2 (revert email → token valid again) and edge case 'Email changed then reverted to original before token use'."
+   },
+   {
+    "test": "test_token_with_different_secret (auth_tests.test_tokens.TokenGeneratorTest)",
+    "covered": true,
+    "why": "The fix adds email to _make_hash_value() but preserves the existing secret key usage. S6.2 ensures the overridable seam works, and the secret remains part of the hash computation. The test verifies tokens generated with one secret fail with another — this is inherent to the hash mechanism and not broken by adding email to the hash value."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

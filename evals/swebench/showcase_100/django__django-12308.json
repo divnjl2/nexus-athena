@@ -1,0 +1,146 @@
+{
+ "instance_id": "django__django-12308",
+ "driver": "local",
+ "n_edge_cases": 15,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_json_display_for_field (admin_utils.tests.UtilsTests)",
+  "test_label_for_field (admin_utils.tests.UtilsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/admin/utils.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "display_for_field"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/admin/utils.py"
+  ],
+  "matched": [
+   "utils.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty JSON object {} displayed as readonly",
+   "Empty JSON array [] displayed as readonly",
+   "Null/None value in JSONField displayed as readonly",
+   "Invalid JSON string stored in database (should not crash)",
+   "Deeply nested JSON structures",
+   "JSON with unicode characters and escape sequences",
+   "JSON containing boolean values (true/false)",
+   "JSON containing numeric values (int, float, negative, zero)",
+   "JSON containing mixed types in arrays",
+   "Inherited JSONField subclasses",
+   "JSONField in list_display vs detail view",
+   "Very large JSON objects (performance/memory)",
+   "JSON with special characters requiring escaping",
+   "Empty string stored as JSON value",
+   "JSONField combined with other admin features (filters, search)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Basic JSON object displays as valid JSON string with double quotes when readonly"
+   },
+   {
+    "id": "S1.2",
+    "covers": "JSON array displays as valid JSON string with brackets when readonly"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Null/None JSONField value displays as 'None' or empty string (not 'null' string)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Empty JSON object {} displays as '{}' not as Python dict representation"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Empty JSON array [] displays as '[]' not as Python list representation"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Invalid JSON in database is handled gracefully without raising exception"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Nested JSON structures preserve proper JSON formatting"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Unicode characters in JSON are properly escaped/displayed"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Boolean values display as 'true'/'false' not Python 'True'/'False'"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Numeric values display as JSON numbers not Python repr"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Inherited JSONField subclasses are properly detected and handled"
+   },
+   {
+    "id": "S1.12",
+    "covers": "JSONField in list_display shows truncated/preview JSON appropriately"
+   },
+   {
+    "id": "S1.13",
+    "covers": "JSONField in change form readonly field shows full JSON"
+   },
+   {
+    "id": "S1.14",
+    "covers": "prepare_value method is called (not json.dumps directly) to handle InvalidJSONInput"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Non-readonly JSONField continues to work normally (editable mode)"
+   },
+   {
+    "id": "S1.16",
+    "covers": "JSONField with encoder/decoder customizations respects those settings"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Empty string JSON value displays correctly"
+   },
+   {
+    "id": "S1.18",
+    "covers": "JSONField works correctly in admin autocomplete/search contexts"
+   }
+  ],
+  "plan_files": [
+   "django/contrib/admin/utils.py",
+   "django/db/models/json.py",
+   "django/contrib/admin/widgets.py"
+  ]
+ },
+ "raw_tail": "xception\"},\n{\"id\":\"S1.7\",\"covers\":\"Nested JSON structures preserve proper JSON formatting\"},\n{\"id\":\"S1.8\",\"covers\":\"Unicode characters in JSON are properly escaped/displayed\"},\n{\"id\":\"S1.9\",\"covers\":\"Boolean values display as 'true'/'false' not Python 'True'/'False'\"},\n{\"id\":\"S1.10\",\"covers\":\"Numeric values display as JSON numbers not Python repr\"},\n{\"id\":\"S1.11\",\"covers\":\"Inherited JSONField subclasses are properly detected and handled\"},\n{\"id\":\"S1.12\",\"covers\":\"JSONField in list_display shows truncated/preview JSON appropriately\"},\n{\"id\":\"S1.13\",\"covers\":\"JSONField in change form readonly field shows full JSON\"},\n{\"id\":\"S1.14\",\"covers\":\"prepare_value method is called (not json.dumps directly) to handle InvalidJSONInput\"},\n{\"id\":\"S1.15\",\"covers\":\"Non-readonly JSONField continues to work normally (editable mode)\"},\n{\"id\":\"S1.16\",\"covers\":\"JSONField with encoder/decoder customizations respects those settings\"},\n{\"id\":\"S1.17\",\"covers\":\"Empty string JSON value displays correctly\"},\n{\"id\":\"S1.18\",\"covers\":\"JSONField works correctly in admin autocomplete/search contexts\"}\n],\n\"plan_files\":[\n\"django/contrib/admin/utils.py\",\n\"django/db/models/json.py\",\n\"django/contrib/admin/widgets.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_json_display_for_field",
+    "covered": true,
+    "why": "S1.1, S1.2, S1.4, S1.5, S1.9, S1.10, S1.14 directly cover JSON display formatting and prepare_value usage for readonly fields"
+   },
+   {
+    "test": "test_label_for_field",
+    "covered": false,
+    "why": "No scenario or edge case addresses label_for_field behavior; the issue and plan focus solely on display_for_field and JSON value rendering, not field label generation"
+   }
+  ],
+  "covered": 1,
+  "total": 2,
+  "ratio": 0.5
+ }
+}

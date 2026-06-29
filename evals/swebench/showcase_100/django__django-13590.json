@@ -1,0 +1,151 @@
+{
+ "instance_id": "django__django-13590",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_range_lookup_namedtuple (expressions.tests.IterableLookupInnerExpressionsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "resolve_lookup_value"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "matched": [
+   "query.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Named tuple with exactly 2 elements (normal __range case)",
+   "Named tuple with None as one or both elements",
+   "Named tuple with duplicate values",
+   "Named tuple with mixed types (e.g., int and str)",
+   "Named tuple with single element (invalid for __range but shouldn't crash with TypeError)",
+   "Empty named tuple (invalid for __range but shouldn't crash with TypeError)",
+   "Named tuple with 3+ elements for other tuple-based lookups",
+   "Regular tuple (regression - must still work)",
+   "List passed to __range (regression - must still work)",
+   "Named tuple with custom __new__ method",
+   "Named tuple with default values",
+   "Named tuple with rename=True (duplicate field names)",
+   "Nested named tuples",
+   "Named tuple with very large number of elements (performance)",
+   "Other tuple-based lookups: __gt, __lt, __gte, __lte, __between",
+   "Named tuple subclass with additional methods",
+   "Named tuple with special characters in field names",
+   "Named tuple containing datetime/date objects",
+   "Named tuple containing Decimal objects",
+   "Named tuple containing UUID objects"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Named tuple with 2 elements works correctly with __range lookup without TypeError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Named tuple with None values works correctly with __range lookup"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Named tuple with duplicate values works correctly with __range lookup"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Regular tuple still works with __range lookup (regression test)"
+   },
+   {
+    "id": "S1.5",
+    "covers": "List still works with __range lookup (regression test)"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Named tuple with 3+ elements works with other tuple-based lookups"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Named tuple with single element fails gracefully (not with TypeError about missing arguments)"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Empty named tuple fails gracefully (not with TypeError about missing arguments)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Named tuple with mixed types works correctly with __range lookup"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Named tuple with custom __new__ method works correctly"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Named tuple with default values works correctly"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Named tuple with rename=True works correctly"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Nested named tuples work correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Named tuple with large number of elements performs acceptably"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Other tuple-based lookups (__gt, __lt, __gte, __lte) work with named tuples"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Named tuple subclass with additional methods works correctly"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Named tuple with special characters in field names works correctly"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Named tuple containing datetime/date objects works correctly"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Named tuple containing Decimal objects works correctly"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Named tuple containing UUID objects works correctly"
+   }
+  ],
+  "plan_files": [
+   "query.py"
+  ]
+ },
+ "raw_tail": "overs\": \"Named tuple with custom __new__ method works correctly\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Named tuple with default values works correctly\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Named tuple with rename=True works correctly\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"Nested named tuples work correctly\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Named tuple with large number of elements performs acceptably\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Other tuple-based lookups (__gt, __lt, __gte, __lte) work with named tuples\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"Named tuple subclass with additional methods works correctly\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Named tuple with special characters in field names works correctly\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"Named tuple containing datetime/date objects works correctly\"\n    },\n    {\n      \"id\": \"S1.19\",\n      \"covers\": \"Named tuple containing Decimal objects works correctly\"\n    },\n    {\n      \"id\": \"S1.20\",\n      \"covers\": \"Named tuple containing UUID objects works correctly\"\n    }\n  ],\n  \"plan_files\": [\n    \"query.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_range_lookup_namedtuple",
+    "covered": true,
+    "why": "S1.1 directly covers named tuple with 2 elements working correctly with __range lookup without TypeError, which is the core behavior this test checks. Additionally, S1.2, S1.3, S1.4, S1.5 and the corresponding edge cases cover related scenarios including None values, duplicate values, and regression tests for regular tuples and lists."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

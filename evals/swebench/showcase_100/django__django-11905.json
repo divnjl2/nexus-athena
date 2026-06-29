@@ -1,0 +1,170 @@
+{
+ "instance_id": "django__django-11905",
+ "driver": "local",
+ "n_edge_cases": 21,
+ "n_scenarios": 23,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_isnull_non_boolean_value (lookup.tests.LookupTests)",
+  "test_iterator (lookup.tests.LookupTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/lookups.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "IsNull"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/lookups.py"
+  ],
+  "matched": [
+   "lookups.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Boolean True - should work without warning",
+   "Boolean False - should work without warning",
+   "Integer 1 - should raise RemovedInDjango40Warning",
+   "Integer 0 - should raise RemovedInDjango40Warning",
+   "Integer 2 or any non-zero/non-one - should raise RemovedInDjango40Warning",
+   "String 'true' - should raise RemovedInDjango40Warning",
+   "String 'false' - should raise RemovedInDjango40Warning",
+   "String '1' or '0' - should raise RemovedInDjango40Warning",
+   "Empty string '' - should raise RemovedInDjango40Warning",
+   "None value - should raise RemovedInDjango40Warning",
+   "Empty list [] - should raise RemovedInDjango40Warning",
+   "Empty dict {} - should raise RemovedInDjango40Warning",
+   "Empty set set() - should raise RemovedInDjango40Warning",
+   "F() expression F('field') - should raise RemovedInDjango40Warning",
+   "Custom object with __bool__ method - should raise RemovedInDjango40Warning",
+   "Float 1.0 or 0.0 - should raise RemovedInDjango40Warning",
+   "Decimal('1') or Decimal('0') - should raise RemovedInDjango40Warning",
+   "Nested in complex query with joins - warning should still be raised",
+   "Used in Q() objects - warning should still be raised",
+   "Used in exclude() - warning should still be raised",
+   "Used in filter() - warning should still be raised"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Boolean True value works correctly without raising any warning"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Boolean False value works correctly without raising any warning"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Integer 1 raises RemovedInDjango40Warning with appropriate message"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Integer 0 raises RemovedInDjango40Warning with appropriate message"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Integer 2 (or any other integer) raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S3.1",
+    "covers": "String 'true' raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S3.2",
+    "covers": "String 'false' raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S3.3",
+    "covers": "String '1' or '0' raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S3.4",
+    "covers": "Empty string '' raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S4.1",
+    "covers": "None value raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Empty list [] raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Empty dict {} raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S5.3",
+    "covers": "Empty set set() raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S6.1",
+    "covers": "F() expression F('field') raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Custom object with __bool__ method raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Float 1.0 raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Float 0.0 raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Decimal('1') raises RemovedInDjango40Warning"
+   },
+   {
+    "id": "S10.1",
+    "covers": "Warning is raised when used in filter() with join requiring promotion"
+   },
+   {
+    "id": "S11.1",
+    "covers": "Warning is raised when used in Q() objects"
+   },
+   {
+    "id": "S12.1",
+    "covers": "Warning is raised when used in exclude()"
+   },
+   {
+    "id": "S13.1",
+    "covers": "Warning message clearly states that value must be True or False"
+   },
+   {
+    "id": "S14.1",
+    "covers": "Warning is a RemovedInDjango40Warning type"
+   }
+  ],
+  "plan_files": [
+   "lookups.py"
+  ]
+ },
+ "raw_tail": "jango40Warning\"\n    },\n    {\n      \"id\": \"S5.3\",\n      \"covers\": \"Empty set set() raises RemovedInDjango40Warning\"\n    },\n    {\n      \"id\": \"S6.1\",\n      \"covers\": \"F() expression F('field') raises RemovedInDjango40Warning\"\n    },\n    {\n      \"id\": \"S7.1\",\n      \"covers\": \"Custom object with __bool__ method raises RemovedInDjango40Warning\"\n    },\n    {\n      \"id\": \"S8.1\",\n      \"covers\": \"Float 1.0 raises RemovedInDjango40Warning\"\n    },\n    {\n      \"id\": \"S8.2\",\n      \"covers\": \"Float 0.0 raises RemovedInDjango40Warning\"\n    },\n    {\n      \"id\": \"S9.1\",\n      \"covers\": \"Decimal('1') raises RemovedInDjango40Warning\"\n    },\n    {\n      \"id\": \"S10.1\",\n      \"covers\": \"Warning is raised when used in filter() with join requiring promotion\"\n    },\n    {\n      \"id\": \"S11.1\",\n      \"covers\": \"Warning is raised when used in Q() objects\"\n    },\n    {\n      \"id\": \"S12.1\",\n      \"covers\": \"Warning is raised when used in exclude()\"\n    },\n    {\n      \"id\": \"S13.1\",\n      \"covers\": \"Warning message clearly states that value must be True or False\"\n    },\n    {\n      \"id\": \"S14.1\",\n      \"covers\": \"Warning is a RemovedInDjango40Warning type\"\n    }\n  ],\n  \"plan_files\": [\n    \"lookups.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_isnull_non_boolean_value",
+    "covered": true,
+    "why": "Plan covers non-boolean values (integers, strings, None, collections, floats, decimals, F expressions, custom objects) raising RemovedInDjango40Warning via scenarios S2-S9, plus edge cases covering all these types"
+   },
+   {
+    "test": "test_iterator",
+    "covered": false,
+    "why": "No scenario or edge case in the plan addresses iterator behavior - the plan focuses on warning behavior for non-boolean values but does not mention any iterator-related functionality that this test might verify"
+   }
+  ],
+  "covered": 1,
+  "total": 2,
+  "ratio": 0.5
+ }
+}

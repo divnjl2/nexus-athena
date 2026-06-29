@@ -1,0 +1,129 @@
+{
+ "instance_id": "django__django-11422",
+ "n_edge_cases": 18,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_main_module_is_resolved (utils_tests.test_autoreload.TestIterModulesAndFiles)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/utils/autoreload.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "iter_modules_and_files"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/utils/autoreload.py"
+  ],
+  "matched": [
+   "autoreload.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "__main__ (manage.py) has __spec__ is None — the core regression: iter_modules_and_files hits `getattr(module,'__spec__',None) is None` and `continue`s, so manage.py is never added to the watch set",
+   "__main__ has no __file__ attribute at all (python -c, interactive REPL, embedded interpreter, frozen exe) — fallback must hasattr-guard and skip without raising AttributeError",
+   "__main__.__file__ is present but None — must be filtered in the results loop (`if not filename: continue`) so a None path is never resolved",
+   "__main__.__file__ is a relative path ('manage.py') — must be .resolve()/.absolute() to a real absolute path or the stat-watcher and path comparisons won't match",
+   "__main__.__file__ points to a deleted/moved/non-existent file — path.resolve(strict=True) raises FileNotFoundError and must be swallowed (don't fail loudly)",
+   "manage.py is a symlink — resolve() should follow to the real target so mtime changes are seen",
+   "Run via `python -m pkg` / runpy: __main__ HAS a valid __spec__ with location — must still be watched and must not be double-counted vs the __file__ fallback (set dedup)",
+   "__main__ appears multiple times in the modules iterable (the report shows manage.py listed twice) — output is a set/frozenset so it must dedup to a single entry",
+   "Non-main module with __spec__ is None (genuinely locationless) — must still be skipped; the special-case must key strictly on module.__name__ == '__main__'",
+   "sys.modules entries that are not real ModuleType objects (typing.io, typing.re, PyDev-injected) — must `isinstance(module, ModuleType)` guard before touching __name__/__spec__ or it crashes",
+   "Namespace packages / frozen / built-in modules: spec exists but has_location is False or origin is None — must skip, never append None",
+   "Modules loaded from a zip archive (zipimporter): origin comes from spec.loader.archive — pre-existing behaviour must be preserved by the refactor",
+   "iter_modules_and_files is @lru_cache'd — inputs must stay hashable (tuple of modules / frozenset of extra_files) and cache must invalidate as new modules import so manage.py is present from the first snapshot",
+   "StatReloader.snapshot_files must include the resolved manage.py path on the very first tick so the first edit is detected, not only subsequent ones",
+   "Both StatReloader and WatchmanReloader must benefit — fix belongs in the shared watched_files/iter_modules_and_files, not one backend",
+   "resolve() may raise platform-specific errors beyond FileNotFoundError on some OSes (Windows, embedded nulls) — be robust to resolve failure without aborting the whole watch-set build",
+   "Regression guard: editing settings.py / a normal app module / extra_files must still trigger reload (spec-based branch unchanged)",
+   "Compiled-only entry (.pyc with no .py) or __pycache__ path as __file__ — must resolve/watch whatever concrete file exists without assuming a .py sibling"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "__main__ with __spec__ is None (manage.py) is resolved into the iter_modules_and_files watched set via __file__"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Editing manage.py while runserver runs triggers an autoreload (end-to-end behaviour the regression broke)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "A fake __main__ ModuleType lacking __file__ is NOT resolved and raises no exception"
+   },
+   {
+    "id": "S2.2",
+    "covers": "__main__.__file__ pointing to a non-existent path is skipped silently (FileNotFoundError from resolve(strict=True) swallowed)"
+   },
+   {
+    "id": "S2.3",
+    "covers": "A relative __main__.__file__ is normalised to an absolute resolved path in the watch set"
+   },
+   {
+    "id": "S2.4",
+    "covers": "__main__.__file__ set to None is filtered out (no None path reaches resolve)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "A normal module with a concrete spec location is still watched via spec.origin (no regression)"
+   },
+   {
+    "id": "S3.2",
+    "covers": "A non-__main__ module whose __spec__ is None is still skipped (special-case keyed on __name__)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "A namespace/frozen/built-in module (spec without has_location) is skipped, never appending None"
+   },
+   {
+    "id": "S3.4",
+    "covers": "A non-ModuleType entry in sys.modules (typing.io/typing.re/PyDev) is skipped without error"
+   },
+   {
+    "id": "S3.5",
+    "covers": "A module loaded from a zip archive is watched via spec.loader.archive (preserved behaviour)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Duplicate __main__ occurrences collapse to a single watched entry (set semantics)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Run via `python -m` (entry module has a valid spec) is still watched without duplication"
+   },
+   {
+    "id": "S5.1",
+    "covers": "StatReloader's first snapshot_files includes the resolved manage.py path"
+   },
+   {
+    "id": "S5.2",
+    "covers": "WatchmanReloader's watched file set includes manage.py (shared fix benefits both backends)"
+   }
+  ],
+  "plan_files": [
+   "django/utils/autoreload.py",
+   "tests/utils_tests/test_autoreload.py"
+  ]
+ },
+ "raw_tail": "overs\":\"__main__.__file__ set to None is filtered out (no None path reaches resolve)\"},{\"id\":\"S3.1\",\"covers\":\"A normal module with a concrete spec location is still watched via spec.origin (no regression)\"},{\"id\":\"S3.2\",\"covers\":\"A non-__main__ module whose __spec__ is None is still skipped (special-case keyed on __name__)\"},{\"id\":\"S3.3\",\"covers\":\"A namespace/frozen/built-in module (spec without has_location) is skipped, never appending None\"},{\"id\":\"S3.4\",\"covers\":\"A non-ModuleType entry in sys.modules (typing.io/typing.re/PyDev) is skipped without error\"},{\"id\":\"S3.5\",\"covers\":\"A module loaded from a zip archive is watched via spec.loader.archive (preserved behaviour)\"},{\"id\":\"S4.1\",\"covers\":\"Duplicate __main__ occurrences collapse to a single watched entry (set semantics)\"},{\"id\":\"S4.2\",\"covers\":\"Run via `python -m` (entry module has a valid spec) is still watched without duplication\"},{\"id\":\"S5.1\",\"covers\":\"StatReloader's first snapshot_files includes the resolved manage.py path\"},{\"id\":\"S5.2\",\"covers\":\"WatchmanReloader's watched file set includes manage.py (shared fix benefits both backends)\"}],\"plan_files\":[\"django/utils/autoreload.py\",\"tests/utils_tests/test_autoreload.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_main_module_is_resolved",
+    "covered": true,
+    "why": "Scenario S1.1 explicitly covers the core regression: __main__ (manage.py) with __spec__ is None is resolved into the iter_modules_and_files watched set via __file__. The edge case also confirms this is the exact issue: iter_modules_and_files was skipping __main__ when __spec__ is None, and the fix adds a special-case keyed on __name__ == '__main__' to fall back to __file__. The test name 'test_main_module_is_resolved' directly corresponds to verifying that __main__ is properly resolved and added to the watch set."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,131 @@
+{
+ "instance_id": "django__django-13925",
+ "n_edge_cases": 17,
+ "n_scenarios": 14,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_auto_created_inherited_pk (check_framework.test_model_checks.ModelDefaultAutoFieldTests)",
+  "test_explicit_inherited_pk (check_framework.test_model_checks.ModelDefaultAutoFieldTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/base.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "check"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/base.py"
+  ],
+  "matched": [
+   "base.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "MTI child whose PK is the auto-created parent-link OneToOneField (*_ptr) must NOT raise W042; the warning belongs to the ancestor that owns the real PK",
+   "Ancestor with a manually-declared PK (primary_key=True) is not warned — this is why Entity is absent from the report while User/ReservedUsername appear",
+   "Ancestor that itself has a genuinely auto-created PK must still raise W042 exactly ONCE, attributed to that ancestor — not duplicated onto every MTI child",
+   "N concrete children of one MTI parent must not produce N copies of the same warning (no per-child duplication)",
+   "Model declaring its own field with primary_key=True (e.g. id = AutoField(primary_key=True)) still produces no W042 — regression guard for the pre-3.2 'works fine' behaviour",
+   "Concrete child of an ABSTRACT base that declares a manual PK: the copied field is user-declared (auto_created=False) so no W042 — abstract bases never appear in cls._meta.parents and are never themselves checked",
+   "Concrete child of an abstract base that declares NO pk: the child's own auto-created AutoField PK is NOT inherited and MUST still raise W042",
+   "Standalone single-table model with an auto-created PK and no DEFAULT_AUTO_FIELD / app default must STILL raise W042 — the fix must not neuter the check",
+   "Multiple concrete-parent inheritance: cls._meta.pk may be a parent link that is NOT the first entry of cls._meta.parents — the inherited-PK test must check membership across ALL parent links, not just next(iter(...)), so ordering can't reintroduce the false positive",
+   "Multi-level MTI (grandparent→parent→child): every descendant whose PK is an inherited parent link is silent; only the top ancestor owning the real PK is evaluated",
+   "Proxy model of a concrete model shares the concrete model's pk — must not emit a spurious or duplicate W042",
+   "Child that OVERRIDES the inherited PK with its own explicit primary_key=True field must not warn (its own PK, not the parent link)",
+   "DEFAULT_AUTO_FIELD overridden globally suppresses W042 for all models — escape hatch preserved by the fix",
+   "AppConfig.default_auto_field set on an app suppresses W042 for that app's models only — escape hatch preserved by the fix",
+   "Warning message text, HINT text, and id='models.W042' are unchanged for the cases that still warn (existing W042 tests must keep passing)",
+   "Empty cls._meta.parents (ordinary non-inheriting model) must short-circuit cleanly with no error before the auto_created/settings checks",
+   "Swapped/unmanaged models (e.g. a swapped AUTH_USER_MODEL) behave consistently and are not falsely flagged via their parent links"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "MTI child whose primary key is the auto-created parent_link field inherits its PK from a parent → no models.W042 emitted for the child"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Reproduction parity: concrete User(Entity) where ancestor Entity declares id=<custom>(primary_key=True) via MTI emits no W042, matching the speedy-net report"
+   },
+   {
+    "id": "S2.1",
+    "covers": "MTI parent that itself has an auto-created PK raises W042 exactly once, attributed to the parent, not the children"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Several MTI children of the same parent do not multiply the warning — no per-descendant duplication"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Regression guard: model with its own primary_key=True field emits no W042 (pre-3.2 behaviour preserved)"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Concrete child of an abstract base that declares a manual PK emits no W042 (copied user-declared field, auto_created=False)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Standalone model with auto-created AutoField PK and no DEFAULT_AUTO_FIELD/app default still raises W042 (check not neutered)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Concrete child of an abstract base with no PK gets its OWN auto-created PK and still raises W042 (not treated as inherited)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "DEFAULT_AUTO_FIELD overridden suppresses W042 for every model (escape hatch intact)"
+   },
+   {
+    "id": "S5.2",
+    "covers": "AppConfig.default_auto_field set suppresses W042 for that app's models only (escape hatch intact)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Model with multiple concrete parents whose PK is a non-first parent link is still recognized as inherited → no W042 (ordering independence)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Three-level MTI (grandparent owns the real PK) emits no W042 on the intermediate child or the leaf grandchild"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Proxy model of a concrete model emits no spurious or duplicate W042 (shares the concrete model's pk)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Child overriding the inherited PK with its own primary_key=True field emits no W042 (own PK, not the parent link)"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/base.py",
+   "tests/check_framework/test_model_checks.py",
+   "django/db/models/options.py"
+  ]
+ },
+ "raw_tail": "rs\":\"Standalone model with auto-created AutoField PK and no DEFAULT_AUTO_FIELD/app default still raises W042 (check not neutered)\"},{\"id\":\"S4.2\",\"covers\":\"Concrete child of an abstract base with no PK gets its OWN auto-created PK and still raises W042 (not treated as inherited)\"},{\"id\":\"S5.1\",\"covers\":\"DEFAULT_AUTO_FIELD overridden suppresses W042 for every model (escape hatch intact)\"},{\"id\":\"S5.2\",\"covers\":\"AppConfig.default_auto_field set suppresses W042 for that app's models only (escape hatch intact)\"},{\"id\":\"S6.1\",\"covers\":\"Model with multiple concrete parents whose PK is a non-first parent link is still recognized as inherited → no W042 (ordering independence)\"},{\"id\":\"S7.1\",\"covers\":\"Three-level MTI (grandparent owns the real PK) emits no W042 on the intermediate child or the leaf grandchild\"},{\"id\":\"S7.2\",\"covers\":\"Proxy model of a concrete model emits no spurious or duplicate W042 (shares the concrete model's pk)\"},{\"id\":\"S3.3\",\"covers\":\"Child overriding the inherited PK with its own primary_key=True field emits no W042 (own PK, not the parent link)\"}],\"plan_files\":[\"django/db/models/base.py\",\"tests/check_framework/test_model_checks.py\",\"django/db/models/options.py\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_auto_created_inherited_pk",
+    "covered": true,
+    "why": "S1.1 explicitly covers MTI child inheriting auto-created PK from parent with no W042 emitted; S2.1 ensures parent with auto-created PK raises W042 exactly once; S7.1 covers multi-level MTI where grandparent owns real PK"
+   },
+   {
+    "test": "test_explicit_inherited_pk",
+    "covered": true,
+    "why": "S1.2 directly addresses the issue reproduction case where ancestor declares id=<custom>(primary_key=True) via MTI with no W042; S3.2 covers concrete child of abstract base with manual PK; edge case 'Ancestor with manually-declared PK is not warned' confirms this behavior"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

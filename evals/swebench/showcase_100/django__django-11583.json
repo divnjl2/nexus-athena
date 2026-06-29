@@ -1,0 +1,146 @@
+{
+ "instance_id": "django__django-11583",
+ "driver": "local",
+ "n_edge_cases": 17,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_path_with_embedded_null_bytes (utils_tests.test_autoreload.TestIterModulesAndFiles)",
+  "test_paths_are_pathlib_instances (utils_tests.test_autoreload.TestIterModulesAndFiles)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/utils/autoreload.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "iter_modules_and_files"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/utils/autoreload.py"
+  ],
+  "matched": [
+   "autoreload.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Symlink with null byte in target string",
+   "Dangling symlink (target doesn't exist)",
+   "Circular symlink chain",
+   "Symlink on network mount (Samba/NFS) with intermittent connectivity",
+   "Permission denied on symlink target",
+   "Symlink target deleted during iteration (race condition)",
+   "Very long symlink chain",
+   "Path containing special characters or unicode",
+   "Empty string path",
+   "None passed as path argument",
+   "Path that doesn't exist",
+   "Multiple files where only some fail resolution",
+   "Symlink to directory vs symlink to file",
+   "Case sensitivity differences across filesystems",
+   "Symlink target changes during resolution process",
+   "Root path resolution edge cases",
+   "Relative vs absolute path handling"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Normal file path resolves correctly without errors"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Valid symlink resolves to its target path correctly"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Symlink with embedded null byte in target is caught and handled gracefully without crashing"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Dangling symlink (broken link) is handled without raising an exception"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Circular symlink chain does not cause infinite loop or stack overflow"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Permission denied on symlink target is caught and handled gracefully"
+   },
+   {
+    "id": "S1.7",
+    "covers": "File deleted between listing and resolution is handled without crashing"
+   },
+   {
+    "id": "S1.8",
+    "covers": "When resolve() fails, falls back to absolute() or original path without resolution"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Warning is logged when a path fails to resolve so user is informed"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Iteration continues successfully for remaining files after one fails"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Empty string path is handled gracefully without error"
+   },
+   {
+    "id": "S1.12",
+    "covers": "None path argument is handled defensively without crashing"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Non-existent path is handled gracefully without raising exception"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Multiple files in watched list where some fail resolution - all others still processed"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Path on network mount with intermittent issues doesn't crash the reloader"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Symlink target changing during resolution is handled gracefully"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Very long symlink chain completes without stack overflow"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Paths with unicode and special characters resolve correctly when possible"
+   }
+  ],
+  "plan_files": [
+   "autoreload.py"
+  ]
+ },
+ "raw_tail": "caught and handled gracefully\"},{\"id\":\"S1.7\",\"covers\":\"File deleted between listing and resolution is handled without crashing\"},{\"id\":\"S1.8\",\"covers\":\"When resolve() fails, falls back to absolute() or original path without resolution\"},{\"id\":\"S1.9\",\"covers\":\"Warning is logged when a path fails to resolve so user is informed\"},{\"id\":\"S1.10\",\"covers\":\"Iteration continues successfully for remaining files after one fails\"},{\"id\":\"S1.11\",\"covers\":\"Empty string path is handled gracefully without error\"},{\"id\":\"S1.12\",\"covers\":\"None path argument is handled defensively without crashing\"},{\"id\":\"S1.13\",\"covers\":\"Non-existent path is handled gracefully without raising exception\"},{\"id\":\"S1.14\",\"covers\":\"Multiple files in watched list where some fail resolution - all others still processed\"},{\"id\":\"S1.15\",\"covers\":\"Path on network mount with intermittent issues doesn't crash the reloader\"},{\"id\":\"S1.16\",\"covers\":\"Symlink target changing during resolution is handled gracefully\"},{\"id\":\"S1.17\",\"covers\":\"Very long symlink chain completes without stack overflow\"},{\"id\":\"S1.18\",\"covers\":\"Paths with unicode and special characters resolve correctly when possible\"}], \"plan_files\":[\"autoreload.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_path_with_embedded_null_bytes",
+    "covered": true,
+    "why": "S1.3 explicitly covers 'Symlink with embedded null byte in target is caught and handled gracefully without crashing', and edge case 'Symlink with null byte in target string' directly addresses the null byte issue mentioned in the bug report"
+   },
+   {
+    "test": "test_paths_are_pathlib_instances",
+    "covered": false,
+    "why": "No scenario or edge case addresses the type requirement that paths must be pathlib.Path instances; the plan focuses on error handling and robustness, not on ensuring specific object types are returned"
+   }
+  ],
+  "covered": 1,
+  "total": 2,
+  "ratio": 0.5
+ }
+}

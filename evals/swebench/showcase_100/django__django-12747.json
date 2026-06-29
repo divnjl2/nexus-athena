@@ -1,0 +1,144 @@
+{
+ "instance_id": "django__django-12747",
+ "driver": "local",
+ "n_edge_cases": 16,
+ "n_scenarios": 16,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_fast_delete_empty_no_update_can_self_select (delete.tests.FastDeleteTests)",
+  "test_model_delete_returns_num_rows (delete.tests.DeletionTests)",
+  "test_queryset_delete_returns_num_rows (delete.tests.DeletionTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/deletion.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "delete"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/deletion.py"
+  ],
+  "matched": [
+   "deletion.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty queryset on simple model (no FKs) - should return (0, {})",
+   "Empty queryset on model with foreign keys - should return (0, {})",
+   "Queryset with filter matching zero objects on simple model - should return (0, {})",
+   "Queryset with filter matching zero objects on FK model - should return (0, {})",
+   "Deleting exactly one object from simple model - should return (1, {'app.Model': 1})",
+   "Deleting one object with cascading FK deletions - should return (N, {'app.Parent': 1, 'app.Child': N-1, ...})",
+   "Deleting all objects from simple model - should return (N, {'app.Model': N})",
+   "Deleting all objects with multi-level FK cascade - should return correct counts per model",
+   "Deleting with many-to-many relationships - should include related model counts",
+   "Deleting with self-referential foreign key - should handle correctly",
+   "Deleting where some models have 0 deletions but others have >0 - only non-zero models in dict",
+   "Deleting from model that only has reverse FKs (other models point to it) - should return (0, {}) if nothing to delete",
+   "Deleting with complex filter combining multiple conditions that match nothing",
+   "Deleting duplicate objects in queryset (same object referenced multiple times) - should count once",
+   "Deleting when objects were already deleted by another process - should return (0, {})",
+   "Consistency: both FK and non-FK models must return same format when zero deleted"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Simple model with empty queryset returns (0, {}) not (0, {'app.Model': 0})"
+   },
+   {
+    "id": "S1.2",
+    "covers": "FK model with empty queryset returns (0, {})"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Simple model with non-matching filter returns (0, {})"
+   },
+   {
+    "id": "S1.4",
+    "covers": "FK model with non-matching filter returns (0, {})"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Deleting 1 object from simple model returns (1, {'app.Model': 1})"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Deleting 1 parent with N children returns (N+1, {'app.Parent': 1, 'app.Child': N})"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Deleting all objects from simple model returns (N, {'app.Model': N})"
+   },
+   {
+    "id": "S2.4",
+    "covers": "Deleting with multi-level cascade returns correct counts for each level"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Many-to-many delete includes related model in count dictionary"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Self-referential FK delete handles correctly without infinite recursion"
+   },
+   {
+    "id": "S4.1",
+    "covers": "When deleting across multiple models, only models with count > 0 appear in dictionary"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Result format is always tuple of (int, dict) regardless of deletion outcome"
+   },
+   {
+    "id": "S4.3",
+    "covers": "Dictionary keys are always _meta.label strings of affected models"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Duplicate objects in queryset are counted only once in deletion"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Objects already deleted externally result in (0, {}) not error"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Consistency: simple model and FK model both return (0, {}) when zero objects deleted"
+   }
+  ],
+  "plan_files": [
+   "query.py",
+   "deletion.py"
+  ]
+ },
+ "raw_tail": "Deleting 1 object from simple model returns (1, {'app.Model': 1})\"},\n{\"id\":\"S2.2\",\"covers\":\"Deleting 1 parent with N children returns (N+1, {'app.Parent': 1, 'app.Child': N})\"},\n{\"id\":\"S2.3\",\"covers\":\"Deleting all objects from simple model returns (N, {'app.Model': N})\"},\n{\"id\":\"S2.4\",\"covers\":\"Deleting with multi-level cascade returns correct counts for each level\"},\n{\"id\":\"S3.1\",\"covers\":\"Many-to-many delete includes related model in count dictionary\"},\n{\"id\":\"S3.2\",\"covers\":\"Self-referential FK delete handles correctly without infinite recursion\"},\n{\"id\":\"S4.1\",\"covers\":\"When deleting across multiple models, only models with count > 0 appear in dictionary\"},\n{\"id\":\"S4.2\",\"covers\":\"Result format is always tuple of (int, dict) regardless of deletion outcome\"},\n{\"id\":\"S4.3\",\"covers\":\"Dictionary keys are always _meta.label strings of affected models\"},\n{\"id\":\"S5.1\",\"covers\":\"Duplicate objects in queryset are counted only once in deletion\"},\n{\"id\":\"S5.2\",\"covers\":\"Objects already deleted externally result in (0, {}) not error\"},\n{\"id\":\"S6.1\",\"covers\":\"Consistency: simple model and FK model both return (0, {}) when zero objects deleted\"}\n],\n\"plan_files\":[\n\"query.py\",\n\"deletion.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_fast_delete_empty_no_update_can_self_select",
+    "covered": true,
+    "why": "S1.1, S1.2, S6.1 and edge cases cover empty queryset returning (0, {}) consistently for both simple and FK models, which is the core behavior this test verifies for the fast delete path"
+   },
+   {
+    "test": "test_model_delete_returns_num_rows",
+    "covered": true,
+    "why": "S2.1, S2.2, S2.3, S4.2 and related edge cases cover model.delete() returning correct tuple format (count, dict) with accurate row counts for single objects and cascading deletions"
+   },
+   {
+    "test": "test_queryset_delete_returns_num_rows",
+    "covered": true,
+    "why": "S1.1, S1.3, S2.1, S2.3, S4.2 and related edge cases cover QuerySet.delete() returning correct tuple format with accurate counts for empty querysets, single objects, and bulk deletions"
+   }
+  ],
+  "covered": 3,
+  "total": 3,
+  "ratio": 1.0
+ }
+}

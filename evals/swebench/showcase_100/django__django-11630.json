@@ -1,0 +1,111 @@
+{
+ "instance_id": "django__django-11630",
+ "driver": "local",
+ "n_edge_cases": 13,
+ "n_scenarios": 10,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_collision_across_apps_database_routers_installed (check_framework.test_model_checks.DuplicateDBTableTests)",
+  "test_collision_in_same_app_database_routers_installed (check_framework.test_model_checks.DuplicateDBTableTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/checks/model_checks.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "check_all_models"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/checks/model_checks.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "DATABASE_ROUTERS is None (default, not configured)",
+   "DATABASE_ROUTERS is an empty list []",
+   "DATABASE_ROUTERS has one router configured",
+   "DATABASE_ROUTERS has multiple routers configured",
+   "Same db_table name in two different apps with routers",
+   "Same db_table name in three or more different apps with routers",
+   "Same db_table name within the same app (should still error)",
+   "Models with explicit db_table attribute vs auto-generated table names",
+   "Warning can be silenced via SILENCED_SYSTEM_CHECKS",
+   "Warning message includes both conflicting model names",
+   "Check runs during system check phase (manage.py check)",
+   "Check runs during migration operations",
+   "Backward compatibility with Django 2.0 behavior when routers exist"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "When DATABASE_ROUTERS is empty/None, E028 error is raised for duplicate db_table across apps"
+   },
+   {
+    "id": "S1.2",
+    "covers": "When DATABASE_ROUTERS is non-empty, E028 becomes a warning instead of error"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Warning message includes both model names (app1.ModelName, app2.ModelName) for clarity"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Warning can be silenced by adding 'models.E028' to SILENCED_SYSTEM_CHECKS"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Same db_table within same app still raises error regardless of DATABASE_ROUTERS"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Check correctly identifies duplicate db_table from explicit db_table attribute"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Check correctly identifies duplicate db_table from auto-generated table names"
+   },
+   {
+    "id": "S1.8",
+    "covers": "System check passes (no error) when routers configured and duplicate exists"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Warning is emitted during manage.py check when routers configured and duplicate exists"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Multiple duplicate pairs across different apps each generate separate warnings"
+   }
+  ],
+  "plan_files": [
+   "models.py",
+   "checks.py",
+   "base.py",
+   "options.py"
+  ]
+ },
+ "raw_tail": "mpty, E028 becomes a warning instead of error\"\n    },\n    {\n      \"id\": \"S1.3\",\n      \"covers\": \"Warning message includes both model names (app1.ModelName, app2.ModelName) for clarity\"\n    },\n    {\n      \"id\": \"S1.4\",\n      \"covers\": \"Warning can be silenced by adding 'models.E028' to SILENCED_SYSTEM_CHECKS\"\n    },\n    {\n      \"id\": \"S1.5\",\n      \"covers\": \"Same db_table within same app still raises error regardless of DATABASE_ROUTERS\"\n    },\n    {\n      \"id\": \"S1.6\",\n      \"covers\": \"Check correctly identifies duplicate db_table from explicit db_table attribute\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"Check correctly identifies duplicate db_table from auto-generated table names\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"System check passes (no error) when routers configured and duplicate exists\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"Warning is emitted during manage.py check when routers configured and duplicate exists\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"Multiple duplicate pairs across different apps each generate separate warnings\"\n    }\n  ],\n  \"plan_files\": [\n    \"models.py\",\n    \"checks.py\",\n    \"base.py\",\n    \"options.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_collision_across_apps_database_routers_installed",
+    "covered": true,
+    "why": "S1.2 covers that E028 becomes a warning (not error) when DATABASE_ROUTERS is non-empty, and S1.8 confirms system check passes without error when routers are configured and duplicate exists across apps"
+   },
+   {
+    "test": "test_collision_in_same_app_database_routers_installed",
+    "covered": true,
+    "why": "S1.5 explicitly states that same db_table within same app still raises error regardless of DATABASE_ROUTERS configuration"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

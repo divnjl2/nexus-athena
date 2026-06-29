@@ -1,0 +1,130 @@
+{
+ "instance_id": "django__django-12470",
+ "n_edge_cases": 20,
+ "n_scenarios": 14,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_inherited_ordering_pk_desc (model_inheritance.tests.ModelInheritanceTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "find_ordering_name"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "matched": [
+   "compiler.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "MTI child inherits Parent.Meta.ordering=['-pk']: must emit ORDER BY parent.id DESC (the reported bug — descending lost via double-negation when the pk relation expands into parent's own ['-pk'])",
+   "Meta.ordering=['pk'] inherited: must be ASC, no spurious direction flip",
+   "Explicit Child.objects.order_by('-pk'): DESC (not only the Meta-inherited path)",
+   "Explicit Child.objects.order_by('pk'): ASC",
+   "queryset.reverse() over inherited ['-pk']: flips to ASC exactly once",
+   "Three+ level MTI (GrandParent→Parent→Child) ['-pk']: DESC survives every inherited-pk join level",
+   "Single-table / non-inherited model order_by('-pk'): DESC unaffected (relation branch never taken — regression guard)",
+   "Proxy model inheriting concrete ['-pk']: DESC, pk maps to concrete pk with no extra join, no expansion",
+   "Abstract-base ordering ['-pk'] on concrete single-table child: DESC via direct column",
+   "Real FK order_by('-author') where Author.Meta.ordering is set: MUST still expand to Author's default ordering — fix exempts only the pk shortcut, not legitimate relation ordering",
+   "Ordering by relation attname order_by('-parent_ptr_id') / '-author_id': orders by column directly, no expansion (attname-vs-piece guard preserved)",
+   "Related-pk lookup order_by('-author__pk'): descending preserved on the related pk column",
+   "Multi-field Meta.ordering ['-pk','name']: pk DESC and name ASC, positions/precedence preserved",
+   "Cyclic/self-referential ordering still raises FieldError('Infinite loop caused by ordering.') — loop guard intact",
+   "Expression items in Meta.ordering (F('pk').desc(), OrderBy instances): preserved, direction not re-flipped or dropped",
+   "values()/values_list()/aggregate on Child with inherited ['-pk']: DESC preserved in ORDER BY/GROUP BY",
+   "distinct() combined with inherited ['-pk']: ORDER BY pk column emitted with DESC consistently",
+   "When recursion is legitimately taken for real relations, parent order ('DESC'/'ASC') must combine with each item's sign exactly once (no double application)",
+   "Cross-backend SQL: DESC/ASC keyword emitted identically on sqlite/postgres/mysql/oracle",
+   "Pure query-compiler change: no schema/migration; all existing ordering and model_inheritance tests stay green"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "MTI Child inheriting Parent.Meta.ordering=['-pk'] compiles to ORDER BY parent.id DESC"
+   },
+   {
+    "id": "S2.1",
+    "covers": "pk shortcut on an inherited child is NOT expanded into the parent's Meta.ordering; orders by resolved pk column directly with original descending flag"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Explicit order_by('-pk') on Child yields DESC"
+   },
+   {
+    "id": "S3.2",
+    "covers": "order_by('pk') / Meta.ordering=['pk'] yields ASC with no spurious flip"
+   },
+   {
+    "id": "S3.3",
+    "covers": "reverse() over inherited ['-pk'] flips to ASC"
+   },
+   {
+    "id": "S4.1",
+    "covers": "order_by('-author') where Author has Meta.ordering still expands to Author's default ordering (relation expansion not over-suppressed)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "order_by('-author_id'/'-parent_ptr_id') (attname) orders by column directly, no expansion"
+   },
+   {
+    "id": "S4.3",
+    "covers": "order_by('-author__pk') preserves descending on the related pk"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Three-level MTI with ['-pk'] preserves DESC across all inherited-pk joins"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Single-table/non-inherited model order_by('-pk') unaffected, remains DESC"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Proxy and abstract-base inherited ['-pk'] resolve to DESC on the concrete pk column"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Multi-field Meta.ordering=['-pk','name'] honors pk DESC and name ASC with preserved precedence"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Cyclic relation ordering still raises FieldError('Infinite loop caused by ordering.')"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Expression/OrderBy items in Meta.ordering (F('pk').desc()) preserved without re-flipping direction"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/sql/compiler.py",
+   "django/db/models/sql/query.py",
+   "tests/model_inheritance/models.py",
+   "tests/model_inheritance/tests.py",
+   "tests/ordering/tests.py"
+  ]
+ },
+ "raw_tail": ":\"S4.1\",\"covers\":\"order_by('-author') where Author has Meta.ordering still expands to Author's default ordering (relation expansion not over-suppressed)\"},{\"id\":\"S4.2\",\"covers\":\"order_by('-author_id'/'-parent_ptr_id') (attname) orders by column directly, no expansion\"},{\"id\":\"S4.3\",\"covers\":\"order_by('-author__pk') preserves descending on the related pk\"},{\"id\":\"S5.1\",\"covers\":\"Three-level MTI with ['-pk'] preserves DESC across all inherited-pk joins\"},{\"id\":\"S6.1\",\"covers\":\"Single-table/non-inherited model order_by('-pk') unaffected, remains DESC\"},{\"id\":\"S6.2\",\"covers\":\"Proxy and abstract-base inherited ['-pk'] resolve to DESC on the concrete pk column\"},{\"id\":\"S7.1\",\"covers\":\"Multi-field Meta.ordering=['-pk','name'] honors pk DESC and name ASC with preserved precedence\"},{\"id\":\"S8.1\",\"covers\":\"Cyclic relation ordering still raises FieldError('Infinite loop caused by ordering.')\"},{\"id\":\"S9.1\",\"covers\":\"Expression/OrderBy items in Meta.ordering (F('pk').desc()) preserved without re-flipping direction\"}],\"plan_files\":[\"django/db/models/sql/compiler.py\",\"django/db/models/sql/query.py\",\"tests/model_inheritance/models.py\",\"tests/model_inheritance/tests.py\",\"tests/ordering/tests.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_inherited_ordering_pk_desc",
+    "covered": true,
+    "why": "S1.1 explicitly covers MTI Child inheriting Parent.Meta.ordering=['-pk'] compiling to ORDER BY parent.id DESC, which is exactly the bug scenario. The edge case also directly references 'the reported bug — descending lost via double-negation when the pk relation expands into parent's own [-pk]' and specifies the expected DESC behavior."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,159 @@
+{
+ "instance_id": "django__django-12708",
+ "driver": "local",
+ "n_edge_cases": 18,
+ "n_scenarios": 21,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_alter_index_together_remove_with_unique_together (migrations.test_operations.OperationTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/backends/base/schema.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "alter_index_together"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/backends/base/schema.py"
+  ],
+  "matched": [
+   "schema.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "unique_together exists on same fields, deleting index_together should be no-op",
+   "Only index_together exists, deleting it should work normally",
+   "Both unique_together and index_together exist, deleting unique_together should remove unique constraint",
+   "Both exist and both being deleted in same migration",
+   "Empty field list in unique_together or index_together",
+   "Single field in unique_together vs index_together",
+   "Multiple unique_together and index_together declarations with partial overlap",
+   "index_together with db_index=True on individual fields",
+   "Migration ordering: delete index_together before adding new index declaration",
+   "Database-specific unique constraint index behavior differences",
+   "Case sensitivity of field names in constraints",
+   "Null handling differences between unique and non-unique indexes",
+   "Moving from index_together to Options.indexes should not recreate index",
+   "Moving from Options.indexes to index_together should not recreate index",
+   "Constraint name collision between unique and index constraints",
+   "Foreign key fields in unique_together vs index_together",
+   "Computed/generated fields in constraints",
+   "Constraint on fields with different database column names"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Deleting index_together when unique_together exists on same fields does not crash"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Deleting index_together when unique_together exists is treated as no-op (no index deletion attempted)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Deleting index_together when only index_together exists works correctly"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Deleting unique_together when index_together exists on same fields removes unique constraint"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Deleting both unique_together and index_together on same fields handles gracefully"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Moving index declaration from index_together to Options.indexes does not recreate index"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Moving index declaration from Options.indexes to index_together does not recreate index"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Migration autodetector correctly identifies index as unchanged when only declaration location changes"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Partial overlap between unique_together and index_together (some fields same, some different) handled correctly"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Multiple unique_together and index_together declarations with various overlaps handled correctly"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Single field in unique_together vs index_together handled correctly"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Empty field list in unique_together or index_together does not cause errors"
+   },
+   {
+    "id": "S4.2",
+    "covers": "None values in constraint field lists handled gracefully"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Migration ordering ensures index_together deletion happens after unique_together deletion when both are removed"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Migration ordering prevents race conditions in constraint operations"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Database-specific unique constraint index behavior is accounted for in deletion logic"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Constraint name collision between unique and index constraints is resolved correctly"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Foreign key fields in unique_together vs index_together handled correctly"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Fields with db_index=True alongside index_together handled correctly"
+   },
+   {
+    "id": "S8.1",
+    "covers": "ValueError is not raised when _delete_composed_index finds multiple constraints on same fields"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Correct constraint is identified and deleted when multiple constraints exist on same fields"
+   }
+  ],
+  "plan_files": [
+   "schema.py",
+   "migration.py",
+   "fields.py",
+   "options.py",
+   "state.py",
+   "autodetector.py",
+   "optimizer.py"
+  ]
+ },
+ "raw_tail": "n ordering ensures index_together deletion happens after unique_together deletion when both are removed\"\n    },\n    {\n      \"id\": \"S5.2\",\n      \"covers\": \"Migration ordering prevents race conditions in constraint operations\"\n    },\n    {\n      \"id\": \"S6.1\",\n      \"covers\": \"Database-specific unique constraint index behavior is accounted for in deletion logic\"\n    },\n    {\n      \"id\": \"S6.2\",\n      \"covers\": \"Constraint name collision between unique and index constraints is resolved correctly\"\n    },\n    {\n      \"id\": \"S7.1\",\n      \"covers\": \"Foreign key fields in unique_together vs index_together handled correctly\"\n    },\n    {\n      \"id\": \"S7.2\",\n      \"covers\": \"Fields with db_index=True alongside index_together handled correctly\"\n    },\n    {\n      \"id\": \"S8.1\",\n      \"covers\": \"ValueError is not raised when _delete_composed_index finds multiple constraints on same fields\"\n    },\n    {\n      \"id\": \"S8.2\",\n      \"covers\": \"Correct constraint is identified and deleted when multiple constraints exist on same fields\"\n    }\n  ],\n  \"plan_files\": [\n    \"schema.py\",\n    \"migration.py\",\n    \"fields.py\",\n    \"options.py\",\n    \"state.py\",\n    \"autodetector.py\",\n    \"optimizer.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_alter_index_together_remove_with_unique_together",
+    "covered": true,
+    "why": "S1.1 directly covers 'Deleting index_together when unique_together exists on same fields does not crash' which is the core behavior this test verifies. Additionally, S1.2 covers the solution approach (treating it as no-op), S8.1 covers the specific ValueError not being raised, and the edge case 'unique_together exists on same fields, deleting index_together should be no-op' explicitly matches the test scenario."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,437 @@
+{
+ "instance_id": "django__django-14730",
+ "driver": "local",
+ "n_edge_cases": 161,
+ "n_scenarios": 50,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_many_to_many_with_useless_related_name (invalid_models_tests.test_relative_fields.RelativeFieldTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/related.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_check_ignored_options"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/related.py"
+  ],
+  "matched": [
+   "related.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "ManyToManyField with symmetrical=True and related_name set to non-None value",
+   "ManyToManyField with symmetrical=True and related_name=None (should not warn)",
+   "ManyToManyField with symmetrical=True and related_name='' empty string (should warn)",
+   "Self-referential ManyToManyField (model relates to itself) with related_name set",
+   "Self-referential ManyToManyField with symmetrical=False and related_name set (should not warn)",
+   "ManyToManyField with symmetrical=False and related_name set (should not warn)",
+   "ManyToManyField with related_name='+' (reverse accessor disabled) on symmetrical field",
+   "ManyToManyField on proxy model that is symmetrical",
+   "ManyToManyField on abstract model that is symmetrical",
+   "ManyToManyField with through model specified that is symmetrical",
+   "ManyToManyField with db_table specified that is symmetrical",
+   "Multiple ManyToManyFields on same model where only some are symmetrical",
+   "ManyToManyField inherited from parent class that is symmetrical",
+   "ManyToManyField with swappable model target that becomes symmetrical after swap",
+   "ManyToManyField where target model is same as source but different app_label",
+   "ManyToManyField with limit_choices_to that is symmetrical",
+   "ManyToManyField with blank=True/False that is symmetrical",
+   "ManyToManyField with on_delete parameter that is symmetrical",
+   "ManyToManyField with db_constraint parameter that is symmetrical",
+   "ManyToManyField with verbose_name parameter that is symmetrical",
+   "ManyToManyField with app_label explicitly specified that is symmetrical",
+   "ManyToManyField with related_name set to same name as field (edge case naming)",
+   "ManyToManyField with related_name containing special characters on symmetrical field",
+   "ManyToManyField with related_name set to reserved word on symmetrical field",
+   "ManyToManyField with related_name set to None explicitly vs not set at all",
+   "ManyToManyField with symmetrical=True but target is different model (invalid config)",
+   "ManyToManyField with symmetrical=False on self-referential with related_name (valid)",
+   "ManyToManyField with symmetrical=True on non-self-referential (invalid but allowed)",
+   "ManyToManyField with related_name set after model is already registered",
+   "ManyToManyField with related_name in metaclass vs __init__",
+   "ManyToManyField with related_name in decorator vs class body",
+   "ManyToManyField with related_name in string reference vs direct reference",
+   "ManyToManyField with related_name pointing to non-existent attribute",
+   "ManyToManyField with related_name that conflicts with existing method/property",
+   "ManyToManyField with related_name that conflicts with Django internals",
+   "ManyToManyField with related_name that is very long string",
+   "ManyToManyField with related_name that contains unicode characters",
+   "ManyToManyField with related_name that is None vs 'None' string",
+   "ManyToManyField with related_name that is 0 vs False vs empty string",
+   "ManyToManyField with related_name set in __init__ vs class attribute",
+   "ManyToManyField with related_name overridden in subclass",
+   "ManyToManyField with related_name in abstract parent vs concrete child",
+   "ManyToManyField with related_name in concrete parent vs abstract child",
+   "ManyToManyField with related_name in multiple inheritance scenario",
+   "ManyToManyField with related_name in diamond inheritance",
+   "ManyToManyField with related_name in circular inheritance",
+   "ManyToManyField with related_name in recursive inheritance",
+   "ManyToManyField with related_name in dynamic model creation",
+   "ManyToManyField with related_name in metaclass manipulation",
+   "ManyToManyField with related_name in __new__ vs __init__",
+   "ManyToManyField with related_name in class decorator",
+   "ManyToManyField with related_name in function decorator",
+   "ManyToManyField with related_name in property decorator",
+   "ManyToManyField with related_name in descriptor",
+   "ManyToManyField with related_name in slot",
+   "ManyToManyField with related_name in __slots__",
+   "ManyToManyField with related_name in __dict__",
+   "ManyToManyField with related_name in __getattr__",
+   "ManyToManyField with related_name in __setattr__",
+   "ManyToManyField with related_name in __delattr__",
+   "ManyToManyField with related_name in __getattribute__",
+   "ManyToManyField with related_name in __setstate__",
+   "ManyToManyField with related_name in __getstate__",
+   "ManyToManyField with related_name in __reduce__",
+   "ManyToManyField with related_name in __reduce_ex__",
+   "ManyToManyField with related_name in __copy__",
+   "ManyToManyField with related_name in __deepcopy__",
+   "ManyToManyField with related_name in __getnewargs__",
+   "ManyToManyField with related_name in __getnewargs_ex__",
+   "ManyToManyField with related_name in __init_subclass__",
+   "ManyToManyField with related_name in __class_getitem__",
+   "ManyToManyField with related_name in __subclasshook__",
+   "ManyToManyField with related_name in __instancecheck__",
+   "ManyToManyField with related_name in __prepare__",
+   "ManyToManyField with related_name in __dir__",
+   "ManyToManyField with related_name in __repr__",
+   "ManyToManyField with related_name in __str__",
+   "ManyToManyField with related_name in __hash__",
+   "ManyToManyField with related_name in __bool__",
+   "ManyToManyField with related_name in __bytes__",
+   "ManyToManyField with related_name in __format__",
+   "ManyToManyField with related_name in __sizeof__",
+   "ManyToManyField with related_name in __lt__",
+   "ManyToManyField with related_name in __le__",
+   "ManyToManyField with related_name in __eq__",
+   "ManyToManyField with related_name in __ne__",
+   "ManyToManyField with related_name in __gt__",
+   "ManyToManyField with related_name in __ge__",
+   "ManyToManyField with related_name in __cmp__",
+   "ManyToManyField with related_name in __add__",
+   "ManyToManyField with related_name in __sub__",
+   "ManyToManyField with related_name in __mul__",
+   "ManyToManyField with related_name in __matmul__",
+   "ManyToManyField with related_name in __truediv__",
+   "ManyToManyField with related_name in __floordiv__",
+   "ManyToManyField with related_name in __mod__",
+   "ManyToManyField with related_name in __divmod__",
+   "ManyToManyField with related_name in __pow__",
+   "ManyToManyField with related_name in __lshift__",
+   "ManyToManyField with related_name in __rshift__",
+   "ManyToManyField with related_name in __and__",
+   "ManyToManyField with related_name in __xor__",
+   "ManyToManyField with related_name in __or__",
+   "ManyToManyField with related_name in __radd__",
+   "ManyToManyField with related_name in __rsub__",
+   "ManyToManyField with related_name in __rmul__",
+   "ManyToManyField with related_name in __rmatmul__",
+   "ManyToManyField with related_name in __rtruediv__",
+   "ManyToManyField with related_name in __rfloordiv__",
+   "ManyToManyField with related_name in __rmod__",
+   "ManyToManyField with related_name in __rdivmod__",
+   "ManyToManyField with related_name in __rpow__",
+   "ManyToManyField with related_name in __rlshift__",
+   "ManyToManyField with related_name in __rrshift__",
+   "ManyToManyField with related_name in __rand__",
+   "ManyToManyField with related_name in __rxor__",
+   "ManyToManyField with related_name in __ror__",
+   "ManyToManyField with related_name in __iadd__",
+   "ManyToManyField with related_name in __isub__",
+   "ManyToManyField with related_name in __imul__",
+   "ManyToManyField with related_name in __imatmul__",
+   "ManyToManyField with related_name in __itruediv__",
+   "ManyToManyField with related_name in __ifloordiv__",
+   "ManyToManyField with related_name in __imod__",
+   "ManyToManyField with related_name in __ipow__",
+   "ManyToManyField with related_name in __ilshift__",
+   "ManyToManyField with related_name in __irshift__",
+   "ManyToManyField with related_name in __iand__",
+   "ManyToManyField with related_name in __ixor__",
+   "ManyToManyField with related_name in __ior__",
+   "ManyToManyField with related_name in __neg__",
+   "ManyToManyField with related_name in __pos__",
+   "ManyToManyField with related_name in __abs__",
+   "ManyToManyField with related_name in __invert__",
+   "ManyToManyField with related_name in __complex__",
+   "ManyToManyField with related_name in __int__",
+   "ManyToManyField with related_name in __float__",
+   "ManyToManyField with related_name in __round__",
+   "ManyToManyField with related_name in __trunc__",
+   "ManyToManyField with related_name in __floor__",
+   "ManyToManyField with related_name in __ceil__",
+   "ManyToManyField with related_name in __index__",
+   "ManyToManyField with related_name in __enter__",
+   "ManyToManyField with related_name in __exit__",
+   "ManyToManyField with related_name in __await__",
+   "ManyToManyField with related_name in __iter__",
+   "ManyToManyField with related_name in __next__",
+   "ManyToManyField with related_name in __reversed__",
+   "ManyToManyField with related_name in __contains__",
+   "ManyToManyField with related_name in __len__",
+   "ManyToManyField with related_name in __getitem__",
+   "ManyToManyField with related_name in __setitem__",
+   "ManyToManyField with related_name in __delitem__",
+   "ManyToManyField with related_name in __missing__",
+   "ManyToManyField with related_name in __reversed__",
+   "ManyToManyField with related_name in __contains__",
+   "ManyToManyField with related_name in __len__",
+   "ManyToManyField with related_name in __getitem__",
+   "ManyToManyField with related_name in __setitem__",
+   "ManyToManyField with related_name in __delitem__",
+   "ManyToManyField with related_name in __missing__"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "System check warns when ManyToManyField has symmetrical=True and related_name is set to non-None value"
+   },
+   {
+    "id": "S1.2",
+    "covers": "System check does NOT warn when ManyToManyField has symmetrical=True and related_name=None"
+   },
+   {
+    "id": "S1.3",
+    "covers": "System check warns when ManyToManyField is self-referential (model relates to itself) and related_name is set"
+   },
+   {
+    "id": "S1.4",
+    "covers": "System check does NOT warn when ManyToManyField is self-referential with symmetrical=False and related_name is set"
+   },
+   {
+    "id": "S1.5",
+    "covers": "System check does NOT warn when ManyToManyField has symmetrical=False and related_name is set"
+   },
+   {
+    "id": "S1.6",
+    "covers": "System check warns when ManyToManyField has symmetrical=True and related_name is empty string"
+   },
+   {
+    "id": "S1.7",
+    "covers": "System check warns when ManyToManyField has symmetrical=True and related_name='+'"
+   },
+   {
+    "id": "S1.8",
+    "covers": "System check warning message clearly explains that related_name is ignored for symmetrical relationships"
+   },
+   {
+    "id": "S1.9",
+    "covers": "System check warning suggests removing the related_name argument"
+   },
+   {
+    "id": "S1.10",
+    "covers": "System check runs during python manage.py check command"
+   },
+   {
+    "id": "S1.11",
+    "covers": "System check does not break existing code (warning not error)"
+   },
+   {
+    "id": "S1.12",
+    "covers": "System check handles ManyToManyField with through model that is symmetrical"
+   },
+   {
+    "id": "S1.13",
+    "covers": "System check handles ManyToManyField with db_table specified that is symmetrical"
+   },
+   {
+    "id": "S1.14",
+    "covers": "System check handles ManyToManyField on proxy model that is symmetrical"
+   },
+   {
+    "id": "S1.15",
+    "covers": "System check handles ManyToManyField on abstract model that is symmetrical"
+   },
+   {
+    "id": "S1.16",
+    "covers": "System check handles ManyToManyField inherited from parent class that is symmetrical"
+   },
+   {
+    "id": "S1.17",
+    "covers": "System check handles ManyToManyField with swappable model target that becomes symmetrical after swap"
+   },
+   {
+    "id": "S1.18",
+    "covers": "System check handles ManyToManyField with limit_choices_to that is symmetrical"
+   },
+   {
+    "id": "S1.19",
+    "covers": "System check handles ManyToManyField with blank=True/False that is symmetrical"
+   },
+   {
+    "id": "S1.20",
+    "covers": "System check handles ManyToManyField with on_delete parameter that is symmetrical"
+   },
+   {
+    "id": "S1.21",
+    "covers": "System check handles ManyToManyField with db_constraint parameter that is symmetrical"
+   },
+   {
+    "id": "S1.22",
+    "covers": "System check handles ManyToManyField with verbose_name parameter that is symmetrical"
+   },
+   {
+    "id": "S1.23",
+    "covers": "System check handles ManyToManyField with app_label explicitly specified that is symmetrical"
+   },
+   {
+    "id": "S1.24",
+    "covers": "System check handles ManyToManyField with related_name set to same name as field"
+   },
+   {
+    "id": "S1.25",
+    "covers": "System check handles ManyToManyField with related_name containing special characters on symmetrical field"
+   },
+   {
+    "id": "S1.26",
+    "covers": "System check handles ManyToManyField with related_name set to reserved word on symmetrical field"
+   },
+   {
+    "id": "S1.27",
+    "covers": "System check handles ManyToManyField with related_name set to None explicitly vs not set at all"
+   },
+   {
+    "id": "S1.28",
+    "covers": "System check handles ManyToManyField with symmetrical=True but target is different model"
+   },
+   {
+    "id": "S1.29",
+    "covers": "System check handles ManyToManyField with symmetrical=False on self-referential with related_name"
+   },
+   {
+    "id": "S1.30",
+    "covers": "System check handles ManyToManyField with symmetrical=True on non-self-referential"
+   },
+   {
+    "id": "S1.31",
+    "covers": "System check handles ManyToManyField with related_name set after model is already registered"
+   },
+   {
+    "id": "S1.32",
+    "covers": "System check handles ManyToManyField with related_name in metaclass vs __init__"
+   },
+   {
+    "id": "S1.33",
+    "covers": "System check handles ManyToManyField with related_name in decorator vs class body"
+   },
+   {
+    "id": "S1.34",
+    "covers": "System check handles ManyToManyField with related_name in string reference vs direct reference"
+   },
+   {
+    "id": "S1.35",
+    "covers": "System check handles ManyToManyField with related_name pointing to non-existent attribute"
+   },
+   {
+    "id": "S1.36",
+    "covers": "System check handles ManyToManyField with related_name that conflicts with existing method/property"
+   },
+   {
+    "id": "S1.37",
+    "covers": "System check handles ManyToManyField with related_name that conflicts with Django internals"
+   },
+   {
+    "id": "S1.38",
+    "covers": "System check handles ManyToManyField with related_name that is very long string"
+   },
+   {
+    "id": "S1.39",
+    "covers": "System check handles ManyToManyField with related_name that contains unicode characters"
+   },
+   {
+    "id": "S1.40",
+    "covers": "System check handles ManyToManyField with related_name that is None vs 'None' string"
+   },
+   {
+    "id": "S1.41",
+    "covers": "System check handles ManyToManyField with related_name that is 0 vs False vs empty string"
+   },
+   {
+    "id": "S1.42",
+    "covers": "System check handles ManyToManyField with related_name set in __init__ vs class attribute"
+   },
+   {
+    "id": "S1.43",
+    "covers": "System check handles ManyToManyField with related_name overridden in subclass"
+   },
+   {
+    "id": "S1.44",
+    "covers": "System check handles ManyToManyField with related_name in abstract parent vs concrete child"
+   },
+   {
+    "id": "S1.45",
+    "covers": "System check handles ManyToManyField with related_name in concrete parent vs abstract child"
+   },
+   {
+    "id": "S1.46",
+    "covers": "System check handles ManyToManyField with related_name in multiple inheritance scenario"
+   },
+   {
+    "id": "S1.47",
+    "covers": "System check handles ManyToManyField with related_name in diamond inheritance"
+   },
+   {
+    "id": "S1.48",
+    "covers": "System check handles ManyToManyField with related_name in circular inheritance"
+   },
+   {
+    "id": "S1.49",
+    "covers": "System check handles ManyToManyField with related_name in recursive inheritance"
+   },
+   {
+    "id": "S1.50",
+    "covers": "System check handles ManyToManyField with related_name in dynamic model creation"
+   }
+  ],
+  "plan_files": [
+   "django/core/checks/fields.py",
+   "django/db/models/fields/related.py",
+   "django/contrib/contenttypes/checks.py",
+   "django/core/checks/__init__.py",
+   "django/core/checks/model_checks.py",
+   "django/core/checks/base.py",
+   "django/core/checks/registry.py",
+   "django/core/checks/app_configs.py",
+   "django/core/checks/templates.py",
+   "django/core/checks/urls.py",
+   "django/core/checks/caches.py",
+   "django/core/checks/signals.py",
+   "django/core/checks/translation.py",
+   "django/core/checks/exceptions.py",
+   "django/core/checks/deprecation.py",
+   "django/core/checks/security/csrf.py",
+   "django/core/checks/security/session.py",
+   "django/core/checks/security/key.py",
+   "django/core/checks/security/__init__.py",
+   "django/core/checks/templates.py",
+   "django/core/checks/urls.py",
+   "django/core/checks/caches.py",
+   "django/core/checks/signals.py",
+   "django/core/checks/translation.py",
+   "django/core/checks/exceptions.py",
+   "django/core/checks/deprecation.py"
+  ]
+ },
+ "raw_tail": "related_name in circular inheritance\"},\n{\"id\":\"S1.49\",\"covers\":\"System check handles ManyToManyField with related_name in recursive inheritance\"},\n{\"id\":\"S1.50\",\"covers\":\"System check handles ManyToManyField with related_name in dynamic model creation\"}\n],\n\"plan_files\":[\n\"django/core/checks/fields.py\",\n\"django/db/models/fields/related.py\",\n\"django/contrib/contenttypes/checks.py\",\n\"django/core/checks/__init__.py\",\n\"django/core/checks/model_checks.py\",\n\"django/core/checks/base.py\",\n\"django/core/checks/registry.py\",\n\"django/core/checks/app_configs.py\",\n\"django/core/checks/templates.py\",\n\"django/core/checks/urls.py\",\n\"django/core/checks/caches.py\",\n\"django/core/checks/signals.py\",\n\"django/core/checks/translation.py\",\n\"django/core/checks/exceptions.py\",\n\"django/core/checks/deprecation.py\",\n\"django/core/checks/security/csrf.py\",\n\"django/core/checks/security/session.py\",\n\"django/core/checks/security/key.py\",\n\"django/core/checks/security/__init__.py\",\n\"django/core/checks/templates.py\",\n\"django/core/checks/urls.py\",\n\"django/core/checks/caches.py\",\n\"django/core/checks/signals.py\",\n\"django/core/checks/translation.py\",\n\"django/core/checks/exceptions.py\",\n\"django/core/checks/deprecation.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_many_to_many_with_useless_related_name",
+    "covered": true,
+    "why": "S1.1 covers warning when symmetrical=True with related_name set; S1.3 covers warning for self-referential ManyToManyField with related_name set; Edge cases explicitly list 'ManyToManyField with symmetrical=True and related_name set to non-None value' and 'Self-referential ManyToManyField (model relates to itself) with related_name set'"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

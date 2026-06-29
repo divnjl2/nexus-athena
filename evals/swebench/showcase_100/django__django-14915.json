@@ -1,0 +1,114 @@
+{
+ "instance_id": "django__django-14915",
+ "driver": "local",
+ "n_edge_cases": 13,
+ "n_scenarios": 13,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_choice_value_hash (model_forms.test_modelchoicefield.ModelChoiceFieldTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/models.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__init__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/models.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "ModelChoiceIteratorValue wrapping a model instance with integer primary key",
+   "ModelChoiceIteratorValue wrapping a model instance with UUID primary key",
+   "ModelChoiceIteratorValue wrapping a model instance with string primary key",
+   "ModelChoiceIteratorValue wrapping a model instance with None/null primary key",
+   "Two ModelChoiceIteratorValue instances wrapping the same model instance should have equal hashes",
+   "Two ModelChoiceIteratorValue instances wrapping different model instances with same PK should have equal hashes",
+   "Hash consistency - calling hash() multiple times returns same value",
+   "Using ModelChoiceIteratorValue as dictionary key",
+   "Using ModelChoiceIteratorValue in set membership test",
+   "Using ModelChoiceIteratorValue in 'in' operator with dict keys",
+   "Model instance whose underlying __hash__ raises exception",
+   "Model instance that is not yet saved (no PK)",
+   "Empty/blank ModelChoiceIteratorValue (value=None)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "ModelChoiceIteratorValue instance can be used as a dictionary key without raising TypeError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "ModelChoiceIteratorValue instance can be added to a set without raising TypeError"
+   },
+   {
+    "id": "S1.3",
+    "covers": "hash(ModelChoiceIteratorValue) returns an integer value"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Two ModelChoiceIteratorValue instances wrapping the same model instance produce equal hash values"
+   },
+   {
+    "id": "S1.5",
+    "covers": "hash(ModelChoiceIteratorValue) is consistent across multiple calls on the same instance"
+   },
+   {
+    "id": "S1.6",
+    "covers": "ModelChoiceIteratorValue can be used in 'value in dict_keys' membership test"
+   },
+   {
+    "id": "S1.7",
+    "covers": "ModelChoiceIteratorValue with None value can be hashed (or raises appropriate error)"
+   },
+   {
+    "id": "S1.8",
+    "covers": "ModelChoiceIteratorValue hash is derived from the underlying model instance's value/PK"
+   },
+   {
+    "id": "S1.9",
+    "covers": "ModelChoiceIteratorValue works with model instances having integer primary keys"
+   },
+   {
+    "id": "S1.10",
+    "covers": "ModelChoiceIteratorValue works with model instances having UUID primary keys"
+   },
+   {
+    "id": "S1.11",
+    "covers": "ModelChoiceIteratorValue works with model instances having string primary keys"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Equality of ModelChoiceIteratorValue instances is consistent with their hash values (equal objects have equal hashes)"
+   },
+   {
+    "id": "S1.13",
+    "covers": "The original use case from the issue works: checking if ModelChoiceIteratorValue is in a dict's keys"
+   }
+  ],
+  "plan_files": [
+   "widgets.py"
+  ]
+ },
+ "raw_tail": "iple calls on the same instance\"\n    },\n    {\n      \"id\": \"S1.6\",\n      \"covers\": \"ModelChoiceIteratorValue can be used in 'value in dict_keys' membership test\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"ModelChoiceIteratorValue with None value can be hashed (or raises appropriate error)\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"ModelChoiceIteratorValue hash is derived from the underlying model instance's value/PK\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"ModelChoiceIteratorValue works with model instances having integer primary keys\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"ModelChoiceIteratorValue works with model instances having UUID primary keys\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"ModelChoiceIteratorValue works with model instances having string primary keys\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Equality of ModelChoiceIteratorValue instances is consistent with their hash values (equal objects have equal hashes)\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"The original use case from the issue works: checking if ModelChoiceIteratorValue is in a dict's keys\"\n    }\n  ],\n  \"plan_files\": [\n    \"widgets.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_choice_value_hash",
+    "covered": true,
+    "why": "Multiple scenarios (S1.1, S1.2, S1.3, S1.4, S1.5, S1.6, S1.8, S1.12) and edge cases directly cover hashability of ModelChoiceIteratorValue, including using it as dict key, hash() returning integer, equal instances having equal hashes, and hash derived from underlying model instance's PK"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,125 @@
+{
+ "instance_id": "django__django-13658",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_program_name_from_argv (admin_scripts.tests.ExecuteFromCommandLine)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/management/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "execute"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/management/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "argv=None (should fall back to sys.argv)",
+   "argv=[] (empty list, should raise appropriate error)",
+   "sys.argv[0] is None (embedded environment bug case)",
+   "sys.argv[0] is empty string",
+   "argv[0] is None (if passed in list)",
+   "argv[0] is empty string",
+   "argv[0] is '__main__.py' (should become 'python -m django')",
+   "argv[0] is full absolute path (should be basename'd)",
+   "argv[0] is relative path (should be basename'd)",
+   "argv[0] contains unicode characters",
+   "argv[0] is very long string",
+   "argv[0] contains special characters (spaces, etc.)",
+   "argv has only one element (no subcommand)",
+   "argv has multiple elements with --pythonpath/--settings options"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "When argv=['manage.py'], prog_name should be 'manage.py' and usage string should show 'manage.py'"
+   },
+   {
+    "id": "S1.2",
+    "covers": "When argv=['/path/to/manage.py'], prog_name should be 'manage.py' (basename)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "When argv=['__main__.py'], prog_name should be 'python -m django'"
+   },
+   {
+    "id": "S1.4",
+    "covers": "When argv=None, prog_name should be derived from sys.argv[0]"
+   },
+   {
+    "id": "S1.5",
+    "covers": "When sys.argv[0] is None and argv is provided, prog_name should use argv[0] (not sys.argv[0])"
+   },
+   {
+    "id": "S1.6",
+    "covers": "When argv=[] (empty), appropriate error should be raised (IndexError or ValueError)"
+   },
+   {
+    "id": "S1.7",
+    "covers": "When argv=[None], appropriate error should be raised or handled gracefully"
+   },
+   {
+    "id": "S1.8",
+    "covers": "When argv=[''], prog_name should be empty string (or handled gracefully)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "CommandParser usage string '%(prog)s' should expand to self.prog_name, not sys.argv[0]"
+   },
+   {
+    "id": "S1.10",
+    "covers": "When --pythonpath or --settings are parsed, error messages should reference correct prog_name"
+   },
+   {
+    "id": "S1.11",
+    "covers": "When argv contains unicode in prog name, it should be handled correctly"
+   },
+   {
+    "id": "S1.12",
+    "covers": "When argv=['manage.py', '--pythonpath', '/path'], parsing should succeed with correct prog_name"
+   },
+   {
+    "id": "S1.13",
+    "covers": "When argv=['manage.py', '--settings', 'mysettings'], parsing should succeed with correct prog_name"
+   },
+   {
+    "id": "S1.14",
+    "covers": "When argv=['manage.py', '--pythonpath', '/path', '--settings', 'mysettings'], both options parsed correctly"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Regression: embedded environment with sys.argv[0]=None and custom argv should not raise exceptions"
+   }
+  ],
+  "plan_files": [
+   "django/core/management/__init__.py"
+  ]
+ },
+ "raw_tail": "  \"id\": \"S1.8\",\n      \"covers\": \"When argv=[''], prog_name should be empty string (or handled gracefully)\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"CommandParser usage string '%(prog)s' should expand to self.prog_name, not sys.argv[0]\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"When --pythonpath or --settings are parsed, error messages should reference correct prog_name\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"When argv contains unicode in prog name, it should be handled correctly\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"When argv=['manage.py', '--pythonpath', '/path'], parsing should succeed with correct prog_name\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"When argv=['manage.py', '--settings', 'mysettings'], parsing should succeed with correct prog_name\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"When argv=['manage.py', '--pythonpath', '/path', '--settings', 'mysettings'], both options parsed correctly\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Regression: embedded environment with sys.argv[0]=None and custom argv should not raise exceptions\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/core/management/__init__.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_program_name_from_argv",
+    "covered": true,
+    "why": "S1.1, S1.5, and S1.9 directly cover the core behavior: prog_name derived from argv parameter (not sys.argv[0]) and used in CommandParser's usage string. S1.15 also covers the embedded environment case mentioned in the issue."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,134 @@
+{
+ "instance_id": "django__django-13448",
+ "n_edge_cases": 16,
+ "n_scenarios": 16,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_migrate_test_setting_false (backends.base.test_creation.TestDbCreationTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/backends/base/creation.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "create_test_db"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/backends/base/creation.py"
+  ],
+  "matched": [
+   "creation.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "TEST.MIGRATE False skips the migrate call entirely, so no tables are ever created in the test DB — every subsequent query (serialization, fixtures, the tests themselves) hits a missing relation; the fix must still synchronize the full schema for ALL apps",
+   "Schema must be built syncdb-style from current model state, NOT from migration files — so apps that DO have migrations still get their tables created when MIGRATE is False",
+   "The crash surfaces inside serialize_db_to_string because SERIALIZE defaults to True; the underlying cause (no tables) would break the tests too, so fixing serialization alone is insufficient — tables must exist",
+   "Data migrations (RunPython/RunSQL seeding rows) are silently skipped when MIGRATE is False, so initial data inserted by migrations is absent — this explains the maintainer's note that TestCases suddenly needed fixtures=['initial_data.json']; must be documented as expected, not a bug",
+   "settings.MIGRATION_MODULES is mutated globally to {app.label: None for every app}; it MUST be restored in a finally block so it survives an exception raised by call_command('migrate')",
+   "Original MIGRATION_MODULES may be the default empty dict or unset — capture-then-restore must handle the default case without KeyError/NameError",
+   "Multi-database: one alias with MIGRATE False and another with MIGRATE True must each be handled correctly within their own create_test_db call, with no MIGRATION_MODULES leak between aliases (global mutation must be scoped/restored per call)",
+   "MIGRATE key absent in TEST dict must default to True (unchanged legacy behaviour); MIGRATE True explicit must apply migrations exactly as before — zero regression on the default path",
+   "keepdb=True combined with MIGRATE False: re-running setup must be idempotent — run_syncdb only creates missing tables, must not error on already-existing tables",
+   "Database router allow_migrate: the set of tables created by syncdb must match the set of models serialize_db_to_string/get_objects iterates, otherwise a routed-away model still triggers a missing-table query",
+   "post_migrate signal must still fire under run_syncdb=True so ContentType and Permission rows are created — tests relying on permissions/contenttypes must not break",
+   "verbosity must be passed through (verbosity-1, floored at 0) and interactive forced False so test setup stays non-interactive and quiet",
+   "Swappable/custom models (e.g. AUTH_USER_MODEL) and apps with no models must be tolerated by the {app.label: None} mapping over apps.get_app_configs()",
+   "SERIALIZE False + MIGRATE False: serialization is skipped, setup must still succeed with a fully created schema",
+   "Console output must not falsely claim migrations were applied when they were intentionally skipped — messaging should reflect schema synchronization, not migration",
+   "Ordering invariant in create_test_db: database created -> schema synchronized -> serialize_db_to_string -> return; serialize must never run before tables exist"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "TEST.MIGRATE False creates the full schema for all apps (e.g. django_admin_log exists) so ./manage.py test no longer raises UndefinedTable"
+   },
+   {
+    "id": "S1.2",
+    "covers": "An app that ships migration files still gets its table created from current model state when MIGRATE is False (syncdb, not migrate)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "An app with no migrations behaves unchanged — its table is created via the existing run_syncdb path"
+   },
+   {
+    "id": "S2.1",
+    "covers": "MIGRATE False with SERIALIZE True (default): serialize_db_to_string completes without ProgrammingError/UndefinedTable"
+   },
+   {
+    "id": "S2.2",
+    "covers": "MIGRATE False with SERIALIZE False: serialization is skipped and setup_databases still succeeds against a fully built schema"
+   },
+   {
+    "id": "S3.1",
+    "covers": "settings.MIGRATION_MODULES is restored to its original value after a successful MIGRATE-False setup"
+   },
+   {
+    "id": "S3.2",
+    "covers": "settings.MIGRATION_MODULES is restored even when call_command('migrate') raises (finally guarantees no leak)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "TEST.MIGRATE absent defaults to True and the normal migrate path runs unchanged"
+   },
+   {
+    "id": "S4.2",
+    "covers": "TEST.MIGRATE explicitly True applies migrations exactly as before — no behavioural regression"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Multi-db with alias A MIGRATE False and alias B MIGRATE True: both schemas are correct and no MIGRATION_MODULES state leaks between aliases"
+   },
+   {
+    "id": "S6.1",
+    "covers": "App with a data migration that seeds rows + MIGRATE False: table exists but seeded rows are absent (documented expected behaviour; fixtures needed)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "MIGRATE False still emits post_migrate so ContentType and Permission rows are created via run_syncdb"
+   },
+   {
+    "id": "S8.1",
+    "covers": "keepdb=True + MIGRATE False is idempotent on re-run — no 'relation already exists' error"
+   },
+   {
+    "id": "S9.1",
+    "covers": "A database router restricting a model to one alias is honoured consistently by both syncdb creation and serialization (no orphan missing-table query)"
+   },
+   {
+    "id": "S10.1",
+    "covers": "verbosity is passed through as max(verbosity-1,0) and interactive is forced False during MIGRATE-False setup"
+   },
+   {
+    "id": "S10.2",
+    "covers": "create_test_db ordering: tables are synchronized before serialize_db_to_string is invoked"
+   }
+  ],
+  "plan_files": [
+   "django/db/backends/base/creation.py",
+   "tests/backends/base/test_creation.py",
+   "docs/topics/testing/overview.txt",
+   "docs/ref/settings.txt",
+   "docs/releases/3.1.1.txt"
+  ]
+ },
+ "raw_tail": "ural regression\"},{\"id\":\"S5.1\",\"covers\":\"Multi-db with alias A MIGRATE False and alias B MIGRATE True: both schemas are correct and no MIGRATION_MODULES state leaks between aliases\"},{\"id\":\"S6.1\",\"covers\":\"App with a data migration that seeds rows + MIGRATE False: table exists but seeded rows are absent (documented expected behaviour; fixtures needed)\"},{\"id\":\"S7.1\",\"covers\":\"MIGRATE False still emits post_migrate so ContentType and Permission rows are created via run_syncdb\"},{\"id\":\"S8.1\",\"covers\":\"keepdb=True + MIGRATE False is idempotent on re-run — no 'relation already exists' error\"},{\"id\":\"S9.1\",\"covers\":\"A database router restricting a model to one alias is honoured consistently by both syncdb creation and serialization (no orphan missing-table query)\"},{\"id\":\"S10.1\",\"covers\":\"verbosity is passed through as max(verbosity-1,0) and interactive is forced False during MIGRATE-False setup\"},{\"id\":\"S10.2\",\"covers\":\"create_test_db ordering: tables are synchronized before serialize_db_to_string is invoked\"}],\"plan_files\":[\"django/db/backends/base/creation.py\",\"tests/backends/base/test_creation.py\",\"docs/topics/testing/overview.txt\",\"docs/ref/settings.txt\",\"docs/releases/3.1.1.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_migrate_test_setting_false",
+    "covered": true,
+    "why": "S1.1 directly addresses the core issue: TEST.MIGRATE False must create full schema (django_admin_log exists) so ./manage.py test doesn't raise UndefinedTable. S2.1 covers the serialization crash scenario. Edge cases explicitly state the fix must synchronize full schema for ALL apps when MIGRATE is False, using syncdb-style creation from current model state."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

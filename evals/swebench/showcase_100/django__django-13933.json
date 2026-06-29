@@ -1,0 +1,139 @@
+{
+ "instance_id": "django__django-13933",
+ "driver": "local",
+ "n_edge_cases": 16,
+ "n_scenarios": 18,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_modelchoicefield_value_placeholder (forms_tests.tests.test_error_messages.ModelChoiceFieldErrorMessagesTestCase)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/models.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "to_python"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/models.py"
+  ],
+  "matched": [
+   "models.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "None value passed as choice",
+   "Empty string passed as choice",
+   "Non-existent primary key value",
+   "Primary key that exists in model but not in QuerySet",
+   "String representation of valid primary key",
+   "String representation of invalid primary key",
+   "Invalid type (list, dict, float, etc.)",
+   "Empty QuerySet (no choices available)",
+   "QuerySet with exactly one choice",
+   "Model with non-integer primary key (UUID, string, etc.)",
+   "Very large primary key value",
+   "Unicode characters in value",
+   "Zero as primary key (if valid in model)",
+   "Negative primary key value",
+   "Whitespace-only string",
+   "Boolean value passed as choice"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Valid choice passes validation without raising ValidationError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Invalid choice (non-existent PK) raises ValidationError with the invalid value displayed in error message"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Invalid choice (PK exists in model but not in filtered QuerySet) raises ValidationError with value displayed"
+   },
+   {
+    "id": "S1.4",
+    "covers": "None value raises ValidationError with 'None' displayed in error message"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Empty string raises ValidationError with empty string displayed in error message"
+   },
+   {
+    "id": "S1.6",
+    "covers": "String representation of valid PK (e.g., '1') passes validation"
+   },
+   {
+    "id": "S1.7",
+    "covers": "String representation of invalid PK raises ValidationError with the string value displayed"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Invalid type (list, dict, etc.) raises ValidationError with value displayed"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Empty QuerySet causes any non-empty value to raise ValidationError with value displayed"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Single-item QuerySet validates correctly (valid PK passes, invalid raises error with value)"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Model with custom PK type (UUID, string) validates correctly with value displayed in error"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Very large PK values are handled correctly and displayed in error message"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Unicode characters in invalid value are properly displayed in error message"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Error message format matches ModelMultipleChoiceField format: 'Select a valid choice. %(value)s is not one of the available choices.'"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Zero as PK (if valid) passes validation; zero as invalid PK shows '0' in error"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Negative PK value raises ValidationError with negative number displayed"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Whitespace-only string raises ValidationError with whitespace displayed"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Boolean value raises ValidationError with True/False displayed"
+   }
+  ],
+  "plan_files": [
+   "models.py"
+  ]
+ },
+ "raw_tail": " validates correctly (valid PK passes, invalid raises error with value)\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Model with custom PK type (UUID, string) validates correctly with value displayed in error\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Very large PK values are handled correctly and displayed in error message\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"Unicode characters in invalid value are properly displayed in error message\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Error message format matches ModelMultipleChoiceField format: 'Select a valid choice. %(value)s is not one of the available choices.'\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Zero as PK (if valid) passes validation; zero as invalid PK shows '0' in error\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"Negative PK value raises ValidationError with negative number displayed\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Whitespace-only string raises ValidationError with whitespace displayed\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"Boolean value raises ValidationError with True/False displayed\"\n    }\n  ],\n  \"plan_files\": [\n    \"models.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_modelchoicefield_value_placeholder",
+    "covered": true,
+    "why": "Scenario S1.14 explicitly covers the error message format with %(value)s placeholder matching ModelMultipleChoiceField. Additionally, scenarios S1.2, S1.3, S1.4, S1.5, S1.7, S1.8, S1.9, S1.10, S1.11, S1.12, S1.13, S1.15, S1.16, S1.17, and S1.18 all specify that invalid values should be displayed in the error message, which requires the %(value)s placeholder to be present in the error message template."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

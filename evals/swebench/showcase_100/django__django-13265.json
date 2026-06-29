@@ -1,0 +1,37 @@
+{
+ "instance_id": "django__django-13265",
+ "driver": "local",
+ "n_edge_cases": 0,
+ "n_scenarios": 0,
+ "parse_ok": false,
+ "fail_to_pass": [
+  "test_add_model_order_with_respect_to_index_constraint (migrations.test_autodetector.AutodetectorTests)",
+  "test_add_model_order_with_respect_to_index_foo_together (migrations.test_autodetector.AutodetectorTests)",
+  "test_set_alter_order_with_respect_to_index_constraint_foo_together (migrations.test_autodetector.AutodetectorTests)",
+  "test_supports_functools_partial (migrations.test_autodetector.AutodetectorTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_detect_changes",
+   "generate_created_models"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/autodetector.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [],
+  "scenarios": [],
+  "plan_files": []
+ },
+ "raw_tail": "planner returned empty content (finish_reason=length)",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge"
+}

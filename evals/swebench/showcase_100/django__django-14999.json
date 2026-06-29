@@ -1,0 +1,100 @@
+{
+ "instance_id": "django__django-14999",
+ "n_edge_cases": 13,
+ "n_scenarios": 9,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_rename_model_with_db_table_noop (migrations.test_operations.OperationTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "database_forwards"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/migrations/operations/models.py"
+  ],
+  "matched": [
+   "models.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Both old and new model define an explicit `db_table` resolving to the SAME value → entire RenameModel.database_forwards must short-circuit and emit ZERO DDL (the core case).",
+   "Symmetry: database_backwards swaps old/new but the db_table equality is symmetric — the no-op must hold in BOTH directions, so reversing the migration is also a no-op.",
+   "Postgres: must NOT issue DROP CONSTRAINT / ADD CONSTRAINT for foreign keys on related (incoming-FK) tables — zero FK constraint churn, avoiding needless ACCESS EXCLUSIVE locks on related tables.",
+   "SQLite: must NOT rebuild/recreate the table (no CREATE TABLE new_…/INSERT…SELECT/DROP TABLE/RENAME) since the physical table name is unchanged.",
+   "M2M auto-generated through tables (named `<db_table>_<field>`, derived from the unchanged db_table) must also be left untouched — no alter_db_table on through models.",
+   "Self-referential FK and self-referential M2M fields must likewise emit no DDL when db_table is unchanged.",
+   "state_forwards is NOT short-circuited: the model is still renamed in the in-memory/project migration state even though the DB side is a no-op — subsequent operations and the historical apps registry must see the new name.",
+   "Differentiating no-op from real rename: if only one side sets db_table, or the two db_table values differ, or neither sets it (so defaults `app_oldmodel` vs `app_newmodel` differ) → it is a genuine rename and MUST execute the table rename + FK/M2M updates.",
+   "The equality check must be computed AFTER fetching old/new models and INSIDE the allow_migrate_model gate, so DB-router exclusion remains a no-op with no regression.",
+   "references_model / reduce / optimizer and migration-dependency behaviour for RenameModel must be unchanged — only database_forwards/backwards gain the early return.",
+   "No-op must not leave deferred/collected SQL queued in the schema editor (e.g. SQLite deferred SQL, atomic-references-rename path) — the editor should never be invoked.",
+   "Idempotency: applying then unapplying (forwards then backwards) the rename leaves the schema byte-identical.",
+   "Verification is by query/DDL capture: assertNumQueries(0) or asserting editor.collected_sql is empty for the no-op case, and non-empty for the genuine-rename case."
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "database_forwards with old_model._meta.db_table == new_model._meta.db_table emits zero DDL (no-op)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "database_backwards with unchanged db_table is symmetrically a no-op (reversal emits zero DDL)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Postgres: model with an incoming FK from a related model and explicit db_table → no DROP/ADD CONSTRAINT issued"
+   },
+   {
+    "id": "S3.1",
+    "covers": "SQLite: model with explicit db_table → table is not recreated (no CREATE/INSERT-SELECT/DROP rebuild)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Model with a ManyToManyField and explicit db_table → auto-named through table left untouched (no alter on through model)"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Self-referential M2M/FK with unchanged db_table → no DDL emitted"
+   },
+   {
+    "id": "S5.1",
+    "covers": "state_forwards still renames the model in project state while database side is a no-op"
+   },
+   {
+    "id": "S6.1",
+    "covers": "db_table differs or is unset → genuine rename still executes (table renamed, FK/M2M updated, DDL emitted)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "DB router disallows the model on the connection → operation remains a no-op with no regression"
+   }
+  ],
+  "plan_files": [
+   "django/db/migrations/operations/models.py",
+   "tests/migrations/test_operations.py"
+  ]
+ },
+ "raw_tail": "id\":\"S1.1\",\"covers\":\"database_forwards with old_model._meta.db_table == new_model._meta.db_table emits zero DDL (no-op)\"},{\"id\":\"S1.2\",\"covers\":\"database_backwards with unchanged db_table is symmetrically a no-op (reversal emits zero DDL)\"},{\"id\":\"S2.1\",\"covers\":\"Postgres: model with an incoming FK from a related model and explicit db_table → no DROP/ADD CONSTRAINT issued\"},{\"id\":\"S3.1\",\"covers\":\"SQLite: model with explicit db_table → table is not recreated (no CREATE/INSERT-SELECT/DROP rebuild)\"},{\"id\":\"S4.1\",\"covers\":\"Model with a ManyToManyField and explicit db_table → auto-named through table left untouched (no alter on through model)\"},{\"id\":\"S4.2\",\"covers\":\"Self-referential M2M/FK with unchanged db_table → no DDL emitted\"},{\"id\":\"S5.1\",\"covers\":\"state_forwards still renames the model in project state while database side is a no-op\"},{\"id\":\"S6.1\",\"covers\":\"db_table differs or is unset → genuine rename still executes (table renamed, FK/M2M updated, DDL emitted)\"},{\"id\":\"S7.1\",\"covers\":\"DB router disallows the model on the connection → operation remains a no-op with no regression\"}],\"plan_files\":[\"django/db/migrations/operations/models.py\",\"tests/migrations/test_operations.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_rename_model_with_db_table_noop",
+    "covered": true,
+    "why": "S1.1 explicitly covers the core case where old and new models have the same db_table, requiring zero DDL emission. The edge case 'Both old and new model define an explicit db_table resolving to the SAME value → entire RenameModel.database_forwards must short-circuit and emit ZERO DDL' also directly covers this scenario."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

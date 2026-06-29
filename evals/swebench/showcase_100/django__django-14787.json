@@ -1,0 +1,242 @@
+{
+ "instance_id": "django__django-14787",
+ "driver": "local",
+ "n_edge_cases": 31,
+ "n_scenarios": 40,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "@method_decorator preserves wrapper assignments."
+ ],
+ "gold_targets": {
+  "files": [
+   "django/utils/decorators.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_wrapper"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/utils/decorators.py"
+  ],
+  "matched": [
+   "decorators.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Method with no docstring (None)",
+   "Method with empty string docstring",
+   "Method with unicode characters in __name__",
+   "Method in nested class (affects __qualname__)",
+   "Method already decorated with another decorator",
+   "Method with __wrapped__ attribute already set",
+   "Class method decorated with method_decorator",
+   "Static method decorated with method_decorator",
+   "Method with __module__ set to None",
+   "Method with __annotations__ dictionary",
+   "Async method decorated with method_decorator",
+   "Method with only __name__ but missing other attributes",
+   "Multiple decorators stacked on same method",
+   "Decorator that accesses __qualname__ specifically",
+   "Decorator that accesses __annotations__ specifically",
+   "Method in metaclass",
+   "Method with __dict__ that gets modified",
+   "Property method decorated with method_decorator",
+   "Method with __doc__ as empty string vs None",
+   "Method with __module__ pointing to non-existent module",
+   "Decorator chain: method_decorator wrapping another method_decorator",
+   "Method with special characters in __qualname__",
+   "Method where func is already a partial object (double wrapping)",
+   "Method with __wrapped__ pointing to different function",
+   "Decorator that modifies __name__ after @wraps",
+   "Method with __code__ object attributes accessed",
+   "Method with __defaults__ and __kwdefaults__",
+   "Method with __closure__ cells",
+   "Method with __globals__ dictionary",
+   "Method with __dict__ containing custom attributes",
+   "Method with __text_signature__ (for inspect.signature)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "method_decorator preserves __name__ attribute so @wraps can copy it"
+   },
+   {
+    "id": "S1.2",
+    "covers": "method_decorator preserves __module__ attribute so @wraps can copy it"
+   },
+   {
+    "id": "S1.3",
+    "covers": "method_decorator preserves __doc__ attribute (including None and empty string)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "method_decorator preserves __qualname__ attribute for nested classes"
+   },
+   {
+    "id": "S1.5",
+    "covers": "method_decorator preserves __annotations__ dictionary"
+   },
+   {
+    "id": "S1.6",
+    "covers": "method_decorator preserves __wrapped__ attribute if already present"
+   },
+   {
+    "id": "S1.7",
+    "covers": "decorated method can be called and returns correct result"
+   },
+   {
+    "id": "S1.8",
+    "covers": "decorator with @wraps(func) does not raise AttributeError on __name__"
+   },
+   {
+    "id": "S1.9",
+    "covers": "decorator with @wraps(func) does not raise AttributeError on __module__"
+   },
+   {
+    "id": "S1.10",
+    "covers": "decorator with @wraps(func) does not raise AttributeError on __doc__"
+   },
+   {
+    "id": "S1.11",
+    "covers": "decorator with @wraps(func) does not raise AttributeError on __qualname__"
+   },
+   {
+    "id": "S1.12",
+    "covers": "inspect.getsource works on decorated method"
+   },
+   {
+    "id": "S1.13",
+    "covers": "inspect.signature works on decorated method"
+   },
+   {
+    "id": "S1.14",
+    "covers": "help() function works on decorated method"
+   },
+   {
+    "id": "S1.15",
+    "covers": "repr() of decorated method shows correct name"
+   },
+   {
+    "id": "S1.16",
+    "covers": "str() of decorated method shows correct name"
+   },
+   {
+    "id": "S1.17",
+    "covers": "decorated method __name__ equals original method __name__"
+   },
+   {
+    "id": "S1.18",
+    "covers": "decorated method __module__ equals original method __module__"
+   },
+   {
+    "id": "S1.19",
+    "covers": "decorated method __doc__ equals original method __doc__"
+   },
+   {
+    "id": "S1.20",
+    "covers": "decorated method __qualname__ equals original method __qualname__"
+   },
+   {
+    "id": "S1.21",
+    "covers": "decorated method __annotations__ equals original method __annotations__"
+   },
+   {
+    "id": "S1.22",
+    "covers": "stacking two method_decorator decorators preserves all attributes"
+   },
+   {
+    "id": "S1.23",
+    "covers": "method_decorator works with classmethod"
+   },
+   {
+    "id": "S1.24",
+    "covers": "method_decorator works with staticmethod"
+   },
+   {
+    "id": "S1.25",
+    "covers": "method_decorator works with async methods"
+   },
+   {
+    "id": "S1.26",
+    "covers": "method_decorator preserves __defaults__ if present"
+   },
+   {
+    "id": "S1.27",
+    "covers": "method_decorator preserves __kwdefaults__ if present"
+   },
+   {
+    "id": "S1.28",
+    "covers": "method_decorator preserves __dict__ if present"
+   },
+   {
+    "id": "S1.29",
+    "covers": "method_decorator preserves __globals__ if present"
+   },
+   {
+    "id": "S1.30",
+    "covers": "method_decorator preserves __code__ if present"
+   },
+   {
+    "id": "S1.31",
+    "covers": "method_decorator preserves __closure__ if present"
+   },
+   {
+    "id": "S1.32",
+    "covers": "method_decorator preserves __text_signature__ if present"
+   },
+   {
+    "id": "S1.33",
+    "covers": "method_decorator with None __module__ does not crash"
+   },
+   {
+    "id": "S1.34",
+    "covers": "method_decorator with unicode __name__ preserves it correctly"
+   },
+   {
+    "id": "S1.35",
+    "covers": "method_decorator on method in nested class preserves __qualname__"
+   },
+   {
+    "id": "S1.36",
+    "covers": "method_decorator on already-decorated method preserves outer decorator attributes"
+   },
+   {
+    "id": "S1.37",
+    "covers": "method_decorator does not break when func is already a partial object"
+   },
+   {
+    "id": "S1.38",
+    "covers": "method_decorator preserves __wrapped__ chain for introspection"
+   },
+   {
+    "id": "S1.39",
+    "covers": "method_decorator works when decorator modifies __name__ after @wraps"
+   },
+   {
+    "id": "S1.40",
+    "covers": "method_decorator preserves all attributes from functools.WRAPPER_ASSIGNMENTS"
+   }
+  ],
+  "plan_files": [
+   "django/utils/decorators.py"
+  ]
+ },
+ "raw_tail": "t\"},\n{\"id\":\"S1.28\",\"covers\":\"method_decorator preserves __dict__ if present\"},\n{\"id\":\"S1.29\",\"covers\":\"method_decorator preserves __globals__ if present\"},\n{\"id\":\"S1.30\",\"covers\":\"method_decorator preserves __code__ if present\"},\n{\"id\":\"S1.31\",\"covers\":\"method_decorator preserves __closure__ if present\"},\n{\"id\":\"S1.32\",\"covers\":\"method_decorator preserves __text_signature__ if present\"},\n{\"id\":\"S1.33\",\"covers\":\"method_decorator with None __module__ does not crash\"},\n{\"id\":\"S1.34\",\"covers\":\"method_decorator with unicode __name__ preserves it correctly\"},\n{\"id\":\"S1.35\",\"covers\":\"method_decorator on method in nested class preserves __qualname__\"},\n{\"id\":\"S1.36\",\"covers\":\"method_decorator on already-decorated method preserves outer decorator attributes\"},\n{\"id\":\"S1.37\",\"covers\":\"method_decorator does not break when func is already a partial object\"},\n{\"id\":\"S1.38\",\"covers\":\"method_decorator preserves __wrapped__ chain for introspection\"},\n{\"id\":\"S1.39\",\"covers\":\"method_decorator works when decorator modifies __name__ after @wraps\"},\n{\"id\":\"S1.40\",\"covers\":\"method_decorator preserves all attributes from functools.WRAPPER_ASSIGNMENTS\"}\n],\n\"plan_files\":[\"django/utils/decorators.py\"]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "@method_decorator preserves wrapper assignments.",
+    "covered": true,
+    "why": "S1.40 explicitly covers 'preserves all attributes from functools.WRAPPER_ASSIGNMENTS'. Additionally, S1.1-S1.6 cover individual WRAPPER_ASSIGNMENTS attributes (__name__, __module__, __doc__, __qualname__, __annotations__, __wrapped__), and S1.8-S1.11 verify @wraps doesn't raise AttributeError on these attributes. Edge cases also cover methods with missing attributes, None __module__, unicode __name__, and already-decorated methods."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

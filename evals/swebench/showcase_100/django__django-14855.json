@@ -1,0 +1,155 @@
+{
+ "instance_id": "django__django-14855",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_readonly_foreignkey_links_custom_admin_site (admin_views.tests.ReadonlyTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/admin/helpers.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "get_admin_url"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/admin/helpers.py"
+  ],
+  "matched": [
+   "helpers.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Default admin site (no custom site) - should still work as before",
+   "Custom admin site with custom name",
+   "Multiple custom admin sites",
+   "ForeignKey to model in different app",
+   "ForeignKey to model not registered in the same admin site",
+   "ForeignKey to model registered in a different admin site",
+   "Null/None ForeignKey values",
+   "ForeignKey to model without admin registration",
+   "Empty model name or app label",
+   "Special characters in model name requiring URL encoding",
+   "Model with custom primary key (non-integer)",
+   "Model with UUID primary key",
+   "Model with string primary key",
+   "Model with auto-increment primary key",
+   "Model with custom get_admin_url override",
+   "Model with custom admin site name containing special characters",
+   "Model with admin site name that conflicts with existing URL patterns",
+   "Model with admin site name that is empty or None",
+   "Model with admin site name that is very long",
+   "Model with admin site name that contains unicode characters"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Basic case: ForeignKey in readonly_fields in custom admin site generates correct URL with custom admin site name"
+   },
+   {
+    "id": "S1.2",
+    "covers": "ForeignKey to model in same app, same admin site generates correct URL"
+   },
+   {
+    "id": "S1.3",
+    "covers": "ForeignKey to model in different app, same admin site generates correct URL"
+   },
+   {
+    "id": "S1.4",
+    "covers": "ForeignKey to model in different app, different admin site generates correct URL"
+   },
+   {
+    "id": "S1.5",
+    "covers": "ForeignKey to model not registered in any admin site handles gracefully"
+   },
+   {
+    "id": "S1.6",
+    "covers": "ForeignKey with null value handles gracefully"
+   },
+   {
+    "id": "S1.7",
+    "covers": "ForeignKey to model with custom primary key generates correct URL"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Multiple ForeignKey fields in readonly_fields all generate correct URLs"
+   },
+   {
+    "id": "S1.9",
+    "covers": "ForeignKey in readonly_fields with other field types works correctly"
+   },
+   {
+    "id": "S1.10",
+    "covers": "ForeignKey in readonly_fields with custom admin site name generates correct URL"
+   },
+   {
+    "id": "S1.11",
+    "covers": "ForeignKey in readonly_fields with default admin site generates correct URL"
+   },
+   {
+    "id": "S1.12",
+    "covers": "ForeignKey in readonly_fields with multiple custom admin sites generates correct URLs"
+   },
+   {
+    "id": "S1.13",
+    "covers": "ForeignKey in readonly_fields with custom admin site name containing special characters generates correct URL"
+   },
+   {
+    "id": "S1.14",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that is empty handles gracefully"
+   },
+   {
+    "id": "S1.15",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that is None handles gracefully"
+   },
+   {
+    "id": "S1.16",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that is very long generates correct URL"
+   },
+   {
+    "id": "S1.17",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that contains unicode characters generates correct URL"
+   },
+   {
+    "id": "S1.18",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that conflicts with existing URL patterns handles gracefully"
+   },
+   {
+    "id": "S1.19",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that is a reserved word handles gracefully"
+   },
+   {
+    "id": "S1.20",
+    "covers": "ForeignKey in readonly_fields with custom admin site name that is a URL path handles gracefully"
+   }
+  ],
+  "plan_files": [
+   "helpers.py",
+   "tests.py",
+   "admin_integration/tests.py",
+   "admin_views/tests.py",
+   "admin_helpers/tests.py"
+  ]
+ },
+ "raw_tail": "\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that is empty handles gracefully\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that is None handles gracefully\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that is very long generates correct URL\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that contains unicode characters generates correct URL\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that conflicts with existing URL patterns handles gracefully\"\n    },\n    {\n      \"id\": \"S1.19\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that is a reserved word handles gracefully\"\n    },\n    {\n      \"id\": \"S1.20\",\n      \"covers\": \"ForeignKey in readonly_fields with custom admin site name that is a URL path handles gracefully\"\n    }\n  ],\n  \"plan_files\": [\n    \"helpers.py\",\n    \"tests.py\",\n    \"admin_integration/tests.py\",\n    \"admin_views/tests.py\",\n    \"admin_helpers/tests.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_readonly_foreignkey_links_custom_admin_site",
+    "covered": true,
+    "why": "S1.1 explicitly covers 'Basic case: ForeignKey in readonly_fields in custom admin site generates correct URL with custom admin site name' which directly matches the test's purpose of verifying that readonly ForeignKey links use the custom admin site URL prefix instead of /admin/..."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

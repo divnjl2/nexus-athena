@@ -1,0 +1,126 @@
+{
+ "instance_id": "django__django-12453",
+ "driver": "local",
+ "n_edge_cases": 13,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_circular_reference (backends.base.test_creation.TestDeserializeDbFromString)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/backends/base/creation.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "deserialize_db_from_string"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/backends/base/creation.py"
+  ],
+  "matched": [
+   "creation.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Circular foreign key relationships (Model A references B, B references A)",
+   "Self-referencing foreign keys (e.g., category with parent category)",
+   "Empty serialized database (no objects to restore)",
+   "Large datasets with many objects",
+   "MySQL/InnoDB constraint handling (doesn't defer constraints like other databases)",
+   "Multiple database connections with serialized_rollback",
+   "Deferred fields that need separate saving",
+   "Constraint violations in serialized data (orphaned foreign keys)",
+   "Transaction rollback on partial deserialization failure",
+   "Database-specific transaction isolation levels",
+   "Objects with null foreign key values",
+   "Many-to-many relationships during deserialization",
+   "Database backends without transaction support (e.g., some NoSQL)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Objects with foreign keys are restored without integrity errors when referenced objects exist in serialized data"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Circular foreign key relationships are handled correctly during deserialization"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Self-referencing foreign keys (parent-child relationships) are restored correctly"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Empty serialized database deserializes without errors"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Partial deserialization failure triggers full transaction rollback, leaving database in consistent state"
+   },
+   {
+    "id": "S1.6",
+    "covers": "MySQL/InnoDB correctly handles constraint deferral during deserialization"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Multiple database connections each deserialize their own serialized contents independently"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Deferred fields are saved correctly after main deserialization"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Objects with null foreign key values deserialize without errors"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Many-to-many relationships are restored correctly during deserialization"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Deserialization respects database router for multi-database setups"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Constraint violations in serialized data are detected and reported appropriately"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Large datasets deserialize within reasonable time without memory issues"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Transaction isolation prevents race conditions during deserialization"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Deserialized objects have correct primary key values matching serialized data"
+   }
+  ],
+  "plan_files": [
+   "django/db/backends/base/creation.py",
+   "django/test/transaction.py",
+   "django/core/serializers/__init__.py"
+  ]
+ },
+ "raw_tail": "ation failure triggers full transaction rollback, leaving database in consistent state\"},{\"id\":\"S1.6\",\"covers\":\"MySQL/InnoDB correctly handles constraint deferral during deserialization\"},{\"id\":\"S1.7\",\"covers\":\"Multiple database connections each deserialize their own serialized contents independently\"},{\"id\":\"S1.8\",\"covers\":\"Deferred fields are saved correctly after main deserialization\"},{\"id\":\"S1.9\",\"covers\":\"Objects with null foreign key values deserialize without errors\"},{\"id\":\"S1.10\",\"covers\":\"Many-to-many relationships are restored correctly during deserialization\"},{\"id\":\"S1.11\",\"covers\":\"Deserialization respects database router for multi-database setups\"},{\"id\":\"S1.12\",\"covers\":\"Constraint violations in serialized data are detected and reported appropriately\"},{\"id\":\"S1.13\",\"covers\":\"Large datasets deserialize within reasonable time without memory issues\"},{\"id\":\"S1.14\",\"covers\":\"Transaction isolation prevents race conditions during deserialization\"},{\"id\":\"S1.15\",\"covers\":\"Deserialized objects have correct primary key values matching serialized data\"}], \"plan_files\":[\"django/db/backends/base/creation.py\",\"django/test/transaction.py\",\"django/core/serializers/__init__.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_circular_reference",
+    "covered": true,
+    "why": "S1.2 explicitly covers 'Circular foreign key relationships are handled correctly during deserialization' and the edge cases list includes 'Circular foreign key relationships (Model A references B, B references A)' which directly matches what test_circular_reference would test based on its name and the issue description about ordering constraints in deserialization."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,109 @@
+{
+ "instance_id": "django__django-12497",
+ "n_edge_cases": 15,
+ "n_scenarios": 9,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_ambiguous_relationship_model_from (invalid_models_tests.test_relative_fields.RelativeFieldTests)",
+  "test_ambiguous_relationship_model_to (invalid_models_tests.test_relative_fields.RelativeFieldTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/related.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_check_relationship_model"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/related.py"
+  ],
+  "matched": [
+   "related.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Two identical hint sites exist — fields.E334 (more than one FK FROM the source model) and fields.E335 (more than one FK TO the target model); BOTH must be changed identically. Fixing only one leaves a stale hint — the likely cause of the maintainer's failing-test regression.",
+   "Hint must read ManyToManyField(\"self\", through=\"<model>\"), not ForeignKey(...).",
+   "symmetrical=False must be removed entirely (not required since Django 3.0 for self-referential m2m via an intermediary to self).",
+   "After deleting symmetrical=False the format string must still hold exactly TWO %s placeholders bound to (RECURSIVE_RELATIONSHIP_CONSTANT, relationship_model_name) in that order — no leftover/missing arg, no TypeError from %-formatting mismatch.",
+   "RECURSIVE_RELATIONSHIP_CONSTANT resolves to 'self', so the rendered hint reads ManyToManyField(\"self\", through=\"X\") — copy-pasteable valid Python.",
+   "Error id (fields.E334 / fields.E335), the non-hint message body, and obj must remain unchanged — only the hint string changes (back-compat for anything keying on error IDs).",
+   "Suggested code must itself be valid: ManyToManyField(\"self\", through=\"X\") for a self-referential m2m must validate clean WITHOUT symmetrical=False — the hint must not point at code that re-errors.",
+   "Firing condition is unchanged: the hint is emitted only when through_fields is NOT set; when through_fields IS set, no error/hint. The fix touches text only, never the trigger.",
+   "Self-referential case (from_model == to_model) can trip both seen_from>1 and seen_to>1, emitting BOTH E334 and E335 — both corrected hints must be valid in that path.",
+   "Non-self-referential ambiguous-through case (2+ FKs to a distinct model) still prints the 'recursive relationship' hint; scope is to make the wording valid, NOT to suppress the hint in non-recursive cases.",
+   "Through model with 3+ FKs to the same model is the same ambiguity branch — corrected hint applies.",
+   "Hint is a plain str (not gettext _()-wrapped) — changing it requires no .po/.mo message-catalog regeneration; confirm it isn't translated before assuming so.",
+   "Test assertions compare the whole Error object (message+hint+obj+id); the expected hint literal in test_relative_fields.py (both _from and _to tests) must match the new string byte-for-byte, including double-quoted \"self\" and the trailing period.",
+   "Change is scoped strictly to these two hint strings — it must NOT touch runtime m2m symmetry logic or any other symmetrical= handling elsewhere in related.py.",
+   "docs/ref/checks.txt may quote the E334/E335 hint verbatim; verify and update if it does, else leave untouched."
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "E334 (more than one FK FROM source, no through_fields) emits a hint suggesting ManyToManyField(...), never ForeignKey(...)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "E335 (more than one FK TO target, no through_fields) emits a hint suggesting ManyToManyField(...), never ForeignKey(...)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Neither corrected hint contains 'symmetrical=False'"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Both hints render through=\"<through model>\" and reference \"self\" (RECURSIVE_RELATIONSHIP_CONSTANT)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Corrected format string binds exactly two %s args in order — formatting raises no TypeError and rendered text is well-formed"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Error id (fields.E334/E335), message body, and obj are unchanged; only the hint differs"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Following the hint — ManyToManyField(\"self\", through=\"X\") for a self-referential m2m — validates clean without symmetrical=False"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Firing condition unchanged: with through_fields set, no E334/E335 error is emitted"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Full invalid_models_tests/test_relative_fields suite passes with both _from and _to hint assertions updated to the new text (the regression that broke the original PR)"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/related.py",
+   "tests/invalid_models_tests/test_relative_fields.py",
+   "docs/ref/checks.txt"
+  ]
+ },
+ "raw_tail": ":\"S1.2\",\"covers\":\"E335 (more than one FK TO target, no through_fields) emits a hint suggesting ManyToManyField(...), never ForeignKey(...)\"},{\"id\":\"S2.1\",\"covers\":\"Neither corrected hint contains 'symmetrical=False'\"},{\"id\":\"S2.2\",\"covers\":\"Both hints render through=\\\"<through model>\\\" and reference \\\"self\\\" (RECURSIVE_RELATIONSHIP_CONSTANT)\"},{\"id\":\"S3.1\",\"covers\":\"Corrected format string binds exactly two %s args in order — formatting raises no TypeError and rendered text is well-formed\"},{\"id\":\"S4.1\",\"covers\":\"Error id (fields.E334/E335), message body, and obj are unchanged; only the hint differs\"},{\"id\":\"S5.1\",\"covers\":\"Following the hint — ManyToManyField(\\\"self\\\", through=\\\"X\\\") for a self-referential m2m — validates clean without symmetrical=False\"},{\"id\":\"S6.1\",\"covers\":\"Firing condition unchanged: with through_fields set, no E334/E335 error is emitted\"},{\"id\":\"S6.2\",\"covers\":\"Full invalid_models_tests/test_relative_fields suite passes with both _from and _to hint assertions updated to the new text (the regression that broke the original PR)\"}],\"plan_files\":[\"django/db/models/fields/related.py\",\"tests/invalid_models_tests/test_relative_fields.py\",\"docs/ref/checks.txt\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_ambiguous_relationship_model_from",
+    "covered": true,
+    "why": "S1.1 directly covers E334 hint correction (ManyToManyField vs ForeignKey), S2.1 removes symmetrical=False, S2.2 ensures through='X' and 'self' reference, S3.1 ensures format string correctness, S4.1 preserves error id/message/obj, S5.1 validates suggested code works, S6.2 explicitly mentions updating _from hint assertion."
+   },
+   {
+    "test": "test_ambiguous_relationship_model_to",
+    "covered": true,
+    "why": "S1.2 directly covers E335 hint correction (ManyToManyField vs ForeignKey), S2.1 removes symmetrical=False, S2.2 ensures through='X' and 'self' reference, S3.1 ensures format string correctness, S4.1 preserves error id/message/obj, S5.1 validates suggested code works, S6.2 explicitly mentions updating _to hint assertion."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

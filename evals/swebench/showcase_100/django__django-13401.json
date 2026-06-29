@@ -1,0 +1,101 @@
+{
+ "instance_id": "django__django-13401",
+ "driver": "local",
+ "n_edge_cases": 10,
+ "n_scenarios": 10,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "Field instances from abstract models are not equal."
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "clone"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Field from abstract model inherited by multiple concrete models should not compare equal",
+   "Same field accessed twice from same model should still compare equal",
+   "Fields with same name in completely unrelated models should not compare equal",
+   "Field with None model (not yet attached) should handle comparison gracefully",
+   "Hash consistency: equal fields must have equal hashes",
+   "Ordering consistency: if a==b then not(a<b) and not(b<a)",
+   "Empty/missing creation_counter should not cause comparison errors",
+   "Multi-level inheritance: abstract -> intermediate -> concrete",
+   "Proxy models with shared fields",
+   "Fields compared before model is fully initialized"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Fields from different concrete models inheriting same abstract model are not equal"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Fields from different concrete models inheriting same abstract model have different hashes"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Two references to same field in same model remain equal"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Set of fields from different models preserves all entries (no deduplication)"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Fields with same name in unrelated models are not equal"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Field comparison handles None model gracefully without raising exception"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Ordering by creation_counter first maintains backward compatibility for non-affected cases"
+   },
+   {
+    "id": "S1.8",
+    "covers": "If two fields are equal, neither is less than the other (ordering consistency)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Multi-level inheritance chain: abstract -> intermediate -> concrete preserves field identity"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Field equality considers both model and creation_counter, not just creation_counter"
+   }
+  ],
+  "plan_files": [
+   "models/fields/__init__.py"
+  ]
+ },
+ "raw_tail": "-> concrete\",\"Proxy models with shared fields\",\"Fields compared before model is fully initialized\"],\"scenarios\":[{\"id\":\"S1.1\",\"covers\":\"Fields from different concrete models inheriting same abstract model are not equal\"}, {\"id\":\"S1.2\",\"covers\":\"Fields from different concrete models inheriting same abstract model have different hashes\"}, {\"id\":\"S1.3\",\"covers\":\"Two references to same field in same model remain equal\"}, {\"id\":\"S1.4\",\"covers\":\"Set of fields from different models preserves all entries (no deduplication)\"}, {\"id\":\"S1.5\",\"covers\":\"Fields with same name in unrelated models are not equal\"}, {\"id\":\"S1.6\",\"covers\":\"Field comparison handles None model gracefully without raising exception\"}, {\"id\":\"S1.7\",\"covers\":\"Ordering by creation_counter first maintains backward compatibility for non-affected cases\"}, {\"id\":\"S1.8\",\"covers\":\"If two fields are equal, neither is less than the other (ordering consistency)\"}, {\"id\":\"S1.9\",\"covers\":\"Multi-level inheritance chain: abstract -> intermediate -> concrete preserves field identity\"}, {\"id\":\"S1.10\",\"covers\":\"Field equality considers both model and creation_counter, not just creation_counter\"}],\"plan_files\":[\"models/fields/__init__.py\"]}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "Field instances from abstract models are not equal",
+    "covered": true,
+    "why": "S1.1 directly covers this: 'Fields from different concrete models inheriting same abstract model are not equal'. Additionally, S1.10 addresses the root cause by ensuring 'Field equality considers both model and creation_counter, not just creation_counter'. The edge case 'Field from abstract model inherited by multiple concrete models should not compare equal' also explicitly covers this behavior."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

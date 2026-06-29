@@ -1,0 +1,192 @@
+{
+ "instance_id": "django__django-11964",
+ "driver": "local",
+ "n_edge_cases": 35,
+ "n_scenarios": 25,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_str (model_enums.tests.ChoicesTests)",
+  "test_textchoices (model_enums.tests.ChoicesTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/enums.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "values"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/enums.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Setting field with enum value (MyChoice.FIRST_CHOICE) - should store underlying value",
+   "Setting field with raw string value ('first') - should store as-is",
+   "Setting field with None - should allow if field is nullable",
+   "Setting field with invalid value - should raise ValidationError",
+   "Creating instance with enum value - should convert to underlying value",
+   "Creating instance with raw value - should store as-is",
+   "Retrieving from database - should always return underlying value type",
+   "IntegerChoices with IntegerField - same behavior for integers",
+   "Empty string as valid choice value",
+   "Zero as valid integer choice value",
+   "Negative integer choice values",
+   "Unicode characters in choice values",
+   "Special characters in choice values",
+   "Leading/trailing whitespace in choice values",
+   "Comparison: field value == raw string should work",
+   "Comparison: field value == enum should work",
+   "Querying with enum value: filter(my_str_value=MyChoice.FIRST_CHOICE)",
+   "Querying with raw value: filter(my_str_value='first')",
+   "F() expressions with choice fields",
+   "Aggregations on choice fields",
+   "Form validation accepting both enum and raw values",
+   "Admin interface displaying correct value",
+   "JSON serialization returning raw value",
+   "Pickling/unpickling preserving correct type",
+   "Model inheritance with choice fields",
+   "Multiple choice fields on same model",
+   "Choice field with None as valid option",
+   "Choice field with duplicate values in choices",
+   "Updating field from enum to raw value",
+   "Updating field from raw value to enum",
+   "Signals (pre_save, post_save) seeing correct value type",
+   "str() on field value returns underlying value, not enum name",
+   "repr() on field value returns underlying value representation",
+   "Hash consistency for field values",
+   "Equality comparison consistency"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Creating instance with enum value results in field storing underlying string/integer, not enum object"
+   },
+   {
+    "id": "S1.2",
+    "covers": "str() on field value returns underlying value ('first'), not enum representation ('MyChoice.FIRST_CHOICE')"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Retrieved instance from database has same field type as created instance (both str or both int)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Setting field with enum value converts to underlying value immediately"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Setting field with raw value stores it as-is without conversion"
+   },
+   {
+    "id": "S1.6",
+    "covers": "IntegerChoices with IntegerField behaves identically to TextChoices with CharField"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Field value equals raw string: obj.field == 'first' returns True"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Field value equals enum: obj.field == MyChoice.FIRST_CHOICE returns True"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Querying with enum value works: MyObject.objects.filter(my_str_value=MyChoice.FIRST_CHOICE)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Querying with raw value works: MyObject.objects.filter(my_str_value='first')"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Setting field to None works correctly for nullable fields"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Setting field to invalid value raises appropriate ValidationError"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Empty string as choice value is handled correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Zero as integer choice value is handled correctly"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Form validation accepts both enum and raw string values"
+   },
+   {
+    "id": "S1.16",
+    "covers": "JSON serialization of model returns raw value, not enum representation"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Pickling and unpickling preserves correct field value type"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Updating field from enum to raw value maintains consistency"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Updating field from raw value to enum converts to underlying value"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Signals receive correct underlying value type, not enum wrapper"
+   },
+   {
+    "id": "S1.21",
+    "covers": "Model inheritance preserves correct field value type behavior"
+   },
+   {
+    "id": "S1.22",
+    "covers": "Multiple choice fields on same model each maintain correct type independently"
+   },
+   {
+    "id": "S1.23",
+    "covers": "F() expressions work correctly with choice fields"
+   },
+   {
+    "id": "S1.24",
+    "covers": "Aggregations on choice fields return correct underlying values"
+   },
+   {
+    "id": "S1.25",
+    "covers": "Admin interface displays underlying value, not enum representation"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "django/db/models/fields/choices.py",
+   "django/utils/functional.py"
+  ]
+ },
+ "raw_tail": "entation\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Pickling and unpickling preserves correct field value type\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"Updating field from enum to raw value maintains consistency\"\n    },\n    {\n      \"id\": \"S1.19\",\n      \"covers\": \"Updating field from raw value to enum converts to underlying value\"\n    },\n    {\n      \"id\": \"S1.20\",\n      \"covers\": \"Signals receive correct underlying value type, not enum wrapper\"\n    },\n    {\n      \"id\": \"S1.21\",\n      \"covers\": \"Model inheritance preserves correct field value type behavior\"\n    },\n    {\n      \"id\": \"S1.22\",\n      \"covers\": \"Multiple choice fields on same model each maintain correct type independently\"\n    },\n    {\n      \"id\": \"S1.23\",\n      \"covers\": \"F() expressions work correctly with choice fields\"\n    },\n    {\n      \"id\": \"S1.24\",\n      \"covers\": \"Aggregations on choice fields return correct underlying values\"\n    },\n    {\n      \"id\": \"S1.25\",\n      \"covers\": \"Admin interface displays underlying value, not enum representation\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/db/models/fields/__init__.py\",\n    \"django/db/models/fields/choices.py\",\n    \"django/utils/functional.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_str",
+    "covered": true,
+    "why": "S1.1 covers creating instance with enum value storing underlying string/integer, not enum object. S1.3 covers retrieved instance having same field type as created instance. S1.7 covers field value equaling raw string. These scenarios directly address the issue that field values should be str/int type, not enum type."
+   },
+   {
+    "test": "test_textchoices",
+    "covered": true,
+    "why": "S1.1 covers TextChoices with CharField storing underlying string value, not enum object. S1.6 explicitly covers IntegerChoices with IntegerField behaving identically to TextChoices with CharField. S1.7 covers field value equaling raw string. These scenarios cover the TextChoices-specific behavior that the test checks."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

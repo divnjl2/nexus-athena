@@ -1,0 +1,259 @@
+{
+ "instance_id": "django__django-11019",
+ "n_edge_cases": 23,
+ "n_scenarios": 23,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_combine_media (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_construction (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_form_media (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_media_deduplication (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_media_inheritance (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_media_inheritance_extends (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_media_property_parent_references (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_merge (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_merge_css_three_way (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_merge_js_three_way (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_merge_js_three_way2 (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_merge_warning (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_multi_widget (forms_tests.tests.test_media.FormsMediaTestCase)",
+  "test_media (admin_widgets.test_autocomplete_widget.AutocompleteMixinTests)",
+  "test_render_options (admin_widgets.test_autocomplete_widget.AutocompleteMixinTests)",
+  "test_inline_media_only_inline (admin_inlines.tests.TestInlineMedia)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/widgets.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__getitem__",
+   "__str__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/widgets.py"
+  ],
+  "matched": [
+   "widgets.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Motivating case: ColorPicker(['color-picker.js']) + SimpleText(['text-editor.js']) + FancyText(['text-editor.js','text-editor-extras.js','color-picker.js']) should resolve to ['text-editor.js','text-editor-extras.js','color-picker.js'] with NO warning — the left-fold pairwise merge invents a phantom 'color-picker before text-editor' constraint from the intermediate list and the fix merges ALL sublists at once",
+   "Association/grouping independence: (A+B)+C, A+(B+C) and merge(A,B,C) yield the same result for acyclic inputs — intermediate merge results must not acquire ordering constraints absent from the original lists",
+   "Diamond / shared-prefix-and-suffix: [jquery,widget1,noConflict] + [jquery,widget2,noConflict] merges with no warning — jquery first, noConflict last, widget1/widget2 unordered relative to each other (the repeatedly-cited hard case)",
+   "color-picker.js is standalone in ColorPicker but trailing in FancyText: it must not be forced before text-editor.js just because an earlier widget listed it alone (an item being independent in one list imposes no global precedence)",
+   "Rejected length-heuristic counter-example: prepending unrelated files to the shortest/standalone list (e.g. ColorPicker gaining its own JS deps) must not reintroduce the conflict — solution is topological, not sort-by-length",
+   "Genuine cycle [a,b] + [b,a] still raises MediaOrderConflictWarning (real conflicting order is preserved as a signal)",
+   "On a detected cycle the fallback returns every file exactly once, in first-seen order, with no crash and no dropped files",
+   "Single list with internal duplicates (e.g. ['a.js','a.js','b.js']) is de-duped — old impl only de-duped during merge() so a lone list never got cleaned (sub-bug #12879)",
+   "Non-adjacent duplicate inside one declared list (['a','b','a']) is self-contradictory: detected as a conflict/cycle, but each file still emitted once",
+   "Same file declared by many widgets collapses to a single occurrence, first position preserved; de-dup is order-preserving (first occurrence wins)",
+   "Empty / None sublists filtered out — merging with empty lists is a no-op and never warns",
+   "Completely empty Media (no js, no css) yields empty output, no warning",
+   "Fully independent files (no shared items across lists) impose no constraints, stable first-seen (declaration) order, no warning",
+   "Determinism: merged order is identical across runs regardless of set/hash iteration order (PYTHONHASHSEED-independent) — requires a stable topological sort / ordered set, not plain sets",
+   "Minimal reordering: unconstrained files keep their original declaration sequence to avoid breaking 1.x-style projects that under-specified dependencies",
+   "CSS is a dict keyed by medium (screen/all/print): each medium merged independently with the same N-way algorithm; medium keys are unioned",
+   "CSS ordering conflicts warn exactly like JS; non-conflicting CSS across different mediums never warns",
+   "Tuple inputs (immutable declared media) accepted; output may become a list after de-dup — acceptable fallout, existing tuple-asserting tests adjusted",
+   "Legacy two-argument merge(a,b) signature preserved (via *lists) for backwards compatibility",
+   "Idempotency: repeated access to .media / re-render is stable (re-merging the same inputs yields the same list)",
+   "Adjacency-only dependency semantics: only items immediately consecutive within a single original sublist create an edge; cross-list and non-adjacent pairs impose no constraint",
+   "Performance: deep hierarchical media trees (Wagtail/feincms3-style bubbling up many layers) merge in roughly linear time — no exponential backtracking / constraint-solver, no heapq.merge (which wrongly assumes pre-sorted inputs)",
+   "Warning, when legitimately emitted, references the actually-conflicting files rather than an unrelated pair (diagnostic quality of the original complaint)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Three+ widget motivating case resolves to text-editor.js, text-editor-extras.js, color-picker.js with no MediaOrderConflictWarning"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Merge is associativity/grouping independent — (A+B)+C == A+(B+C) == merge(A,B,C) for acyclic inputs; no phantom constraint from intermediate results"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Two independent single-file widgets merge with no warning, order = first-seen"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Transitive dependency chain across separate lists is preserved (a->b in one list, b->c in another => a,b,c)"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Only intra-list adjacency creates ordering constraints; non-adjacent / cross-list pairs are unconstrained"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Diamond case [jquery,w1,noConflict]+[jquery,w2,noConflict] merges without warning: jquery first, noConflict last, w1/w2 stable-ordered"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Prepending unrelated files to the standalone list does not reintroduce the conflict (topological, not length-heuristic)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "A file standalone in one widget but trailing-dependency in another is not forced ahead of its true predecessors"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Genuine cyclic order [a,b]+[b,a] still raises MediaOrderConflictWarning"
+   },
+   {
+    "id": "S4.2",
+    "covers": "On conflict the fallback returns each file exactly once in first-seen order, no crash, nothing dropped"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Duplicates within a single declared list are stripped (single-list de-dup, sub-bug #12879)"
+   },
+   {
+    "id": "S5.2",
+    "covers": "A file declared by multiple widgets appears once in merged output, first position preserved"
+   },
+   {
+    "id": "S5.3",
+    "covers": "De-duplication is order-preserving (first occurrence wins)"
+   },
+   {
+    "id": "S5.4",
+    "covers": "Non-adjacent duplicate inside one list ([a,b,a]) is treated as a conflict yet each file emitted once"
+   },
+   {
+    "id": "S6.1",
+    "covers": "CSS merged per-medium with the same N-way algorithm; medium keys (screen/all/print) unioned and kept independent"
+   },
+   {
+    "id": "S6.2",
+    "covers": "CSS ordering conflict warns; non-conflicting CSS across mediums does not warn"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Merged order is deterministic regardless of set/hash iteration order (PYTHONHASHSEED-independent stable sort)"
+   },
+   {
+    "id": "S7.2",
+    "covers": "Unconstrained files retain original declaration order — minimal reordering preserving 1.x-style sequence"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Legacy two-arg merge(a,b) signature still works; empty/None sublists are filtered as a no-op"
+   },
+   {
+    "id": "S8.2",
+    "covers": "Empty Media (no js/css) produces empty output with no warning"
+   },
+   {
+    "id": "S8.3",
+    "covers": "Repeated .media access / re-render is idempotent and stable"
+   },
+   {
+    "id": "S8.4",
+    "covers": "Tuple-declared media accepted; output may normalize to a list after de-dup (acceptable fallout)"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Deep hierarchical media trees merge in near-linear time with no backtracking blow-up (scope guardrail: no constraint solver, no heapq pre-sort assumption)"
+   }
+  ],
+  "plan_files": [
+   "widgets.py",
+   "topological_sort.py",
+   "test_media.py",
+   "datastructures.py"
+  ]
+ },
+ "raw_tail": " emitted once\"},{\"id\":\"S6.1\",\"covers\":\"CSS merged per-medium with the same N-way algorithm; medium keys (screen/all/print) unioned and kept independent\"},{\"id\":\"S6.2\",\"covers\":\"CSS ordering conflict warns; non-conflicting CSS across mediums does not warn\"},{\"id\":\"S7.1\",\"covers\":\"Merged order is deterministic regardless of set/hash iteration order (PYTHONHASHSEED-independent stable sort)\"},{\"id\":\"S7.2\",\"covers\":\"Unconstrained files retain original declaration order — minimal reordering preserving 1.x-style sequence\"},{\"id\":\"S8.1\",\"covers\":\"Legacy two-arg merge(a,b) signature still works; empty/None sublists are filtered as a no-op\"},{\"id\":\"S8.2\",\"covers\":\"Empty Media (no js/css) produces empty output with no warning\"},{\"id\":\"S8.3\",\"covers\":\"Repeated .media access / re-render is idempotent and stable\"},{\"id\":\"S8.4\",\"covers\":\"Tuple-declared media accepted; output may normalize to a list after de-dup (acceptable fallout)\"},{\"id\":\"S9.1\",\"covers\":\"Deep hierarchical media trees merge in near-linear time with no backtracking blow-up (scope guardrail: no constraint solver, no heapq pre-sort assumption)\"}],\"plan_files\":[\"widgets.py\",\"topological_sort.py\",\"test_media.py\",\"datastructures.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_combine_media",
+    "covered": true,
+    "why": "S1.1 covers three+ widget motivating case; S1.2 covers associativity; edge case 'Motivating case' directly addresses combining ColorPicker + SimpleTextWidget + FancyTextWidget"
+   },
+   {
+    "test": "test_construction",
+    "covered": true,
+    "why": "S8.1 covers legacy two-arg merge signature; S8.4 covers tuple-declared media; edge case 'Tuple inputs accepted'"
+   },
+   {
+    "test": "test_form_media",
+    "covered": true,
+    "why": "S1.1 covers three+ widget motivating case (form media aggregation); edge case 'Motivating case' directly addresses form media resolution"
+   },
+   {
+    "test": "test_media_deduplication",
+    "covered": true,
+    "why": "S5.1 covers single-list de-dup; S5.2 covers multi-widget de-dup; S5.3 covers order-preserving de-dup; edge case 'Same file declared by many widgets collapses to single occurrence'"
+   },
+   {
+    "test": "test_media_inheritance",
+    "covered": true,
+    "why": "S2.1 covers transitive dependency chain across separate lists; S1.2 covers associativity; edge case 'Deep hierarchical media trees'"
+   },
+   {
+    "test": "test_media_inheritance_extends",
+    "covered": true,
+    "why": "S2.1 covers transitive dependency chain; S1.2 covers associativity; edge case 'Deep hierarchical media trees'"
+   },
+   {
+    "test": "test_media_property_parent_references",
+    "covered": true,
+    "why": "S2.1 covers transitive dependency chain; S1.2 covers associativity; edge case 'Deep hierarchical media trees'"
+   },
+   {
+    "test": "test_merge",
+    "covered": true,
+    "why": "S1.2 covers associativity; S1.3 covers two independent widgets; S8.1 covers legacy two-arg merge; edge case 'Association/grouping independence'"
+   },
+   {
+    "test": "test_merge_css_three_way",
+    "covered": true,
+    "why": "S6.1 covers CSS merged per-medium with N-way algorithm; S1.2 covers associativity; edge case 'CSS is a dict keyed by medium'"
+   },
+   {
+    "test": "test_merge_js_three_way",
+    "covered": true,
+    "why": "S1.1 covers three+ widget motivating case; S1.2 covers associativity; edge case 'Motivating case' directly addresses this"
+   },
+   {
+    "test": "test_merge_js_three_way2",
+    "covered": true,
+    "why": "S1.1 covers three+ widget motivating case; S1.2 covers associativity; edge case 'Motivating case' directly addresses this"
+   },
+   {
+    "test": "test_merge_warning",
+    "covered": true,
+    "why": "S4.1 covers genuine cycle raises warning; S4.2 covers fallback on conflict; edge case 'Genuine cycle [a,b] + [b,a] still raises MediaOrderConflictWarning'"
+   },
+   {
+    "test": "test_multi_widget",
+    "covered": true,
+    "why": "S1.1 covers three+ widget motivating case; S1.2 covers associativity; edge case 'Motivating case' directly addresses this"
+   },
+   {
+    "test": "test_media",
+    "covered": true,
+    "why": "S1.1 covers three+ widget motivating case; S1.2 covers associativity; edge case 'Motivating case' directly addresses this"
+   },
+   {
+    "test": "test_render_options",
+    "covered": true,
+    "why": "S8.3 covers idempotency; S1.2 covers associativity; edge case 'Idempotency: repeated access to .media / re-render is stable'"
+   },
+   {
+    "test": "test_inline_media_only_inline",
+    "covered": true,
+    "why": "S1.2 covers associativity; S2.2 covers only intra-list adjacency creates constraints; edge case 'Adjacency-only dependency semantics'"
+   }
+  ],
+  "covered": 16,
+  "total": 16,
+  "ratio": 1.0
+ }
+}

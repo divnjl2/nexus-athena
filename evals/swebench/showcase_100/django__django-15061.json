@@ -1,0 +1,144 @@
+{
+ "instance_id": "django__django-15061",
+ "driver": "local",
+ "n_edge_cases": 21,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_form_as_table (forms_tests.field_tests.test_multivaluefield.MultiValueFieldTest)",
+  "test_form_as_table_data (forms_tests.field_tests.test_multivaluefield.MultiValueFieldTest)",
+  "test_form_as_table (forms_tests.field_tests.test_splitdatetimefield.SplitDateTimeFieldTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/forms/widgets.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "get_context"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/forms/widgets.py"
+  ],
+  "matched": [
+   "widgets.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty string passed as id_ to id_for_label()",
+   "None passed as id_ to id_for_label()",
+   "Very long id_ strings",
+   "id_ with special characters (spaces, hyphens, underscores)",
+   "MultiWidget with empty sub-widgets list",
+   "MultiWidget with exactly one sub-widget",
+   "MultiWidget with many sub-widgets (stress test)",
+   "Sub-widgets that override id_for_label (e.g., ChoiceWidget with add_id_index)",
+   "Nested MultiWidgets (MultiWidget containing another MultiWidget)",
+   "MultiWidget used in forms with validation errors",
+   "MultiWidget in formsets",
+   "MultiWidget in inline formsets",
+   "JavaScript that relies on label-for relationships",
+   "CSS selectors targeting label[for='...']",
+   "Screen reader accessibility testing",
+   "Form field value binding after removing for attribute",
+   "Custom MultiWidget subclasses that override id_for_label",
+   "MultiWidget subclasses: SplitDateTimeWidget, SplitSelectDateTimeWidget, SplitDateWidget, SplitTimeWidget, SplitSelectWidget",
+   "MultiWidget with auto_id=None (no IDs generated)",
+   "MultiWidget with auto_id as callable",
+   "MultiWidget rendering in different contexts (form, formfield, widget render method)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "MultiWidget.id_for_label() returns empty string for any id_ input"
+   },
+   {
+    "id": "S1.2",
+    "covers": "MultiWidget renders <label> element without for attribute"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Sub-widgets still receive their own unique IDs (e.g., id_0, id_1, id_2)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Form field value binding works correctly without label for attribute"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Form validation and error display works correctly"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Sub-widgets with add_id_index (ChoiceWidget) still function correctly"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Built-in MultiWidget subclasses render correctly (SplitDateTimeWidget, SplitDateWidget, SplitTimeWidget, SplitSelectDateTimeWidget, SplitSelectWidget)"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Custom MultiWidget subclasses that override id_for_label are not affected"
+   },
+   {
+    "id": "S1.9",
+    "covers": "MultiWidget works correctly in formsets"
+   },
+   {
+    "id": "S1.10",
+    "covers": "MultiWidget works correctly with auto_id=None (no IDs generated)"
+   },
+   {
+    "id": "S1.11",
+    "covers": "MultiWidget works correctly with auto_id as callable"
+   },
+   {
+    "id": "S1.12",
+    "covers": "No regression in form submission and data binding"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Accessibility: screen readers can still navigate form correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Empty sub-widgets list does not cause errors"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Nested MultiWidgets render correctly"
+   }
+  ],
+  "plan_files": [
+   "widgets.py"
+  ]
+ },
+ "raw_tail": "id\": \"S1.6\",\n      \"covers\": \"Sub-widgets with add_id_index (ChoiceWidget) still function correctly\"\n    },\n    {\n      \"id\": \"S1.7\",\n      \"covers\": \"Built-in MultiWidget subclasses render correctly (SplitDateTimeWidget, SplitDateWidget, SplitTimeWidget, SplitSelectDateTimeWidget, SplitSelectWidget)\"\n    },\n    {\n      \"id\": \"S1.8\",\n      \"covers\": \"Custom MultiWidget subclasses that override id_for_label are not affected\"\n    },\n    {\n      \"id\": \"S1.9\",\n      \"covers\": \"MultiWidget works correctly in formsets\"\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"MultiWidget works correctly with auto_id=None (no IDs generated)\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"MultiWidget works correctly with auto_id as callable\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"No regression in form submission and data binding\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"Accessibility: screen readers can still navigate form correctly\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Empty sub-widgets list does not cause errors\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Nested MultiWidgets render correctly\"\n    }\n  ],\n  \"plan_files\": [\n    \"widgets.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_form_as_table (forms_tests.field_tests.test_multivaluefield.MultiValueFieldTest)",
+    "covered": true,
+    "why": "S1.2 covers label rendering without for attribute; S1.3 ensures sub-widgets get unique IDs; S1.7 covers MultiValueField's widget; edge case covers table rendering context"
+   },
+   {
+    "test": "test_form_as_table_data (forms_tests.field_tests.test_multivaluefield.MultiValueFieldTest)",
+    "covered": true,
+    "why": "S1.4 covers value binding without for attribute; S1.12 ensures no regression in form submission; S1.3 ensures data binds to correct sub-widgets; edge case covers data binding after removing for attribute"
+   },
+   {
+    "test": "test_form_as_table (forms_tests.field_tests.test_splitdatetimefield.SplitDateTimeFieldTest)",
+    "covered": true,
+    "why": "S1.7 explicitly covers SplitDateTimeWidget; S1.2 covers label rendering; S1.3 ensures date/time sub-widgets get unique IDs; edge case explicitly lists SplitDateTimeWidget"
+   }
+  ],
+  "covered": 3,
+  "total": 3,
+  "ratio": 1.0
+ }
+}

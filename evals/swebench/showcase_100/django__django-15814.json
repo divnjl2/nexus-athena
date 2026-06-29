@@ -1,0 +1,153 @@
+{
+ "instance_id": "django__django-15814",
+ "driver": "local",
+ "n_edge_cases": 20,
+ "n_scenarios": 20,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_select_related_only (proxy_models.tests.ProxyModelTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "deferred_to_data"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "matched": [
+   "query.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Proxy model with select_related + only on related field",
+   "Null foreign key to proxy model with select_related + only",
+   "Empty QuerySet with select_related + only on proxy",
+   "Multiple select_related fields including proxy model",
+   "Chained select_related (custom__nested) with proxy model",
+   "Multiple only() calls on proxy model fields",
+   "Combination of only() and defer() with proxy model",
+   "Reverse relation query from concrete model to proxy",
+   "Multiple proxy models for same concrete model",
+   "Nested proxy models (proxy of proxy)",
+   "select_related + only + filter on proxy fields",
+   "select_related + only + order_by on proxy fields",
+   "select_related + only + aggregate on proxy fields",
+   "select_related + only + annotate with proxy fields",
+   "select_related + only + prefetch_related with proxy",
+   "select_related + only + distinct() with proxy",
+   "QuerySet iteration (list, len, for loop) with proxy select_related + only",
+   "select_related + only on proxy model primary key field",
+   "select_related + only with database-specific behavior",
+   "select_related + only within transaction boundaries"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Basic select_related + only on proxy model field should not raise ValueError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "select_related + only returns correct data for selected proxy model fields"
+   },
+   {
+    "id": "S1.3",
+    "covers": "select_related + only does not fetch unselected fields (query optimization preserved)"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Multiple select_related fields with only on proxy model fields works correctly"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Chained select_related (custom__nested) with only on proxy model fields"
+   },
+   {
+    "id": "S1.6",
+    "covers": "only() with multiple proxy model fields in single call"
+   },
+   {
+    "id": "S1.7",
+    "covers": "select_related + only handles null foreign key to proxy model gracefully"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Empty QuerySet with select_related + only on proxy model does not crash"
+   },
+   {
+    "id": "S1.9",
+    "covers": "select_related + only + filter combination works with proxy model fields"
+   },
+   {
+    "id": "S1.10",
+    "covers": "select_related + only + order_by combination works with proxy model fields"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Reverse relation query from concrete model accessing proxy model works"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Multiple proxy models for same concrete model with select_related + only"
+   },
+   {
+    "id": "S1.13",
+    "covers": "select_related + only + aggregate on proxy model fields"
+   },
+   {
+    "id": "S1.14",
+    "covers": "select_related + only + annotate with proxy model fields"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Combination of only() and defer() with proxy model fields"
+   },
+   {
+    "id": "S1.16",
+    "covers": "select_related + only on proxy model primary key field"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Nested proxy models (proxy of proxy) with select_related + only"
+   },
+   {
+    "id": "S1.18",
+    "covers": "select_related + only combined with prefetch_related on proxy model"
+   },
+   {
+    "id": "S1.19",
+    "covers": "QuerySet evaluation (len, list, iteration) with select_related + only on proxy"
+   },
+   {
+    "id": "S1.20",
+    "covers": "select_related + only + distinct() with proxy model fields"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/query.py",
+   "django/db/models/sql/query.py",
+   "tests/proxy_models/tests.py"
+  ]
+ },
+ "raw_tail": "g proxy model works\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Multiple proxy models for same concrete model with select_related + only\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"select_related + only + aggregate on proxy model fields\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"select_related + only + annotate with proxy model fields\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Combination of only() and defer() with proxy model fields\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"select_related + only on proxy model primary key field\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Nested proxy models (proxy of proxy) with select_related + only\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"select_related + only combined with prefetch_related on proxy model\"\n    },\n    {\n      \"id\": \"S1.19\",\n      \"covers\": \"QuerySet evaluation (len, list, iteration) with select_related + only on proxy\"\n    },\n    {\n      \"id\": \"S1.20\",\n      \"covers\": \"select_related + only + distinct() with proxy model fields\"\n    }\n  ],\n  \"plan_files\": [\n    \"django/db/models/query.py\",\n    \"django/db/models/sql/query.py\",\n    \"tests/proxy_models/tests.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_select_related_only",
+    "covered": true,
+    "why": "S1.1 directly covers the core issue: basic select_related + only on proxy model field should not raise ValueError (the crash described in the issue). S1.2 covers data correctness, and S1.19 covers QuerySet evaluation where the crash occurs. The edge case 'Proxy model with select_related + only on related field' also directly matches the issue scenario."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

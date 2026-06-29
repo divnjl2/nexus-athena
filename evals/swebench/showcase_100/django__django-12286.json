@@ -1,0 +1,139 @@
+{
+ "instance_id": "django__django-12286",
+ "driver": "local",
+ "n_edge_cases": 19,
+ "n_scenarios": 17,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_valid_variant_consistent_language_settings (check_framework.test_translation.TranslationCheckTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/checks/translation.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "check_setting_languages_bidi"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/checks/translation.py"
+  ],
+  "matched": [
+   "translation.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "LANGUAGE_CODE is a sublanguage (e.g., de-at) not in LANGUAGES, but base language (de) is in LANGUAGES",
+   "LANGUAGE_CODE is a sublanguage that IS in LANGUAGES",
+   "LANGUAGE_CODE is a sublanguage not in LANGUAGES, and base language is also NOT in LANGUAGES",
+   "LANGUAGE_CODE is a base language only (no sublanguage) that is in LANGUAGES",
+   "LANGUAGE_CODE is a base language only that is NOT in LANGUAGES",
+   "LANGUAGE_CODE is an empty string",
+   "LANGUAGE_CODE is None",
+   "LANGUAGES setting is an empty list",
+   "LANGUAGES setting is None",
+   "LANGUAGES setting is not a list (malformed)",
+   "Sublanguage with uppercase country code (e.g., de-AT vs de-at)",
+   "Sublanguage with multiple hyphens (e.g., de-AT-variant)",
+   "Invalid language code format (no hyphen, or malformed like -de or de-)",
+   "Duplicate entries in LANGUAGES list",
+   "Base language available but sublanguage explicitly disabled in LANGUAGES",
+   "Multiple sublanguages of same base, some available, some not",
+   "LANGUAGE_CODE with trailing/leading whitespace",
+   "Locale codes with script component (e.g., zh-Hans-cn)",
+   "Three-letter language codes (ISO 639-2) vs two-letter (ISO 639-1)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "E004 is NOT raised when LANGUAGE_CODE is a sublanguage not in LANGUAGES but the base language IS in LANGUAGES (e.g., LANGUAGE_CODE='de-at', LANGUAGES=[('de', 'German')])"
+   },
+   {
+    "id": "S1.2",
+    "covers": "E004 is NOT raised when LANGUAGE_CODE is a sublanguage that IS in LANGUAGES (e.g., LANGUAGE_CODE='es-ar', LANGUAGES=[('es-ar', 'Spanish (Argentina)')])"
+   },
+   {
+    "id": "S1.3",
+    "covers": "E004 IS raised when LANGUAGE_CODE is a sublanguage not in LANGUAGES and the base language is also NOT in LANGUAGES (e.g., LANGUAGE_CODE='de-at', LANGUAGES=[('fr', 'French')])"
+   },
+   {
+    "id": "S1.4",
+    "covers": "E004 is NOT raised when LANGUAGE_CODE is a base language only that IS in LANGUAGES (e.g., LANGUAGE_CODE='de', LANGUAGES=[('de', 'German')])"
+   },
+   {
+    "id": "S1.5",
+    "covers": "E004 IS raised when LANGUAGE_CODE is a base language only that is NOT in LANGUAGES (e.g., LANGUAGE_CODE='de', LANGUAGES=[('fr', 'French')])"
+   },
+   {
+    "id": "S1.6",
+    "covers": "E004 is NOT raised when LANGUAGE_CODE is an empty string"
+   },
+   {
+    "id": "S1.7",
+    "covers": "E004 is NOT raised when LANGUAGE_CODE is None"
+   },
+   {
+    "id": "S1.8",
+    "covers": "E004 IS raised when LANGUAGES is an empty list and LANGUAGE_CODE is non-empty"
+   },
+   {
+    "id": "S1.9",
+    "covers": "E004 is NOT raised when LANGUAGES is None (uses default LANGUAGES)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "System check handles gracefully when LANGUAGES is not a list (does not crash)"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Sublanguage codes are case-insensitive (de-AT matches de-at in LANGUAGES)"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Sublanguage with multiple hyphens extracts correct base language (e.g., de-AT-variant falls back to de)"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Invalid language code format without hyphen is validated normally (not treated as sublanguage)"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Duplicate entries in LANGUAGES do not cause incorrect validation results"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Locale codes with script component (zh-Hans-cn) correctly extract base language (zh) for fallback"
+   },
+   {
+    "id": "S1.16",
+    "covers": "LANGUAGE_CODE with trailing/leading whitespace is handled correctly (stripped or validated as-is)"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Three-letter language codes (ISO 639-2) are handled correctly in sublanguage detection"
+   }
+  ],
+  "plan_files": [
+   "translation.py",
+   "checks.py"
+  ]
+ },
+ "raw_tail": "\n    },\n    {\n      \"id\": \"S1.10\",\n      \"covers\": \"System check handles gracefully when LANGUAGES is not a list (does not crash)\"\n    },\n    {\n      \"id\": \"S1.11\",\n      \"covers\": \"Sublanguage codes are case-insensitive (de-AT matches de-at in LANGUAGES)\"\n    },\n    {\n      \"id\": \"S1.12\",\n      \"covers\": \"Sublanguage with multiple hyphens extracts correct base language (e.g., de-AT-variant falls back to de)\"\n    },\n    {\n      \"id\": \"S1.13\",\n      \"covers\": \"Invalid language code format without hyphen is validated normally (not treated as sublanguage)\"\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Duplicate entries in LANGUAGES do not cause incorrect validation results\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Locale codes with script component (zh-Hans-cn) correctly extract base language (zh) for fallback\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"LANGUAGE_CODE with trailing/leading whitespace is handled correctly (stripped or validated as-is)\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Three-letter language codes (ISO 639-2) are handled correctly in sublanguage detection\"\n    }\n  ],\n  \"plan_files\": [\n    \"translation.py\",\n    \"checks.py\"\n  ]\n}\n```",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_valid_variant_consistent_language_settings",
+    "covered": true,
+    "why": "Scenario S1.1 explicitly covers the core bug: E004 is NOT raised when LANGUAGE_CODE is a sublanguage (e.g., 'de-at') not in LANGUAGES but the base language (e.g., 'de') IS in LANGUAGES. This matches the issue description and the test name 'valid_variant_consistent_language_settings' which implies testing that a valid language variant with consistent settings (base language available) does not trigger E004."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

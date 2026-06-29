@@ -1,0 +1,134 @@
+{
+ "instance_id": "django__django-11848",
+ "n_edge_cases": 17,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_parsing_rfc850 (utils_tests.test_http.HttpDateProcessingTests)",
+  "test_parsing_year_less_than_70 (utils_tests.test_http.HttpDateProcessingTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/utils/http.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "parse_http_date"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/utils/http.py"
+  ],
+  "matched": [
+   "http.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Two-digit year equal to the current two-digit year (yy == current_year % 100) → resolves to the current year in the current century",
+   "Two-digit year landing exactly 50 years in the future → boundary is strict ('more than 50'), so it is KEPT in the current century, NOT rolled back",
+   "Two-digit year landing exactly 51 years in the future (just over 50) → rolled back one century to the most-recent past year with the same last two digits",
+   "Two-digit year one less than current (recent past) → stays in current century, not pushed forward a century",
+   "Old hard-coded pivot value 69 (regression test_parsing_rfc850_year_69): result must now depend on the current year, not be fixed at 2069",
+   "Old hard-coded pivot value 70: must no longer be fixed at 1970 — depends on current year",
+   "Century-boundary current year where current_year % 100 == 0 (e.g. 2000): yy=50→2050 kept, yy=51→1951 rolled back",
+   "Century-boundary current year where current_year % 100 == 99 (e.g. 2099): low yy values never roll forward; remain past dates in the current century",
+   "Extreme two-digit values yy=00 and yy=99",
+   "Negative diff case: yy < (current_year % 100) → (yy - current%100) is negative, must never be treated as 'in the future' / never rolled back",
+   "Rollback subtracts exactly ONE century (most-recent matching past year), never two or more",
+   "Current year must be taken in UTC, not server local time — result identical regardless of server timezone, including across New Year's Eve when local and UTC years differ",
+   "Four-digit RFC 1123 year (e.g. 1994, 0069, 2069) bypasses the century logic entirely and is used verbatim",
+   "asctime format four-digit year (e.g. 'Sun Nov  6 08:49:37 1994') unaffected by the two-digit logic",
+   "Tests must pin/patch the notion of 'current year' (deterministic datetime) so assertions don't rot as real time advances",
+   "Malformed/invalid dates still raise ValueError; parse_http_date_safe still returns None instead of raising",
+   "Return value remains an integer count of seconds since the Unix epoch (UTC), unchanged by the fix"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "RFC850 two-digit year within 50 years of the future is interpreted in the current century"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Two-digit year equal to the current two-digit year resolves to the current calendar year"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Two-digit year more than 50 years in the future rolls back one century to the most-recent past year with the same last two digits"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Boundary: a date exactly 50 years in the future is kept in the current century (strict 'more than 50')"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Boundary: a date exactly 51 years in the future is rolled back a century"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Regression test_parsing_rfc850_year_69 — value 69 is interpreted relative to current year, not the old fixed 2069 pivot"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Value 70 is no longer hard-mapped to 1970; mapping depends on current year"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Century-boundary current year (current_year % 100 == 0) maps yy=50→current century and yy=51→prior century"
+   },
+   {
+    "id": "S5.2",
+    "covers": "Two-digit year below the current two-digit value (negative future-diff) is never treated as future and stays in the current century"
+   },
+   {
+    "id": "S6.1",
+    "covers": "Current year is sourced from UTC so the parsed result is independent of server local timezone, including around year boundaries"
+   },
+   {
+    "id": "S7.1",
+    "covers": "Four-digit RFC1123 year is used verbatim and bypasses all century-pivot logic"
+   },
+   {
+    "id": "S7.2",
+    "covers": "asctime four-digit-year format is unaffected by the two-digit-year change"
+   },
+   {
+    "id": "S8.1",
+    "covers": "Tests pin a fixed current year via patched datetime so assertions remain deterministic over time"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Invalid dates still raise ValueError and parse_http_date_safe still returns None"
+   },
+   {
+    "id": "S9.2",
+    "covers": "parse_http_date still returns an integer count of seconds since the Unix epoch in UTC"
+   }
+  ],
+  "plan_files": [
+   "http.py",
+   "test_http.py"
+  ]
+ },
+ "raw_tail": " 69 is interpreted relative to current year, not the old fixed 2069 pivot\"},{\"id\":\"S4.2\",\"covers\":\"Value 70 is no longer hard-mapped to 1970; mapping depends on current year\"},{\"id\":\"S5.1\",\"covers\":\"Century-boundary current year (current_year % 100 == 0) maps yy=50→current century and yy=51→prior century\"},{\"id\":\"S5.2\",\"covers\":\"Two-digit year below the current two-digit value (negative future-diff) is never treated as future and stays in the current century\"},{\"id\":\"S6.1\",\"covers\":\"Current year is sourced from UTC so the parsed result is independent of server local timezone, including around year boundaries\"},{\"id\":\"S7.1\",\"covers\":\"Four-digit RFC1123 year is used verbatim and bypasses all century-pivot logic\"},{\"id\":\"S7.2\",\"covers\":\"asctime four-digit-year format is unaffected by the two-digit-year change\"},{\"id\":\"S8.1\",\"covers\":\"Tests pin a fixed current year via patched datetime so assertions remain deterministic over time\"},{\"id\":\"S9.1\",\"covers\":\"Invalid dates still raise ValueError and parse_http_date_safe still returns None\"},{\"id\":\"S9.2\",\"covers\":\"parse_http_date still returns an integer count of seconds since the Unix epoch in UTC\"}],\"plan_files\":[\"http.py\",\"test_http.py\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_parsing_rfc850",
+    "covered": true,
+    "why": "S1.1 covers RFC850 two-digit year interpretation within 50 years; S7.1 covers four-digit RFC1123 bypass; S9.1/S9.2 cover error handling and return format; multiple edge cases address RFC850 parsing behavior"
+   },
+   {
+    "test": "test_parsing_year_less_than_70",
+    "covered": true,
+    "why": "S4.1 explicitly addresses regression test_parsing_rfc850_year_69 ensuring value 69 is interpreted relative to current year, not old fixed 2069 pivot; S4.2 covers value 70 no longer hard-mapped to 1970; edge case explicitly mentions 'Old hard-coded pivot value 69' regression test"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

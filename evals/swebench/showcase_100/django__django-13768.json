@@ -1,0 +1,122 @@
+{
+ "instance_id": "django__django-13768",
+ "n_edge_cases": 17,
+ "n_scenarios": 13,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_send_robust_fail (dispatch.tests.DispatcherTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/dispatch/dispatcher.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "send_robust"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/dispatch/dispatcher.py"
+  ],
+  "matched": [
+   "dispatcher.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Receiver raises Exception → an ERROR-level record with full traceback is emitted via logger.exception() (must be inside the except so sys.exc_info() is populated)",
+   "Must use logger.exception() (ERROR + exc_info), not logger.error()/warning() — otherwise no traceback reaches Sentry, defeating the issue's goal",
+   "Logger is module-level logging.getLogger('django.dispatch'), created once at import — not constructed per send_robust call",
+   "Multiple receivers raise → each exception logged independently; one failure does not short-circuit the receiver loop",
+   "Mixed run: an early receiver raises and a later one succeeds → only the failure is logged; both still appear in responses as (receiver, exc) and (receiver, response)",
+   "Happy path (no receiver raises) → zero log output and zero added overhead, since the logger call lives only in the except branch",
+   "Existing contract preserved: send_robust still swallows the exception, appends (receiver, exception), continues to remaining receivers, and returns the full responses list unchanged in order/shape",
+   "BaseException (KeyboardInterrupt, SystemExit) is NOT caught by `except Exception` → it propagates, is not logged, and is not added to responses",
+   "Lazy %-style interpolation (logger.exception('...%s', err)) — never an f-string — so message formatting cost is only paid if a handler consumes the record, and a receiver whose __str__/__repr__ raises cannot break send_robust at log time",
+   "Message must identify the failing receiver, but receivers may lack __qualname__ (functools.partial, callable instances, some lambdas/bound methods) → message construction inside the except must not itself raise AttributeError",
+   "send() must NOT receive the same logging — it re-raises, so the caller's handler already reports it; adding a log there would double-report",
+   "No receivers connected, or _live_receivers returns empty for the sender (weakref GC'd / cache miss) → loop body never runs → nothing logged, returns []",
+   "Thread-safety / re-entrancy: concurrent send_robust calls or a receiver that re-sends the same signal — Python logging is thread-safe and re-entrant and no new shared mutable state is introduced",
+   "Logger name must fit Django's existing hierarchy (django.*) so it propagates to root and hits the lastResort handler when unconfigured, and so users can route/silence it",
+   "Pre-existing tests that assert send_robust produces no output must be updated; new test must use assertLogs('django.dispatch','ERROR') — an observable backwards-incompatible change in log output",
+   "Documentation must register the new django.dispatch logger in the logging reference and call out the behaviour change in release notes",
+   "sender=None and cached empty-receiver code paths remain unaffected by the change"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "A receiver raising an exception causes an ERROR-level record with full traceback to be logged via logger.exception()"
+   },
+   {
+    "id": "S1.2",
+    "covers": "The logged message identifies the failing receiver (e.g. its qualname) and the exception"
+   },
+   {
+    "id": "S2.1",
+    "covers": "The exception record is emitted on a dedicated, discoverable logger named 'django.dispatch'"
+   },
+   {
+    "id": "S3.1",
+    "covers": "After a receiver raises, send_robust still appends (receiver, exception) to responses and returns the full list"
+   },
+   {
+    "id": "S3.2",
+    "covers": "When an early receiver raises, later receivers are still invoked and their results appended (loop not short-circuited)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "A receiver that returns normally produces no log output and is appended as (receiver, response)"
+   },
+   {
+    "id": "S3.4",
+    "covers": "Multiple raising receivers each produce an independent log record"
+   },
+   {
+    "id": "S4.1",
+    "covers": "send() is unchanged: a raising receiver propagates and send() emits no django.dispatch log"
+   },
+   {
+    "id": "S5.1",
+    "covers": "A receiver raising BaseException (KeyboardInterrupt/SystemExit) propagates, is not logged, and is absent from responses"
+   },
+   {
+    "id": "S6.1",
+    "covers": "A receiver without __qualname__ (functools.partial / callable instance) that raises is logged without the except block itself raising"
+   },
+   {
+    "id": "S6.2",
+    "covers": "Message interpolation is lazy so an exception whose __str__/__repr__ misbehaves cannot break send_robust"
+   },
+   {
+    "id": "S7.1",
+    "covers": "With no connected/live receivers, send_robust emits no log and returns []"
+   },
+   {
+    "id": "S2.2",
+    "covers": "The new django.dispatch logger is documented in the logging reference and release notes"
+   }
+  ],
+  "plan_files": [
+   "dispatcher.py",
+   "tests.py",
+   "logging.txt",
+   "3.1.txt"
+  ]
+ },
+ "raw_tail": "he full list\"},{\"id\":\"S3.2\",\"covers\":\"When an early receiver raises, later receivers are still invoked and their results appended (loop not short-circuited)\"},{\"id\":\"S3.3\",\"covers\":\"A receiver that returns normally produces no log output and is appended as (receiver, response)\"},{\"id\":\"S3.4\",\"covers\":\"Multiple raising receivers each produce an independent log record\"},{\"id\":\"S4.1\",\"covers\":\"send() is unchanged: a raising receiver propagates and send() emits no django.dispatch log\"},{\"id\":\"S5.1\",\"covers\":\"A receiver raising BaseException (KeyboardInterrupt/SystemExit) propagates, is not logged, and is absent from responses\"},{\"id\":\"S6.1\",\"covers\":\"A receiver without __qualname__ (functools.partial / callable instance) that raises is logged without the except block itself raising\"},{\"id\":\"S6.2\",\"covers\":\"Message interpolation is lazy so an exception whose __str__/__repr__ misbehaves cannot break send_robust\"},{\"id\":\"S7.1\",\"covers\":\"With no connected/live receivers, send_robust emits no log and returns []\"},{\"id\":\"S2.2\",\"covers\":\"The new django.dispatch logger is documented in the logging reference and release notes\"}],\"plan_files\":[\"dispatcher.py\",\"tests.py\",\"logging.txt\",\"3.1.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_send_robust_fail",
+    "covered": true,
+    "why": "The test name indicates it tests the failure/exception case of send_robust. The plan covers: (1) ERROR-level logging with full traceback via logger.exception() [S1.1, edge case], (2) correct logger name 'django.dispatch' [S2.1, edge case], (3) exception captured in responses as (receiver, exception) [S3.1, edge case], (4) loop continues to remaining receivers [S3.2, edge case], (5) multiple raising receivers each logged independently [S3.4, edge case]. All core behaviors required by the issue are explicitly addressed in scenarios S1.1, S1.2, S2.1, S3.1, S3.2, S3.4 and multiple edge cases."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

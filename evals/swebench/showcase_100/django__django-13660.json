@@ -1,0 +1,387 @@
+{
+ "instance_id": "django__django-13660",
+ "driver": "local",
+ "n_edge_cases": 60,
+ "n_scenarios": 67,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_command_option_inline_function_call (shell.tests.ShellCommandTestCase)",
+  "test_stdin_read_inline_function_call (shell.tests.ShellCommandTestCase)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/management/commands/shell.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "python"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/management/commands/shell.py"
+  ],
+  "matched": [
+   "shell.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Empty command string passed to -c",
+   "Command with only imports (no function definitions)",
+   "Command with only function definitions (no calls)",
+   "Command with nested function definitions",
+   "Command with class definitions and methods",
+   "Command with multiple imports",
+   "Command with syntax errors",
+   "Command with exceptions raised during execution",
+   "Command that modifies globals",
+   "Command with lambda functions",
+   "Command with list/dict/set comprehensions",
+   "Command with generator expressions",
+   "Command with async functions",
+   "Command with decorators",
+   "Command with try/except blocks",
+   "Command with loops",
+   "Command with conditionals",
+   "Command with multiple statements",
+   "Command with return statements",
+   "Command with yield statements",
+   "Command with context managers",
+   "Command with type annotations",
+   "Command with f-strings",
+   "Command with walrus operator (Python 3.8+)",
+   "Command with positional-only parameters (Python 3.8+)",
+   "Command with match/case (Python 3.10+)",
+   "Command with exception groups (Python 3.11+)",
+   "Command with stdin input (non-tty)",
+   "Command with both -c and stdin input",
+   "Command with Unicode characters",
+   "Command with very long code",
+   "Command with circular imports",
+   "Command with relative imports",
+   "Command with absolute imports",
+   "Command with from imports",
+   "Command with import as aliases",
+   "Command with import inside functions",
+   "Command with import inside classes",
+   "Command with import inside nested functions",
+   "Command with import inside lambda",
+   "Command with import inside comprehensions",
+   "Command with import inside generator expressions",
+   "Command with import inside async functions",
+   "Command with import inside decorators",
+   "Command with import inside try/except blocks",
+   "Command with import inside loops",
+   "Command with import inside conditionals",
+   "Command with import inside multiple statements",
+   "Command with import inside return statements",
+   "Command with import inside yield statements",
+   "Command with import inside context managers",
+   "Command with import inside list/dict/set comprehensions",
+   "Command with import inside generator functions",
+   "Command with import inside async generators",
+   "Command with import inside type annotations",
+   "Command with import inside f-strings",
+   "Command with import inside walrus operators (Python 3.8+)",
+   "Command with import inside positional-only parameters (Python 3.8+)",
+   "Command with import inside match/case (Python 3.10+)",
+   "Command with import inside exception groups (Python 3.11+)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Basic function definition and call with import should work without NameError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Multiple function definitions should all have access to imports"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Nested function definitions should have access to imports from outer scope"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Class definitions with methods should have access to imports"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Import and use in function should work"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Import and use in class method should work"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Import and use in nested function should work"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Import and use in lambda should work"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Import and use in comprehension should work"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Import and use in generator expression should work"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Import and use in async function should work"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Import and use in decorator should work"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Import and use in try/except block should work"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Import and use in loop should work"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Import and use in conditional should work"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Import and use in multiple statements should work"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Import and use in return statement should work"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Import and use in yield statement should work"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Import and use in context manager should work"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Import and use in list/dict/set comprehension should work"
+   },
+   {
+    "id": "S1.21",
+    "covers": "Import and use in generator function should work"
+   },
+   {
+    "id": "S1.22",
+    "covers": "Import and use in async generator should work"
+   },
+   {
+    "id": "S1.23",
+    "covers": "Import and use in type annotation should work"
+   },
+   {
+    "id": "S1.24",
+    "covers": "Import and use in f-string should work"
+   },
+   {
+    "id": "S1.25",
+    "covers": "Import and use in walrus operator (Python 3.8+) should work"
+   },
+   {
+    "id": "S1.26",
+    "covers": "Import and use in positional-only parameters (Python 3.8+) should work"
+   },
+   {
+    "id": "S1.27",
+    "covers": "Import and use in match/case (Python 3.10+) should work"
+   },
+   {
+    "id": "S1.28",
+    "covers": "Import and use in exception groups (Python 3.11+) should work"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Empty command string should not crash"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Command with only imports should work"
+   },
+   {
+    "id": "S2.3",
+    "covers": "Command with only function definitions (no calls) should work"
+   },
+   {
+    "id": "S2.4",
+    "covers": "Command with syntax errors should raise appropriate exception"
+   },
+   {
+    "id": "S2.5",
+    "covers": "Command with exceptions raised during execution should propagate correctly"
+   },
+   {
+    "id": "S2.6",
+    "covers": "Command that modifies globals should not affect outer scope"
+   },
+   {
+    "id": "S2.7",
+    "covers": "Command with stdin input (non-tty) should work"
+   },
+   {
+    "id": "S2.8",
+    "covers": "Command with both -c and stdin input should prioritize -c"
+   },
+   {
+    "id": "S2.9",
+    "covers": "Command with Unicode characters should work"
+   },
+   {
+    "id": "S2.10",
+    "covers": "Command with very long code should work"
+   },
+   {
+    "id": "S2.11",
+    "covers": "Command with circular imports should handle gracefully"
+   },
+   {
+    "id": "S2.12",
+    "covers": "Command with relative imports should work"
+   },
+   {
+    "id": "S2.13",
+    "covers": "Command with absolute imports should work"
+   },
+   {
+    "id": "S2.14",
+    "covers": "Command with from imports should work"
+   },
+   {
+    "id": "S2.15",
+    "covers": "Command with import as aliases should work"
+   },
+   {
+    "id": "S2.16",
+    "covers": "Command with import inside functions should work"
+   },
+   {
+    "id": "S2.17",
+    "covers": "Command with import inside classes should work"
+   },
+   {
+    "id": "S2.18",
+    "covers": "Command with import inside nested functions should work"
+   },
+   {
+    "id": "S2.19",
+    "covers": "Command with import inside lambda should work"
+   },
+   {
+    "id": "S2.20",
+    "covers": "Command with import inside comprehensions should work"
+   },
+   {
+    "id": "S2.21",
+    "covers": "Command with import inside generator expressions should work"
+   },
+   {
+    "id": "S2.22",
+    "covers": "Command with import inside async functions should work"
+   },
+   {
+    "id": "S2.23",
+    "covers": "Command with import inside decorators should work"
+   },
+   {
+    "id": "S2.24",
+    "covers": "Command with import inside try/except blocks should work"
+   },
+   {
+    "id": "S2.25",
+    "covers": "Command with import inside loops should work"
+   },
+   {
+    "id": "S2.26",
+    "covers": "Command with import inside conditionals should work"
+   },
+   {
+    "id": "S2.27",
+    "covers": "Command with import inside multiple statements should work"
+   },
+   {
+    "id": "S2.28",
+    "covers": "Command with import inside return statements should work"
+   },
+   {
+    "id": "S2.29",
+    "covers": "Command with import inside yield statements should work"
+   },
+   {
+    "id": "S2.30",
+    "covers": "Command with import inside context managers should work"
+   },
+   {
+    "id": "S2.31",
+    "covers": "Command with import inside list/dict/set comprehensions should work"
+   },
+   {
+    "id": "S2.32",
+    "covers": "Command with import inside generator functions should work"
+   },
+   {
+    "id": "S2.33",
+    "covers": "Command with import inside async generators should work"
+   },
+   {
+    "id": "S2.34",
+    "covers": "Command with import inside type annotations should work"
+   },
+   {
+    "id": "S2.35",
+    "covers": "Command with import inside f-strings should work"
+   },
+   {
+    "id": "S2.36",
+    "covers": "Command with import inside walrus operators (Python 3.8+) should work"
+   },
+   {
+    "id": "S2.37",
+    "covers": "Command with import inside positional-only parameters (Python 3.8+) should work"
+   },
+   {
+    "id": "S2.38",
+    "covers": "Command with import inside match/case (Python 3.10+) should work"
+   },
+   {
+    "id": "S2.39",
+    "covers": "Command with import inside exception groups (Python 3.11+) should work"
+   }
+  ],
+  "plan_files": [
+   "shell.py",
+   "test_shell.py",
+   "release_notes.rst"
+  ]
+ },
+ "raw_tail": "rs\": \"Command with import inside context managers should work\"\n    },\n    {\n      \"id\": \"S2.31\",\n      \"covers\": \"Command with import inside list/dict/set comprehensions should work\"\n    },\n    {\n      \"id\": \"S2.32\",\n      \"covers\": \"Command with import inside generator functions should work\"\n    },\n    {\n      \"id\": \"S2.33\",\n      \"covers\": \"Command with import inside async generators should work\"\n    },\n    {\n      \"id\": \"S2.34\",\n      \"covers\": \"Command with import inside type annotations should work\"\n    },\n    {\n      \"id\": \"S2.35\",\n      \"covers\": \"Command with import inside f-strings should work\"\n    },\n    {\n      \"id\": \"S2.36\",\n      \"covers\": \"Command with import inside walrus operators (Python 3.8+) should work\"\n    },\n    {\n      \"id\": \"S2.37\",\n      \"covers\": \"Command with import inside positional-only parameters (Python 3.8+) should work\"\n    },\n    {\n      \"id\": \"S2.38\",\n      \"covers\": \"Command with import inside match/case (Python 3.10+) should work\"\n    },\n    {\n      \"id\": \"S2.39\",\n      \"covers\": \"Command with import inside exception groups (Python 3.11+) should work\"\n    }\n  ],\n  \"plan_files\": [\n    \"shell.py\",\n    \"test_shell.py\",\n    \"release_notes.rst\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_command_option_inline_function_call",
+    "covered": true,
+    "why": "S1.1 covers basic function definition and call with import without NameError; S1.5 covers import and use in function; edge cases include 'Command with nested function definitions' and 'Command with class definitions and methods'"
+   },
+   {
+    "test": "test_stdin_read_inline_function_call",
+    "covered": true,
+    "why": "S1.1 covers the core function definition/call behavior; S2.7 explicitly covers 'Command with stdin input (non-tty) should work'; edge cases include 'Command with stdin input (non-tty)' and 'Command with both -c and stdin input'"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

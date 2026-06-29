@@ -1,0 +1,35 @@
+{
+ "instance_id": "django__django-11564",
+ "driver": "local",
+ "n_edge_cases": 0,
+ "n_scenarios": 0,
+ "parse_ok": false,
+ "fail_to_pass": [
+  "test_add_script_name_prefix (settings_tests.tests.MediaURLStaticURLPrefixTest)",
+  "test_not_prefixed (settings_tests.tests.MediaURLStaticURLPrefixTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/conf/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "PASSWORD_RESET_TIMEOUT_DAYS",
+   "configure"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/conf/__init__.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [],
+  "scenarios": [],
+  "plan_files": []
+ },
+ "raw_tail": "planner returned empty content (finish_reason=length)",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge"
+}

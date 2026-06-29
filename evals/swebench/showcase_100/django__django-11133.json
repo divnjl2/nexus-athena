@@ -1,0 +1,122 @@
+{
+ "instance_id": "django__django-11133",
+ "n_edge_cases": 18,
+ "n_scenarios": 13,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_memoryview_content (httpwrappers.tests.HttpResponseTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/http/response.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "make_bytes"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/http/response.py"
+  ],
+  "matched": [
+   "response.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "[VERIFIED] memoryview(b'My Content') → content == b'My Content' (bytes(mv) confirmed; core: Postgres/psycopg2 BinaryField returns memoryview)",
+   "[VERIFIED] bug repro: str(memoryview).encode() == b'<memory at 0x...>' — confirms make_bytes str()-fallthrough is the defect",
+   "[VERIFIED] empty memoryview(b'') → b''",
+   "[VERIFIED] memoryview over bytearray (mutable buffer source) → underlying bytes (b'x')",
+   "[VERIFIED] content setter must keep excluding memoryview — it IS iterable and yields ints [65,66], which would corrupt the body",
+   "[VERIFIED] subclass safety: bytes(subclass/memoryview) downcasts to plain `bytes`",
+   "[VERIFIED] Content-Length = real byte length (10 for 'My Content'), not repr length (30)",
+   "[UNVERIFIED] REGRESSION: bytes content still returns identical bytes (mechanism known, not run through Django make_bytes)",
+   "[UNVERIFIED] REGRESSION: str content still encoded with response charset, not bytes()",
+   "[UNVERIFIED] REGRESSION: non-string scalar (int/object) still str(value).encode(charset)",
+   "[UNVERIFIED] REGRESSION: None content still yields b''",
+   "[UNVERIFIED] non-utf-8 charset: memoryview/bytes-like NOT re-encoded — raw bytes pass through",
+   "[UNVERIFIED] post-construction setter: response.content = memoryview(...) yields correct bytes",
+   "[UNVERIFIED] write()/file-like: response.write(memoryview(...)) appends correct bytes",
+   "[UNVERIFIED] StreamingHttpResponse yielding memoryview chunks → each chunk cast via make_bytes",
+   "[UNVERIFIED] repeated .content reads idempotent (container materialized once)",
+   "[SCOPE-OUT] non-contiguous/multi-dimensional/non-'B'-format memoryview → bytes() may raise BufferError/ValueError; DB BinaryField is 1-D contiguous",
+   "[SCOPE-OUT] bytearray content not wrapped in memoryview still hits str() fallback — issue targets memoryview only"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "HttpResponse(memoryview(b'My Content')).content == b'My Content'"
+   },
+   {
+    "id": "S1.2",
+    "covers": "HttpResponse(memoryview(b'')).content == b'' (empty memoryview)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "memoryview wrapping a bytearray yields the underlying bytes"
+   },
+   {
+    "id": "S1.4",
+    "covers": "repeated access to .content returns the same bytes (idempotent materialization)"
+   },
+   {
+    "id": "S2.1",
+    "covers": "regression: bytes content returns identical bytes"
+   },
+   {
+    "id": "S2.2",
+    "covers": "regression: str content encoded with response charset"
+   },
+   {
+    "id": "S2.3",
+    "covers": "regression: non-string scalar (int) returns str(value).encode(charset)"
+   },
+   {
+    "id": "S2.4",
+    "covers": "subclass safety: bytes/memoryview content downcast to plain bytes type"
+   },
+   {
+    "id": "S3.1",
+    "covers": "memoryview body with non-utf-8 charset is not re-encoded (raw bytes pass through)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "response.content = memoryview(...) set after construction yields correct bytes"
+   },
+   {
+    "id": "S4.2",
+    "covers": "response.write(memoryview(...)) appends correct bytes"
+   },
+   {
+    "id": "S4.3",
+    "covers": "StreamingHttpResponse yielding memoryview chunks emits correct bytes"
+   },
+   {
+    "id": "S5.1",
+    "covers": "serialized response Content-Length equals byte length (10) of the memoryview body"
+   }
+  ],
+  "plan_files": [
+   "django/http/response.py",
+   "tests/httpwrappers/tests.py",
+   "tests/responses/tests.py"
+  ]
+ },
+ "raw_tail": "s\":\"HttpResponse(memoryview(b'')).content == b'' (empty memoryview)\"},{\"id\":\"S1.3\",\"covers\":\"memoryview wrapping a bytearray yields the underlying bytes\"},{\"id\":\"S1.4\",\"covers\":\"repeated access to .content returns the same bytes (idempotent materialization)\"},{\"id\":\"S2.1\",\"covers\":\"regression: bytes content returns identical bytes\"},{\"id\":\"S2.2\",\"covers\":\"regression: str content encoded with response charset\"},{\"id\":\"S2.3\",\"covers\":\"regression: non-string scalar (int) returns str(value).encode(charset)\"},{\"id\":\"S2.4\",\"covers\":\"subclass safety: bytes/memoryview content downcast to plain bytes type\"},{\"id\":\"S3.1\",\"covers\":\"memoryview body with non-utf-8 charset is not re-encoded (raw bytes pass through)\"},{\"id\":\"S4.1\",\"covers\":\"response.content = memoryview(...) set after construction yields correct bytes\"},{\"id\":\"S4.2\",\"covers\":\"response.write(memoryview(...)) appends correct bytes\"},{\"id\":\"S4.3\",\"covers\":\"StreamingHttpResponse yielding memoryview chunks emits correct bytes\"},{\"id\":\"S5.1\",\"covers\":\"serialized response Content-Length equals byte length (10) of the memoryview body\"}],\"plan_files\":[\"django/http/response.py\",\"tests/httpwrappers/tests.py\",\"tests/responses/tests.py\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_memoryview_content",
+    "covered": true,
+    "why": "S1.1 explicitly tests HttpResponse(memoryview(b'My Content')).content == b'My Content', which is the core behavior the test checks. Additionally, the [VERIFIED] edge case 'memoryview(b'My Content') → content == b'My Content' confirms this behavior is covered."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

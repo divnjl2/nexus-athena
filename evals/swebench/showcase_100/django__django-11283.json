@@ -1,0 +1,123 @@
+{
+ "instance_id": "django__django-11283",
+ "n_edge_cases": 15,
+ "n_scenarios": 14,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_migrate_with_existing_target_permission (auth_tests.test_migrations.ProxyModelWithSameAppLabelTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/contrib/auth/migrations/0011_update_proxy_permissions.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "update_proxy_model_permissions"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/contrib/auth/migrations/0011_update_proxy_permissions.py"
+  ],
+  "matched": [
+   "0011_update_proxy_permissions.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Stale permission rows left by a deleted non-proxy model that shared the proxy model's name: row (new_content_type_id, codename) already exists, so the bulk UPDATE hits the unique constraint on (content_type_id, codename)",
+   "auth post_migrate hook (create_permissions) already inserted new-form permission rows before 0011 runs — e.g. when another app is migrated first (`migrate app`), then `migrate` collides",
+   "Reverse migration (rollback): the same collision occurs in the opposite direction when moving permissions from the proxy content_type back to the concrete content_type",
+   "Postgres aborts the whole transaction on IntegrityError unless the failing statement is wrapped in a savepoint — fix must use transaction.atomic() so the migrate command does not die and remaining work survives",
+   "Multiple proxy models in apps.get_models(): a collision on one model must not block updates for the others — per-model isolation/continuation",
+   "Collision on custom Meta.permissions (codename,name pairs) as well as default_permissions codenames (add_/change_/delete_/view_)",
+   "'view' default permission added in Django 2.1 is part of default_permissions and can itself collide",
+   "Partial overlap: only some of a model's codenames already exist for the new content_type — the bulk .update() still fails atomically, so the whole model set is skipped (acceptable tradeoff to surface via warning)",
+   "Multi-database / db routing: content_type lookup (get_for_model) and Permission update must run on schema_editor.connection.alias, not the default DB — content types & permissions differ per database",
+   "Empty default_permissions or empty Meta.permissions — Q() query construction must not break or match everything",
+   "Fresh DB / no proxy models / no existing permissions — migration is a clean no-op, never warns or crashes",
+   "Re-running `migrate` after a warning must remain consistent (migration is still recorded as applied; stale/duplicate rows are left for the operator to audit, not auto-mutated)",
+   "Warning must render with and without color terminal (color_style) and be actionable: identify old→new content types and tell the user to audit/remove conflicting permissions before reassigning",
+   "No silent auto-delete (data-loss risk) and no silent re-use of an existing permission (privilege-confusion/security risk) — maintainers explicitly chose warn-and-skip over both",
+   "Already-shipped 2.2.0 installs that applied the migration cleanly must be unaffected — the patch changes only the data-function behaviour, not the migration's identity/dependencies"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Forward migration with no collision: proxy model default permissions are updated from concrete content_type to proxy content_type"
+   },
+   {
+    "id": "S1.2",
+    "covers": "All default_permissions codenames (add/change/delete/view) and custom Meta.permissions for a proxy model are re-pointed to the proxy content_type"
+   },
+   {
+    "id": "S1.3",
+    "covers": "No proxy models / empty permissions table: migration completes as a no-op with no warning and no error"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Stale permission from a previously-deleted regular model of the same name already exists for the new content_type → migration catches IntegrityError and does not abort"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Collision on a custom Meta.permissions entry (not just default permissions) is caught and handled the same way"
+   },
+   {
+    "id": "S2.3",
+    "covers": "On collision an actionable warning is written naming the old and new content types and instructing the operator to audit/resolve duplicate permissions"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Collision is isolated in a savepoint (transaction.atomic) so the surrounding migration transaction is not poisoned (Postgres) and the migrate command keeps running"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Multiple proxy models where one collides and the rest do not: the non-colliding models are still migrated successfully"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Reverse migration with no collision moves permissions back from proxy content_type to concrete content_type"
+   },
+   {
+    "id": "S4.2",
+    "covers": "Reverse migration collision is caught and warned symmetrically to the forward direction"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Migration runs against a non-default database: get_for_model and Permission.update operate on schema_editor.connection.alias"
+   },
+   {
+    "id": "S6.1",
+    "covers": "auth post_migrate create_permissions pre-populated new-form rows (another app migrated first) → 0011 warns instead of raising IntegrityError"
+   },
+   {
+    "id": "S7.1",
+    "covers": "After a collision warning, pre-existing permission rows are left untouched (no automatic delete, no data loss)"
+   },
+   {
+    "id": "S7.2",
+    "covers": "On collision the migration does not silently re-use/merge an existing permission (no privilege confusion); operator retains control"
+   }
+  ],
+  "plan_files": [
+   "django/contrib/auth/migrations/0011_update_proxy_permissions.py",
+   "tests/auth_tests/test_migrations.py",
+   "docs/releases/2.2.1.txt"
+  ]
+ },
+ "raw_tail": "ned (Postgres) and the migrate command keeps running\"},{\"id\":\"S3.2\",\"covers\":\"Multiple proxy models where one collides and the rest do not: the non-colliding models are still migrated successfully\"},{\"id\":\"S4.1\",\"covers\":\"Reverse migration with no collision moves permissions back from proxy content_type to concrete content_type\"},{\"id\":\"S4.2\",\"covers\":\"Reverse migration collision is caught and warned symmetrically to the forward direction\"},{\"id\":\"S5.1\",\"covers\":\"Migration runs against a non-default database: get_for_model and Permission.update operate on schema_editor.connection.alias\"},{\"id\":\"S6.1\",\"covers\":\"auth post_migrate create_permissions pre-populated new-form rows (another app migrated first) → 0011 warns instead of raising IntegrityError\"},{\"id\":\"S7.1\",\"covers\":\"After a collision warning, pre-existing permission rows are left untouched (no automatic delete, no data loss)\"},{\"id\":\"S7.2\",\"covers\":\"On collision the migration does not silently re-use/merge an existing permission (no privilege confusion); operator retains control\"}],\"plan_files\":[\"django/contrib/auth/migrations/0011_update_proxy_permissions.py\",\"tests/auth_tests/test_migrations.py\",\"docs/releases/2.2.1.txt\"]}",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_migrate_with_existing_target_permission",
+    "covered": true,
+    "why": "The test verifies migration handles existing permissions for the target (proxy) content_type without crashing. Plan scenarios S2.1 (catches IntegrityError when stale permission exists for new content_type), S2.3 (writes actionable warning on collision), S3.1 (isolates collision in savepoint so migration continues), S7.1 (leaves pre-existing rows untouched), and S7.2 (no silent re-use/merge) collectively cover this behavior. The edge case 'Stale permission rows left by a deleted non-proxy model that shared the proxy model's name' directly matches the issue scenario where (content_type_id, codename) already exists for the target, causing the bulk UPDATE to hit the unique constraint."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

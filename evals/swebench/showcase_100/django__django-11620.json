@@ -1,0 +1,157 @@
+{
+ "instance_id": "django__django-11620",
+ "driver": "local",
+ "n_edge_cases": 21,
+ "n_scenarios": 21,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_technical_404_converter_raise_404 (view_tests.tests.test_debug.DebugViewTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/views/debug.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "technical_404_response"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/views/debug.py"
+  ],
+  "matched": [
+   "debug.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Http404 raised in to_python() with DEBUG=True",
+   "Http404 raised in to_python() with DEBUG=False",
+   "Http404 raised in to_url() with DEBUG=True",
+   "Http404 raised in to_url() with DEBUG=False",
+   "Http404 with custom message",
+   "Http404 with empty message",
+   "Http404 with None message",
+   "Resolver404 (regression test)",
+   "Http404 raised in view (regression test)",
+   "Http404 raised during URL reversing (regression test)",
+   "Http404 raised in middleware during URL resolution",
+   "Http404 raised in a custom URL resolver",
+   "Http404 raised when path converter used in regex pattern",
+   "Http404 raised when path converter used in path pattern",
+   "Http404 raised when path converter used in route pattern",
+   "Http404 raised when path converter used in named pattern",
+   "Http404 raised when path converter used in parameterized pattern",
+   "Http404 raised when path converter used in dynamic pattern",
+   "Http404 raised when path converter used in static pattern",
+   "Http404 raised when path converter used in mixed pattern",
+   "Http404 raised when path converter used in complex pattern"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Http404 raised in to_python() with DEBUG=True results in technical 404 page with error message"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Http404 raised in to_python() with DEBUG=False results in standard 404 page"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Http404 raised in to_url() with DEBUG=True results in technical 404 page with error message"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Http404 raised in to_url() with DEBUG=False results in standard 404 page"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Http404 with custom message in to_python() displays custom message on technical 404 page"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Http404 with empty message in to_python() displays default message on technical 404 page"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Http404 with None message in to_python() displays default message on technical 404 page"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Resolver404 still results in technical 404 page (no regression)"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Http404 raised in view still results in technical 404 page (no regression)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Http404 raised during URL reversing still results in technical 404 page (no regression)"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Http404 raised in middleware during URL resolution results in technical 404 page"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Http404 raised in custom URL resolver results in technical 404 page"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Http404 raised when path converter used in regex pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Http404 raised when path converter used in path pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Http404 raised when path converter used in route pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.16",
+    "covers": "Http404 raised when path converter used in named pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.17",
+    "covers": "Http404 raised when path converter used in parameterized pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.18",
+    "covers": "Http404 raised when path converter used in dynamic pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.19",
+    "covers": "Http404 raised when path converter used in static pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.20",
+    "covers": "Http404 raised when path converter used in mixed pattern results in technical 404 page"
+   },
+   {
+    "id": "S1.21",
+    "covers": "Http404 raised when path converter used in complex pattern results in technical 404 page"
+   }
+  ],
+  "plan_files": [
+   "debug.py",
+   "resolvers_tests.py"
+  ]
+ },
+ "raw_tail": "\n    },\n    {\n      \"id\": \"S1.14\",\n      \"covers\": \"Http404 raised when path converter used in path pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.15\",\n      \"covers\": \"Http404 raised when path converter used in route pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.16\",\n      \"covers\": \"Http404 raised when path converter used in named pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.17\",\n      \"covers\": \"Http404 raised when path converter used in parameterized pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.18\",\n      \"covers\": \"Http404 raised when path converter used in dynamic pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.19\",\n      \"covers\": \"Http404 raised when path converter used in static pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.20\",\n      \"covers\": \"Http404 raised when path converter used in mixed pattern results in technical 404 page\"\n    },\n    {\n      \"id\": \"S1.21\",\n      \"covers\": \"Http404 raised when path converter used in complex pattern results in technical 404 page\"\n    }\n  ],\n  \"plan_files\": [\n    \"debug.py\",\n    \"resolvers_tests.py\"\n  ]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_technical_404_converter_raise_404",
+    "covered": true,
+    "why": "Scenario S1.1 explicitly covers 'Http404 raised in to_python() with DEBUG=True results in technical 404 page with error message', which matches the test's purpose of verifying that raising Http404 in a path converter's to_python method with DEBUG=True produces the technical 404 page rather than a generic server error."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

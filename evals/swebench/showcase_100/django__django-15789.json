@@ -1,0 +1,173 @@
+{
+ "instance_id": "django__django-15789",
+ "driver": "local",
+ "n_edge_cases": 23,
+ "n_scenarios": 24,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_json_script_custom_encoder (utils_tests.test_html.TestUtilsHtml)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/utils/html.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "escapejs",
+   "json_script"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/utils/html.py"
+  ],
+  "matched": [
+   "html.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "encoder=None should use default DjangoJSONEncoder",
+   "custom encoder class (not instance) should be instantiated",
+   "custom encoder instance should be used directly",
+   "invalid encoder (not JSONEncoder subclass) should raise TypeError",
+   "empty dict {} data",
+   "empty list [] data",
+   "None data",
+   "Unicode characters in data",
+   "Special characters requiring HTML escaping",
+   "Circular references in data structures",
+   "Encoder with custom default() method for custom types",
+   "Encoder with custom encode() method",
+   "Script ID with special characters",
+   "Empty script ID string",
+   "Large data sets",
+   "Nested data structures",
+   "Data with datetime objects",
+   "Data with Decimal objects",
+   "Data with UUID objects",
+   "Backward compatibility - existing calls without encoder param",
+   "Encoder that raises exception during encoding",
+   "Non-serializable data with default encoder",
+   "Non-serializable data with custom encoder that handles it"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "json_script() works without encoder parameter (backward compatibility)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "json_script() accepts encoder=None and uses DjangoJSONEncoder"
+   },
+   {
+    "id": "S1.3",
+    "covers": "json_script() accepts custom encoder class and instantiates it"
+   },
+   {
+    "id": "S1.4",
+    "covers": "json_script() accepts custom encoder instance and uses it directly"
+   },
+   {
+    "id": "S1.5",
+    "covers": "json_script() raises TypeError for invalid encoder type"
+   },
+   {
+    "id": "S2.1",
+    "covers": "json_script() handles empty dict {} data correctly"
+   },
+   {
+    "id": "S2.2",
+    "covers": "json_script() handles empty list [] data correctly"
+   },
+   {
+    "id": "S2.3",
+    "covers": "json_script() handles None data correctly"
+   },
+   {
+    "id": "S2.4",
+    "covers": "json_script() handles Unicode characters correctly"
+   },
+   {
+    "id": "S2.5",
+    "covers": "json_script() properly escapes special HTML characters"
+   },
+   {
+    "id": "S2.6",
+    "covers": "json_script() handles nested data structures"
+   },
+   {
+    "id": "S3.1",
+    "covers": "custom encoder with default() method handles custom types"
+   },
+   {
+    "id": "S3.2",
+    "covers": "custom encoder with encode() method produces valid output"
+   },
+   {
+    "id": "S3.3",
+    "covers": "custom encoder handles datetime objects differently than DjangoJSONEncoder"
+   },
+   {
+    "id": "S3.4",
+    "covers": "custom encoder handles Decimal objects differently than DjangoJSONEncoder"
+   },
+   {
+    "id": "S3.5",
+    "covers": "custom encoder handles UUID objects differently than DjangoJSONEncoder"
+   },
+   {
+    "id": "S4.1",
+    "covers": "json_script() handles script ID with special characters"
+   },
+   {
+    "id": "S4.2",
+    "covers": "json_script() handles empty script ID string"
+   },
+   {
+    "id": "S5.1",
+    "covers": "output is valid HTML with proper script tag structure"
+   },
+   {
+    "id": "S5.2",
+    "covers": "output contains valid JSON inside script tag"
+   },
+   {
+    "id": "S5.3",
+    "covers": "output can be parsed back to original data structure"
+   },
+   {
+    "id": "S6.1",
+    "covers": "encoder exception during encoding propagates correctly"
+   },
+   {
+    "id": "S6.2",
+    "covers": "non-serializable data with default encoder raises TypeError"
+   },
+   {
+    "id": "S6.3",
+    "covers": "non-serializable data with custom encoder that handles it succeeds"
+   }
+  ],
+  "plan_files": [
+   "django/utils/html.py",
+   "django/utils/json.py",
+   "docs/ref/utils/html.txt"
+  ]
+ },
+ "raw_tail": "d\":\"S3.1\",\"covers\":\"custom encoder with default() method handles custom types\"},\n{\"id\":\"S3.2\",\"covers\":\"custom encoder with encode() method produces valid output\"},\n{\"id\":\"S3.3\",\"covers\":\"custom encoder handles datetime objects differently than DjangoJSONEncoder\"},\n{\"id\":\"S3.4\",\"covers\":\"custom encoder handles Decimal objects differently than DjangoJSONEncoder\"},\n{\"id\":\"S3.5\",\"covers\":\"custom encoder handles UUID objects differently than DjangoJSONEncoder\"},\n{\"id\":\"S4.1\",\"covers\":\"json_script() handles script ID with special characters\"},\n{\"id\":\"S4.2\",\"covers\":\"json_script() handles empty script ID string\"},\n{\"id\":\"S5.1\",\"covers\":\"output is valid HTML with proper script tag structure\"},\n{\"id\":\"S5.2\",\"covers\":\"output contains valid JSON inside script tag\"},\n{\"id\":\"S5.3\",\"covers\":\"output can be parsed back to original data structure\"},\n{\"id\":\"S6.1\",\"covers\":\"encoder exception during encoding propagates correctly\"},\n{\"id\":\"S6.2\",\"covers\":\"non-serializable data with default encoder raises TypeError\"},\n{\"id\":\"S6.3\",\"covers\":\"non-serializable data with custom encoder that handles it succeeds\"}\n],\n\"plan_files\":[\n\"django/utils/html.py\",\n\"django/utils/json.py\",\n\"docs/ref/utils/html.txt\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_json_script_custom_encoder",
+    "covered": true,
+    "why": "Scenarios S1.3 and S1.4 directly cover the core functionality: S1.3 tests accepting a custom encoder class and instantiating it, while S1.4 tests accepting a custom encoder instance and using it directly. Additionally, S3.1-S3.5 cover various custom encoder behaviors (default() method, encode() method, handling datetime/Decimal/UUID differently). The edge cases also explicitly mention 'custom encoder class (not instance) should be instantiated' and 'custom encoder instance should be used directly', which are the key behaviors this test would verify."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

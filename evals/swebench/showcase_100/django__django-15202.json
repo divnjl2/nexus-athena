@@ -1,0 +1,127 @@
+{
+ "instance_id": "django__django-15202",
+ "n_edge_cases": 20,
+ "n_scenarios": 12,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_urlfield_clean_invalid (forms_tests.field_tests.test_urlfield.URLFieldTest)",
+  "test_urlfield_clean_not_required (forms_tests.field_tests.test_urlfield.URLFieldTest)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/core/validators.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__call__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/core/validators.py"
+  ],
+  "matched": [
+   "validators.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Exact repro forms.URLField().clean('////]@N.AN') must raise ValidationError, not ValueError",
+   "Unmatched closing bracket ']' in netloc -> urlsplit 'Invalid IPv6 URL' ValueError -> ValidationError",
+   "Unmatched opening bracket '[' / unclosed IPv6 literal e.g. 'http://[::1' -> ValidationError not crash",
+   "Bracketed but invalid IPv6 e.g. 'http://[notipv6]' / 'http://[fe80::1%25]' -> ValidationError via validate_ipv6_address path",
+   "Port that makes urlsplit raise (Python>=3.6 'Port out of range'/'Port could not be cast to integer') e.g. 'http://example.com:port' or ':999999' -> ValidationError",
+   "Value with no scheme (the reported input has none) still hits validator and must be ValidationError",
+   "Userinfo + stray bracket combo like ']@N.AN' (mixes '@' and stray ']') -> ValidationError",
+   "Empty string '' -> ValidationError (required), no ValueError",
+   "None / non-str input -> handled upstream (to_python -> ''), fix must not swallow TypeError as if it were a parse error",
+   "Leading/trailing whitespace is stripped before validation; stripped malformed value still -> ValidationError",
+   "Over-length URL (> max_length / >2048) still raises ValidationError, not crash, even when also malformed",
+   "IDN/non-ASCII netloc that fails encode/idna -> ValidationError, not UnicodeError/ValueError leaking",
+   "URLField.to_python's internal urlsplit/urlunsplit (scheme-prepend path) must also convert ValueError -> ValidationError",
+   "URLValidator used directly on a model field (not via a form) must give the same ValidationError guarantee",
+   "Converted ValidationError must set code='invalid' and the standard invalid-URL message",
+   "Converted ValidationError must include params={'value': value} so the templated message renders",
+   "Regression: valid 'http://example.com' still cleans successfully",
+   "Regression: valid IPv6 'http://[::1]/' still validates",
+   "Regression: valid port 'http://example.com:8000/path' still validates",
+   "Only ValueError from parsing is caught — genuine bugs (TypeError, AttributeError) must still propagate, not be masked as ValidationError"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "forms.URLField().clean('////]@N.AN') raises ValidationError, not ValueError (exact repro)"
+   },
+   {
+    "id": "S1.2",
+    "covers": "URLValidator called with unmatched-bracket value whose urlsplit raises 'Invalid IPv6 URL' surfaces as ValidationError"
+   },
+   {
+    "id": "S1.3",
+    "covers": "URLValidator with a port-related urlsplit ValueError ('Port out of range'/'cannot cast') surfaces as ValidationError"
+   },
+   {
+    "id": "S1.4",
+    "covers": "URLField.clean('http://[::1') (unclosed IPv6 bracket) raises ValidationError, not ValueError"
+   },
+   {
+    "id": "S2.1",
+    "covers": "Converted error has code=='invalid' and the standard invalid-URL message, matching other rejections"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Converted ValidationError carries params={'value': value} so the message template renders correctly"
+   },
+   {
+    "id": "S3.1",
+    "covers": "Valid URL 'http://example.com' still cleans successfully (no regression)"
+   },
+   {
+    "id": "S3.2",
+    "covers": "Valid IPv6 URL 'http://[::1]/' still validates (no regression)"
+   },
+   {
+    "id": "S3.3",
+    "covers": "Valid URL with port 'http://example.com:8000/path' still validates (no regression)"
+   },
+   {
+    "id": "S4.1",
+    "covers": "URLField.to_python's internal urlsplit/urlunsplit converts ValueError to ValidationError"
+   },
+   {
+    "id": "S4.2",
+    "covers": "URLValidator used directly (model-field path) gives ValidationError for the fuzzer input"
+   },
+   {
+    "id": "S4.3",
+    "covers": "Non-parse exceptions (TypeError/AttributeError) are NOT masked as ValidationError by the fix"
+   }
+  ],
+  "plan_files": [
+   "django/core/validators.py",
+   "django/forms/fields.py",
+   "tests/validators/tests.py",
+   "tests/forms_tests/field_tests/test_urlfield.py"
+  ]
+ },
+ "raw_tail": "nnot cast') surfaces as ValidationError\"},{\"id\":\"S1.4\",\"covers\":\"URLField.clean('http://[::1') (unclosed IPv6 bracket) raises ValidationError, not ValueError\"},{\"id\":\"S2.1\",\"covers\":\"Converted error has code=='invalid' and the standard invalid-URL message, matching other rejections\"},{\"id\":\"S2.2\",\"covers\":\"Converted ValidationError carries params={'value': value} so the message template renders correctly\"},{\"id\":\"S3.1\",\"covers\":\"Valid URL 'http://example.com' still cleans successfully (no regression)\"},{\"id\":\"S3.2\",\"covers\":\"Valid IPv6 URL 'http://[::1]/' still validates (no regression)\"},{\"id\":\"S3.3\",\"covers\":\"Valid URL with port 'http://example.com:8000/path' still validates (no regression)\"},{\"id\":\"S4.1\",\"covers\":\"URLField.to_python's internal urlsplit/urlunsplit converts ValueError to ValidationError\"},{\"id\":\"S4.2\",\"covers\":\"URLValidator used directly (model-field path) gives ValidationError for the fuzzer input\"},{\"id\":\"S4.3\",\"covers\":\"Non-parse exceptions (TypeError/AttributeError) are NOT masked as ValidationError by the fix\"}],\"plan_files\":[\"django/core/validators.py\",\"django/forms/fields.py\",\"tests/validators/tests.py\",\"tests/forms_tests/field_tests/test_urlfield.py\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_urlfield_clean_invalid",
+    "covered": true,
+    "why": "S1.1 directly covers exact repro case; S1.2 covers 'Invalid IPv6 URL' ValueError conversion; S1.4 covers unclosed bracket case; S2.1/S2.2 cover ValidationError structure"
+   },
+   {
+    "test": "test_urlfield_clean_not_required",
+    "covered": false,
+    "why": "No scenario explicitly covers non-required field behavior with empty values; edge case only mentions 'Empty string -> ValidationError (required)' but doesn't address required=False case where empty should be allowed"
+   }
+  ],
+  "covered": 1,
+  "total": 2,
+  "ratio": 0.5
+ }
+}

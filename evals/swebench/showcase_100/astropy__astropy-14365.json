@@ -1,0 +1,196 @@
+{
+ "instance_id": "astropy__astropy-14365",
+ "driver": "local",
+ "n_edge_cases": 24,
+ "n_scenarios": 30,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "astropy/io/ascii/tests/test_qdp.py::test_roundtrip[True]"
+ ],
+ "gold_targets": {
+  "files": [
+   "astropy/io/ascii/qdp.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_get_tables_from_qdp_file",
+   "_line_type"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "astropy/io/ascii/qdp.py"
+  ],
+  "matched": [
+   "qdp.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "All lowercase QDP commands (e.g., 'read serr 1 2')",
+   "All uppercase QDP commands (regression - e.g., 'READ SERR 1 2')",
+   "Mixed case QDP commands (e.g., 'Read Serr 1 2')",
+   "Mixed case per word (e.g., 'READ serr 1 2')",
+   "Empty QDP file",
+   "QDP file with only comment lines",
+   "QDP file with header but no data rows",
+   "QDP file with data but no explicit header",
+   "Multiple tables in single QDP file",
+   "All QDP command types: READ, READ SERR, READ ERR, READ ERRS, READ ERRR, READ ERRR2",
+   "Commands with varying argument counts",
+   "Comments interspersed with commands and data",
+   "Leading whitespace before commands",
+   "Trailing whitespace after commands",
+   "Extra whitespace between command tokens",
+   "Unicode characters in data values",
+   "Very long command lines",
+   "Case variations in table_id parameter",
+   "Case variations in column names",
+   "Empty lines between header and data",
+   "Multiple consecutive empty lines",
+   "QDP file with only whitespace",
+   "Invalid/unrecognized command (should still raise ValueError)",
+   "Malformed command arguments (should still raise appropriate error)"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "QDP file with all lowercase commands parses successfully without raising ValueError"
+   },
+   {
+    "id": "S1.2",
+    "covers": "QDP file with all uppercase commands still parses successfully (regression test)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "QDP file with mixed case commands (e.g., 'Read Serr 1 2') parses successfully"
+   },
+   {
+    "id": "S1.4",
+    "covers": "QDP file with 'read serr 1 2' creates Table with error columns correctly populated"
+   },
+   {
+    "id": "S1.5",
+    "covers": "QDP file with 'READ ERR 1 2' (uppercase) still works correctly"
+   },
+   {
+    "id": "S1.6",
+    "covers": "QDP file with 'read err 1 2' (lowercase) works correctly"
+   },
+   {
+    "id": "S1.7",
+    "covers": "QDP file with 'READ ERRS 1 2 3' (uppercase) still works correctly"
+   },
+   {
+    "id": "S1.8",
+    "covers": "QDP file with 'read errs 1 2 3' (lowercase) works correctly"
+   },
+   {
+    "id": "S1.9",
+    "covers": "QDP file with 'READ ERRR 1 2 3 4' (uppercase) still works correctly"
+   },
+   {
+    "id": "S1.10",
+    "covers": "QDP file with 'read errr 1 2 3 4' (lowercase) works correctly"
+   },
+   {
+    "id": "S1.11",
+    "covers": "QDP file with 'READ ERRR2 1 2 3 4 5' (uppercase) still works correctly"
+   },
+   {
+    "id": "S1.12",
+    "covers": "QDP file with 'read errr2 1 2 3 4 5' (lowercase) works correctly"
+   },
+   {
+    "id": "S1.13",
+    "covers": "QDP file with 'READ 1 2' (simple read, uppercase) still works correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "QDP file with 'read 1 2' (simple read, lowercase) works correctly"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Unrecognized QDP command still raises ValueError with descriptive message"
+   },
+   {
+    "id": "S1.16",
+    "covers": "QDP file with leading whitespace before command parses correctly"
+   },
+   {
+    "id": "S1.17",
+    "covers": "QDP file with trailing whitespace after command parses correctly"
+   },
+   {
+    "id": "S1.18",
+    "covers": "QDP file with extra whitespace between command tokens parses correctly"
+   },
+   {
+    "id": "S1.19",
+    "covers": "QDP file with comments mixed with lowercase commands parses correctly"
+   },
+   {
+    "id": "S1.20",
+    "covers": "QDP file with empty lines between header and data parses correctly"
+   },
+   {
+    "id": "S1.21",
+    "covers": "QDP file with table_id parameter in lowercase works correctly"
+   },
+   {
+    "id": "S1.22",
+    "covers": "QDP file with column names in various cases preserves original case in output"
+   },
+   {
+    "id": "S1.23",
+    "covers": "Empty QDP file raises appropriate error or returns empty Table"
+   },
+   {
+    "id": "S1.24",
+    "covers": "QDP file with only comments raises appropriate error or returns empty Table"
+   },
+   {
+    "id": "S1.25",
+    "covers": "QDP file with header but no data rows returns Table with correct structure"
+   },
+   {
+    "id": "S1.26",
+    "covers": "QDP file with multiple tables handles case insensitivity for all tables"
+   },
+   {
+    "id": "S1.27",
+    "covers": "QDP file with Unicode characters in data values still parses correctly"
+   },
+   {
+    "id": "S1.28",
+    "covers": "QDP file with malformed command arguments still raises appropriate error"
+   },
+   {
+    "id": "S1.29",
+    "covers": "QDP file with 'READ SERR 1 2' followed by data with correct number of columns"
+   },
+   {
+    "id": "S1.30",
+    "covers": "QDP file with 'read serr 1 2' followed by data with correct number of columns"
+   }
+  ],
+  "plan_files": [
+   "qdp.py"
+  ]
+ },
+ "raw_tail": "\"covers\":\"QDP file with comments mixed with lowercase commands parses correctly\"},\n{\"id\":\"S1.20\",\"covers\":\"QDP file with empty lines between header and data parses correctly\"},\n{\"id\":\"S1.21\",\"covers\":\"QDP file with table_id parameter in lowercase works correctly\"},\n{\"id\":\"S1.22\",\"covers\":\"QDP file with column names in various cases preserves original case in output\"},\n{\"id\":\"S1.23\",\"covers\":\"Empty QDP file raises appropriate error or returns empty Table\"},\n{\"id\":\"S1.24\",\"covers\":\"QDP file with only comments raises appropriate error or returns empty Table\"},\n{\"id\":\"S1.25\",\"covers\":\"QDP file with header but no data rows returns Table with correct structure\"},\n{\"id\":\"S1.26\",\"covers\":\"QDP file with multiple tables handles case insensitivity for all tables\"},\n{\"id\":\"S1.27\",\"covers\":\"QDP file with Unicode characters in data values still parses correctly\"},\n{\"id\":\"S1.28\",\"covers\":\"QDP file with malformed command arguments still raises appropriate error\"},\n{\"id\":\"S1.29\",\"covers\":\"QDP file with 'READ SERR 1 2' followed by data with correct number of columns\"},\n{\"id\":\"S1.30\",\"covers\":\"QDP file with 'read serr 1 2' followed by data with correct number of columns\"}\n],\n\"plan_files\":[\"qdp.py\"]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "astropy/io/ascii/tests/test_qdp.py::test_roundtrip[True]",
+    "covered": true,
+    "why": "The test_roundtrip[True] test verifies that a Table with error columns can be written to QDP format and read back correctly. Scenarios S1.4 ('read serr 1 2' creates Table with error columns correctly populated), S1.6 (lowercase 'read err 1 2'), S1.8 (lowercase 'read errs 1 2 3'), S1.10 (lowercase 'read errr 1 2 3 4'), S1.12 (lowercase 'read errr2 1 2 3 4 5'), and S1.30 (lowercase 'read serr 1 2' with correct columns) all cover the case-insensitive parsing of error commands that the roundtrip test requires. Additionally, the edge cases explicitly list 'All QDP command types: READ, READ SERR, READ ERR, READ ERRS, READ ERRR, READ ERRR2' with case variations, which directly addresses the behavior this test validates."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

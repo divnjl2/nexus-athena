@@ -1,0 +1,135 @@
+{
+ "instance_id": "django__django-11999",
+ "n_edge_cases": 20,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_overriding_FIELD_display (model_fields.tests.GetFieldDisplayTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "contribute_to_class"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/fields/__init__.py"
+  ],
+  "matched": [
+   "__init__.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Override get_foo_bar_display() declared AFTER the choices field — must be used (ticket repro, breaks 2.2+).",
+   "Override declared BEFORE the field ('backwards' case) — must give the SAME result; fix makes declaration order irrelevant since plain methods are set before fields' contribute_to_class() runs.",
+   "No override + field has choices — auto-generated get_FOO_display still created (no regression).",
+   "Field WITHOUT choices — no get_FOO_display synthesized; guard sits inside the existing `choices is not None` branch.",
+   "Value not in choices — display returns str(value) unchanged.",
+   "Integer/mixed-type choice keys resolve to label.",
+   "Grouped/optgroup choices resolve to leaf label.",
+   "Lazy/gettext-translated labels return translated string.",
+   "Multiple choices fields — overriding one must not disturb the other.",
+   "Override inherited from an abstract base — respected by subclasses (hasattr walks MRO).",
+   "SUBCLASS overrides an inherited abstract-base field ADDING choices — display must reflect the SUBCLASS field's choices. HAZARD: naive `if not hasattr(cls, name)` finds the base's auto-generated partialmethod and skips setup, returning raw values for new child choices; fix must distinguish a user method from an inherited auto-generated partialmethod.",
+   "Subclass custom get_FOO_display overrides parent's auto-generated one.",
+   "Documented stable approach: override Model._get_FIELD_display(self, field), dispatch on field.attname, delegate to super().",
+   "_get_FIELD_display override chains via super() for non-targeted fields.",
+   "hasattr guard respects any user-declared attribute of that name on the class itself as intentional.",
+   "Proxy model adds a custom get_FOO_display — respected.",
+   "makemigrations/deconstruct() unaffected — methods aren't field state; no spurious migration.",
+   "Backwards-compat: projects with no override see identical behaviour.",
+   "choices=[] (empty, not None) still enters the choices branch — consistent with prior releases.",
+   "Deferred/.only()/.defer() instances still return the correct label."
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Custom get_FOO_display() declared after the choices field is used and returns the custom value (core repro)."
+   },
+   {
+    "id": "S1.2",
+    "covers": "Custom get_FOO_display() declared before the choices field is used (order-independence)."
+   },
+   {
+    "id": "S1.3",
+    "covers": "Override yields the same custom result for both declaration orders."
+   },
+   {
+    "id": "S2.1",
+    "covers": "No override: auto-generated get_FOO_display returns the label for a valid choice."
+   },
+   {
+    "id": "S2.2",
+    "covers": "No override: get_FOO_display returns str(value) for a value not in choices."
+   },
+   {
+    "id": "S2.3",
+    "covers": "No override: lazy/translated labels returned translated."
+   },
+   {
+    "id": "S2.4",
+    "covers": "Two choices fields: overriding one leaves the other's auto display intact."
+   },
+   {
+    "id": "S2.5",
+    "covers": "Adding/keeping an override produces no new migration (makemigrations --check clean)."
+   },
+   {
+    "id": "S3.1",
+    "covers": "Override on an abstract base is inherited and respected by a concrete subclass."
+   },
+   {
+    "id": "S3.2",
+    "covers": "Subclass overriding an inherited field with expanded choices: display reflects the SUBCLASS field's choices."
+   },
+   {
+    "id": "S3.3",
+    "covers": "Subclass custom get_FOO_display overrides an inherited auto-generated display."
+   },
+   {
+    "id": "S4.1",
+    "covers": "A field without choices does not gain a get_FOO_display attribute."
+   },
+   {
+    "id": "S5.1",
+    "covers": "Overriding _get_FIELD_display(self, field), dispatching on field.attname, returns the custom value."
+   },
+   {
+    "id": "S5.2",
+    "covers": "_get_FIELD_display override delegates to super() for non-targeted fields."
+   },
+   {
+    "id": "S6.1",
+    "covers": "Documentation shows the supported way to customize the display."
+   }
+  ],
+  "plan_files": [
+   "django/db/models/fields/__init__.py",
+   "django/db/models/base.py",
+   "tests/model_fields/tests.py",
+   "tests/model_fields/models.py",
+   "docs/ref/models/instances.txt",
+   "docs/releases/2.2.7.txt"
+  ]
+ },
+ "raw_tail": "nslated labels returned translated.\"},{\"id\":\"S2.4\",\"covers\":\"Two choices fields: overriding one leaves the other's auto display intact.\"},{\"id\":\"S2.5\",\"covers\":\"Adding/keeping an override produces no new migration (makemigrations --check clean).\"},{\"id\":\"S3.1\",\"covers\":\"Override on an abstract base is inherited and respected by a concrete subclass.\"},{\"id\":\"S3.2\",\"covers\":\"Subclass overriding an inherited field with expanded choices: display reflects the SUBCLASS field's choices.\"},{\"id\":\"S3.3\",\"covers\":\"Subclass custom get_FOO_display overrides an inherited auto-generated display.\"},{\"id\":\"S4.1\",\"covers\":\"A field without choices does not gain a get_FOO_display attribute.\"},{\"id\":\"S5.1\",\"covers\":\"Overriding _get_FIELD_display(self, field), dispatching on field.attname, returns the custom value.\"},{\"id\":\"S5.2\",\"covers\":\"_get_FIELD_display override delegates to super() for non-targeted fields.\"},{\"id\":\"S6.1\",\"covers\":\"Documentation shows the supported way to customize the display.\"}],\"plan_files\":[\"django/db/models/fields/__init__.py\",\"django/db/models/base.py\",\"tests/model_fields/tests.py\",\"tests/model_fields/models.py\",\"docs/ref/models/instances.txt\",\"docs/releases/2.2.7.txt\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_overriding_FIELD_display",
+    "covered": true,
+    "why": "S1.1 explicitly covers the core repro: custom get_FOO_display() declared after choices field returns custom value. Edge case 'Override get_foo_bar_display() declared AFTER the choices field — must be used (ticket repro, breaks 2.2+)' directly addresses this test's purpose."
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

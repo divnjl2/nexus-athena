@@ -1,0 +1,33 @@
+{
+ "instance_id": "django__django-11797",
+ "driver": "local",
+ "n_edge_cases": 0,
+ "n_scenarios": 0,
+ "parse_ok": false,
+ "fail_to_pass": [
+  "test_exact_query_rhs_with_selected_columns (lookup.tests.LookupTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/lookups.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "process_rhs"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/lookups.py"
+  ],
+  "matched": [],
+  "recall": 0.0
+ },
+ "plan": {
+  "edge_cases": [],
+  "scenarios": [],
+  "plan_files": []
+ },
+ "raw_tail": "planner returned empty content (finish_reason=length)",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge"
+}

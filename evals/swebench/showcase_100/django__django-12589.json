@@ -1,0 +1,125 @@
+{
+ "instance_id": "django__django-12589",
+ "driver": "local",
+ "n_edge_cases": 14,
+ "n_scenarios": 15,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_aggregation_subquery_annotation_values_collision (aggregation.tests.AggregateTestCase)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/query.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "set_group_by"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/query.py"
+  ],
+  "matched": [
+   "query.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Annotation alias matches column name in through table that is joined via filter",
+   "Annotation alias matches column name in directly related table",
+   "Multiple annotations with same alias as different table columns",
+   "Annotation alias matches column in table not involved in query (should use alias)",
+   "Empty annotation set - no group by needed",
+   "Annotation with None/null values in group by",
+   "Multiple subqueries with same alias as column names",
+   "Annotation alias matches primary key column name",
+   "Case sensitivity of column name matching",
+   "Annotation used in both SELECT and GROUP BY with collision",
+   "Complex nested subqueries with alias collisions",
+   "Aggregation on annotation that has collision (Count, Sum, etc.)",
+   "Order by on annotation with collision",
+   "Having clause referencing annotation with collision"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Query with annotation alias colliding with through table column generates GROUP BY with full expression instead of alias"
+   },
+   {
+    "id": "S1.2",
+    "covers": "Query with annotation alias NOT colliding with any involved table column uses alias in GROUP BY (performance optimization preserved)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "Multiple annotations where only some have collisions - each handled independently"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Aggregation (Count, Sum, Avg) on annotation with collision works correctly"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Query with annotation matching column in directly joined table (not through) handles collision"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Annotation alias matching column in table NOT involved in query uses alias (no false positive)"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Complex filter with OR conditions involving related tables triggers correct collision detection"
+   },
+   {
+    "id": "S1.8",
+    "covers": "Subquery annotation with collision generates correct SQL without ProgrammingError"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Empty annotation set does not cause errors in group by processing"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Annotation with null values in group by context handled correctly"
+   },
+   {
+    "id": "S1.11",
+    "covers": "Order by on annotation with collision works after group by fix"
+   },
+   {
+    "id": "S1.12",
+    "covers": "Having clause referencing annotation with collision works correctly"
+   },
+   {
+    "id": "S1.13",
+    "covers": "Multiple subqueries with same alias as different columns each handled correctly"
+   },
+   {
+    "id": "S1.14",
+    "covers": "Annotation alias matching primary key column name handled correctly"
+   },
+   {
+    "id": "S1.15",
+    "covers": "Backward compatibility - existing queries without collisions unchanged"
+   }
+  ],
+  "plan_files": [
+   "django/db/models/sql/query.py"
+  ]
+ },
+ "raw_tail": "ly\"},\n{\"id\":\"S1.5\",\"covers\":\"Query with annotation matching column in directly joined table (not through) handles collision\"},\n{\"id\":\"S1.6\",\"covers\":\"Annotation alias matching column in table NOT involved in query uses alias (no false positive)\"},\n{\"id\":\"S1.7\",\"covers\":\"Complex filter with OR conditions involving related tables triggers correct collision detection\"},\n{\"id\":\"S1.8\",\"covers\":\"Subquery annotation with collision generates correct SQL without ProgrammingError\"},\n{\"id\":\"S1.9\",\"covers\":\"Empty annotation set does not cause errors in group by processing\"},\n{\"id\":\"S1.10\",\"covers\":\"Annotation with null values in group by context handled correctly\"},\n{\"id\":\"S1.11\",\"covers\":\"Order by on annotation with collision works after group by fix\"},\n{\"id\":\"S1.12\",\"covers\":\"Having clause referencing annotation with collision works correctly\"},\n{\"id\":\"S1.13\",\"covers\":\"Multiple subqueries with same alias as different columns each handled correctly\"},\n{\"id\":\"S1.14\",\"covers\":\"Annotation alias matching primary key column name handled correctly\"},\n{\"id\":\"S1.15\",\"covers\":\"Backward compatibility - existing queries without collisions unchanged\"}\n],\n\"plan_files\":[\n\"django/db/models/sql/query.py\"\n]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_aggregation_subquery_annotation_values_collision",
+    "covered": true,
+    "why": "S1.1 covers annotation alias colliding with through table column generating correct GROUP BY; S1.4 covers aggregation (Count) on annotation with collision; S1.7 covers OR filter conditions triggering collision detection; S1.8 covers subquery annotation with collision generating correct SQL without ProgrammingError. Edge cases also explicitly cover 'Annotation alias matches column name in through table that is joined via filter' and 'Aggregation on annotation that has collision (Count, Sum, etc.)'"
+   }
+  ],
+  "covered": 1,
+  "total": 1,
+  "ratio": 1.0
+ }
+}

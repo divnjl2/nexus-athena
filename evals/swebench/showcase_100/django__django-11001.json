@@ -1,0 +1,145 @@
+{
+ "instance_id": "django__django-11001",
+ "n_edge_cases": 18,
+ "n_scenarios": 17,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "test_order_by_multiline_sql (expressions.tests.BasicExpressionsTests)",
+  "test_order_of_operations (expressions.tests.BasicExpressionsTests)"
+ ],
+ "gold_targets": {
+  "files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "__init__"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "django/db/models/sql/compiler.py"
+  ],
+  "matched": [
+   "compiler.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Two multiline RawSQL clauses with identical final line but different bodies — both must survive (the exact reported bug)",
+   "Three+ multiline RawSQL where only the 2nd and 3rd share a last line — none dropped, original order preserved",
+   "A genuinely identical full RawSQL listed twice must still collapse to one (dedup not disabled)",
+   "Same expression ordered ASC then DESC must still dedup to the first (direction stripped from key, but key is whole-expression)",
+   "Same SQL text but different bound params (RawSQL('... %s', [1]) vs [2]) must NOT dedup — params must be part of the seen key",
+   "CRLF (\\r\\n) line endings inside the RawSQL body normalized like \\n",
+   "Bare CR (\\r) / old-Mac or pasted EOLs do not cause a false duplicate",
+   "Trailing whitespace or a blank final line must not change the dedup outcome — the issue's 'add a space' workaround must become unnecessary",
+   "ASC/DESC appearing as a substring inside the expression body (column like 'cascade', literal 'DESCRIPTION', lowercase 'desc') must not corrupt key extraction or emitted SQL",
+   "An ordering fragment where the regex finds no ASC/DESC must not raise AttributeError on .group(1) — guard the None match",
+   "Trailing NULLS FIRST / NULLS LAST after the direction handled when extracting the without-ordering key",
+   "Emitted ORDER BY SQL must retain the original multiline expression text — only the dedup *key* is normalized to one line",
+   "Single-line / ordinary field ordering unchanged (no regression in the common path)",
+   "Unicode / non-ASCII literals in RawSQL compile and dedup without encoding errors",
+   "str(qs.query) and the executed SQL must both contain every distinct clause (issue noted print() produced truncated SQL)",
+   "Greedy vs anchored capture: with multiple ASC/DESC tokens across lines, the key must reflect the trailing direction of the whole expression, not an internal one",
+   "Large numbers of ordering expressions — newline-collapse per expression stays O(n), no quadratic blowup",
+   "Interplay with GROUP BY / DISTINCT ON / window ordering that reuse get_order_by output — normalization must not leak into emitted columns"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "Two multiline RawSQL with identical last line but different bodies both appear in ORDER BY"
+   },
+   {
+    "id": "S1.2",
+    "covers": "The reported 3-clause query (2nd & 3rd share 'else null end') emits all three, none silently removed"
+   },
+   {
+    "id": "S2.1",
+    "covers": "An identical full RawSQL expression listed twice is emitted only once"
+   },
+   {
+    "id": "S2.2",
+    "covers": "Ordering by the same plain field twice still dedups to one (regression preserved)"
+   },
+   {
+    "id": "S3.1",
+    "covers": "The without_ordering dedup key is derived from the full multiline SQL, not just its final line"
+   },
+   {
+    "id": "S4.1",
+    "covers": "Same expression ASC then DESC dedups to the first occurrence (direction ignored, expression identity respected)"
+   },
+   {
+    "id": "S5.1",
+    "covers": "Two RawSQL with identical SQL text but different bound params are both kept (params in seen key)"
+   },
+   {
+    "id": "S6.1",
+    "covers": "RawSQL bodies using CRLF line endings dedup correctly and are all preserved"
+   },
+   {
+    "id": "S6.2",
+    "covers": "RawSQL bodies using bare CR line endings handled without false dedup"
+   },
+   {
+    "id": "S6.3",
+    "covers": "Trailing whitespace / blank final line no longer changes the dedup outcome (workaround unneeded)"
+   },
+   {
+    "id": "S7.1",
+    "covers": "RawSQL containing non-ASCII/unicode literals compiles and dedups without error"
+   },
+   {
+    "id": "S8.1",
+    "covers": "str(qs.query) and executed SQL contain every distinct ordering clause"
+   },
+   {
+    "id": "S9.1",
+    "covers": "Ordering by ordinary single-line fields/expressions is byte-for-byte unchanged"
+   },
+   {
+    "id": "S9.2",
+    "covers": "Emitted ORDER BY retains original multiline expression text; only the dedup key is normalized"
+   },
+   {
+    "id": "S10.1",
+    "covers": "ASC/DESC as a substring inside the expression body does not corrupt key or emitted SQL"
+   },
+   {
+    "id": "S10.2",
+    "covers": "An ordering fragment with no ASC/DESC match does not raise (None-match guard)"
+   },
+   {
+    "id": "S11.1",
+    "covers": "Trailing NULLS FIRST/NULLS LAST after the direction handled in key extraction"
+   }
+  ],
+  "plan_files": [
+   "compiler.py",
+   "tests.py",
+   "expressions.py",
+   "hashable.py"
+  ]
+ },
+ "raw_tail": "but different bound params are both kept (params in seen key)\"},{\"id\":\"S6.1\",\"covers\":\"RawSQL bodies using CRLF line endings dedup correctly and are all preserved\"},{\"id\":\"S6.2\",\"covers\":\"RawSQL bodies using bare CR line endings handled without false dedup\"},{\"id\":\"S6.3\",\"covers\":\"Trailing whitespace / blank final line no longer changes the dedup outcome (workaround unneeded)\"},{\"id\":\"S7.1\",\"covers\":\"RawSQL containing non-ASCII/unicode literals compiles and dedups without error\"},{\"id\":\"S8.1\",\"covers\":\"str(qs.query) and executed SQL contain every distinct ordering clause\"},{\"id\":\"S9.1\",\"covers\":\"Ordering by ordinary single-line fields/expressions is byte-for-byte unchanged\"},{\"id\":\"S9.2\",\"covers\":\"Emitted ORDER BY retains original multiline expression text; only the dedup key is normalized\"},{\"id\":\"S10.1\",\"covers\":\"ASC/DESC as a substring inside the expression body does not corrupt key or emitted SQL\"},{\"id\":\"S10.2\",\"covers\":\"An ordering fragment with no ASC/DESC match does not raise (None-match guard)\"},{\"id\":\"S11.1\",\"covers\":\"Trailing NULLS FIRST/NULLS LAST after the direction handled in key extraction\"}],\"plan_files\":[\"compiler.py\",\"tests.py\",\"expressions.py\",\"hashable.py\"]}\n```",
+ "note": "behaviour_coverage requires the LLM judge (held; run as a second pass)",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "test_order_by_multiline_sql",
+    "covered": true,
+    "why": "S1.1 directly covers two multiline RawSQL with identical last line but different bodies both appearing in ORDER BY. S1.2 covers the exact 3-clause example from the issue. S3.1 addresses the root cause (dedup key from full multiline SQL, not just final line). Edge case explicitly states 'Two multiline RawSQL clauses with identical final line but different bodies — both must survive (the exact reported bug)'."
+   },
+   {
+    "test": "test_order_of_operations",
+    "covered": true,
+    "why": "S1.1 and S1.2 ensure all distinct ordering clauses are emitted (not silently removed), preserving the intended order. Edge case 'Three+ multiline RawSQL where only the 2nd and 3rd share a last line — none dropped, original order preserved' explicitly covers order preservation. S9.1 ensures single-line ordering remains unchanged (regression check). The fix normalizes only the dedup key, not the emitted SQL (S9.2), preserving original order."
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}

@@ -1,0 +1,109 @@
+{
+ "instance_id": "astropy__astropy-6938",
+ "driver": "local",
+ "n_edge_cases": 12,
+ "n_scenarios": 10,
+ "parse_ok": true,
+ "fail_to_pass": [
+  "astropy/io/fits/tests/test_checksum.py::TestChecksumFunctions::test_ascii_table_data",
+  "astropy/io/fits/tests/test_table.py::TestTableFunctions::test_ascii_table"
+ ],
+ "gold_targets": {
+  "files": [
+   "astropy/io/fits/fitsrec.py"
+  ],
+  "test_files": [],
+  "symbols": [
+   "_scale_back_ascii"
+  ]
+ },
+ "file_recall": {
+  "gold_files": [
+   "astropy/io/fits/fitsrec.py"
+  ],
+  "matched": [
+   "fitsrec.py"
+  ],
+  "recall": 1.0
+ },
+ "plan": {
+  "edge_cases": [
+   "Format string without 'D' - no replacement should occur",
+   "Empty format string - should not cause errors",
+   "Format with 'D' but no floating point numbers in data - replacement still applied but no visible effect",
+   "Multiple floating point numbers in same field - all should use 'D' exponent",
+   "Lowercase 'e' in numbers - should it also be replaced to 'D'?",
+   "Non-numeric characters that happen to be 'E' - should still be replaced if 'D' in format",
+   "None/null values in field - should not cause errors",
+   "Very large/small exponents (e.g., 1.0D+308, 1.0D-308)",
+   "NaN and Infinity values with 'D' format",
+   "Format string with multiple 'D' characters",
+   "Unicode vs ASCII encoding edge cases",
+   "Empty string field content"
+  ],
+  "scenarios": [
+   {
+    "id": "S1.1",
+    "covers": "When format contains 'D', floating point output uses 'D' as exponent separator (e.g., '1.23D+04' not '1.23E+04')"
+   },
+   {
+    "id": "S1.2",
+    "covers": "The replace result is actually assigned back to output_field (not discarded)"
+   },
+   {
+    "id": "S1.3",
+    "covers": "When format does not contain 'D', 'E' exponent separator is preserved"
+   },
+   {
+    "id": "S1.4",
+    "covers": "Empty format string does not cause errors or unexpected behavior"
+   },
+   {
+    "id": "S1.5",
+    "covers": "Multiple floating point numbers in same record all get correct 'D' exponent separator"
+   },
+   {
+    "id": "S1.6",
+    "covers": "Lowercase 'e' in numbers is handled consistently (either replaced to 'D' or left as 'e')"
+   },
+   {
+    "id": "S1.7",
+    "covers": "Non-numeric 'E' characters in field are also replaced when 'D' in format"
+   },
+   {
+    "id": "S1.8",
+    "covers": "None/null field values do not cause AttributeError or other errors"
+   },
+   {
+    "id": "S1.9",
+    "covers": "Existing test test_ascii_table_data still passes after fix (regression check)"
+   },
+   {
+    "id": "S1.10",
+    "covers": "Round-trip write/read preserves the 'D' exponent format in FITS file"
+   }
+  ],
+  "plan_files": [
+   "fitsrec.py"
+  ]
+ },
+ "raw_tail": "ing with multiple 'D' characters\",\n\"Unicode vs ASCII encoding edge cases\",\n\"Empty string field content\"\n],\n\"scenarios\":[\n{\"id\":\"S1.1\",\"covers\":\"When format contains 'D', floating point output uses 'D' as exponent separator (e.g., '1.23D+04' not '1.23E+04')\"},\n{\"id\":\"S1.2\",\"covers\":\"The replace result is actually assigned back to output_field (not discarded)\"},\n{\"id\":\"S1.3\",\"covers\":\"When format does not contain 'D', 'E' exponent separator is preserved\"},\n{\"id\":\"S1.4\",\"covers\":\"Empty format string does not cause errors or unexpected behavior\"},\n{\"id\":\"S1.5\",\"covers\":\"Multiple floating point numbers in same record all get correct 'D' exponent separator\"},\n{\"id\":\"S1.6\",\"covers\":\"Lowercase 'e' in numbers is handled consistently (either replaced to 'D' or left as 'e')\"},\n{\"id\":\"S1.7\",\"covers\":\"Non-numeric 'E' characters in field are also replaced when 'D' in format\"},\n{\"id\":\"S1.8\",\"covers\":\"None/null field values do not cause AttributeError or other errors\"},\n{\"id\":\"S1.9\",\"covers\":\"Existing test test_ascii_table_data still passes after fix (regression check)\"},\n{\"id\":\"S1.10\",\"covers\":\"Round-trip write/read preserves the 'D' exponent format in FITS file\"}\n],\n\"plan_files\":[\"fitsrec.py\"]\n}",
+ "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+ "behaviour_coverage": {
+  "per_test": [
+   {
+    "test": "astropy/io/fits/tests/test_checksum.py::TestChecksumFunctions::test_ascii_table_data",
+    "covered": true,
+    "why": "S1.1 covers 'D' exponent separator behavior for floating point output; S1.2 covers the core bug fix (assigning replace result); S1.9 explicitly mentions this test as regression check"
+   },
+   {
+    "test": "astropy/io/fits/tests/test_table.py::TestTableFunctions::test_ascii_table",
+    "covered": true,
+    "why": "S1.1 covers 'D' exponent separator behavior for ASCII table formatting; S1.2 covers the core bug fix ensuring replace result is assigned; S1.10 covers round-trip write/read preserving 'D' format"
+   }
+  ],
+  "covered": 2,
+  "total": 2,
+  "ratio": 1.0
+ }
+}
