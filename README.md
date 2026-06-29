@@ -23,6 +23,57 @@ Shipped as **two plugins** over one core:
 bidirectional code↔spec loop — `task→commit`, `commit→scenario`, and a version-drift
 detector — is the **v4** roadmap.
 
+## Architecture
+
+### The pipeline — one-line intent to a compiled graph
+
+```mermaid
+flowchart LR
+  I["intent<br/>(one line)"] --> SP["/specify"]
+  SP --> CL["/clarify"]
+  CL --> DS["CRISP<br/>design"]
+  DS --> SC["EARS→GWT<br/>scenarios"]
+  SC --> PL["/plan + /tasks"]
+  PL --> CO["compile<br/>(plan2beads,<br/>deterministic)"]
+  CO --> G[("Beads<br/>graph")]
+```
+
+### The provenance graph + the v4 bidirectional link
+
+The left half (plan) is built today; `implements` is the reserved edge v4 fills so the
+right half (code) ties back — `success_check` makes each link *checkable*, not declarative.
+
+```mermaid
+flowchart TB
+  spec["spec"] --> design["design"] --> epic["epic"] --> task["task"]
+  scenario["scenario"] -- "verifies (validates)" --> spec
+  task -- "satisfies (tracks)" --> scenario
+  task -. "implements (v4)" .-> commit["commit &lt;sha&gt;"]
+  commit -. "spec_version label → drift detect" .-> spec
+```
+
+`trace_down(spec) → … → commit` · `trace_up(commit) → … → spec` · `trace_proof(spec)` runs
+the scenarios on the current code → "does it still conform?"
+
+### Two plugins, one core, any executor
+
+```mermaid
+flowchart TB
+  CC["Claude Code plugin<br/>(commands + skills)"] --> CORE
+  HP["Hermes plugin<br/>(athena MCP, 17 verbs)"] --> CORE
+  subgraph CORE["one core — lib/ AST + plan2beads"]
+    AST["Plan AST"] --> CMP["deterministic compiler"]
+  end
+  CORE --> G[("bd graph")]
+  G --> SEL{"select_adapter"}
+  SEL --> A1["claude_code"]
+  SEL --> A2["opencode"]
+  SEL --> A3["openhands"]
+  SEL --> A4["hermes"]
+  A1 & A2 & A3 & A4 --> CWP["close_with_provenance<br/>fills implements + version labels<br/>(agent-independent)"]
+  CWP --> G
+```
+
 ### What v3 / v3.1 add over the original
 
 - **v3 — provenance graph.** `spec → design → epic → task` parent chain, each LLM-hop output
