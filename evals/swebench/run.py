@@ -84,6 +84,55 @@ def _json_block(text: str):
     return None
 
 
+def _prompt_local(problem_statement: str, hints: str) -> str:
+    """Self-contained frame prompt for a single local-model completion (no file reads,
+    no agent). Inlines the spec/scenarios expectations so a strong local model produces the
+    same shaped plan the Claude Code agent would — used to recover Usage-Policy-blocked
+    instances. NOTE: single-shot != the agentic plugin pipeline; results are tagged driver."""
+    hint_block = f"\n## Maintainer hints\n{hints}\n" if hints.strip() else ""
+    return f"""You are a spec-driven planning agent. From ONE GitHub issue, produce a complete,
+EXHAUSTIVE plan: the behaviours the fix must satisfy and the edge cases it must handle.
+Reason from the issue text only; name likely files by basename if implied.
+
+## Issue (the intent)
+{problem_statement}
+{hint_block}
+Think about: what the correct behaviour is, what inputs break it, boundary/empty/None/dup
+cases, and what a reviewer would test. Then output ONLY this JSON (no prose, no fences):
+{{"edge_cases":["..."],"scenarios":[{{"id":"S1.1","covers":"<behaviour a test would assert>"}}],
+"plan_files":["likely_file.py"]}}"""
+
+
+def run_instance_local(instance: dict, *, timeout: int = 900) -> dict:
+    """Drive the frame via the local vLLM planner lane (dodges the Anthropic Usage-Policy
+    filter that blocks ~a third of headless claude -p runs). One completion, tagged local."""
+    from evals.llm import chat, LLMError
+    try:
+        content, _ = chat(_prompt_local(instance["problem_statement"], instance.get("hints_text", "")),
+                          lane="planner", max_tokens=8000, timeout=timeout, strict_finish=False)
+    except LLMError as e:
+        content = ""
+        local_err = str(e)
+    else:
+        local_err = ""
+    parsed = _json_block(content)
+    plan = parsed or {"edge_cases": [], "scenarios": [], "plan_files": []}
+    fr = file_recall(set(plan.get("plan_files", [])), instance)
+    return {
+        "instance_id": instance["instance_id"],
+        "driver": "local",
+        "n_edge_cases": len(plan.get("edge_cases", [])),
+        "n_scenarios": len(plan.get("scenarios", [])),
+        "parse_ok": parsed is not None,
+        "fail_to_pass": fail_to_pass(instance),
+        "gold_targets": gold_patch_targets(instance["patch"]),
+        "file_recall": fr,
+        "plan": plan,
+        "raw_tail": (content or local_err)[-1200:],
+        "note": "driver=local single-shot (not the agentic pipeline); behaviour_coverage via judge",
+    }
+
+
 def run_instance(instance: dict, *, timeout: int = 1800) -> dict:
     """Drive the frame on one issue. Returns the parsed plan summary + deterministic scores."""
     proc = subprocess.run(
@@ -138,12 +187,26 @@ def _existing_ok(iid: str) -> bool:
     return d.get("n_scenarios", 0) > 0 or d.get("n_edge_cases", 0) > 0  # older schema
 
 
-def _one(inst: dict) -> dict:
+def _is_blocked(iid: str) -> bool:
+    """A saved result that ran but produced no plan (Usage-Policy block / parse miss).
+    These are the gap-fill targets for the local driver — claude's single pass is done
+    with them, so a local re-run cannot race the claude run."""
+    p = os.path.join(RESULTS_DIR, f"{iid}.json")
+    if not os.path.exists(p):
+        return False
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    return "error" not in d and not (d.get("parse_ok") or d.get("n_scenarios", 0) > 0)
+
+
+def _one(inst: dict, driver: str = "claude") -> dict:
     iid = inst["instance_id"]
     try:
-        r = run_instance(inst)
+        r = run_instance_local(inst) if driver == "local" else run_instance(inst)
     except Exception as e:  # one bad/timed-out instance must not kill the batch
-        r = {"instance_id": iid, "error": f"{type(e).__name__}: {str(e)[:120]}"}
+        r = {"instance_id": iid, "error": f"{type(e).__name__}: {str(e)[:120]}", "driver": driver}
     _save(r)
     return r
 
@@ -155,6 +218,7 @@ if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 1
     offline = "--offline" in sys.argv
     resume = "--resume" in sys.argv          # skip instances already done (parse_ok)
+    driver = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--driver=")), "claude")
     only = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), "")
     workers = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--workers=")), "4"))
     only_ids = {x.strip() for x in only.split(",") if x.strip()}
@@ -162,13 +226,17 @@ if __name__ == "__main__":
     insts = load_instances(n, offline=offline)
     if only_ids:
         insts = [i for i in insts if i["instance_id"] in only_ids]
-    if resume:
+    elif driver == "local":
+        # gap-fill: local recovers ONLY instances claude already blocked (race-free — the
+        # claude pass is done with them). Avoids racing the still-running claude run.
+        insts = [i for i in insts if _is_blocked(i["instance_id"])]
+    elif resume:
         insts = [i for i in insts if not _existing_ok(i["instance_id"])]
 
-    print(f"[run] {len(insts)} instances to run (workers={workers}); skipping done={resume}", flush=True)
+    print(f"[run] driver={driver}: {len(insts)} instances (workers={workers})", flush=True)
     done = ok = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
-        futs = {ex.submit(_one, i): i["instance_id"] for i in insts}
+        futs = {ex.submit(_one, i, driver): i["instance_id"] for i in insts}
         for fut in as_completed(futs):
             r = fut.result()
             done += 1
