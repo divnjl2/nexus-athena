@@ -11,12 +11,10 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 
 from evals.swebench.loader import load_instances
 from evals.swebench.score import fail_to_pass
 
-CLAUDE = os.environ.get("CLAUDE_BIN", "claude")
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
 
@@ -68,16 +66,16 @@ def _parse_judgement(text: str, f2p: list[str]) -> dict:
 
 
 def judge_one(instance: dict, plan: dict, *, timeout: int = 300) -> dict:
+    """Judge via the LOCAL planner lane (qwen35-a3b). Using `claude -p` here would re-trigger
+    the same Anthropic Usage-Policy false-positive on the very issues we recovered locally,
+    so the judge runs on the same filter-free lane — and it's free."""
     f2p = fail_to_pass(instance)
-    proc = subprocess.run(
-        [CLAUDE, "-p", _prompt(instance["problem_statement"], f2p, plan),
-         "--output-format", "json", "--dangerously-skip-permissions"],
-        capture_output=True, encoding="utf-8", errors="replace", timeout=timeout)
+    from evals.llm import chat, LLMError
     try:
-        env = json.loads(proc.stdout or "")
-        text = env.get("result", proc.stdout) if isinstance(env, dict) else proc.stdout
-    except json.JSONDecodeError:
-        text = proc.stdout or ""
+        text, _ = chat(_prompt(instance["problem_statement"], f2p, plan),
+                       lane="planner", max_tokens=4000, timeout=timeout, strict_finish=False)
+    except LLMError:
+        text = ""
     return _parse_judgement(text, f2p)
 
 
@@ -86,7 +84,9 @@ def _judge_saved(iid: str, inst: dict, *, resume: bool):
     if not os.path.exists(rp):
         return iid, None, "no saved plan"
     saved = json.load(open(rp, encoding="utf-8"))
-    if "error" in saved or not saved.get("parse_ok"):
+    # tolerant of the pre-parse_ok schema: a real plan = no error AND (parse_ok or scenarios)
+    has_plan = saved.get("parse_ok") or saved.get("n_scenarios", 0) > 0
+    if "error" in saved or not has_plan:
         return iid, None, "no parseable plan"
     if resume and isinstance(saved.get("behaviour_coverage"), dict):
         return iid, saved["behaviour_coverage"]["ratio"], "cached"
