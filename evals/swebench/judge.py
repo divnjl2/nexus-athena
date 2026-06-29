@@ -81,26 +81,44 @@ def judge_one(instance: dict, plan: dict, *, timeout: int = 300) -> dict:
     return _parse_judgement(text, f2p)
 
 
+def _judge_saved(iid: str, inst: dict, *, resume: bool):
+    rp = os.path.join(RESULTS_DIR, f"{iid}.json")
+    if not os.path.exists(rp):
+        return iid, None, "no saved plan"
+    saved = json.load(open(rp, encoding="utf-8"))
+    if "error" in saved or not saved.get("parse_ok"):
+        return iid, None, "no parseable plan"
+    if resume and isinstance(saved.get("behaviour_coverage"), dict):
+        return iid, saved["behaviour_coverage"]["ratio"], "cached"
+    try:
+        v = judge_one(inst, saved.get("plan", {}))
+    except Exception as e:
+        return iid, None, type(e).__name__
+    saved["behaviour_coverage"] = v
+    json.dump(saved, open(rp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return iid, v["ratio"], f"{v['covered']}/{v['total']}"
+
+
 if __name__ == "__main__":
     import sys
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    n = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 5
     offline = "--offline" in sys.argv
+    resume = "--resume" in sys.argv
+    workers = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--workers=")), "4"))
     by_id = {i["instance_id"]: i for i in load_instances(n, offline=offline)}
+
     ratios = []
-    for iid, inst in by_id.items():
-        rp = os.path.join(RESULTS_DIR, f"{iid}.json")
-        if not os.path.exists(rp):
-            print(f"[skip] {iid}: no saved plan"); continue
-        saved = json.load(open(rp, encoding="utf-8"))
-        if "error" in saved:
-            print(f"[skip] {iid}: run errored"); continue
-        try:
-            v = judge_one(inst, saved.get("plan", {}))
-        except Exception as e:
-            print(f"[err]  {iid}: {type(e).__name__}"); continue
-        saved["behaviour_coverage"] = v
-        json.dump(saved, open(rp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        ratios.append(v["ratio"])
-        print(f"[ok]   {iid}: behaviour_coverage={v['ratio']:.2f} ({v['covered']}/{v['total']})")
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+        futs = {ex.submit(_judge_saved, iid, inst, resume=resume): iid for iid, inst in by_id.items()}
+        for fut in as_completed(futs):
+            iid, ratio, tag = fut.result()
+            if ratio is None:
+                print(f"[skip] {iid}: {tag}")
+            else:
+                ratios.append(ratio)
+                print(f"[ok]   {iid}: behaviour_coverage={ratio:.2f} ({tag})")
     if ratios:
-        print(f"\nMEAN behaviour_coverage over {len(ratios)} instances: {sum(ratios)/len(ratios):.3f}")
+        print(f"\nMEAN behaviour_coverage over {len(ratios)} judged instances: "
+              f"{sum(ratios)/len(ratios):.3f}")

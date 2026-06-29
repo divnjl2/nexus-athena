@@ -121,27 +121,64 @@ def _save(result: dict) -> str:
     return path
 
 
+def _existing_ok(iid: str) -> bool:
+    """Resume: an instance is 'done' if it has a saved non-error result with a real plan.
+    Tolerant of the pre-parse_ok schema (judge by a non-empty plan when the flag is absent)."""
+    p = os.path.join(RESULTS_DIR, f"{iid}.json")
+    if not os.path.exists(p):
+        return False
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    if "error" in d:
+        return False
+    if "parse_ok" in d:
+        return bool(d["parse_ok"])
+    return d.get("n_scenarios", 0) > 0 or d.get("n_edge_cases", 0) > 0  # older schema
+
+
+def _one(inst: dict) -> dict:
+    iid = inst["instance_id"]
+    try:
+        r = run_instance(inst)
+    except Exception as e:  # one bad/timed-out instance must not kill the batch
+        r = {"instance_id": iid, "error": f"{type(e).__name__}: {str(e)[:120]}"}
+    _save(r)
+    return r
+
+
 if __name__ == "__main__":
     import sys
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    n = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 1
     offline = "--offline" in sys.argv
-    # --only a,b restricts to specific instance ids (re-run just the failures)
+    resume = "--resume" in sys.argv          # skip instances already done (parse_ok)
     only = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")), "")
+    workers = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--workers=")), "4"))
     only_ids = {x.strip() for x in only.split(",") if x.strip()}
+
     insts = load_instances(n, offline=offline)
     if only_ids:
         insts = [i for i in insts if i["instance_id"] in only_ids]
-    results = []
-    for inst in insts:
-        iid = inst["instance_id"]
-        try:
-            r = run_instance(inst)
-        except Exception as e:  # one bad/timed-out instance must not kill the batch
-            r = {"instance_id": iid, "error": f"{type(e).__name__}: {str(e)[:120]}"}
-        path = _save(r)
-        results.append(r)
-        ok = "ERROR" if "error" in r else (
-            f"edge={r['n_edge_cases']} scen={r['n_scenarios']} "
-            f"file_recall={r['file_recall']['recall']:.2f}")
-        print(f"[{len(results)}/{n}] {iid}: {ok} -> {path}", flush=True)
-    print(json.dumps(results, ensure_ascii=False, indent=1))
+    if resume:
+        insts = [i for i in insts if not _existing_ok(i["instance_id"])]
+
+    print(f"[run] {len(insts)} instances to run (workers={workers}); skipping done={resume}", flush=True)
+    done = ok = 0
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+        futs = {ex.submit(_one, i): i["instance_id"] for i in insts}
+        for fut in as_completed(futs):
+            r = fut.result()
+            done += 1
+            if "error" in r:
+                tag = f"ERROR {r['error'][:50]}"
+            elif not r.get("parse_ok"):
+                tag = "NO-PLAN (policy/parse — see raw_tail)"
+            else:
+                ok += 1
+                tag = (f"edge={r['n_edge_cases']} scen={r['n_scenarios']} "
+                       f"file_recall={r['file_recall']['recall']:.2f}")
+            print(f"[{done}/{len(insts)}] {r['instance_id']}: {tag}", flush=True)
+    print(f"[run] complete: {ok}/{len(insts)} produced a parseable plan", flush=True)
