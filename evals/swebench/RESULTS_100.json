@@ -1,0 +1,23 @@
+{
+ "n_instances": 100,
+ "plans_produced": 90,
+ "unrecovered": 10,
+ "claude": {
+  "plans": 39,
+  "file_recall": 1.0,
+  "behaviour_coverage": 0.94,
+  "behaviour_perfect": 35
+ },
+ "local": {
+  "plans": 51,
+  "file_recall": 0.863,
+  "behaviour_coverage": 0.935,
+  "behaviour_perfect": 45
+ },
+ "all": {
+  "plans": 90,
+  "file_recall": 0.922,
+  "behaviour_coverage": 0.937
+ },
+ "note": "Headless claude -p hit Usage-Policy false-positives on ~60% of issues (frame never ran); local 35B lane recovered most. claude=agent pipeline, local=single-shot."
+}

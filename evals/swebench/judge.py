@@ -43,7 +43,13 @@ this JSON:
 
 
 def _parse_judgement(text: str, f2p: list[str]) -> dict:
-    """Pure: extract the per_test verdicts, coerce to a coverage ratio. Testable offline."""
+    """Pure: extract the per_test verdicts, coerce to a coverage ratio. Testable offline.
+
+    Count the judge's own covered==true verdicts (capped at total). Do NOT re-match the
+    judge's test labels against the raw FAIL_TO_PASS node-ids: the judge returns the short
+    function name (`test_zero_size_input`) while f2p holds the full id
+    (`a/b.py::test_zero_size_input[param]`), so substring matching silently zeroed real
+    coverage. Trust the verdict count instead."""
     text = re.sub(r"```(?:json)?|```", "", text)
     m = re.search(r"\{.*\}", text, re.DOTALL)
     per = []
@@ -52,11 +58,9 @@ def _parse_judgement(text: str, f2p: list[str]) -> dict:
             per = json.loads(m.group(0)).get("per_test", [])
         except json.JSONDecodeError:
             per = []
-    covered_names = {p.get("test") for p in per if p.get("covered") is True}
-    # count by membership in the real f2p list (judge may paraphrase names)
-    hit = sum(1 for t in f2p if any(t == p.get("test") or t in str(p.get("test", "")) for p in per
-                                    if p.get("covered") is True)) if per else 0
     total = len(f2p)
+    covered_true = sum(1 for p in per if p.get("covered") is True)
+    hit = min(covered_true, total)   # judge may return more/fewer rows than total
     return {
         "per_test": per,
         "covered": hit,
