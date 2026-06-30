@@ -1,0 +1,13 @@
+{
+  "_comment": "Reference template for Smart Composer (v1.2.9) data.json. The installer builds this object programmatically and MERGES it over any existing config; this file is documentation of the schema only. Tokens: __BASE_URL__ __API_KEY__ __MODEL__ __CLAUDE_KEY__",
+  "providers": [
+    { "type": "openai-compatible", "id": "litellm-local", "baseUrl": "__BASE_URL__", "apiKey": "__API_KEY__" },
+    { "type": "anthropic", "id": "anthropic", "apiKey": "__CLAUDE_KEY__" }
+  ],
+  "chatModels": [
+    { "providerType": "openai-compatible", "providerId": "litellm-local", "id": "__MODEL__", "model": "__MODEL__" },
+    { "providerType": "anthropic", "providerId": "anthropic", "id": "claude-sonnet-4-5", "model": "claude-sonnet-4-5" }
+  ],
+  "chatModelId": "__MODEL__",
+  "applyModelId": "__MODEL__"
+}
