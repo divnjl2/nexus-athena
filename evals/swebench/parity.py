@@ -109,14 +109,21 @@ def _tracked_py(workdir: str) -> list[str]:
 
 
 def pick_file(instance: dict, workdir: str) -> str | None:
-    """Pick the file to edit FROM THE ISSUE (no gold knowledge): rank tracked .py files by how
-    often their basename / module name is mentioned in the problem statement."""
+    """Pick the file to edit FROM THE ISSUE (no gold knowledge): rank tracked .py files by
+    word-boundary mentions of their basename / module path. Short stems (e.g. `e`) are matched
+    only as whole words and only when >=4 chars, so they don't inflate via substring hits."""
     ps = instance["problem_statement"].lower()
+    words = set(re.findall(r"[a-z_][a-z0-9_]{2,}", ps))   # tokens in the issue, len>=3
     best, best_score = None, 0
     for path in _tracked_py(workdir):
-        base = path.rsplit("/", 1)[-1]
-        stem = base[:-3]                      # drop .py
-        score = ps.count(base) * 3 + (ps.count("/" + base) * 2) + ps.count(stem)
+        base = path.rsplit("/", 1)[-1]                    # fitsrec.py
+        stem = base[:-3]                                  # fitsrec
+        # dotted module path tokens (astropy/io/fits/fitsrec.py -> io, fits, fitsrec)
+        parts = [p for p in path[:-3].split("/") if len(p) >= 4]
+        score = ps.count(base) * 5                        # exact "fitsrec.py" mention — strongest
+        if len(stem) >= 4 and stem in words:              # whole-word module name
+            score += 3
+        score += sum(2 for p in parts[-3:] if p in words)  # path components named in the issue
         if score > best_score:
             best, best_score = path, score
     return best
@@ -205,49 +212,6 @@ def run_parity_local(instance: dict, workdir: str, *, keep: bool = False) -> dic
             "picked_file": impl["file"], "empty": not impl["patch"].strip(), **score}
 
 
-if __name__ == "__main__":
-    import json
-    import os
-    import sys
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    from evals.swebench.loader import load_instances
-
-    n = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 5
-    workers = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--workers=")), "2"))
-    base = r"D:\tmp\claude\parity_batch"
-
-    def _one(inst):
-        try:
-            return run_parity_local(inst, os.path.join(base, inst["instance_id"]))
-        except Exception as e:  # checkout/clone failures must not kill the batch
-            return {"instance_id": inst["instance_id"], "error": f"{type(e).__name__}: {str(e)[:80]}"}
-
-    insts = load_instances(n)
-    results, scores = [], []
-    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
-        for fut in as_completed({ex.submit(_one, i): i for i in insts}):
-            r = fut.result()
-            results.append(r)
-            if "error" in r:
-                tag = f"ERROR {r['error'][:40]}"
-            else:
-                scores.append(r["score"])
-                tag = f"score={r['score']} file={r.get('picked_file', '?').rsplit('/', 1)[-1]}"
-            print(f"[{len(results)}/{len(insts)}] {r['instance_id']}: {tag}", flush=True)
-    mean = sum(scores) / len(scores) if scores else 0.0
-    out = {"agent": "local_9b_cluster", "n": len(results), "scored": len(scores),
-           "mean_proxy_score": round(mean, 3),
-           "file_touch_rate": round(sum(1 for r in results if r.get("file_touch")) / len(results), 3),
-           "results": results}
-    os.makedirs(RESULTS_DIR := os.path.join(os.path.dirname(os.path.abspath(__file__)), "results"),
-                exist_ok=True)
-    with open(os.path.join(RESULTS_DIR, "parity_cluster.json"), "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False, indent=1)
-    print(f"\nCLUSTER-ONLY implementation proxy: mean={mean:.3f} over {len(scores)} scored "
-          f"(file_touch+hunk_overlap → 1.0); saved results/parity_cluster.json", flush=True)
-
-
 def _reset(workdir: str) -> None:
     subprocess.run(["git", "-C", workdir, "checkout", "."], capture_output=True, text=True)
     subprocess.run(["git", "-C", workdir, "clean", "-fd"], capture_output=True, text=True)
@@ -315,3 +279,49 @@ def run_parity(instance: dict, adapters: list, workdir: str, *, timeout: int = 1
         if not keep:
             _rmtree_retry(workdir)
     return {"instance_id": instance["instance_id"], "by_agent": results}
+
+
+# NOTE: this block MUST stay at the END of the file — under `python -m` the module body runs
+# top-to-bottom, so every function the batch calls (run_parity_local, _rmtree_retry,
+# local_implement, …) must already be defined above it.
+if __name__ == "__main__":
+    import json
+    import os
+    import sys
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    from evals.swebench.loader import load_instances
+
+    n = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 5
+    workers = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--workers=")), "2"))
+    base = r"D:\tmp\claude\parity_batch"
+
+    def _one(inst):
+        try:
+            return run_parity_local(inst, os.path.join(base, inst["instance_id"]))
+        except Exception as e:  # checkout/clone failures must not kill the batch
+            return {"instance_id": inst["instance_id"], "error": f"{type(e).__name__}: {str(e)[:80]}"}
+
+    insts = load_instances(n)
+    results, scores = [], []
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+        for fut in as_completed({ex.submit(_one, i): i for i in insts}):
+            r = fut.result()
+            results.append(r)
+            if "error" in r:
+                tag = f"ERROR {r['error'][:40]}"
+            else:
+                scores.append(r["score"])
+                tag = f"score={r['score']} file={r.get('picked_file', '?').rsplit('/', 1)[-1]}"
+            print(f"[{len(results)}/{len(insts)}] {r['instance_id']}: {tag}", flush=True)
+    mean = sum(scores) / len(scores) if scores else 0.0
+    out = {"agent": "local_9b_cluster", "n": len(results), "scored": len(scores),
+           "mean_proxy_score": round(mean, 3),
+           "file_touch_rate": round(sum(1 for r in results if r.get("file_touch")) / len(results), 3),
+           "results": results}
+    rdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    os.makedirs(rdir, exist_ok=True)
+    with open(os.path.join(rdir, "parity_cluster.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print(f"\nCLUSTER-ONLY implementation proxy: mean={mean:.3f} over {len(scores)} scored "
+          f"(file_touch+hunk_overlap -> 1.0); saved results/parity_cluster.json", flush=True)
