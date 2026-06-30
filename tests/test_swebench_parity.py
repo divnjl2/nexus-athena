@@ -47,3 +47,15 @@ def test_wrong_file_scores_zero():
 def test_empty_candidate_scores_zero():
     v = proxy_score("", _gold())
     assert v["score"] == 0.0
+
+
+def test_candidate_without_git_header_is_scored():
+    """A model diff that omits `diff --git` and starts at `--- a/ … +++ b/` must still be
+    recognised (the cluster 9B emits this form; the git-header-only extractor zeroed it)."""
+    gold = _gold()  # touches astropy/modeling/separable.py near line 242
+    candidate = ("--- a/astropy/modeling/separable.py\n+++ b/astropy/modeling/separable.py\n"
+                 "@@ -242,3 +242,3 @@ def _cstack(left, right):\n-        cright[x] = 1\n"
+                 "+        cright[x] = right\n         return np.hstack([cleft, cright])\n")
+    v = proxy_score(candidate, gold)
+    assert v["candidate_files"] == ["separable.py"]
+    assert v["file_touch"] is True and v["hunk_overlap"] is True and v["score"] == 1.0
