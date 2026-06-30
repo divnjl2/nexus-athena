@@ -1,0 +1,11 @@
+# Pre-fetched plugin binaries are NOT vendored (vendor builds carry embedded OAuth
+# client ids that trip GitHub push protection, and they bloat the repo).
+# The installer fetches them at install time; Fetch-Plugins.ps1 populates this for
+# offline transfer.
+/plugins/
+
+# Built offline bundle ZIP (build artifact from scripts/Build-OfflineBundle.ps1)
+/dist/
+
+# A configured vault's data.json may contain real API keys — never commit one.
+**/data.json
