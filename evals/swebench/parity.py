@@ -224,19 +224,28 @@ if __name__ == "__main__":
             return {"instance_id": inst["instance_id"], "error": f"{type(e).__name__}: {str(e)[:80]}"}
 
     insts = load_instances(n)
-    scores = []
+    results, scores = [], []
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
         for fut in as_completed({ex.submit(_one, i): i for i in insts}):
             r = fut.result()
+            results.append(r)
             if "error" in r:
                 tag = f"ERROR {r['error'][:40]}"
             else:
                 scores.append(r["score"])
                 tag = f"score={r['score']} file={r.get('picked_file', '?').rsplit('/', 1)[-1]}"
-            print(f"[{len(scores)}] {r['instance_id']}: {tag}", flush=True)
-    if scores:
-        print(f"\nCLUSTER-ONLY implementation proxy: mean={sum(scores) / len(scores):.3f} "
-              f"over {len(scores)} instances (file_touch+hunk_overlap → 1.0)")
+            print(f"[{len(results)}/{len(insts)}] {r['instance_id']}: {tag}", flush=True)
+    mean = sum(scores) / len(scores) if scores else 0.0
+    out = {"agent": "local_9b_cluster", "n": len(results), "scored": len(scores),
+           "mean_proxy_score": round(mean, 3),
+           "file_touch_rate": round(sum(1 for r in results if r.get("file_touch")) / len(results), 3),
+           "results": results}
+    os.makedirs(RESULTS_DIR := os.path.join(os.path.dirname(os.path.abspath(__file__)), "results"),
+                exist_ok=True)
+    with open(os.path.join(RESULTS_DIR, "parity_cluster.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print(f"\nCLUSTER-ONLY implementation proxy: mean={mean:.3f} over {len(scores)} scored "
+          f"(file_touch+hunk_overlap → 1.0); saved results/parity_cluster.json", flush=True)
 
 
 def _reset(workdir: str) -> None:
