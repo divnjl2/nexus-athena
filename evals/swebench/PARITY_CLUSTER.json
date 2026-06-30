@@ -1,0 +1,143 @@
+{
+ "agent": "local_9b_cluster",
+ "n": 10,
+ "scored": 10,
+ "mean_proxy_score": 0.1,
+ "file_touch_rate": 0.1,
+ "results": [
+  {
+   "instance_id": "astropy__astropy-12907",
+   "agent": "local_9b",
+   "picked_file": "astropy/modeling/models.py",
+   "empty": true,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "separable.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "astropy__astropy-14182",
+   "agent": "local_9b",
+   "picked_file": "astropy/io/ascii/connect.py",
+   "empty": false,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "rst.py"
+   ],
+   "candidate_files": [
+    "connect.py"
+   ]
+  },
+  {
+   "instance_id": "astropy__astropy-14365",
+   "agent": "local_9b",
+   "picked_file": "astropy/table/table.py",
+   "empty": false,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "qdp.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "astropy__astropy-14995",
+   "agent": "local_9b",
+   "picked_file": "astropy/nddata/nddata.py",
+   "empty": true,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "ndarithmetic.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "astropy__astropy-6938",
+   "agent": "local_9b",
+   "picked_file": "astropy/io/fits/fitsrec.py",
+   "empty": true,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "fitsrec.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "astropy__astropy-7746",
+   "agent": "local_9b",
+   "picked_file": "astropy/wcs/wcs.py",
+   "empty": true,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "wcs.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "django__django-10914",
+   "agent": "local_9b",
+   "picked_file": "django/core/files/storage.py",
+   "empty": true,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "global_settings.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "django__django-10924",
+   "agent": "local_9b",
+   "picked_file": "tests/i18n/sampleproject/manage.py",
+   "empty": true,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "__init__.py"
+   ],
+   "candidate_files": []
+  },
+  {
+   "instance_id": "django__django-11019",
+   "agent": "local_9b",
+   "picked_file": "django/forms/widgets.py",
+   "empty": false,
+   "file_touch": true,
+   "hunk_overlap": true,
+   "score": 1.0,
+   "gold_files": [
+    "widgets.py"
+   ],
+   "candidate_files": [
+    "widgets.py"
+   ]
+  },
+  {
+   "instance_id": "django__django-11001",
+   "agent": "local_9b",
+   "picked_file": "django/contrib/postgres/search.py",
+   "empty": false,
+   "file_touch": false,
+   "hunk_overlap": false,
+   "score": 0.0,
+   "gold_files": [
+    "compiler.py"
+   ],
+   "candidate_files": []
+  }
+ ]
+}

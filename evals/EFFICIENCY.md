@@ -10,7 +10,7 @@ because they are easy to conflate.
 | What | vs base (no-plan agent / Claude) | status |
 |---|---|---|
 | End-to-end time / task (non-trivial) | **−25…40%** | theory (cost-of-change + our spec completeness) |
-| Cost / task | **−~100%** (API → 0) | conditional on local-model parity at implementation |
+| Cost / task | **−~100%** (API → 0) | conditional — single-shot impl parity NOT met (0.10 proxy); needs a cluster coding-agent loop (see caveats) |
 | Throughput on the corpus | **~2.3×** | **measured** (60% of headless Claude runs were Usage-Policy-blocked; local recovered them) |
 | Back-end code↔spec audit | a query (`trace_proof`) instead of a manual review | architectural (v4) |
 
@@ -41,12 +41,18 @@ This one has **measured** numbers from the N=100 run:
 ## What this does NOT save / risks in the estimate
 
 - **Trivial tasks**: the frame's spec stages are pure overhead — a net negative.
-- **Implementation parity is unproven.** We measured *planning* parity (local
-  behaviour_coverage **0.935** vs Claude **0.940**; file_recall 0.863 vs 1.000). Whether the
-  local model writes correct *code* at parity is a separate, unmeasured assumption — if it is
-  weaker, a rework tax eats into Lever B. The honest next measurement: drive the same
-  SWE-bench issues through `ralph/adapter.py` with `local` vs `claude_code` and compare on the
-  `FAIL_TO_PASS` gate.
+- **Implementation parity does NOT hold for a single completion (MEASURED).** Planning parity
+  holds (local behaviour_coverage **0.935** vs Claude **0.940**), but a *cluster-only,
+  single-shot* implementer (the 9B worker lane writes one diff; `evals/swebench/parity.py`,
+  `--driver` cluster-only, no Anthropic) scored **0.100 mean proxy over 10 issues** — file
+  pick hit the gold file 3/10, full file+hunk match 1/10. Two failure modes: a completion
+  can't *explore* the repo to find the file (7/10 wrong file), and a one-shot diff rarely
+  lands on the right lines. This is a **floor**, not a ceiling: it shows *one completion ≠ an
+  agent loop*, not that local models can't implement. A fair test needs a cluster CODING AGENT
+  (opencode/aider on the local lane) that greps the repo and iterates against the test gate —
+  that is the next build, and the real `FAIL_TO_PASS` gate needs Docker (down on this box).
+  **Net: Lever B's cost win is real only if a proper cluster agent closes this gap; single-shot
+  does not.**
 - **Planning itself costs** ~$2.65/task on Claude — but ~$0 on local, and a plan is reused
   (one spec → many tasks).
 
