@@ -59,6 +59,32 @@ Then in Obsidian: **Ctrl+P → "Reload app without saving"** (or restart). Open 
 Smart Composer chat (left ribbon) or Copilot Chat and go. If the model isn't pre-
 selected, pick it in the dropdown — the provider + endpoint + key are already seeded.
 
+## Locked-down office machine (nothing installed)
+
+Designed for a vanilla, restricted Windows box: **no git, no gh, no dev tools, GitHub
+maybe blocked, no admin rights.** Everything writes only inside your own vault — no
+system changes, no firewall, no admin.
+
+**At home (once):** build a self-contained bundle.
+```powershell
+cd obsidian-ai-pack
+.\scripts\Build-OfflineBundle.ps1      # fetches plugins + zips -> dist\obsidian-ai-pack-offline.zip
+```
+Carry `obsidian-ai-pack-offline.zip` to the office (USB / email / cloud).
+
+**At the office:**
+1. Right-click the ZIP → **Properties → Unblock** (clears "mark of the web"), then extract.
+2. **Double-click `Install.bat`** → it runs the installer with a per-process execution-policy
+   bypass (works on the default Restricted/RemoteSigned policies) and asks for your Claude
+   key (or a custom endpoint). No PowerShell window to open, no command to type.
+3. In Obsidian: Ctrl+P → "Reload app without saving". Done.
+
+**If even `Install.bat` is blocked** (machine-level GPO `AllSigned` — the one wall a script
+can't pass): open **`MANUAL-INSTALL.txt`** — a 2-minute, zero-script, no-admin path (drag the
+two plugin folders into `.obsidian\plugins\`, enable them in Obsidian's Community-plugins UI,
+paste your key in the plugin settings). The plugins are already in the bundle, so no internet
+is needed for the install — only access to your chosen model (Claude or an office endpoint).
+
 ### Installer parameters
 
 | Param | Meaning | Default |

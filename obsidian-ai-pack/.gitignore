@@ -4,5 +4,8 @@
 # offline transfer.
 /plugins/
 
+# Built offline bundle ZIP (build artifact from scripts/Build-OfflineBundle.ps1)
+/dist/
+
 # A configured vault's data.json may contain real API keys — never commit one.
 **/data.json

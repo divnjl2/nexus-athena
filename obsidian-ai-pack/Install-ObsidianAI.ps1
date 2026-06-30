@@ -42,7 +42,8 @@ param(
   [string]$Model    = 'qwopus-9b',
   [string]$ClaudeKey = '',
   [string]$OfflineDir,
-  [switch]$NoEnable
+  [switch]$NoEnable,
+  [switch]$Interactive
 )
 
 $ErrorActionPreference = 'Stop'
@@ -92,6 +93,32 @@ function Get-PluginFiles([string]$Id, [string]$Dst) {
     if (-not $ok) { throw "Failed to fetch $Id/$f ($repo @ $ver). No gh CLI and direct download blocked? Pre-fetch with Fetch-Plugins.ps1 and use -OfflineDir." }
   }
   Write-Host "[+] $Id ($ver, fetched)"
+}
+
+# --- 0. interactive prompts (for the double-click Install.bat path) --------
+if ($Interactive) {
+  Write-Host "==================================================="
+  Write-Host "  Obsidian AI Chat - installer"
+  Write-Host "==================================================="
+  Write-Host "Pick a model backend:"
+  Write-Host "  [1] Claude (Anthropic API) - works anywhere, needs your sk-ant- key   [default]"
+  Write-Host "  [2] Custom OpenAI-compatible endpoint (office Ollama / vLLM / LM Studio)"
+  $choice = Read-Host "Choice (1/2)"
+  if ($choice -eq '2') {
+    $Backend  = 'custom'
+    $Endpoint = Read-Host "Endpoint base URL (must end with /v1)"
+    $kp = Read-Host "API key (leave blank if the endpoint needs none)"
+    if ($kp) { $ApiKey = $kp } else { $ApiKey = 'none' }
+    $Model    = Read-Host "Model id served by that endpoint"
+  } else {
+    $Backend = 'claude'
+    $sec = Read-Host "Paste your Claude API key (sk-ant-...)" -AsSecureString
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
+    try { $ClaudeKey = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    if (-not $ClaudeKey) { throw "No Claude key entered." }
+  }
+  Write-Host ""
 }
 
 # --- 1. resolve vault -------------------------------------------------------
