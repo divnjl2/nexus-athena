@@ -124,5 +124,11 @@ def planner_trace_proof(spec_version: str) -> dict:
     return verbs.planner_trace_proof(spec_version)
 
 
+@mcp.tool
+def planner_trace_coverage(front_path: str, coverage_path: str) -> dict:
+    """Coverage axis (v3.2): are satisfies edges coverage-proven + list spec_gaps (orphan code)."""
+    return verbs.planner_trace_coverage(front_path, coverage_path)
+
+
 if __name__ == "__main__":
     mcp.run()

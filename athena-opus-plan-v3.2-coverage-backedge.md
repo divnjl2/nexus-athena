@@ -113,9 +113,9 @@ CLI-эквивалент готов (`athena.py trace-coverage`); MCP-регис
 - [x] D.2 `seam_coverage_backed` fail-closed на фальшивых рёбрах. `success_check:` `pytest tests/test_coverage_backed.py -q -k seam`
 - [x] D.3 CLI `seam coverage_backed` + `trace-coverage`. `success_check:` `python athena.py --speckit off trace-coverage qa-farm/unit/plan.md --coverage <xml>`
 
-### Phase E: spec_gap backedge (в replan-слое)
-- [ ] E.1 `planner_replan(trigger="spec_gap")` — развилка мёртвый-код / потерянное-требование. `success_check:` `pytest tests/test_backedge.py -q -k spec_gap`
-- [ ] E.2 `planner_trace_coverage` MCP-глагол поверх `trace_coverage`. `success_check:` `pytest tests/ -q -k trace_coverage`
+### Phase E: spec_gap backedge + MCP verb (ГОТОВО)
+- [x] E.1 `planner_replan(trigger="spec_gap")` — развилка мёртвый-код / потерянное-требование; + `satisfies_unproven` reopen. `success_check:` `pytest mcp/athena_mcp/tests/test_verbs.py -q -k "spec_gap or unproven"`
+- [x] E.2 `planner_trace_coverage` MCP-глагол (server.py + verbs.py) поверх `trace_coverage`. `success_check:` `pytest mcp/athena_mcp/tests/test_verbs.py -q -k trace_coverage`
 
 ### Правка Phase 11 (E2E)
 - [ ] после compile: `seam coverage_backed` зелёный (нет фальшивых `satisfies`); `trace-coverage` показывает `spec_gaps`. `success_check:` есть отчёт с `proven`/`unproven`/`spec_gaps`.

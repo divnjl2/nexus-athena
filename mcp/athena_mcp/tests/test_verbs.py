@@ -121,3 +121,46 @@ def test_compile_apply_readback_seam_passes_on_full_graph():
 
     r = verbs.compile_plan(str(FIX / "valid.md"), apply=True, speckit=False, run=fake_run)
     assert r["seam"]["passed"] is True
+
+
+# --- v3.2 coverage-backedge verbs ---------------------------------------------
+
+def test_replan_spec_gap_forks_deadcode_vs_lost_requirement():
+    r = verbs.replan("spec_gap")
+    assert "fork" in r
+    assert "dead_code" in r["fork"] and "lost_requirement" in r["fork"]
+
+
+def test_replan_satisfies_unproven_reopens():
+    r = verbs.replan("satisfies_unproven")
+    assert "reopen" in r
+
+
+def test_planner_trace_coverage_proves_edge_and_reports_gap(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "# Plan: t\n## Overview\nx\n"
+        "## Phase 1: p\n**Goal:** g\n**Depends on:** none\n### Tasks\n"
+        "- [ ] T1.1 do\n  - success_check: `pytest x`\n  - files: `pkg/a.py`\n  - verifies: S1\n",
+        encoding="utf-8")
+    cov = tmp_path / "cov.xml"
+    cov.write_text(
+        '<coverage><packages><package><classes>'
+        '<class filename="pkg/a.py" line-rate="0.5"><lines>'
+        '<line number="1" hits="1"/>'
+        '<line number="2" hits="1" branch="true" condition-coverage="50% (1/2)"/>'
+        '</lines></class></classes></package></packages></coverage>',
+        encoding="utf-8")
+    r = verbs.planner_trace_coverage(str(plan), str(cov), speckit=False)
+    assert r["proven"] == 1 and r["unproven"] == 0
+    assert "pkg/a.py:2" in r["spec_gaps"]
+    assert r["replan_trigger"] == "spec_gap"
+
+
+def test_planner_trace_coverage_missing_coverage_file(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "# Plan: t\n## Overview\nx\n## Phase 1: p\n**Goal:** g\n**Depends on:** none\n"
+        "### Tasks\n- [ ] T1 do\n  - success_check: `pytest x`\n", encoding="utf-8")
+    r = verbs.planner_trace_coverage(str(plan), str(tmp_path / "nope.xml"), speckit=False)
+    assert r["ok"] is False

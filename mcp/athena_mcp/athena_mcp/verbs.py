@@ -274,6 +274,20 @@ def planner_trace_proof(spec_version: str, *, run=_run) -> dict:
     }
 
 
+def planner_trace_coverage(front_path: str, coverage_path: str, *, speckit=None) -> dict:
+    """Coverage axis (v3.2): walk `satisfies` and confirm each scenario actually covers its
+    task's source, then list orphan branches (`spec_gaps`). Reads a coverage.xml from a
+    scenario run. Deterministic, no bd — feeds planner_replan(trigger='spec_gap')."""
+    from lib.coverage_backed import parse_coverage, trace_coverage
+    import xml.etree.ElementTree as ET
+    try:
+        plan = parse_source(front_path, speckit=speckit)
+        cov = parse_coverage(pathlib.Path(coverage_path).read_text(encoding="utf-8"))
+    except (ParseError, FileNotFoundError, OSError, ET.ParseError) as e:
+        return {"ok": False, "error": _err(e)}
+    return trace_coverage(plan, cov)
+
+
 # --- CRISP / Spec-Kit stage dispatch (host executes the prompt) -----------------
 
 _STAGE_ARTIFACT = {"question": "questions.md", "research": "research.md",
@@ -315,6 +329,25 @@ def replan(trigger: str, context: str = "") -> dict:
                 "spec_drift": "backedge: research/scenario -> /specify, bump spec_version",
             },
             "note": "diagnose which branch applies before acting",
+        }
+    if "spec_gap" in t:
+        # v3.2: a code branch no scenario exercises — spec lags code (mirror of scenario_failed)
+        return {
+            "trigger": trigger,
+            "context": context,
+            "fork": {
+                "dead_code": "remove: neither a requirement nor one that should exist",
+                "lost_requirement": "backedge: code -> /specify, add requirement, bump spec_version",
+            },
+            "note": "diagnose dead-code vs lost-requirement before acting",
+        }
+    if "satisfies_unproven" in t:
+        # v3.2: satisfies edge declared but the scenario does not cover the task's source
+        return {
+            "trigger": trigger,
+            "context": context,
+            "reopen": "task's scenario does not exercise its source; fix the test or the binding",
+            "note": "the satisfies edge is false until coverage proves it",
         }
     if "spec_invalid" in t:
         # v3: backedge research -> /specify bumps spec_version
