@@ -202,6 +202,36 @@ def seam_toggle_equiv(plan_a: Plan, plan_b: Plan) -> SeamResult:
                       _hash(repr(shape(plan_a))))
 
 
+def seam_coverage_backed(plan: Plan, cov) -> SeamResult:
+    """Seam 10 (v3.2): the reverse leg. A task that `verifies` a scenario AND declares source
+    files must have that source actually covered when the scenarios run — else the `satisfies`
+    edge is DECLARED but false (the pilot-bug class). Fail-closed on fake edges; orphan branches
+    (`spec_gap`) ride in the trace report, not this gate. `cov` is a lib.coverage_backed.Coverage."""
+    from lib.coverage_backed import trace_coverage
+    rep = trace_coverage(plan, cov)
+    issues = [f"task {e['task']} satisfies {e['verifies']} but its source is uncovered: {e['src']}"
+              for e in rep["unproven_edges"]]
+    shape = repr([(e["task"], tuple(e["verifies"]))
+                  for e in rep["proven_edges"] + rep["unproven_edges"]])
+    return SeamResult("seam.coverage_backed", not issues, tuple(issues), _hash(shape))
+
+
+def seam_implements_backed(plan: Plan, results) -> SeamResult:
+    """Seam 11 (v4): the `implements` edge must pin a REAL commit to a REAL task. Any
+    ExecutorResult with an empty/fake sha, or one that implements a task not in the plan, would
+    make commit->task a lie — fail-closed. WHO executed (Hermes/OpenHands/Claude Code/Ralph) is
+    irrelevant: the port guarantees only that a real sha reached the graph. `results` is an
+    iterable of lib.executor.ExecutorResult."""
+    from lib.executor import validate_results
+    results = list(results)
+    task_ids = {t.id for ph in plan.phases for t in ph.tasks}
+    issues = list(validate_results(results))
+    issues += [f"{r.task_id}: implements a task not in the plan" for r in results
+               if r.task_id.strip() and r.task_id not in task_ids]
+    shape = repr(sorted((r.task_id, r.commit_sha[:12], r.checks_passed) for r in results))
+    return SeamResult("seam.implements_backed", not issues, tuple(issues), _hash(shape))
+
+
 # --- observability: record (effectful) + render (pure) -------------------------
 
 def make_record(result: SeamResult, *, src: str, dst: str, ts: str,

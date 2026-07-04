@@ -113,11 +113,29 @@ def cmd_seam(a) -> int:
         r = seams.seam_ast_wellformed(plan)
     elif name == "compile_pure":
         r = seams.seam_compile_pure(compile, plan)
+    elif name == "coverage_backed":
+        from lib.coverage_backed import parse_coverage
+        cov_path = a.coverage or _env("CEX_HERMES_INPUT_COVERAGE")
+        if not cov_path:
+            _emit({"error": "seam coverage_backed needs --coverage <coverage.xml>"})
+            return 2
+        cov = parse_coverage(pathlib.Path(cov_path).read_text(encoding="utf-8"))
+        r = seams.seam_coverage_backed(plan, cov)
     else:
         _emit({"error": f"unknown seam: {a.name}"})
         return 2
     _emit({"seam": r.name, "passed": r.passed, "issues": list(r.issues), "hash": r.artifact_hash})
     return 0 if r.passed else 1
+
+
+def cmd_trace_coverage(a) -> int:
+    # v3.2 third trace axis: is each requirement's code actually covered, and is there
+    # code no scenario exercises (spec_gap). Deterministic report; feeds planner_replan.
+    from lib.coverage_backed import parse_coverage, trace_coverage
+    plan = parse_source(a.front, speckit=_speckit(a.speckit))
+    cov = parse_coverage(pathlib.Path(a.coverage).read_text(encoding="utf-8"))
+    _emit(trace_coverage(plan, cov))
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -134,7 +152,11 @@ def build_parser() -> argparse.ArgumentParser:
     h.add_argument("--plan-id", dest="plan_id", default=""); h.add_argument("--created", default="")
     h.set_defaults(fn=cmd_hermes_plan)
     s = sub.add_parser("seam"); s.add_argument("name"); s.add_argument("front", nargs="?", default="")
+    s.add_argument("--coverage", default="")
     s.set_defaults(fn=cmd_seam)
+    tc = sub.add_parser("trace-coverage"); tc.add_argument("front")
+    tc.add_argument("--coverage", required=True)
+    tc.set_defaults(fn=cmd_trace_coverage)
     return p
 
 
