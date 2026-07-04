@@ -130,5 +130,21 @@ def planner_trace_coverage(front_path: str, coverage_path: str) -> dict:
     return verbs.planner_trace_coverage(front_path, coverage_path)
 
 
+# --- v4 implements edge (commit<->task, executor-agnostic port) ---
+@mcp.tool
+def planner_close_task(front_path: str, task_id: str, commit_sha: str,
+                       checks_passed: bool = True, executor: str = "") -> dict:
+    """v4: pin the implements edge (commit->task, real SHA) + close the task. Any executor
+    (Hermes/OpenHands/Claude Code/Ralph) hands back only the sha; Athena stays agnostic."""
+    return verbs.planner_close_task(front_path, task_id, commit_sha,
+                                    checks_passed=checks_passed, executor=executor)
+
+
+@mcp.tool
+def planner_trace_implements(front_path: str) -> dict:
+    """v4: which tasks have a real commit pinned vs still open (implements_missing)."""
+    return verbs.planner_trace_implements(front_path)
+
+
 if __name__ == "__main__":
     mcp.run()
