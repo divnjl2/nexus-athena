@@ -1,0 +1,27 @@
+# Hermes registration for the Integration-QA workflow-microservice (NEXUS QA farm, domain #2).
+# The farm orchestrator runs this as a workflow; HITL points below are routed to a human.
+name: qa_integration
+plan_id: integration-testing-qa-workflow-microservice
+executor: apps/hermes/workflows/PLAN_RUN.yaml   # existing farm executor
+trigger:
+  on: pull_request
+  budget_seconds: 600
+gate:
+  blocking: true            # R7.1 — a FAIL blocks merge
+stages:
+  - id: select                  # L1 run_changed_integration_tests
+  - id: dependency_health_gate   # L1 dependency_health_gate (probes ALL declared deps)
+  - id: isolation                # L1 isolation_manager (reset + bleed fingerprint + serial)
+  - id: coverage_gate            # L1 integration_coverage_gate (per-boundary)
+  - id: slow_flaky_triage        # L1 slow_flaky_triage + quarantine
+  - id: env_fix                  # L2 agent — proposes env/dependency fixes, opens PR, never applies
+  - id: report                   # L1 report (JUnit + Allure + dependency health)
+hitl:                       # R8.3 — mirrors qa_integration/ci/hitl_manifest.py
+  - id: approve-environment-fix
+    requirement: R8.1
+  - id: classify-ambiguous-flaky
+    requirement: R5.2
+  - id: move-gate-threshold
+    requirement: R2/R3
+  - id: waive-dependency-outage
+    requirement: R2.2
