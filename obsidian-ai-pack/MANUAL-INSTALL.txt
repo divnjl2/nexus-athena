@@ -1,0 +1,50 @@
+MANUAL INSTALL  --  no scripts, no internet, no admin
+=====================================================
+For fully locked-down machines where Install.bat is blocked by company policy.
+Everything below stays inside YOUR OWN Obsidian vault. No admin rights, no system
+changes, no PowerShell. Takes ~2 minutes.
+
+WHAT YOU NEED FROM THIS BUNDLE
+  - the "plugins\" folder (already contains smart-composer\ and copilot\)
+  - your model access: either a Claude API key (sk-ant-...) OR an OpenAI-compatible
+    endpoint URL + key (office Ollama / vLLM / LM Studio).
+
+STEPS
+  1. Find your vault folder = the folder you open in Obsidian. It contains a hidden
+     ".obsidian" folder. Can't see it? File Explorer -> View -> Show -> Hidden items.
+
+  2. Copy these two folders from this bundle's "plugins\" folder:
+         smart-composer
+         copilot
+     into:
+         <your-vault>\.obsidian\plugins\
+     (create the "plugins" folder there if it doesn't exist)
+
+  3. Open Obsidian -> Settings (gear, bottom-left) -> Community plugins.
+       - If "Restricted mode" is ON, click "Turn on community plugins".
+       - "Smart Composer" and "Copilot" now appear in the installed list. Toggle both ON.
+
+  4. Point a plugin at your model (one is enough to start):
+
+     SMART COMPOSER  (Settings -> Smart Composer)
+       Providers -> Add:
+         * Claude:               type = Anthropic,          paste sk-ant-... key
+         * OpenAI-compatible box: type = "OpenAI Compatible", Base URL = http://HOST:PORT/v1, key
+       Chat models -> Add a model that uses that provider -> select it.
+
+     COPILOT  (Settings -> Copilot -> Model)
+       Add custom model:
+         * Claude:               provider = anthropic,                  sk-ant-... key
+         * OpenAI-compatible box: provider = "3rd party (openai-format)", Base URL + key
+       Set it as the default model.
+
+  5. Open the chat:
+       - Smart Composer: chat icon in the left ribbon.
+       - Copilot: command palette (Ctrl+P) -> "Copilot: Open Copilot Chat".
+     Type something. Done.
+
+NOTES
+  - Plugins are already in this bundle, so no internet is needed for the install itself.
+  - You DO need network access to your chosen model (api.anthropic.com for Claude, or your
+    office endpoint). That's the only external dependency.
+  - Compatible with Obsidian 1.6.7+ (these are pinned builds; Copilot 3.2.8).

@@ -1,0 +1,21 @@
+{
+  "_comment": "Reference template for Copilot (v3.2.8) data.json. The installer builds this object programmatically and MERGES it over any existing config; this file documents the schema only. For a local/custom OpenAI-compatible endpoint, provider is the literal string '3rd party (openai-format)'. defaultModelKey format is 'name|provider'.",
+  "activeModels": [
+    {
+      "name": "__MODEL__",
+      "provider": "3rd party (openai-format)",
+      "baseUrl": "__BASE_URL__",
+      "apiKey": "__API_KEY__",
+      "enabled": true,
+      "isBuiltIn": false
+    },
+    {
+      "name": "claude-sonnet-4-5",
+      "provider": "anthropic",
+      "apiKey": "__CLAUDE_KEY__",
+      "enabled": true,
+      "isBuiltIn": false
+    }
+  ],
+  "defaultModelKey": "__MODEL__|3rd party (openai-format)"
+}

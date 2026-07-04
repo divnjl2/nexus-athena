@@ -121,3 +121,94 @@ def test_compile_apply_readback_seam_passes_on_full_graph():
 
     r = verbs.compile_plan(str(FIX / "valid.md"), apply=True, speckit=False, run=fake_run)
     assert r["seam"]["passed"] is True
+
+
+# --- v3.2 coverage-backedge verbs ---------------------------------------------
+
+def test_replan_spec_gap_forks_deadcode_vs_lost_requirement():
+    r = verbs.replan("spec_gap")
+    assert "fork" in r
+    assert "dead_code" in r["fork"] and "lost_requirement" in r["fork"]
+
+
+def test_replan_satisfies_unproven_reopens():
+    r = verbs.replan("satisfies_unproven")
+    assert "reopen" in r
+
+
+def test_planner_trace_coverage_proves_edge_and_reports_gap(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "# Plan: t\n## Overview\nx\n"
+        "## Phase 1: p\n**Goal:** g\n**Depends on:** none\n### Tasks\n"
+        "- [ ] T1.1 do\n  - success_check: `pytest x`\n  - files: `pkg/a.py`\n  - verifies: S1\n",
+        encoding="utf-8")
+    cov = tmp_path / "cov.xml"
+    cov.write_text(
+        '<coverage><packages><package><classes>'
+        '<class filename="pkg/a.py" line-rate="0.5"><lines>'
+        '<line number="1" hits="1"/>'
+        '<line number="2" hits="1" branch="true" condition-coverage="50% (1/2)"/>'
+        '</lines></class></classes></package></packages></coverage>',
+        encoding="utf-8")
+    r = verbs.planner_trace_coverage(str(plan), str(cov), speckit=False)
+    assert r["proven"] == 1 and r["unproven"] == 0
+    assert "pkg/a.py:2" in r["spec_gaps"]
+    assert r["replan_trigger"] == "spec_gap"
+
+
+def test_planner_trace_coverage_missing_coverage_file(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "# Plan: t\n## Overview\nx\n## Phase 1: p\n**Goal:** g\n**Depends on:** none\n"
+        "### Tasks\n- [ ] T1 do\n  - success_check: `pytest x`\n", encoding="utf-8")
+    r = verbs.planner_trace_coverage(str(plan), str(tmp_path / "nope.xml"), speckit=False)
+    assert r["ok"] is False
+
+
+# --- v4 implements port (executor-agnostic) -----------------------------------
+
+_PLAN_2 = ("# Plan: Demo Feature\n## Overview\nx\n## Phase 1: p\n**Goal:** g\n"
+           "**Depends on:** none\n### Tasks\n- [ ] T1.1 a\n  - success_check: `x`\n"
+           "- [ ] T1.2 b\n  - success_check: `y`\n")
+
+
+def test_planner_close_task_pins_implements_and_closes(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(_PLAN_2, encoding="utf-8")
+    calls = []
+
+    def fake_run(argv):
+        calls.append(argv)
+        return ""
+
+    r = verbs.planner_close_task(str(plan), "T1.1", "a1b2c3d4e5f6", checks_passed=True,
+                                 executor="claude_code", speckit=False, run=fake_run)
+    assert r["ok"] is True and r["closed"] is True
+    joined = [" ".join(c) for c in calls]
+    assert any("--type implements" in j for j in joined)
+    assert any(j.startswith("bd close") for j in joined)
+
+
+def test_planner_close_task_rejects_fake_sha(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(_PLAN_2, encoding="utf-8")
+    r = verbs.planner_close_task(str(plan), "T1.1", "nothex!", speckit=False, run=lambda a: "")
+    assert r["ok"] is False
+
+
+def test_planner_trace_implements_reports_missing(tmp_path):
+    plan = tmp_path / "plan.md"
+    plan.write_text(_PLAN_2, encoding="utf-8")
+
+    def fake_run(argv):
+        return '[{"target": "athena:demo-feature:T1.1"}]' if argv[:2] == ["bd", "list"] else ""
+
+    r = verbs.planner_trace_implements(str(plan), speckit=False, run=fake_run)
+    assert r["implemented"] == ["T1.1"] and r["unimplemented"] == ["T1.2"]
+    assert r["replan_trigger"] == "implements_missing"
+
+
+def test_replan_implements_missing_hands_off_to_executor():
+    r = verbs.replan("implements_missing")
+    assert "handoff" in r and "executor" in r["handoff"]
