@@ -288,6 +288,51 @@ def planner_trace_coverage(front_path: str, coverage_path: str, *, speckit=None)
     return trace_coverage(plan, cov)
 
 
+def planner_close_task(front_path: str, task_id: str, commit_sha: str, *,
+                       checks_passed: bool = True, executor: str = "",
+                       speckit=None, run=_run) -> dict:
+    """v4 executor port: pin the `implements` edge (commit->task, REAL sha) into the graph and
+    close the task if its checks passed. Executor-AGNOSTIC — the caller already ran Hermes /
+    OpenHands / Claude Code / Ralph and hands us only the ExecutorResult. Athena never looks
+    inside the executor; it only guarantees a real sha reached the graph (validated here)."""
+    from lib.executor import ExecutorResult, implements_commands, validate_results
+    try:
+        plan = parse_source(front_path, speckit=speckit)
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    res = ExecutorResult(task_id, commit_sha, checks_passed, executor)
+    issues = validate_results([res])
+    if issues:
+        return {"ok": False, "error": "; ".join(issues)}
+    cmds = implements_commands([res], slug=_slugify(plan.title))
+    try:
+        for c in cmds:
+            run(c)
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    return {"ok": True, "task": task_id, "commit": commit_sha[:12], "executor": executor,
+            "closed": checks_passed, "commands": len(cmds)}
+
+
+def planner_trace_implements(front_path: str, *, speckit=None, run=_run) -> dict:
+    """v4: which tasks have a real `implements` commit pinned, which are still open. Feeds
+    planner_replan(trigger='implements_missing')."""
+    try:
+        plan = parse_source(front_path, speckit=speckit)
+        edges = json.loads(run(["bd", "list", "--label", "implements", "--json"]) or "[]")
+    except (ParseError, FileNotFoundError, OSError, subprocess.CalledProcessError) as e:
+        return {"ok": False, "error": _err(e)}
+    all_tasks = [t.id for ph in plan.phases for t in ph.tasks]
+    implemented = {str(e.get("target", "")).split(":")[-1] for e in edges}
+    unimplemented = [t for t in all_tasks if t not in implemented]
+    return {
+        "total": len(all_tasks),
+        "implemented": [t for t in all_tasks if t in implemented],
+        "unimplemented": unimplemented,
+        "replan_trigger": "implements_missing" if unimplemented else None,
+    }
+
+
 # --- CRISP / Spec-Kit stage dispatch (host executes the prompt) -----------------
 
 _STAGE_ARTIFACT = {"question": "questions.md", "research": "research.md",
@@ -348,6 +393,15 @@ def replan(trigger: str, context: str = "") -> dict:
             "context": context,
             "reopen": "task's scenario does not exercise its source; fix the test or the binding",
             "note": "the satisfies edge is false until coverage proves it",
+        }
+    if "implements_missing" in t:
+        # v4: task has no commit pinned — hand off to an executor adapter, then close with the sha
+        return {
+            "trigger": trigger,
+            "context": context,
+            "handoff": "export_ready -> executor adapter (hermes|openhands|claude_code|ralph)",
+            "then": "planner_close_task(front, task_id, commit_sha) pins the implements edge",
+            "note": "Athena is executor-agnostic; the port only needs a real commit sha back",
         }
     if "spec_invalid" in t:
         # v3: backedge research -> /specify bumps spec_version
