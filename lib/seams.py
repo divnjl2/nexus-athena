@@ -202,6 +202,20 @@ def seam_toggle_equiv(plan_a: Plan, plan_b: Plan) -> SeamResult:
                       _hash(repr(shape(plan_a))))
 
 
+def seam_coverage_backed(plan: Plan, cov) -> SeamResult:
+    """Seam 10 (v3.2): the reverse leg. A task that `verifies` a scenario AND declares source
+    files must have that source actually covered when the scenarios run — else the `satisfies`
+    edge is DECLARED but false (the pilot-bug class). Fail-closed on fake edges; orphan branches
+    (`spec_gap`) ride in the trace report, not this gate. `cov` is a lib.coverage_backed.Coverage."""
+    from lib.coverage_backed import trace_coverage
+    rep = trace_coverage(plan, cov)
+    issues = [f"task {e['task']} satisfies {e['verifies']} but its source is uncovered: {e['src']}"
+              for e in rep["unproven_edges"]]
+    shape = repr([(e["task"], tuple(e["verifies"]))
+                  for e in rep["proven_edges"] + rep["unproven_edges"]])
+    return SeamResult("seam.coverage_backed", not issues, tuple(issues), _hash(shape))
+
+
 # --- observability: record (effectful) + render (pure) -------------------------
 
 def make_record(result: SeamResult, *, src: str, dst: str, ts: str,
