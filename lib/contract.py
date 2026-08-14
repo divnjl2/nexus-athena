@@ -192,7 +192,7 @@ def parse(text: str) -> Contract:
             flush()
             cur = {"id": mc.group(1), "text": mc.group(3) or "", "status": CLAUSE_ACTIVE,
                    "superseded_by": (), "supersedes": (), "tags": (), "notes": (),
-                   "group": group, "line": lineno}
+                   "group": group, "line": lineno, "last": "text"}
             if mc.group(2):
                 _apply_marker(cur, mc.group(2))
             continue
@@ -203,6 +203,7 @@ def parse(text: str) -> Contract:
         ma = _ATTR_RE.match(raw)
         if ma:
             _apply_attr(cur, ma.group(1), ma.group(2))
+            cur["last"] = "attr"
             continue
 
         if raw.startswith("- ") or not raw.strip():
@@ -211,8 +212,14 @@ def parse(text: str) -> Contract:
             continue
 
         if raw[:1] in (" ", "\t"):
-            # wrapped continuation of the normative text — append, never drop
-            cur["text"] = f"{cur['text']} {raw.strip()}"
+            # Wrapped continuation — append to WHATEVER was last, never drop it. Appending
+            # blindly to `text` let a multi-line `- note:` leak into the normative sentence,
+            # which both corrupted the clause version hash and made a 24-word requirement
+            # read as 98 words. Caught by `critique()` running on this very file.
+            if cur["last"] == "text":
+                cur["text"] = f"{cur['text']} {raw.strip()}"
+            elif cur["notes"]:
+                cur["notes"] = cur["notes"][:-1] + (f"{cur['notes'][-1]} {raw.strip()}",)
 
     flush()
 
@@ -292,6 +299,149 @@ def lint(contract: Contract) -> tuple[str, ...]:
         issues.append(f"{cid}: supersede cycle — the chain never reaches a current clause")
 
     return tuple(issues)
+
+
+# --- the reverse direction: judge the WORDING, not just the wiring -------------------
+
+# The checks below are the mechanically decidable subset of the ISO/IEC/IEEE 29148 §5.2.4
+# requirement-quality characteristics. Mapping, so the gaps are explicit rather than implied:
+#
+#   Singular             -> not_atomic, conjoined
+#   Unambiguous          -> vague, weak_modal, and_or, ambiguous_passive
+#   Verifiable           -> unquantified  (+ the coverage report: an unproved clause is
+#                                          reported by `contract coverage`, not here)
+#   Implementation-free  -> names_mechanism
+#   Complete             -> placeholder
+#   Conforming           -> no_ears_shape, no_obligation
+#   Consistent (set)     -> duplicate_of
+#   Traceable (set)      -> not here: `contract coverage` + the clause->spec binding
+#   Necessary / Feasible -> NOT decidable by a linter; they need a human or a judge model
+#
+# These are WARNINGS, not errors: a human may knowingly keep a clause the linter dislikes.
+# `athena contract lint --strict` is what turns them into a gate.
+_VAGUE = (
+    "properly", "correctly", "appropriately", "as appropriate", "as needed",
+    "if necessary", "where possible", "reasonable", "reasonably", "efficiently",
+    "quickly", "fast enough", "robustly", "and so on", "etc.", "user-friendly",
+    "best effort", "high quality", "as expected", "make sense",
+)
+# High precision on purpose: a gate that cries wolf gets disabled. `, and ` was tried and
+# dropped — it fires on ordinary lists ("the failing run commands, and the clause text"),
+# which are ONE obligation. Only an explicit second obligation counts.
+_CONJOINED = (" and shall ", " and then shall ", " and also shall ", "; and shall ")
+_QUOTED = re.compile(r"\"[^\"]*\"|`[^`]*`|'[^']{2,}'")
+_TRIGGERS = ("when ", "while ", "if ", "where ", "after ", "before ", "once ", "given ")
+_MAX_WORDS = 45
+
+# Unambiguous: a normative clause states an obligation, not a preference (RFC 2119 keeps
+# SHOULD/MAY for exactly the non-binding case — mixing them makes "is it required?" unanswerable).
+_WEAK_MODAL = re.compile(r"\b(?:the system|it)\s+(should|may|might|could|can)\b")
+_AND_OR = re.compile(r"\band\s*/\s*or\b")
+# Unambiguous: "SHALL be logged" — by whom? A passive obligation names no actor to test.
+_PASSIVE = re.compile(r"\bshall\s+(?:not\s+)?be\s+\w+(?:ed|en)\b")
+# Complete: a placeholder is an admission the requirement is not written yet.
+_PLACEHOLDER = re.compile(r"\b(tbd|tba|todo|fixme|xxx)\b|\?\?\?")
+# Implementation-free: "...SHALL do X **by** doing Y" dictates the mechanism. That is the
+# exact defect this frame committed in draft clause C-3.9 ("by batching into one process"),
+# which measurement then refuted — a linter would have refused it a priori.
+_MECHANISM = re.compile(r"\bby\s+\w+ing\b")
+# Verifiable: an unquantified quality has no exit code.
+_UNQUANTIFIED = re.compile(r"\bas\s+\w+\s+as\s+possible\b|\b(minimal|maximal|optimal|"
+                           r"sufficient|adequate|seamless|scalable|performant)\b")
+
+
+def critique(contract: Contract) -> tuple[dict, ...]:
+    """Quality pass over clause WORDING. Deterministic, stdlib-only, no LLM.
+
+    An LLM writing requirements fails in two directions the structural lint cannot see:
+    it CONFLATES ("...SHALL validate the input and log the error and return 400" is three
+    requirements wearing one id, and no single spec can prove it) and it INFLATES (near-
+    duplicate clauses that look like coverage). Both are mechanically detectable, so the
+    frame checks its own authors instead of trusting them.
+
+    Returns dicts {clause, code, detail} in document order, most-structural code first.
+    """
+    out: list[dict] = []
+    seen_text: dict[str, str] = {}
+
+    for c in contract.clauses:
+        if c.status in (CLAUSE_WITHDRAWN, CLAUSE_SUPERSEDED):
+            # Dead wording is history, not a requirement. Policing it would punish the very
+            # discipline this format asks for: the reason old text is still in the file is
+            # that it was REPLACED rather than deleted.
+            continue
+        # Quoted spans are MENTIONS, not use: a clause about vague wording necessarily
+        # contains the word "properly", and a clause about atomicity contains the word
+        # SHALL as a noun. Scanning them would make the rules about the rules unwritable.
+        low = f" {_QUOTED.sub(' ', c.text.lower().strip())} "
+        words = c.text.split()
+
+        # An obligation is "THE SYSTEM SHALL ..."; a second one is joined by "and shall".
+        # Counting bare "shall" would trip on the word used as a noun.
+        shall_count = low.count("system shall") + sum(low.count(m) for m in _CONJOINED)
+        if shall_count == 0:
+            # distinguish "not a requirement at all" from "a requirement in the wrong shape",
+            # because the fix is different: write one, versus name the actor.
+            code = "no_ears_shape" if " shall " in low else "no_obligation"
+            out.append({"clause": c.id, "code": code,
+                        "detail": ("no SHALL — this is prose, not a requirement"
+                                   if code == "no_obligation"
+                                   else "SHALL without 'THE SYSTEM' — the actor is implicit")})
+        elif shall_count > 1:
+            out.append({"clause": c.id, "code": "not_atomic",
+                        "detail": f"{shall_count} SHALL obligations in one clause — "
+                                  f"split it, one clause proves one thing"})
+
+        for marker in _CONJOINED:
+            if marker in low:
+                out.append({"clause": c.id, "code": "conjoined",
+                            "detail": f"joins obligations with '{marker.strip()}' — "
+                                      f"a single spec cannot prove both halves"})
+                break
+
+        hits = [v for v in _VAGUE if v in low]
+        if hits:
+            out.append({"clause": c.id, "code": "vague",
+                        "detail": f"unprovable wording: {', '.join(sorted(hits))}"})
+
+        if len(words) > _MAX_WORDS:
+            out.append({"clause": c.id, "code": "too_long",
+                        "detail": f"{len(words)} words (> {_MAX_WORDS}) — usually a "
+                                  f"conflated requirement"})
+
+        if shall_count and not any(low.lstrip().startswith(t) for t in _TRIGGERS) \
+                and " the system shall" not in low[:40]:
+            out.append({"clause": c.id, "code": "no_ears_shape",
+                        "detail": "no WHEN/WHILE/IF trigger and not a ubiquitous "
+                                  "'THE SYSTEM SHALL ...' — the condition is implicit"})
+
+        for rx, code, detail in (
+            (_WEAK_MODAL, "weak_modal",
+             "states a preference (should/may/can), not an obligation — is it required?"),
+            (_AND_OR, "and_or",
+             "'and/or' leaves the obligation undecidable; state both cases"),
+            (_PASSIVE, "ambiguous_passive",
+             "passive obligation with no actor — who must do it?"),
+            (_PLACEHOLDER, "placeholder",
+             "carries a TBD/TODO marker — the requirement is not written yet"),
+            (_MECHANISM, "names_mechanism",
+             "dictates HOW ('by ...ing') instead of WHAT — implementation belongs in design"),
+            (_UNQUANTIFIED, "unquantified",
+             "unquantified quality — no number means no exit code"),
+        ):
+            m = rx.search(low)
+            if m:
+                out.append({"clause": c.id, "code": code,
+                            "detail": f"{detail} [{m.group(0).strip()}]"})
+
+        key = _norm_text(c.text).lower()
+        if key in seen_text:
+            out.append({"clause": c.id, "code": "duplicate_of",
+                        "detail": f"same wording as {seen_text[key]} — inflation, not coverage"})
+        else:
+            seen_text[key] = c.id
+
+    return tuple(out)
 
 
 def _supersede_cycles(contract: Contract) -> tuple[str, ...]:

@@ -51,13 +51,24 @@ def test_a_spec_naming_an_unknown_or_withdrawn_clause_is_an_orphan():
     assert rep["passed"] is False
 
 
-def test_a_spec_on_a_superseded_clause_is_redirected_and_does_not_credit_the_successor():
-    """C-4.3 — the reference resolves forward, but the successor still needs its own proof."""
+def test_a_spec_on_a_superseded_clause_is_reported_as_redirected():
+    """C-4.14 — the old reference still resolves, and the report says where it now points."""
     rep = coverage(CONTRACT, (_scen("S1", "C-1.1"), _scen("S2", "C-1.2"),
                               _scen("S3", "C-1.4")))
     assert rep["redirected_specs"] == [{"scenario": "S3", "clause": "C-1.4", "now": ["C-1.5"]}]
-    assert "C-1.5" in rep["uncovered"]        # NOT credited by the old spec
     assert "C-1.4" not in rep["covered"]      # superseded clauses are not owed a proof
+
+
+def test_a_redirected_spec_does_not_credit_coverage_to_the_successor():
+    """C-4.15 — a spec written against the old wording proves nothing about the new one."""
+    rep = coverage(CONTRACT, (_scen("S1", "C-1.1"), _scen("S2", "C-1.2"),
+                              _scen("S3", "C-1.4")))
+    assert "C-1.5" in rep["uncovered"]
+    assert rep["passed"] is False
+    # ...and it flips the moment the successor gets a spec of its own
+    fixed = coverage(CONTRACT, (_scen("S1", "C-1.1"), _scen("S2", "C-1.2"),
+                                _scen("S4", "C-1.5")))
+    assert fixed["uncovered"] == [] and fixed["passed"] is True
 
 
 def test_draft_clauses_are_exempt_from_coverage():
@@ -67,14 +78,19 @@ def test_draft_clauses_are_exempt_from_coverage():
     assert rep["passed"] is True and rep["coverage_rate"] == 1.0
 
 
-def test_todo_splits_live_clauses_into_unspecified_red_unrun_stale_done():
-    """C-4.13 — the "what is left" answer, and a stale-proof clause counts as work."""
+def _todo_fixture():
     scenarios = (_scen("S1", "C-1.1", pin=_pin("C-1.1")),
                  _scen("S2", "C-1.2", cmd="pytest -q -k two"),
                  _scen("S3", "C-1.5"))
     ledger = make_ledger((SpecResult("S1", "C-1.1", True, 0, 5, clause_version=_pin("C-1.1")),
                           SpecResult("S2", "C-1.2", False, 1, 7)),
                          contract=CONTRACT, ts="T")
+    return scenarios, ledger
+
+
+def test_todo_puts_every_live_clause_in_exactly_one_bucket():
+    """C-4.16 — the "what is left" answer, in one linear pass, with no clause in limbo."""
+    scenarios, ledger = _todo_fixture()
     rep = todo(CONTRACT, scenarios, ledger)
     assert rep["counts"] == {"unspecified": 0, "red": 1, "unrun": 1, "stale": 0,
                              "done": 1, "draft": 1}
@@ -82,18 +98,28 @@ def test_todo_splits_live_clauses_into_unspecified_red_unrun_stale_done():
     assert rep["red"][0]["run_cmds"] == ["pytest -q -k two"]
     assert rep["unrun"][0] == {"clause": "C-1.5", "specs": ["S3"]}
     assert rep["done"] == [{"clause": "C-1.1"}]
-    assert rep["remaining"] == 2
-
-    # the requirement moves under a passing spec: green, but no longer 'done'
-    drifted = (_scen("S1", "C-1.1", pin="0" * 16),) + scenarios[1:]
-    stale = todo(CONTRACT, drifted, ledger)
-    assert stale["stale"] == [{"clause": "C-1.1", "text": CONTRACT.by_id("C-1.1").text,
-                               "stale_specs": ["S1"]}]
-    assert stale["counts"]["done"] == 0 and stale["remaining"] == 3
+    # every live clause lands exactly once across the buckets
+    placed = [e["clause"] for k in ("unspecified", "red", "unrun", "stale", "done")
+              for e in rep[k]]
+    assert sorted(placed) == sorted(c.id for c in CONTRACT.live())
+    assert len(placed) == len(set(placed))
 
     # with no ledger at all, everything specified is simply 'unrun'
     none_run = todo(CONTRACT, scenarios)
     assert none_run["counts"]["unrun"] == 3 and none_run["counts"]["red"] == 0
+
+
+def test_a_clause_proved_only_against_an_older_wording_counts_as_remaining_work():
+    """C-4.17 — green is not done when the requirement moved under the spec."""
+    scenarios, ledger = _todo_fixture()
+    assert todo(CONTRACT, scenarios, ledger)["remaining"] == 2
+
+    drifted = (_scen("S1", "C-1.1", pin="0" * 16),) + scenarios[1:]
+    stale = todo(CONTRACT, drifted, ledger)
+    assert stale["stale"] == [{"clause": "C-1.1", "text": CONTRACT.by_id("C-1.1").text,
+                               "stale_specs": ["S1"]}]
+    assert stale["counts"]["done"] == 0
+    assert stale["remaining"] == 3, "a stale clause is work, not a finished item"
 
 
 def test_unspecified_clause_carries_its_text_so_an_agent_can_act():

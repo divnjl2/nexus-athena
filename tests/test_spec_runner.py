@@ -66,21 +66,28 @@ def test_missing_command_is_red_with_the_os_error(monkeypatch):
     assert "no such tool" in res[0].output_tail
 
 
-def test_a_run_cmd_with_shell_metacharacters_is_refused_not_executed(monkeypatch):
-    """C-3.10 — a run_cmd is an LLM-hop output: refuse it, never hand it to a shell."""
+def test_a_dangerous_or_unparseable_run_cmd_is_refused_and_recorded_red(monkeypatch):
+    """C-3.13 — a run_cmd is an LLM-hop output: refuse it, and say why in the ledger."""
     calls = []
     monkeypatch.setattr(subprocess, "run",
                         lambda *a, **kw: calls.append((a, kw)) or _Ok())
     res = run_specs((_scen(1, "C-1.1", cmd="pytest -q; rm -rf /"),
                      _scen(2, "C-1.1", cmd='pytest -q "unterminated'),
-                     _scen(3, "C-1.1", cmd="   "),
-                     _scen(4, "C-1.2", cmd="pytest tests/test_x.py::test_y -q")), jobs=1)
-    assert [(r.scenario_id, r.exit_code) for r in res[:3]] == [("S1", 126), ("S2", 126), ("S3", 126)]
+                     _scen(3, "C-1.1", cmd="   ")), jobs=1)
+    assert [(r.scenario_id, r.passed, r.exit_code) for r in res] == [
+        ("S1", False, 126), ("S2", False, 126), ("S3", False, 126)]
     assert "shell metacharacter" in res[0].output_tail
     assert "unparseable" in res[1].output_tail and "empty" in res[2].output_tail
-    assert res[3].passed                                  # the clean command still runs
-    # only the clean command reached subprocess, and never through a shell
-    assert len(calls) == 1
+    assert calls == [], "a refused command must never reach subprocess"
+
+
+def test_an_accepted_run_cmd_is_tokenized_and_never_shelled(monkeypatch):
+    """C-3.14 — the accepted path runs argv-style with shell=False."""
+    calls = []
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **kw: calls.append((a, kw)) or _Ok())
+    res = run_specs((_scen(1, "C-1.2", cmd="pytest tests/test_x.py::test_y -q"),), jobs=1)
+    assert res[0].passed
     assert calls[0][0][0] == ["pytest", "tests/test_x.py::test_y", "-q"]
     assert calls[0][1]["shell"] is False
 
@@ -128,8 +135,8 @@ def test_absent_or_corrupt_ledger_degrades_to_unrun(tmp_path):
     assert load_ledger(listy) == {}
 
 
-def test_worker_pool_follows_the_machine_and_env_is_pinnable(monkeypatch):
-    """C-3.11 — the pool defaults to the machine's cores, and the caller can pin env vars."""
+def test_the_worker_pool_is_sized_from_the_machines_cores(monkeypatch):
+    """C-3.15 — specs are processes, so an 8-worker default on an 18-core box is pure waste."""
     monkeypatch.setattr(os, "cpu_count", lambda: 36)
     assert default_jobs() == 36
     monkeypatch.setattr(os, "cpu_count", lambda: None)      # unknowable -> safe floor
@@ -137,6 +144,9 @@ def test_worker_pool_follows_the_machine_and_env_is_pinnable(monkeypatch):
     monkeypatch.setattr(os, "cpu_count", lambda: 256)       # capped, never unbounded
     assert default_jobs() == 64
 
+
+def test_pinned_env_is_merged_over_the_inherited_environment(monkeypatch):
+    """C-3.16 — a spec runs in the developer's real env PLUS what the caller pins."""
     seen = {}
 
     def fake_run(argv, **kw):
@@ -147,10 +157,9 @@ def test_worker_pool_follows_the_machine_and_env_is_pinnable(monkeypatch):
     monkeypatch.setattr(os, "environ", {"PATH": "/usr/bin", "HOME": "/home/x"})
     run_specs((_scen(1, "C-1.1", cmd="pytest -q"),),
               env={"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
-    # merged OVER the inherited environment, never replacing it
     assert seen["env"]["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
-    assert seen["env"]["PATH"] == "/usr/bin"
-    assert seen["shell"] is False
+    assert seen["env"]["PATH"] == "/usr/bin"        # merged, never replacing
+    assert seen["env"]["HOME"] == "/home/x"
 
 
 def test_specs_can_be_included_or_excluded_by_clause_tag():

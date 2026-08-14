@@ -54,6 +54,31 @@ Typo fixes and re-wrapping are NOT changes: the version hashes whitespace-normal
 Re-pin whenever a clause is superseded or a spec is rewritten. An unpinned spec is legal —
 drift simply cannot be detected for it.
 
+## Rule: a clause must be worth proving
+
+`athena contract lint` runs two passes. The first judges the WIRING (ids, refs, cycles) and
+is a hard error. The second judges the WORDING — the mechanically decidable subset of the
+ISO/IEC/IEEE 29148 §5.2.4 quality characteristics — and is advisory until `--strict`:
+
+| characteristic | code | fires on |
+|---|---|---|
+| Singular | `not_atomic`, `conjoined` | two SHALLs, or "... and shall ..." |
+| Unambiguous | `vague` | "properly", "as needed", "reasonable" |
+| Unambiguous | `weak_modal` | "THE SYSTEM should/may/can" — preference, not obligation |
+| Unambiguous | `and_or` | "and/or" — which one must hold? |
+| Unambiguous | `ambiguous_passive` | "SHALL be logged" — by whom? |
+| Verifiable | `unquantified` | "as fast as possible", "minimal", "adequate" |
+| Implementation-free | `names_mechanism` | "... **by** batching ..." — HOW belongs in design |
+| Complete | `placeholder` | "TBD" / "TODO" inside a live clause |
+| Conforming | `no_ears_shape`, `no_obligation` | no trigger, or no SHALL at all |
+| Consistent | `duplicate_of` | two live clauses, identical wording |
+| Traceable | — | not here: `contract coverage` proves it |
+| Necessary, Feasible | — | **not decidable by a linter** — needs a human or a judge model |
+
+Mentions are exempt: text inside `"quotes"` or `` `backticks` `` is not scanned, so a clause
+*about* vague wording can name it. Superseded and withdrawn clauses are exempt entirely —
+policing dead text would punish the discipline this format asks for.
+
 ## The three questions (each a linear scan, no LLM)
 
 ```bash

@@ -178,12 +178,18 @@ def _report_out(a, report: dict, *, title: str) -> None:
 
 
 def cmd_contract_lint(a) -> int:
-    from lib.contract import lint
+    # Two passes, deliberately separate: `lint` judges the WIRING (ids, refs, cycles) and is
+    # always a hard error; `critique` judges the WORDING (atomicity, vagueness, duplication)
+    # and is advisory unless --strict, because a human may knowingly keep a clause it dislikes.
+    from lib.contract import critique, lint
     c = _load_contract(a)
     issues = lint(c)
-    _emit({"seam": "contract.lint", "passed": not issues, "issues": list(issues),
+    warnings = critique(c)
+    failed = bool(issues) or (bool(warnings) and a.strict)
+    _emit({"seam": "contract.lint", "passed": not failed, "issues": list(issues),
+           "warnings": [f"{w['clause']}: {w['code']} — {w['detail']}" for w in warnings],
            "clauses": len(c.clauses), "live": len(c.live()), "version": c.version})
-    return 0 if not issues else 1
+    return 1 if failed else 0
 
 
 def cmd_contract_coverage(a) -> int:
@@ -319,6 +325,8 @@ def build_parser() -> argparse.ArgumentParser:
         return sp
 
     cl = csub.add_parser("lint"); cl.add_argument("contract", nargs="?", default="contract.md")
+    cl.add_argument("--strict", action="store_true",
+                    help="fail on wording warnings too (non-atomic, vague, duplicated)")
     cl.set_defaults(fn=cmd_contract_lint)
     _rep("coverage", cmd_contract_coverage, gate=True)
     _rep("todo", cmd_contract_todo)

@@ -177,22 +177,6 @@
 - **When** the spec `test_empty_spec_set_is_an_empty_run_not_an_error` is executed
 - **Then** filtering everything out yields an empty, still-valid ledger.
 
-### S3.10 — a run cmd with shell metacharacters is refused not executed
-- **verifies:** C-3.10
-- **pins:** 35235d6704b17b0b
-- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_a_run_cmd_with_shell_metacharacters_is_refused_not_executed -q`
-- **Given** the executable-spec runner (lib/spec_runner.py)
-- **When** the spec `test_a_run_cmd_with_shell_metacharacters_is_refused_not_executed` is executed
-- **Then** a run_cmd is an LLM-hop output: refuse it, never hand it to a shell.
-
-### S3.11 — worker pool follows the machine and env is pinnable
-- **verifies:** C-3.11
-- **pins:** 34107ed1bb4aacf3
-- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_worker_pool_follows_the_machine_and_env_is_pinnable -q`
-- **Given** the executable-spec runner (lib/spec_runner.py)
-- **When** the spec `test_worker_pool_follows_the_machine_and_env_is_pinnable` is executed
-- **Then** the pool defaults to the machine's cores, and the caller can pin env vars.
-
 ### S3.12 — specs can be included or excluded by clause tag
 - **verifies:** C-3.12
 - **pins:** 299151d9d3e018ac
@@ -200,6 +184,38 @@
 - **Given** the executable-spec runner (lib/spec_runner.py)
 - **When** the spec `test_specs_can_be_included_or_excluded_by_clause_tag` is executed
 - **Then** one slow spec must not hold the fast lane hostage.
+
+### S3.13 — a dangerous or unparseable run cmd is refused and recorded red
+- **verifies:** C-3.13
+- **pins:** 74b503401465c50a
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_a_dangerous_or_unparseable_run_cmd_is_refused_and_recorded_red -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_a_dangerous_or_unparseable_run_cmd_is_refused_and_recorded_red` is executed
+- **Then** a run_cmd is an LLM-hop output: refuse it, and say why in the ledger.
+
+### S3.14 — an accepted run cmd is tokenized and never shelled
+- **verifies:** C-3.14
+- **pins:** b7799b069c08d8e2
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_an_accepted_run_cmd_is_tokenized_and_never_shelled -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_an_accepted_run_cmd_is_tokenized_and_never_shelled` is executed
+- **Then** the accepted path runs argv-style with shell=False.
+
+### S3.15 — the worker pool is sized from the machines cores
+- **verifies:** C-3.15
+- **pins:** 7d0462523910a00b
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_the_worker_pool_is_sized_from_the_machines_cores -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_the_worker_pool_is_sized_from_the_machines_cores` is executed
+- **Then** specs are processes, so an 8-worker default on an 18-core box is pure waste.
+
+### S3.16 — pinned env is merged over the inherited environment
+- **verifies:** C-3.16
+- **pins:** d5445ed57dccc77f
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_pinned_env_is_merged_over_the_inherited_environment -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_pinned_env_is_merged_over_the_inherited_environment` is executed
+- **Then** a spec runs in the developer's real env PLUS what the caller pins.
 
 ---
 
@@ -220,14 +236,6 @@
 - **Given** the three reports (lib/contract_report.py)
 - **When** the spec `test_a_spec_naming_an_unknown_or_withdrawn_clause_is_an_orphan` is executed
 - **Then** a rotted reference is surfaced, never silently ignored.
-
-### S4.3 — a spec on a superseded clause is redirected and does not credit the successor
-- **verifies:** C-4.3
-- **pins:** 309748b7f5027574
-- **run_cmd:** `python -m pytest tests/test_contract_report.py::test_a_spec_on_a_superseded_clause_is_redirected_and_does_not_credit_the_successor -q`
-- **Given** the three reports (lib/contract_report.py)
-- **When** the spec `test_a_spec_on_a_superseded_clause_is_redirected_and_does_not_credit_the_successor` is executed
-- **Then** the reference resolves forward, but the successor still needs its own proof.
 
 ### S4.4 — draft clauses are exempt from coverage
 - **verifies:** C-4.4
@@ -293,13 +301,37 @@
 - **When** the spec `test_todo_lists_draft_clauses_as_backlog` is executed
 - **Then** a written-down-but-not-yet-owed requirement stays visible in the answer.
 
-### S4.13 — todo splits live clauses into unspecified red unrun stale done
-- **verifies:** C-4.13
-- **pins:** cd49fd34f3fe86a1
-- **run_cmd:** `python -m pytest tests/test_contract_report.py::test_todo_splits_live_clauses_into_unspecified_red_unrun_stale_done -q`
+### S4.14 — a spec on a superseded clause is reported as redirected
+- **verifies:** C-4.14
+- **pins:** 3db3976c55b68287
+- **run_cmd:** `python -m pytest tests/test_contract_report.py::test_a_spec_on_a_superseded_clause_is_reported_as_redirected -q`
 - **Given** the three reports (lib/contract_report.py)
-- **When** the spec `test_todo_splits_live_clauses_into_unspecified_red_unrun_stale_done` is executed
-- **Then** the "what is left" answer, and a stale-proof clause counts as work.
+- **When** the spec `test_a_spec_on_a_superseded_clause_is_reported_as_redirected` is executed
+- **Then** the old reference still resolves, and the report says where it now points.
+
+### S4.15 — a redirected spec does not credit coverage to the successor
+- **verifies:** C-4.15
+- **pins:** b44a62340d471d7a
+- **run_cmd:** `python -m pytest tests/test_contract_report.py::test_a_redirected_spec_does_not_credit_coverage_to_the_successor -q`
+- **Given** the three reports (lib/contract_report.py)
+- **When** the spec `test_a_redirected_spec_does_not_credit_coverage_to_the_successor` is executed
+- **Then** a spec written against the old wording proves nothing about the new one.
+
+### S4.16 — todo puts every live clause in exactly one bucket
+- **verifies:** C-4.16
+- **pins:** 4fccc2873a0bce32
+- **run_cmd:** `python -m pytest tests/test_contract_report.py::test_todo_puts_every_live_clause_in_exactly_one_bucket -q`
+- **Given** the three reports (lib/contract_report.py)
+- **When** the spec `test_todo_puts_every_live_clause_in_exactly_one_bucket` is executed
+- **Then** the "what is left" answer, in one linear pass, with no clause in limbo.
+
+### S4.17 — a clause proved only against an older wording counts as remaining work
+- **verifies:** C-4.17
+- **pins:** 59fe1831bf69ebe0
+- **run_cmd:** `python -m pytest tests/test_contract_report.py::test_a_clause_proved_only_against_an_older_wording_counts_as_remaining_work -q`
+- **Given** the three reports (lib/contract_report.py)
+- **When** the spec `test_a_clause_proved_only_against_an_older_wording_counts_as_remaining_work` is executed
+- **Then** green is not done when the requirement moved under the spec.
 
 ---
 
@@ -379,7 +411,7 @@
 
 ### S5.11 — clause nodes and edges materialize in a real bd graph
 - **verifies:** C-5.11
-- **pins:** e52be852a7ebeae3
+- **pins:** 5497f7656e1b8dd6
 - **run_cmd:** `python -m pytest tests/test_bd_integration_contract.py::test_clause_nodes_and_edges_materialize_in_a_real_bd_graph -q`
 - **Given** the compiled graph against a real bd
 - **When** the spec `test_clause_nodes_and_edges_materialize_in_a_real_bd_graph` is executed
@@ -412,3 +444,127 @@
 - **Given** the clause parser / resolver (lib/contract.py)
 - **When** the spec `test_contract_version_tracks_status_changes` is executed
 - **Then** withdrawing a clause moves the registry pin even if no text changed.
+
+---
+
+## C-7 — proved by the wording critique (lib/contract.py critique)
+
+### S7.1 — a clause with two obligations is reported as not atomic
+- **verifies:** C-7.1
+- **pins:** 179d44a2bd289fb3
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_clause_with_two_obligations_is_reported_as_not_atomic -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_clause_with_two_obligations_is_reported_as_not_atomic` is executed
+- **Then** one clause proves one thing; two SHALLs cannot be proved by one spec.
+
+### S7.2 — obligations joined with and shall are reported as conjoined
+- **verifies:** C-7.2
+- **pins:** 2b79fce1fa7cb964
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_obligations_joined_with_and_shall_are_reported_as_conjoined -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_obligations_joined_with_and_shall_are_reported_as_conjoined` is executed
+- **Then** the conjunction is the tell; ordinary lists are not.
+
+### S7.3 — unprovable wording is reported as vague
+- **verifies:** C-7.3
+- **pins:** c0f0d9277c21f329
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_unprovable_wording_is_reported_as_vague -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_unprovable_wording_is_reported_as_vague` is executed
+- **Then** "properly" cannot be a run_cmd; quoted mentions are exempt.
+
+### S7.4 — identical wording is reported as duplication not coverage
+- **verifies:** C-7.4
+- **pins:** e7fa7503d9b83f0f
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_identical_wording_is_reported_as_duplication_not_coverage -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_identical_wording_is_reported_as_duplication_not_coverage` is executed
+- **Then** inflation looks like coverage until you compare the sentences.
+
+### S7.5 — superseded and withdrawn wording is exempt from the quality pass
+- **verifies:** C-7.5
+- **pins:** fc230c81f90b12be
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_superseded_and_withdrawn_wording_is_exempt_from_the_quality_pass -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_superseded_and_withdrawn_wording_is_exempt_from_the_quality_pass` is executed
+- **Then** policing dead text would punish the discipline the format asks for.
+
+### S7.6 — wording findings are advisory unless the caller asks for a gate
+- **verifies:** C-7.6
+- **pins:** 059cb9d8a49345d9
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_wording_findings_are_advisory_unless_the_caller_asks_for_a_gate -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_wording_findings_are_advisory_unless_the_caller_asks_for_a_gate` is executed
+- **Then** a linter that fails the build on style gets switched off.
+
+### S7.7 — a multi line note stays out of the normative text and version
+- **verifies:** C-7.7
+- **pins:** f487c46b44dfe286
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_multi_line_note_stays_out_of_the_normative_text_and_version -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_multi_line_note_stays_out_of_the_normative_text_and_version` is executed
+- **Then** a note leaking into the sentence corrupts both the wording and the pin.
+
+### S7.8 — the frames own contract passes its own quality bar
+- **verifies:** C-7.8
+- **pins:** edb4562298f63e0f
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_the_frames_own_contract_passes_its_own_quality_bar -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_the_frames_own_contract_passes_its_own_quality_bar` is executed
+- **Then** the rules are applied to the file that states them, not only to examples.
+
+### S7.9 — a preference is not an obligation
+- **verifies:** C-7.9
+- **pins:** f21c5ebb495db86f
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_preference_is_not_an_obligation -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_preference_is_not_an_obligation` is executed
+- **Then** should/may/can leave "is it required?" unanswerable (RFC 2119 keeps them for the non-binding case).
+
+### S7.10 — and or makes the obligation undecidable
+- **verifies:** C-7.10
+- **pins:** 6f19ab4b093ebef0
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_and_or_makes_the_obligation_undecidable -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_and_or_makes_the_obligation_undecidable` is executed
+- **Then** "and/or" hides two requirements behind one sentence.
+
+### S7.11 — a passive obligation without an actor is reported
+- **verifies:** C-7.11
+- **pins:** 5281257dda7582c1
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_passive_obligation_without_an_actor_is_reported -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_passive_obligation_without_an_actor_is_reported` is executed
+- **Then** "SHALL be logged" — by whom? A spec needs someone to hold responsible.
+
+### S7.12 — a placeholder marks the requirement as unwritten
+- **verifies:** C-7.12
+- **pins:** 12647edd551cf2d5
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_placeholder_marks_the_requirement_as_unwritten -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_placeholder_marks_the_requirement_as_unwritten` is executed
+- **Then** tBD is an admission, and it must not sit silently in a live clause.
+
+### S7.13 — a clause that dictates the mechanism is reported
+- **verifies:** C-7.13
+- **pins:** ee0de43ecfa1827a
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_clause_that_dictates_the_mechanism_is_reported -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_clause_that_dictates_the_mechanism_is_reported` is executed
+- **Then** "by ...ing" is HOW, and HOW belongs in design; this frame made exactly that mistake in draft clause C-3.9 and measurement refuted the mechanism.
+
+### S7.14 — an unquantified quality has no exit code
+- **verifies:** C-7.14
+- **pins:** 800351498f76d04f
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_an_unquantified_quality_has_no_exit_code -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_an_unquantified_quality_has_no_exit_code` is executed
+- **Then** "as responsive as possible" cannot be a run_cmd.
+
+### S7.15 — every rule the linter defines fires on the known bad contract
+- **verifies:** C-7.15
+- **pins:** 66706df7ab6f5a06
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_every_rule_the_linter_defines_fires_on_the_known_bad_contract -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_every_rule_the_linter_defines_fires_on_the_known_bad_contract` is executed
+- **Then** a check that can never fire is decoration; this is the dead-rule guard.
