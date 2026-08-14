@@ -63,6 +63,10 @@ over it, which is why every task's success_check is an already-green pytest node
   - success_check: `python -m pytest tests/test_spec_runner.py -q -k ledger`
   - files: `lib/spec_runner.py`
   - verifies: S3.4, S3.5, S3.6
+- [ ] T3.3 Size the pool from the machine, allow env pinning, and split lanes by clause tag
+  - success_check: `python -m pytest tests/test_spec_runner.py -q -k "worker_pool or tag"`
+  - files: `lib/spec_runner.py, athena.py`
+  - verifies: S3.11, S3.12
 
 ## Phase 4: The three questions
 **Goal:** coverage / todo / drift answer in a linear pass over (contract x scenarios x ledger).

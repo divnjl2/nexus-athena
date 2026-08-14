@@ -35,7 +35,7 @@ Add `--gate` in CI to exit 1.
 ## 3. Run the specs, then: what is left to implement?
 
 ```bash
-python athena.py spec run scenarios.md -o .athena/spec_ledger.json --jobs 12
+python athena.py spec run scenarios.md -o .athena/spec_ledger.json     --skip-tag slow --env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1   # fast lane: 47 specs in 2.1s
 python athena.py contract todo contract.md --ledger .athena/spec_ledger.json --text
 ```
 
@@ -76,7 +76,7 @@ python athena.py compile plan.md --speckit off               # clause nodes + su
 
 ## Worked example — this repo's own contract layer
 
-`features/contract-layer/` carries `contract.md` (49 clauses, 46 live), `scenarios.md`
-(46 specs, each a real pytest node), `plan.md` and a committed `spec_ledger.json`. It is the
+`features/contract-layer/` carries `contract.md` (51 clauses, 48 live), `scenarios.md`
+(48 specs, each a real pytest node), `plan.md` and a committed `spec_ledger.json`. It is the
 frame applied to itself: `C-4.5` was superseded by `C-4.13` because running these very
 reports on Athena exposed a bucket that answered "nothing left" while drift said otherwise.

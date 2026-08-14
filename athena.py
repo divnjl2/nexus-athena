@@ -252,8 +252,13 @@ def cmd_spec_run(a) -> int:
     if pathlib.Path(cpath).exists():
         contract = parse_contract(_read(cpath))
 
-    picked = select(scenarios, clause_prefix=a.clause, scenario_prefix=a.spec_id)
-    results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs)
+    picked = select(scenarios, clause_prefix=a.clause, scenario_prefix=a.spec_id,
+                    contract=contract, skip_tags=tuple(a.skip_tag), only_tags=tuple(a.only_tag))
+    # --env KEY=VALUE (repeatable): pinned over the inherited environment. The measured use
+    # case is PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 — on a box with many pytest plugins installed
+    # their autoload dominates a spec's runtime (10.3s of 10.8s here).
+    env = dict(kv.split("=", 1) for kv in a.env if "=" in kv) or None
+    results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env)
     ledger = make_ledger(
         results, contract=contract,
         scenario_version=hash_text(_read(scen_path)),
@@ -338,8 +343,16 @@ def build_parser() -> argparse.ArgumentParser:
     srun.add_argument("--contract", default="")
     srun.add_argument("--clause", default="", help="only specs whose clause id starts with this")
     srun.add_argument("--spec-id", dest="spec_id", default="", help="only specs with this id prefix")
+    srun.add_argument("--skip-tag", dest="skip_tag", action="append", default=[],
+                      metavar="TAG", help="skip specs whose CLAUSE carries this tag "
+                                          "(repeatable) — e.g. --skip-tag slow")
+    srun.add_argument("--only-tag", dest="only_tag", action="append", default=[],
+                      metavar="TAG", help="run only specs whose clause carries this tag")
     srun.add_argument("--cwd", default=".")
-    srun.add_argument("--jobs", type=int, default=8)
+    srun.add_argument("--jobs", type=int, default=0, help="0 = one worker per logical core")
+    srun.add_argument("--env", action="append", default=[], metavar="KEY=VALUE",
+                      help="pin an env var for the spec processes (repeatable), e.g. "
+                           "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1")
     srun.add_argument("--timeout", type=int, default=120)
     srun.add_argument("-o", "--out", default=".athena/spec_ledger.json")
     srun.set_defaults(fn=cmd_spec_run)

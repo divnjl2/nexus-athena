@@ -185,6 +185,22 @@
 - **When** the spec `test_a_run_cmd_with_shell_metacharacters_is_refused_not_executed` is executed
 - **Then** a run_cmd is an LLM-hop output: refuse it, never hand it to a shell.
 
+### S3.11 — worker pool follows the machine and env is pinnable
+- **verifies:** C-3.11
+- **pins:** 34107ed1bb4aacf3
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_worker_pool_follows_the_machine_and_env_is_pinnable -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_worker_pool_follows_the_machine_and_env_is_pinnable` is executed
+- **Then** the pool defaults to the machine's cores, and the caller can pin env vars.
+
+### S3.12 — specs can be included or excluded by clause tag
+- **verifies:** C-3.12
+- **pins:** 299151d9d3e018ac
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_specs_can_be_included_or_excluded_by_clause_tag -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_specs_can_be_included_or_excluded_by_clause_tag` is executed
+- **Then** one slow spec must not hold the fast lane hostage.
+
 ---
 
 ## C-4 — proved by the three reports (lib/contract_report.py)

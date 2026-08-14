@@ -63,10 +63,21 @@
     `planner_verify` (mcp/.../verbs.py); found by the python audit registry when the first
     cut of spec_runner used shell=True.
   - tags: security
-- **C-3.9** *(draft)* — WHEN the whole spec suite is run THE SYSTEM SHALL complete in under
-  five seconds by batching the specs into a single test-runner process.
-  - note: measured 56s wall clock for 43 specs (one pytest process each). Written down as
-    draft rather than silently missing — a draft clause is not yet owed a proof.
+- **C-3.9** *(superseded-by C-3.11 C-3.12)* — WHEN the whole spec suite is run THE SYSTEM
+  SHALL complete in under five seconds by batching the specs into a single test-runner process.
+  - note: the draft named the WRONG mechanism, and measuring it said so. Batching was never
+    the lever: of the 10.8s a spec took, 10.3s was third-party pytest plugin autoload (22
+    plugins installed on the box), the pool was hardcoded to 8 workers on an 18-core machine,
+    and after both were fixed the wall clock was still pinned by ONE inherently slow spec
+    (real `bd` + Dolt init, 100.5s vs a 1.21s median). Superseded, not edited: the wrong
+    guess stays on the record and `resolve("C-3.9")` lands on what replaced it.
+  - tags: performance
+- **C-3.11** — WHEN specs are run THE SYSTEM SHALL default the worker count to the machine's
+  logical cores and SHALL let the caller pin environment variables for the spec processes, so
+  a project can drop start-up cost its specs do not need.
+  - tags: performance
+- **C-3.12** — WHEN a clause carries a tag THE SYSTEM SHALL be able to include or exclude its
+  specs by that tag, so one inherently slow spec cannot hold the fast lane hostage.
   - tags: performance
 
 ## C-4 — The three questions
@@ -129,6 +140,7 @@
   clause-rooted validates edges accepted by bd's native typed-edge API.
   - note: command SHAPE is not acceptance — v3.1 shipped `bd related`, a command bd does not
     have, and every fake-based test passed. This clause exists so that class cannot repeat.
+  - tags: slow, integration
 - **C-5.10** *(superseded-by C-5.3)* — WHEN scenarios are compiled THE SYSTEM SHALL point
   each spec's validates edge at the spec document.
   - note: this was the v3.1 requirement, retro-documented so the change is auditable. It is

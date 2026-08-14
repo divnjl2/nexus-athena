@@ -23,7 +23,9 @@ in the MCP verbs — one rule for the whole repo.
 """
 from __future__ import annotations
 
+import functools
 import json
+import os
 import pathlib
 import shlex
 import subprocess
@@ -51,11 +53,26 @@ _SHELL_METACHARS = (";", "|", "&", "`", "$", ">", "<", "\n")
 _REFUSED = 126          # distinct from 124 timeout / 127 not-found so the ledger says WHY
 
 
-def _exec(cmd: str, *, cwd: str, timeout: int) -> tuple[int, str]:
+def default_jobs() -> int:
+    """One worker per logical core.
+
+    A spec is a PROCESS, not a coroutine, so the ceiling is the machine, not a guessed 8.
+    Capped at 64 so a 128-thread server does not thrash on a 20-spec suite.
+    """
+    return max(1, min(64, os.cpu_count() or 4))
+
+
+def _exec(cmd: str, *, cwd: str, timeout: int, env: dict | None = None) -> tuple[int, str]:
     """Default effectful runner: tokenize, run SHELL-LESS, return (exit_code, output tail).
 
     A run_cmd is an LLM-hop output, so it is refused rather than trusted when it carries
     shell metacharacters — a red spec with a stated reason beats an executed pipeline.
+
+    `env` is merged OVER the inherited environment (not replacing it) — a spec runs in the
+    developer's real environment plus whatever the caller pins. The reason this exists is
+    measured: on a machine with 22 third-party pytest plugins installed, autoloading them
+    cost 10.3s of the 10.8s a spec took. `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` is a per-project
+    decision (a suite may NEED a plugin), so it is a caller knob, never a default.
     """
     bad = [ch for ch in _SHELL_METACHARS if ch in cmd]
     if bad:
@@ -68,7 +85,8 @@ def _exec(cmd: str, *, cwd: str, timeout: int) -> tuple[int, str]:
         return _REFUSED, "refused: empty run_cmd"
     try:
         p = subprocess.run(argv, shell=False, cwd=cwd, capture_output=True,
-                           text=True, timeout=timeout, errors="replace")
+                           text=True, timeout=timeout, errors="replace",
+                           env=({**os.environ, **env} if env else None))
         out = ((p.stdout or "") + (p.stderr or "")).strip()
         return p.returncode, out[-_TAIL_CHARS:]
     except subprocess.TimeoutExpired:
@@ -79,27 +97,50 @@ def _exec(cmd: str, *, cwd: str, timeout: int) -> tuple[int, str]:
 
 
 def select(scenarios: tuple[Scenario, ...], *, clause_prefix: str = "",
-           scenario_prefix: str = "") -> tuple[Scenario, ...]:
-    """Filter the spec set — running one area's specs is the fast inner loop."""
+           scenario_prefix: str = "", contract: Contract | None = None,
+           skip_tags: tuple[str, ...] = (), only_tags: tuple[str, ...] = ()
+           ) -> tuple[Scenario, ...]:
+    """Filter the spec set — running one area's specs is the fast inner loop.
+
+    Tag filtering reads the CLAUSE's tags (identity lives on the clause, never on the spec),
+    which is what makes a fast lane possible: a suite is only as quick as its slowest spec,
+    so one `tags: slow` clause must not hold the other forty-five hostage.
+    """
     out = scenarios
     if clause_prefix:
         out = tuple(s for s in out if s.requirement_key.startswith(clause_prefix))
     if scenario_prefix:
         out = tuple(s for s in out if s.id.startswith(scenario_prefix))
+    if (skip_tags or only_tags) and contract is not None:
+        def tags_of(s: Scenario) -> set[str]:
+            cl = contract.by_id(s.requirement_key)
+            return set(cl.tags) if cl else set()
+        if only_tags:
+            out = tuple(s for s in out if tags_of(s) & set(only_tags))
+        if skip_tags:
+            out = tuple(s for s in out if not (tags_of(s) & set(skip_tags)))
     return out
 
 
 def run_specs(scenarios: tuple[Scenario, ...], *, cwd: str = ".", timeout: int = 120,
-              jobs: int = 8, executor=_exec, clock=None) -> tuple[SpecResult, ...]:
+              jobs: int = 0, executor=None, clock=None,
+              env: dict | None = None) -> tuple[SpecResult, ...]:
     """EFFECTFUL: run every scenario's run_cmd, concurrently, and time each one.
 
     Results are returned in DOCUMENT order regardless of completion order, so two runs
     of the same suite produce ledgers that diff cleanly. `executor` and `clock` are
     injected so the pure rollup below can be tested without a shell.
+
+    jobs=0 means `default_jobs()` — the machine's core count. Specs are independent
+    processes, so under-provisioning the pool is pure wall-clock waste.
     """
     if clock is None:
         import time
         clock = time.perf_counter
+    if jobs <= 0:
+        jobs = default_jobs()
+    if executor is None:
+        executor = functools.partial(_exec, env=env) if env else _exec
 
     def one(sc: Scenario) -> SpecResult:
         t0 = clock()

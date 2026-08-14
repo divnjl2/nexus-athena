@@ -7,12 +7,13 @@ out and the assertions are deterministic.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 
 from lib.ast import Scenario
 from lib.contract import parse as parse_contract
-from lib.spec_runner import (SpecResult, load_ledger, make_ledger, run_specs, select,
-                             totals, write_ledger)
+from lib.spec_runner import (SpecResult, default_jobs, load_ledger, make_ledger, run_specs,
+                             select, totals, write_ledger)
 
 CONTRACT = parse_contract("""# Contract: Demo
 
@@ -125,6 +126,48 @@ def test_absent_or_corrupt_ledger_degrades_to_unrun(tmp_path):
     listy = tmp_path / "list.json"
     listy.write_text("[1,2]", encoding="utf-8")
     assert load_ledger(listy) == {}
+
+
+def test_worker_pool_follows_the_machine_and_env_is_pinnable(monkeypatch):
+    """C-3.11 — the pool defaults to the machine's cores, and the caller can pin env vars."""
+    monkeypatch.setattr(os, "cpu_count", lambda: 36)
+    assert default_jobs() == 36
+    monkeypatch.setattr(os, "cpu_count", lambda: None)      # unknowable -> safe floor
+    assert default_jobs() == 4
+    monkeypatch.setattr(os, "cpu_count", lambda: 256)       # capped, never unbounded
+    assert default_jobs() == 64
+
+    seen = {}
+
+    def fake_run(argv, **kw):
+        seen.update(kw)
+        return _Ok()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(os, "environ", {"PATH": "/usr/bin", "HOME": "/home/x"})
+    run_specs((_scen(1, "C-1.1", cmd="pytest -q"),),
+              env={"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+    # merged OVER the inherited environment, never replacing it
+    assert seen["env"]["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
+    assert seen["env"]["PATH"] == "/usr/bin"
+    assert seen["shell"] is False
+
+
+def test_specs_can_be_included_or_excluded_by_clause_tag():
+    """C-3.12 — one slow spec must not hold the fast lane hostage."""
+    contract = parse_contract("""# Contract: Lanes
+
+- **C-1.1** — WHEN asked THE SYSTEM SHALL answer fast.
+- **C-1.2** — WHEN asked THE SYSTEM SHALL answer via a real backend.
+  - tags: slow, integration
+""")
+    scenarios = (_scen(1, "C-1.1"), _scen(2, "C-1.2"))
+    fast = select(scenarios, contract=contract, skip_tags=("slow",))
+    assert [s.id for s in fast] == ["S1"]
+    slow = select(scenarios, contract=contract, only_tags=("integration",))
+    assert [s.id for s in slow] == ["S2"]
+    # without a contract the tag filters are inert, never silently dropping specs
+    assert select(scenarios, skip_tags=("slow",)) == scenarios
 
 
 def test_select_filters_by_clause_or_spec_prefix():

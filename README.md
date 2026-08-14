@@ -112,7 +112,7 @@ flowchart LR
 ```bash
 python athena.py contract lint     contract.md            # ids, dangling refs, cycles
 python athena.py contract coverage contract.md --text     # Q1 clauses with no spec
-python athena.py spec run          scenarios.md --jobs 12 # -> .athena/spec_ledger.json
+python athena.py spec run          scenarios.md --skip-tag slow  # -> .athena/spec_ledger.json
 python athena.py contract todo     contract.md --ledger .athena/spec_ledger.json --text
 python athena.py contract drift    contract.md --ledger .athena/spec_ledger.json --text
 python athena.py seam contract_bound plan.md --speckit off   # fail-closed gate
@@ -128,9 +128,9 @@ Adoption is opt-in — with no `contract.md` attached, compiler output is byte-i
 ### Dogfood — the frame applied to itself
 
 [`features/contract-layer/`](./features/contract-layer/) is Athena's own contract for the
-feature that adds contracts: **49 clauses (46 live) ↔ 46 executable specs**, each `run_cmd` a
+feature that adds contracts: **51 clauses (48 live) ↔ 48 executable specs**, each `run_cmd` a
 real pytest node in this repo, plus a committed `spec_ledger.json`. Compiles to a
-**117-node / 108-edge** graph (49 clause + 46 scenario + 6 epic + 15 task + spec).
+**121-node / 112-edge** graph (51 clause + 48 scenario + 6 epic + 16 task + spec).
 
 Running the reports on itself found a real defect: with only four buckets, `todo` answered
 "nothing left" for a clause whose proof was stale while `drift` said the contract was out of
@@ -144,15 +144,30 @@ v3.1 ship `bd related`, a command bd does not have — so clause `C-5.11` and a 
 integration spec now prove that bd actually *accepts* the clause nodes and the
 supersede/validates edges.
 
-The measured limit is honest too: 46 specs take **~101 s** wall clock (one pytest process
-each) against **~11 s** for the same set inside a single pytest process. That headroom is
-why the sub-second goal is written down as the **draft** clause `C-3.9` (batch the specs
-into one runner process) instead of being quietly missing.
+The fourth finding is the best advert for keeping wrong guesses on the record. The draft
+clause `C-3.9` promised a sub-five-second suite **by batching specs into one process**.
+Measuring killed that mechanism: of the 10.8 s a spec took, **10.3 s was third-party pytest
+plugin autoload** (22 plugins installed on the box), the pool was hardcoded to 8 workers on
+an 18-core machine, and even after both fixes the clock was pinned by ONE inherently slow
+spec (real `bd` + Dolt init: 100.5 s against a 1.21 s median). So `C-3.9` was **superseded by
+`C-3.11`** (pool = machine cores, caller-pinnable env) **and `C-3.12`** (include/exclude specs
+by clause tag). Measured result:
+
+| lane | before | after |
+|---|---|---|
+| 47 specs, `--skip-tag slow` | ~101 s | **2.1 s** |
+| all 48 specs incl. real `bd` | ~112 s | 58 s |
+
+```bash
+python athena.py spec run scenarios.md --skip-tag slow --env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+```
+`--jobs` now defaults to the machine's logical cores; `--env` is a knob, never a default,
+because a suite may genuinely need a plugin.
 
 ### Proof it works
 
-- **222 tests green, zero failing** (176 core/v3.1 incl. the real-`bd` integration suite +
-  46 v3.3 contract-layer specs).
+- **224 tests green, zero failing** (176 core/v3.1 incl. the real-`bd` integration suite +
+  48 v3.3 contract-layer specs).
 - **Real-pipeline eval: 0.92 mean recall, coverage 1.0** over a 5-task corpus × 3 runs
   (answer-key-isolated). See [`evals/`](./evals/).
 - **End-to-end showcase:** [`examples/snake_game/`](./examples/snake_game/) — a 4-sentence
