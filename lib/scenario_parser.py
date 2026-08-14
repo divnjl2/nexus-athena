@@ -33,6 +33,9 @@ class ScenarioParseError(ParseError):
 _SCEN_RE = re.compile(r"^###\s+(S\d+\.\d+)\s*(?:[—\-]\s*(.*))?$")
 _VERIFIES_RE = re.compile(r"^-\s*\*\*verifies:\*\*\s*`?(.+?)`?\s*$", re.IGNORECASE)
 _RUNCMD_RE = re.compile(r"^-\s*\*\*run_cmd:\*\*\s*`?(.+?)`?\s*$", re.IGNORECASE)
+# v3.3: the contract-clause version this spec was written against (see lib/contract.py
+# pin_scenarios). Optional — an unpinned spec parses fine, drift just cannot be detected.
+_PINS_RE = re.compile(r"^\s*-\s*\*\*pins:\*\*\s*`?([0-9a-f]{6,64})`?\s*$", re.IGNORECASE)
 # Given / When / Then bullet — bold marker optional, prose follows
 _GWT_RE = re.compile(r"^-\s*\*\*(Given|When|Then|And)\*\*\s*(.*)$", re.IGNORECASE)
 
@@ -57,6 +60,7 @@ def parse(text: str) -> tuple[Scenario, ...]:
             requirement_key=cur["requirement_key"],
             gwt_text=" ".join(g.strip() for g in gwt if g.strip()).strip(),
             run_cmd=cur["run_cmd"],
+            clause_version=cur.get("clause_version", ""),
         ))
         cur, gwt = None, []
 
@@ -81,6 +85,10 @@ def parse(text: str) -> tuple[Scenario, ...]:
         mr = _RUNCMD_RE.match(raw)
         if mr:
             cur["run_cmd"] = mr.group(1).strip()
+            continue
+        mp = _PINS_RE.match(raw)
+        if mp:
+            cur["clause_version"] = mp.group(1).strip()
             continue
         mg = _GWT_RE.match(raw)
         if mg:

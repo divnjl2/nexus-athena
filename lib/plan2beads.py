@@ -22,6 +22,14 @@ v3.1 additions (active when plan.scenarios is non-empty):
 Backward compat: when provenance.spec_version == "" (v2 plans / tests), spec/design/scenario
 nodes are NOT emitted and epic parent is not set — output is identical to v2.
 """
+# v3.3 additions (active when plan.contract is attached AND provenance.contract_version set):
+#   * clause-node (kind:clause) per contract clause, parented under the spec-node
+#   * supersede edge: successor -> predecessor (type related), so an OLD clause id stays
+#     reachable in the graph after the requirement was rewritten or split
+#   * the `validates` edge from a scenario points at its CLAUSE instead of the whole spec
+#     (still one edge per scenario, but rooted at the requirement it actually proves)
+#   * CompileError if a scenario names a clause absent from the contract
+#   * no contract attached -> output byte-identical to v3.1
 from __future__ import annotations
 
 import re
@@ -76,6 +84,10 @@ def _scenario_key(slug: str, scenario_id: str) -> str:
     return f"{EXTERNAL_KEY_PREFIX}:{slug}:scenario:{scenario_id}"
 
 
+def _clause_key(slug: str, clause_id: str) -> str:
+    return f"{EXTERNAL_KEY_PREFIX}:{slug}:clause:{clause_id}"
+
+
 def _issue_body(t: Task) -> str:
     lines = [t.title, "", f"success_check: {t.success_check}"]
     if t.files:
@@ -128,6 +140,22 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                         )
 
     use_provenance = bool(plan.provenance.spec_version)
+    # v3.3: a contract only becomes graph structure when it is also PINNED. An attached
+    # contract with no contract_version would emit "athena:clause:" labels with a trailing
+    # colon (same trap the scenario_version guard closes below).
+    contract = plan.contract if (use_provenance and plan.provenance.contract_version) else None
+
+    if contract is not None:
+        clause_ids = {c.id for c in contract.clauses}
+        for sc in plan.scenarios:
+            if sc.requirement_key not in clause_ids:
+                # fail-closed: a spec proving a clause the contract does not define means
+                # the reference rotted (renamed/deleted clause) — exactly what the
+                # immutable-id rule exists to prevent. Do not compile a lie into the graph.
+                raise CompileError(
+                    f"scenario {sc.id} verifies clause {sc.requirement_key!r} "
+                    f"which is not in the contract"
+                )
 
     cmds: list[Command] = []
     epic_keys: list[str] = []
@@ -166,6 +194,34 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
                     "--label", f"athena:design:{plan.provenance.design_version}",
                 )))
 
+    # --- v3.3: clause nodes (the requirement ROOT) + supersede edges ---
+    if contract is not None and spec_key is not None:
+        for cl in contract.clauses:
+            ckey = _clause_key(slug, cl.id)
+            if ckey not in existing_keys:
+                cmds.append(Command((
+                    "bd", "create",
+                    "--parent", spec_key,
+                    "--no-inherit-labels",
+                    "--title", f"clause:{cl.id}",
+                    "--label", ckey,
+                    "--label", EXTERNAL_KEY_PREFIX,
+                    "--label", "kind:clause",
+                    "--label", f"athena:clause:{cl.version}",
+                    "--label", f"status:{cl.status}",
+                    "--description", cl.text,
+                )))
+        # supersede chain: successor --related--> predecessor. This is what lets a query
+        # walk from a live clause back to the wording it replaced (and lets an old id
+        # still land somewhere in the graph). CANONICAL sorted order for determinism.
+        for cl in contract.clauses:
+            for pred in sorted(cl.supersedes):
+                if contract.by_id(pred) is None:
+                    continue                       # lint reports the dangling ref
+                ckey, pkey = _clause_key(slug, cl.id), _clause_key(slug, pred)
+                if not (ckey in existing_keys and pkey in existing_keys):
+                    cmds.append(Command(("bd", "dep", "add", ckey, pkey, "--type", "related")))
+
     # --- v3.1: scenario nodes + verifies edges ---
     # Guard also on scenario_version: empty scenario_version would produce malformed
     # "athena:scenario:" label (trailing colon). Scenarios require a pinned version.
@@ -186,9 +242,16 @@ def compile(plan: Plan, *, existing_keys: frozenset[str] = frozenset()) -> Compi
             # command; the native typed edge for "X verifies/validates Y" is
             # `bd dep add <scenario> <spec> --type validates` (verified against bd v1.0.4).
             # skip if both endpoints already exist (idempotent).
-            if spec_key is not None and not (skey in existing_keys and spec_key in existing_keys):
+            #
+            # v3.3: with a contract attached the target is the CLAUSE, not the whole spec —
+            # same edge count, finer root, so `bd`-side coverage queries answer per
+            # requirement instead of per document. The scenario's clause ref was already
+            # validated above, so the endpoint is guaranteed to exist.
+            target = (_clause_key(slug, sc.requirement_key) if contract is not None
+                      else spec_key)
+            if target is not None and not (skey in existing_keys and target in existing_keys):
                 cmds.append(Command((
-                    "bd", "dep", "add", skey, spec_key, "--type", "validates",
+                    "bd", "dep", "add", skey, target, "--type", "validates",
                 )))
 
     # --- epics + issues, strict document order ---

@@ -108,6 +108,20 @@ def cmd_seam(a) -> int:
         except (SpecKitParseError, FileNotFoundError) as e:
             _emit({"seam": "seam.speckit_schema", "passed": False, "issues": [str(e)]})
             return 1
+    if name == "contract_bound":
+        # v3.3 gate: every live clause proved by >=1 spec, no spec pointing at a clause
+        # the contract does not define. Needs the sibling contract.md + scenarios.md, so
+        # it reads the front through parse_with_provenance (not the flat parse).
+        plan = parse_with_provenance(front, speckit=_speckit(a.speckit))
+        if plan.contract is None:
+            _emit({"seam": "seam.contract_bound", "passed": False,
+                   "issues": [f"no contract.md next to {front}"]})
+            return 1
+        r = seams.seam_contract_bound(plan.contract, plan.scenarios)
+        _emit({"seam": r.name, "passed": r.passed, "issues": list(r.issues),
+               "hash": r.artifact_hash})
+        return 0 if r.passed else 1
+
     plan = parse_source(front, speckit=_speckit(a.speckit))
     if name == "ast_wellformed":
         r = seams.seam_ast_wellformed(plan)
@@ -126,6 +140,129 @@ def cmd_seam(a) -> int:
         return 2
     _emit({"seam": r.name, "passed": r.passed, "issues": list(r.issues), "hash": r.artifact_hash})
     return 0 if r.passed else 1
+
+
+# --- v3.3: the contract layer (numbered clauses + executable specs) ---------------
+
+def _read(path: str) -> str:
+    return pathlib.Path(path).read_text(encoding="utf-8")
+
+
+def _sibling(path: str, name: str) -> str:
+    return str(pathlib.Path(path).parent / name)
+
+
+def _load_contract(a):
+    from lib.contract import parse as parse_contract
+    return parse_contract(_read(a.contract))
+
+
+def _load_scenarios(a, *, anchor: str):
+    """Scenarios come from --scenarios, else the sibling scenarios.md of the anchor file."""
+    from lib.scenario_parser import parse as parse_scenarios
+    path = getattr(a, "scenarios", "") or _sibling(anchor, "scenarios.md")
+    return parse_scenarios(_read(path))
+
+
+def _ledger(a) -> dict:
+    from lib.spec_runner import load_ledger
+    return load_ledger(getattr(a, "ledger", "") or ".athena/spec_ledger.json")
+
+
+def _report_out(a, report: dict, *, title: str) -> None:
+    if getattr(a, "text", False):
+        from lib.contract_report import render
+        print(render(report, title=title))
+    else:
+        _emit(report)
+
+
+def cmd_contract_lint(a) -> int:
+    from lib.contract import lint
+    c = _load_contract(a)
+    issues = lint(c)
+    _emit({"seam": "contract.lint", "passed": not issues, "issues": list(issues),
+           "clauses": len(c.clauses), "live": len(c.live()), "version": c.version})
+    return 0 if not issues else 1
+
+
+def cmd_contract_coverage(a) -> int:
+    from lib.contract_report import coverage
+    c = _load_contract(a)
+    rep = coverage(c, _load_scenarios(a, anchor=a.contract))
+    _report_out(a, rep, title="contract coverage")
+    return 0 if rep["passed"] or not a.gate else 1
+
+
+def cmd_contract_todo(a) -> int:
+    from lib.contract_report import todo
+    c = _load_contract(a)
+    rep = todo(c, _load_scenarios(a, anchor=a.contract), _ledger(a))
+    _report_out(a, rep, title="what is left to implement")
+    return 0
+
+
+def cmd_contract_drift(a) -> int:
+    from lib.contract_report import drift
+    c = _load_contract(a)
+    rep = drift(c, _load_scenarios(a, anchor=a.contract), _ledger(a))
+    _report_out(a, rep, title="requirement <-> spec <-> proof drift")
+    return 0 if rep["in_sync"] or not a.gate else 1
+
+
+def cmd_contract_pin(a) -> int:
+    from lib.contract import pin_scenarios
+    c = _load_contract(a)
+    path = a.scenarios or _sibling(a.contract, "scenarios.md")
+    new_text, stats = pin_scenarios(_read(path), c)
+    if a.write:
+        pathlib.Path(path).write_text(new_text, encoding="utf-8")
+    else:
+        stats["dry_run"] = True
+    _emit({"scenarios": path, **stats})
+    return 0
+
+
+def cmd_contract_import(a) -> int:
+    # migration: an existing spec.md already carries numbered EARS criteria. Import keeps
+    # the ids VERBATIM, so every `verifies:` already written keeps resolving.
+    from lib.contract import import_from_spec, lint, render
+    c = import_from_spec(_read(a.spec), section=a.section, title=a.title)
+    text = render(c)
+    if a.out:
+        pathlib.Path(a.out).write_text(text, encoding="utf-8")
+    else:
+        print(text)
+    _emit({"clauses": len(c.clauses), "version": c.version, "out": a.out,
+           "issues": list(lint(c))})
+    return 0
+
+
+def cmd_spec_run(a) -> int:
+    # THE effectful one: run every executable spec, roll the verdicts up per clause.
+    import datetime
+    from lib.contract import parse as parse_contract
+    from lib.spec_runner import make_ledger, run_specs, select, write_ledger
+    from lib.versioning import hash_text
+
+    scen_path = a.scenarios
+    scenarios = _load_scenarios(a, anchor=scen_path)
+    contract = None
+    cpath = a.contract or _sibling(scen_path, "contract.md")
+    if pathlib.Path(cpath).exists():
+        contract = parse_contract(_read(cpath))
+
+    picked = select(scenarios, clause_prefix=a.clause, scenario_prefix=a.spec_id)
+    results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs)
+    ledger = make_ledger(
+        results, contract=contract,
+        scenario_version=hash_text(_read(scen_path)),
+        ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    )
+    out = write_ledger(ledger, a.out)
+    _emit({"ledger": str(out), **ledger["totals"],
+           "red": [r["scenario"] for r in ledger["results"] if not r["passed"]]})
+    return 0 if ledger["totals"]["failed"] == 0 else 1
 
 
 def cmd_trace_coverage(a) -> int:
@@ -157,6 +294,55 @@ def build_parser() -> argparse.ArgumentParser:
     tc = sub.add_parser("trace-coverage"); tc.add_argument("front")
     tc.add_argument("--coverage", required=True)
     tc.set_defaults(fn=cmd_trace_coverage)
+
+    # --- v3.3: contract (numbered clauses) + executable-spec ledger ---
+    ct = sub.add_parser("contract", help="query the requirement contract")
+    csub = ct.add_subparsers(dest="contract_cmd", required=True)
+
+    def _rep(name, fn, *, gate=False):
+        sp = csub.add_parser(name)
+        sp.add_argument("contract", nargs="?", default="contract.md")
+        sp.add_argument("--scenarios", default="")
+        sp.add_argument("--ledger", default="")
+        sp.add_argument("--text", action="store_true", help="human table instead of JSON")
+        if gate:
+            sp.add_argument("--gate", action="store_true",
+                            help="exit 1 when the report is not clean (CI use)")
+        else:
+            sp.set_defaults(gate=False)
+        sp.set_defaults(fn=fn)
+        return sp
+
+    cl = csub.add_parser("lint"); cl.add_argument("contract", nargs="?", default="contract.md")
+    cl.set_defaults(fn=cmd_contract_lint)
+    _rep("coverage", cmd_contract_coverage, gate=True)
+    _rep("todo", cmd_contract_todo)
+    _rep("drift", cmd_contract_drift, gate=True)
+
+    cp = csub.add_parser("pin")
+    cp.add_argument("scenarios", nargs="?", default="")
+    cp.add_argument("--contract", default="contract.md")
+    cp.add_argument("--write", action="store_true", help="edit scenarios.md in place")
+    cp.set_defaults(fn=cmd_contract_pin)
+
+    ci = csub.add_parser("import"); ci.add_argument("spec")
+    ci.add_argument("-o", "--out", default="")
+    ci.add_argument("--section", default="EARS Acceptance Criteria")
+    ci.add_argument("--title", default="")
+    ci.set_defaults(fn=cmd_contract_import)
+
+    sr = sub.add_parser("spec", help="run the executable specs")
+    srsub = sr.add_subparsers(dest="spec_cmd", required=True)
+    srun = srsub.add_parser("run")
+    srun.add_argument("scenarios", nargs="?", default="scenarios.md")
+    srun.add_argument("--contract", default="")
+    srun.add_argument("--clause", default="", help="only specs whose clause id starts with this")
+    srun.add_argument("--spec-id", dest="spec_id", default="", help="only specs with this id prefix")
+    srun.add_argument("--cwd", default=".")
+    srun.add_argument("--jobs", type=int, default=8)
+    srun.add_argument("--timeout", type=int, default=120)
+    srun.add_argument("-o", "--out", default=".athena/spec_ledger.json")
+    srun.set_defaults(fn=cmd_spec_run)
     return p
 
 

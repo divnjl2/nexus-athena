@@ -216,6 +216,26 @@ def seam_coverage_backed(plan: Plan, cov) -> SeamResult:
     return SeamResult("seam.coverage_backed", not issues, tuple(issues), _hash(shape))
 
 
+def seam_contract_bound(contract, scenarios) -> SeamResult:
+    """Seam 12 (v3.3): the contract must be BOUND to executable specs before it compiles.
+
+    Fail-closed on the three ways a clause id stops meaning anything:
+      * a live clause nothing verifies  — a requirement with no proof is a wish;
+      * a spec naming a clause that does not exist — a typo'd or deleted reference;
+      * a spec naming a WITHDRAWN clause — dead coverage kept alive by inertia.
+    Draft clauses are exempt by design: `draft` is how you write a requirement down
+    before it is owed a proof. A spec still pointing at a SUPERSEDED clause is an
+    advisory (it resolves forward), not a gate failure — it rides in the coverage report.
+    """
+    from lib.contract_report import coverage
+    rep = coverage(contract, scenarios)
+    issues = [f"clause {cid} has no executable spec" for cid in rep["uncovered"]]
+    issues += [f"spec {o['scenario']} verifies {o['clause']} ({o['reason']})"
+               for o in rep["orphan_specs"]]
+    shape = repr(sorted((c.id, c.version, c.status) for c in contract.clauses))
+    return SeamResult("seam.contract_bound", not issues, tuple(issues), _hash(shape))
+
+
 def seam_implements_backed(plan: Plan, results) -> SeamResult:
     """Seam 11 (v4): the `implements` edge must pin a REAL commit to a REAL task. Any
     ExecutorResult with an empty/fake sha, or one that implements a task not in the plan, would

@@ -1,8 +1,14 @@
-# Athena — a spec-driven planning framework (v3 + v3.1)
+# Athena — a spec-driven planning framework (v3 + v3.1 + v3.3)
 
 Turn a one-line intent into a **complete, traceable, compilable plan** — and a durable
 **provenance graph** where every task's success check is a *proof that a requirement holds*,
 not just "a test passed."
+
+**v3.3 adds the requirement contract**: numbered clauses with immutable ids that are
+*superseded, never edited in place*, so a reference written months ago keeps resolving. Each
+clause is bound to an executable spec, which makes three questions a linear scan instead of a
+re-read of the codebase — *which requirements have no spec*, *what is left to implement*, and
+*where requirement, spec and code diverged*. See [Requirement contract](#requirement-contract-v33).
 
 The pipeline chains existing, proven pieces and adds the deterministic glue between them:
 
@@ -16,7 +22,7 @@ Shipped as **two plugins** over one core:
 
 - **Claude Code plugin** — `.claude-plugin/plugin.json` + `commands/` + `skills/`; Claude
   Code is the canonical agent that executes the Spec-Kit + CRISP slash-commands.
-- **Hermes plugin** — `hermes/` workflows + the **athena MCP** (17 `planner_*` verbs) so an
+- **Hermes plugin** — `hermes/` workflows + the **athena MCP** (23 `planner_*` verbs) so an
   autonomous Hermes swarm can drive the same pipeline. See `hermes/HERMES_PLUGIN.md`.
 
 **Execution (`implement`) is currently DEFERRED** (`ralph/INTERFACE.md`). Closing the
@@ -60,7 +66,7 @@ the scenarios on the current code → "does it still conform?"
 ```mermaid
 flowchart TB
   CC["Claude Code plugin<br/>(commands + skills)"] --> CORE
-  HP["Hermes plugin<br/>(athena MCP, 17 verbs)"] --> CORE
+  HP["Hermes plugin<br/>(athena MCP, 23 verbs)"] --> CORE
   subgraph CORE["one core — lib/ AST + plan2beads"]
     AST["Plan AST"] --> CMP["deterministic compiler"]
   end
@@ -74,17 +80,79 @@ flowchart TB
   CWP --> G
 ```
 
-### What v3 / v3.1 add over the original
+### What v3 / v3.1 / v3.3 add over the original
 
 - **v3 — provenance graph.** `spec → design → epic → task` parent chain, each LLM-hop output
   pinned by a content hash (`spec_version`, `design_version`, `scenario_version`).
 - **v3.1 — executable scenario harness.** One Given-When-Then `Scenario` per EARS criterion;
   `scenario --verifies(validates)--> spec` and `task --satisfies(tracks)--> scenario` edges,
   so `success_check = requirement proved`.
+- **v3.3 — requirement contract.** Numbered clauses (`C-3.2`) with immutable ids and
+  supersede/branch semantics become the graph ROOT (`kind:clause`), each with its OWN version
+  hash, and each spec pins the clause wording it was written against.
+
+## Requirement contract (v3.3)
+
+A spec.md is prose with implicit numbering: renumber it and every `verifies: R4.2` written
+last month silently points somewhere else — the reference rots without a single test going
+red. A contract fixes identity instead: an id is allocated once, never reused, and a
+requirement that changes is **superseded** by one or more successors.
+
+```mermaid
+flowchart LR
+  C13["C-1.3<br/>(superseded)"] -->|related| C14["C-1.4"]
+  C13 --> C15["C-1.5"]
+  S["spec S1.4<br/>run_cmd + pins:"] -->|validates| C14
+  T["task T2.1"] -->|tracks| S
+  T -.->|implements v4| K["commit &lt;sha&gt;"]
+```
+
+`resolve("C-1.3") → (C-1.4, C-1.5)` — the old reference still lands somewhere current.
+
+```bash
+python athena.py contract lint     contract.md            # ids, dangling refs, cycles
+python athena.py contract coverage contract.md --text     # Q1 clauses with no spec
+python athena.py spec run          scenarios.md --jobs 12 # -> .athena/spec_ledger.json
+python athena.py contract todo     contract.md --ledger .athena/spec_ledger.json --text
+python athena.py contract drift    contract.md --ledger .athena/spec_ledger.json --text
+python athena.py seam contract_bound plan.md --speckit off   # fail-closed gate
+python athena.py contract import   spec.md -o contract.md    # migrate, ids VERBATIM
+```
+
+`todo` buckets every live clause as `unspecified | red | unrun | stale | done` (+ `draft`
+backlog). `drift` reports `spec_drift` / `stale_proof` / `missing_spec` / `extra_spec` — the
+two middle ones are what no test suite can tell you: every spec is green, but it is proving an
+older wording of the requirement. Format rules: `skills/contract-format/SKILL.md`.
+Adoption is opt-in — with no `contract.md` attached, compiler output is byte-identical to v3.1.
+
+### Dogfood — the frame applied to itself
+
+[`features/contract-layer/`](./features/contract-layer/) is Athena's own contract for the
+feature that adds contracts: **49 clauses (46 live) ↔ 46 executable specs**, each `run_cmd` a
+real pytest node in this repo, plus a committed `spec_ledger.json`. Compiles to a
+**117-node / 108-edge** graph (49 clause + 46 scenario + 6 epic + 15 task + spec).
+
+Running the reports on itself found a real defect: with only four buckets, `todo` answered
+"nothing left" for a clause whose proof was stale while `drift` said the contract was out of
+sync. Clause `C-4.5` was therefore **superseded by `C-4.13`** (the `stale` bucket) rather than
+edited — `resolve("C-4.5") → C-4.13`, and the old id still works. A second finding came from
+the repo's own audit rules: the first cut of the runner used `shell=True` on a `run_cmd`,
+contradicting the policy `planner_verify` had already set (a run_cmd is an LLM-hop output);
+the runner is now shell-less with a refusal path, written down as clause `C-3.10`. Third,
+the unit tests only asserted the SHAPE of the emitted `bd` commands — the very gap that let
+v3.1 ship `bd related`, a command bd does not have — so clause `C-5.11` and a real-`bd`
+integration spec now prove that bd actually *accepts* the clause nodes and the
+supersede/validates edges.
+
+The measured limit is honest too: 46 specs take **~101 s** wall clock (one pytest process
+each) against **~11 s** for the same set inside a single pytest process. That headroom is
+why the sub-second goal is written down as the **draft** clause `C-3.9` (batch the specs
+into one runner process) instead of being quietly missing.
 
 ### Proof it works
 
-- **126 core tests + 7 v3.1 edge tests green.**
+- **222 tests green, zero failing** (176 core/v3.1 incl. the real-`bd` integration suite +
+  46 v3.3 contract-layer specs).
 - **Real-pipeline eval: 0.92 mean recall, coverage 1.0** over a 5-task corpus × 3 runs
   (answer-key-isolated). See [`evals/`](./evals/).
 - **End-to-end showcase:** [`examples/snake_game/`](./examples/snake_game/) — a 4-sentence
@@ -123,7 +191,13 @@ nexus-athena/
 ├── speckit/{presets/athena, seed.md}  # success_check preset + phase-by-phase seed [done]
 ├── skills/{plan-format, speckit-tasks-format}/SKILL.md  # fallback + primary schemas [done]
 ├── agents/                        # documentarian subagents                       [done]
+├── features/contract-layer/       # v3.3 dogfood: Athena's own contract + specs    [done]
+├── skills/contract-format/        # the formal clause language (v3.3)             [done]
+├── commands/contract.md           # /athena.contract — the three questions        [done]
 ├── lib/
+│   ├── contract.py                # contract.md -> clauses (parse/lint/pin/import) [done]
+│   ├── spec_runner.py             # run executable specs -> red/green ledger       [done]
+│   ├── contract_report.py         # coverage / todo / drift (pure, linear)         [done]
 │   ├── ast.py                     # shared Plan AST (the contract)                [done]
 │   ├── plan_parser.py             # plan.md  -> Plan  (fallback)                  [done]
 │   ├── speckit_parser.py          # tasks.md -> Plan  (primary)                   [done]

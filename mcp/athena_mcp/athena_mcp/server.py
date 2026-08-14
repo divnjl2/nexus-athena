@@ -146,5 +146,49 @@ def planner_trace_implements(front_path: str) -> dict:
     return verbs.planner_trace_implements(front_path)
 
 
+# --- v3.3 requirement contract (numbered clauses + executable-spec ledger) ---
+@mcp.tool
+def planner_contract_coverage(contract_path: str = "contract.md",
+                              scenarios_path: str = "") -> dict:
+    """v3.3 Q1: which contract clauses have no executable spec (+ orphan/redirected specs)."""
+    return verbs.planner_contract_coverage(contract_path, scenarios_path)
+
+
+@mcp.tool
+def planner_contract_todo(contract_path: str = "contract.md", scenarios_path: str = "",
+                          ledger_path: str = "") -> dict:
+    """v3.3 Q2: what is left to implement — unspecified/red/unrun/stale/done + draft backlog."""
+    return verbs.planner_contract_todo(contract_path, scenarios_path, ledger_path)
+
+
+@mcp.tool
+def planner_contract_drift(contract_path: str = "contract.md", scenarios_path: str = "",
+                           ledger_path: str = "") -> dict:
+    """v3.3 Q3: requirement<->spec<->proof divergence; `in_sync` is the gate bit."""
+    return verbs.planner_contract_drift(contract_path, scenarios_path, ledger_path)
+
+
+@mcp.tool
+def planner_spec_run(scenarios_path: str = "scenarios.md", contract_path: str = "",
+                     out_path: str = ".athena/spec_ledger.json", clause: str = "",
+                     jobs: int = 8, timeout: int = 120) -> dict:
+    """v3.3: run the executable specs and write the red/green ledger the reports read."""
+    return verbs.planner_spec_run(scenarios_path, contract_path, out_path, clause,
+                                  jobs, timeout)
+
+
+@mcp.tool
+def planner_contract_pin(scenarios_path: str = "scenarios.md",
+                         contract_path: str = "contract.md", write: bool = False) -> dict:
+    """v3.3: pin each spec to the clause version it was written against (drift instrument)."""
+    return verbs.planner_contract_pin(scenarios_path, contract_path, write)
+
+
+@mcp.tool
+def planner_contract_gate(front_path: str) -> dict:
+    """v3.3: seam.contract_bound — fail closed before compiling an unbound contract."""
+    return verbs.planner_contract_gate(front_path)
+
+
 if __name__ == "__main__":
     mcp.run()

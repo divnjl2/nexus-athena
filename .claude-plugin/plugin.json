@@ -1,7 +1,7 @@
 {
   "name": "nexus-athena",
-  "description": "Spec-driven planning framework (v3+v3.1), shipped as a Claude Code plugin + a Hermes plugin (hermes/HERMES_PLUGIN.md). Drives Spec-Kit /specify -> CRISP design -> EARS->GWT scenarios -> deterministic compile into a Beads (bd) durable PROVENANCE graph (spec->design->epic->task + verifies/satisfies edges). success_check = requirement proved, not just test-passed. 17 planner_* MCP verbs. Validated by evals/ (real pipeline = 92% mean recall over a 5-task set).",
-  "version": "0.3.1",
+  "description": "Spec-driven planning framework (v3+v3.1+v3.3), shipped as a Claude Code plugin + a Hermes plugin (hermes/HERMES_PLUGIN.md). Drives Spec-Kit /specify -> CRISP design -> EARS->GWT scenarios -> deterministic compile into a Beads (bd) durable PROVENANCE graph (spec->design->epic->task + verifies/satisfies edges). v3.3 roots that graph in a REQUIREMENT CONTRACT: numbered clauses with immutable ids, supersede/branch semantics, per-clause version pins and an executable-spec ledger, so 'which requirements have no spec / what is left / where did requirement, spec and code diverge' are linear scans. success_check = requirement proved, not just test-passed. 23 planner_* MCP verbs. Validated by evals/ (real pipeline = 92% mean recall over a 5-task set).",
+  "version": "0.3.3",
   "author": {
     "name": "divnjl2"
   },
