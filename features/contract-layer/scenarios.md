@@ -793,14 +793,6 @@
 - **When** the spec `test_the_gate_hash_moves_when_the_map_goes_stale` is executed
 - **Then** the seam's artifact hash fingerprints the pins and the id deltas.
 
-### S9.13 — a refactor that moves lines makes the map stale
-- **verifies:** C-9.13
-- **pins:** 8adda1a38ae85da0
-- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_refactor_that_moves_lines_makes_the_map_stale -q`
-- **Given** the per-clause line map (lib/clause_map.py)
-- **When** the spec `test_a_refactor_that_moves_lines_makes_the_map_stale` is executed
-- **Then** the subtle one: shifting a file by three lines changes neither the contract nor the specs, so the version pins stay green while every line number in the map points somewhere else. Pinning the SOURCE is what closes it.
-
 ### S9.14 — a map in the previous schema is refused
 - **verifies:** C-9.14
 - **pins:** 4cbc110b055a1226
@@ -808,3 +800,27 @@
 - **Given** the per-clause line map (lib/clause_map.py)
 - **When** the spec `test_a_map_in_the_previous_schema_is_refused` is executed
 - **Then** a v1 map cannot prove source freshness at all, so it fails rather than passing on the strength of pins it does not carry.
+
+### S9.15 — only the clauses whose lines moved go stale
+- **verifies:** C-9.15
+- **pins:** 5df9f904c5afeb7d
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_only_the_clauses_whose_lines_moved_go_stale -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_only_the_clauses_whose_lines_moved_go_stale` is executed
+- **Then** the pin covers the lines a clause OWNS, so an edit elsewhere in the same file costs nothing; whole-file pinning made the map unkeepable on an active file.
+
+### S9.16 — a line that no longer exists counts as moved
+- **verifies:** C-9.16
+- **pins:** d8096b3456fb4366
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_line_that_no_longer_exists_counts_as_moved -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_line_that_no_longer_exists_counts_as_moved` is executed
+- **Then** a clause whose file shrank past its lines must not digest as unchanged.
+
+### S9.17 — an incremental rebuild keeps the clauses that still hold
+- **verifies:** C-9.17
+- **pins:** b0fc6f9fe07125ed
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_an_incremental_rebuild_keeps_the_clauses_that_still_hold -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_an_incremental_rebuild_keeps_the_clauses_that_still_hold` is executed
+- **Then** re-deriving one clause must cost one spec run, not the whole suite; the untouched entries are carried over byte-for-byte.

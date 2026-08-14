@@ -26,16 +26,21 @@ stays OUT of this module's imports so lib/ keeps no third-party dependency).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import shlex
 from dataclasses import dataclass
 
-SCHEMA = "athena.clause_map/2"   # /2 adds source pins; /1 maps fail the gate
+SCHEMA = "athena.clause_map/3"   # /3 pins the OWNED LINES per clause, not whole files
 
 
 def _norm(p: str) -> str:
     return p.replace("\\", "/").strip().lstrip("./")
+
+
+def _sha16(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
 @dataclass(frozen=True)
@@ -88,7 +93,7 @@ def lines_from_json(text: str) -> dict:
 
 
 def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
-          scenario_version: str = "", source_versions: dict | None = None) -> dict:
+          scenario_version: str = "", clause_digests: dict | None = None) -> dict:
     """PURE: fold per-spec line sets into the clause map artifact.
 
     A clause owns the UNION of the lines its specs execute. Two clauses may own the same
@@ -104,14 +109,79 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
-        # Pinning the SOURCE is what closes the last hole: a refactor that shifts a file by
-        # three lines changes neither the contract nor the specs, so pins on those two stay
-        # green while every line number in the map silently points somewhere else.
-        "source_versions": dict(sorted((source_versions or {}).items())),
+        # Pinning the owned LINES is what closes the last hole: a refactor that shifts a
+        # file changes neither the contract nor the specs, so those two pins stay green
+        # while every line number in the map silently points somewhere else.
+        "clause_digests": dict(sorted((clause_digests or {}).items())),
         "clauses": {cid: {p: clauses[cid][p] for p in sorted(clauses[cid])}
                     for cid in sorted(clauses)},
         "specs": {sl.scenario_id: sl.clause_id for sl in sorted(spec_lines,
                                                                 key=lambda s: s.scenario_id)},
+    }
+
+
+def clause_digest(files: dict, sources: dict) -> str:
+    """PURE: fingerprint the CONTENT sitting at the lines a clause owns.
+
+    Whole-file pinning was the safe first cut and far too blunt: any edit anywhere in a
+    covered file invalidated every clause in it, so on an active file the map could never
+    stay green. Hashing the owned lines instead is both tighter and still correct — an
+    insertion above them shifts what those numbers point at, so the digest moves; an edit
+    below or beside them does not touch what the clause owns, so it does not.
+
+    `sources` is {path: file text}, injected — reading files is the caller's job.
+    A line past the end of its file digests as a sentinel, which is itself a change.
+    """
+    parts = []
+    for path in sorted(files):
+        text = sources.get(_norm(path))
+        lines = text.splitlines() if text is not None else []
+        for ln in files[path]:
+            body = lines[ln - 1] if 0 < ln <= len(lines) else "<gone-line>"
+            parts.append(f"{_norm(path)}:{ln}:{body}")
+    return _sha16("\n".join(parts))
+
+
+def digests(clause_map: dict, sources: dict) -> dict:
+    """PURE: {clause id: digest of the lines it owns} for every clause in the map."""
+    return {cid: clause_digest(files, sources)
+            for cid, files in sorted((clause_map.get("clauses") or {}).items())}
+
+
+def stale_clauses(clause_map: dict, current: dict) -> tuple[str, ...]:
+    """PURE: the clauses whose owned lines no longer hold what they held. This is the set an
+    incremental rebuild has to re-derive — everything else in the map is still true."""
+    pinned = (clause_map or {}).get("clause_digests") or {}
+    return tuple(sorted(cid for cid, d in pinned.items()
+                        if cid in current and current[cid] != d))
+
+
+def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
+          scenario_version: str = "", clause_digests: dict | None = None,
+          rebuilt: tuple[str, ...] = ()) -> dict:
+    """PURE: fold freshly collected specs into an existing map, keeping what stayed true.
+
+    Only the clauses in `rebuilt` are replaced; the rest of the map is carried over intact.
+    That is what makes the map affordable on a live repo: re-deriving one clause costs one
+    spec run, not the whole suite.
+    """
+    fresh = build(spec_lines, contract_version=contract_version,
+                  scenario_version=scenario_version)
+    clauses = dict((base or {}).get("clauses") or {})
+    specs = dict((base or {}).get("specs") or {})
+    for cid in rebuilt:
+        clauses.pop(cid, None)
+    clauses.update(fresh["clauses"])
+    specs.update(fresh["specs"])
+    kept = dict((base or {}).get("clause_digests") or {})
+    kept.update(clause_digests or {})
+    return {
+        "schema": SCHEMA,
+        "contract_version": contract_version,
+        "scenario_version": scenario_version,
+        "clause_digests": {c: kept[c] for c in sorted(kept) if c in clauses},
+        "clauses": {c: clauses[c] for c in sorted(clauses)},
+        "specs": {s: specs[s] for s in sorted(specs)},
     }
 
 
@@ -160,7 +230,7 @@ def classify(clause_map: dict, suite_lines: dict, *, files: tuple[str, ...] = ()
 
 
 def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = "",
-              source_versions: dict | None = None) -> dict:
+              clause_digests: dict | None = None) -> dict:
     """PURE: is this map still describing the contract and the specs in front of us?
 
     A derived artifact nobody re-derives is worse than no artifact: `owners()` keeps
@@ -172,8 +242,8 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
       spec_drift      — the map's scenario pin is not the current scenarios.md hash
       unmapped        — a live clause the map never saw (added since it was built)
       stale_entries   — a mapped clause the contract no longer defines (removed since)
-      source_drift    — a mapped FILE whose content changed: the line numbers moved even
-                        though the requirements did not
+      clause_drift    — a mapped CLAUSE whose owned lines no longer hold what they held:
+                        the code moved even though the requirements did not
 
     `scenario_version` is INJECTED, because hashing a file is I/O and this stays pure.
     """
@@ -186,10 +256,7 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
     unmapped = sorted(live - set(mapped))
     stale_entries = sorted(set(mapped) - known)
 
-    pinned_sources = (clause_map or {}).get("source_versions") or {}
-    now_sources = source_versions or {}
-    source_drift = sorted(p for p, v in pinned_sources.items()
-                          if p in now_sources and now_sources[p] != v)
+    clause_drift = list(stale_clauses(clause_map, clause_digests or {}))
 
     map_contract = (clause_map or {}).get("contract_version", "")
     map_scenarios = (clause_map or {}).get("scenario_version", "")
@@ -204,7 +271,7 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
         "spec_drift": spec_drift,
         "unmapped": unmapped,
         "stale_entries": stale_entries,
-        "source_drift": source_drift,
+        "clause_drift": clause_drift,
         "map_contract_version": map_contract,
         "contract_version": contract.version if contract is not None else "",
         "map_scenario_version": map_scenarios,
@@ -212,7 +279,7 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
         "specs_mapped": len((clause_map or {}).get("specs") or {}),
         "specs_now": len(scenarios or ()),
         "is_fresh": not (absent or contract_drift or spec_drift or unmapped
-                         or stale_entries or source_drift),
+                         or stale_entries or clause_drift),
     }
 
 

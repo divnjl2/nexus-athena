@@ -275,9 +275,19 @@
   gate, because "no map" must never read as "nothing to check".
 - **C-9.12** — WHEN the freshness gate runs THE SYSTEM SHALL fingerprint the pins and the id
   deltas in its artifact hash.
-- **C-9.13** — WHEN a file the map covers has changed since the map was built THE SYSTEM
-  SHALL report the map as stale, even though the contract and the specs did not move.
-  - note: found by trying it — three blank lines prepended to a mapped file left both
-    version pins green while `owners` for a real line answered nothing.
+- **C-9.13** *(superseded-by C-9.15)* — WHEN a file the map covers has changed since the map
+  was built THE SYSTEM SHALL report the map as stale, even though the contract and the specs
+  did not move.
+  - note: right diagnosis, blunt instrument. Whole-file pinning invalidated every clause in
+    a file for an edit that moved none of their lines, so on an active file the map could
+    never be kept green. Superseded by the per-clause line pin, not deleted — the wrong
+    granularity stays on the record.
+- **C-9.15** *(supersedes C-9.13)* — WHEN the lines a clause owns no longer hold what they
+  held THE SYSTEM SHALL report that clause as drifted, leaving clauses whose lines are
+  untouched fresh.
+- **C-9.16** — WHEN a clause owns a line its file no longer has THE SYSTEM SHALL count that
+  clause as drifted.
+- **C-9.17** — WHEN a map is rebuilt incrementally THE SYSTEM SHALL re-derive only the
+  drifted and unseen clauses, carrying the rest of the map over unchanged.
 - **C-9.14** — WHEN a map carries an earlier schema THE SYSTEM SHALL refuse it rather than
   trust pins it does not carry.

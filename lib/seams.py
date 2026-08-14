@@ -237,7 +237,7 @@ def seam_contract_bound(contract, scenarios) -> SeamResult:
 
 
 def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "",
-                   source_versions: dict | None = None) -> SeamResult:
+                   clause_digests: dict | None = None) -> SeamResult:
     """Seam 13 (v3.3): the clause->file:line map must describe the contract in front of us.
 
     The map is DERIVED, which is its strength and its trap: nothing about a stale one looks
@@ -245,13 +245,15 @@ def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "
     at lines two refactors old. So the gate refuses a map that is absent, pinned to another
     contract or spec version, missing a live clause, or still holding a clause that is gone.
     An absent map fails CLOSED — "no map" must never read as "nothing to check". The
-    source pins are the subtle one: a refactor that shifts a file by three lines changes
-    neither the contract nor the specs, so without them the gate stays green while every
-    line number in the map points somewhere else.
+    The line pins are the subtle one: a refactor that shifts a file changes neither the
+    contract nor the specs, so without them the gate stays green while every line number in
+    the map points somewhere else. They are per CLAUSE and cover only the lines it owns, so
+    editing elsewhere in the same file costs nothing — and the drift list doubles as the
+    exact work list for an incremental rebuild.
     """
     from lib.clause_map import SCHEMA, staleness
     rep = staleness(clause_map, contract, scenarios, scenario_version=scenario_version,
-                    source_versions=source_versions)
+                    clause_digests=clause_digests)
     issues: list[str] = []
     if rep["absent"]:
         issues.append(f"clause map is absent or not {SCHEMA} — run `contract map`")
@@ -264,12 +266,12 @@ def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "
     issues += [f"clause {cid} has no lines in the map" for cid in rep["unmapped"]]
     issues += [f"map holds {cid}, which the contract no longer defines"
                for cid in rep["stale_entries"]]
-    issues += [f"{path} changed since the map was built — its line numbers moved"
-               for path in rep["source_drift"]]
+    issues += [f"clause {cid}: the lines it owns changed since the map was built"
+               for cid in rep["clause_drift"]]
     # already deterministic: the pins are scalars and both id lists come back sorted
     shape = _hash(repr((rep["map_contract_version"], rep["map_scenario_version"],
                         tuple(rep["unmapped"]), tuple(rep["stale_entries"]),
-                        tuple(rep["source_drift"]))))
+                        tuple(rep["clause_drift"]))))
     return SeamResult("seam.map_fresh", not issues, tuple(issues), shape)
 
 

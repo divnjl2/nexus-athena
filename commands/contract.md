@@ -61,9 +61,13 @@ After reconciling, re-pin: `python athena.py contract pin scenarios.md --contrac
 ## 5. Line ownership — which requirement owns this line
 
 ```bash
-python athena.py contract map contract.md --source lib       # derive; ~4 min for 94 specs
-python athena.py contract owners lib/seams.py:230            # -> C-5.8, C-5.9 + their text
+python athena.py contract map contract.md --source lib                # full derive (~3 min / 98 specs)
+python athena.py contract map contract.md --source lib --incremental  # only what drifted (~28 s / 12)
+python athena.py contract owners lib/seams.py:230                     # -> C-5.8, C-5.9 + their text
 ```
+
+Each clause is pinned to the CONTENT at the lines it owns, so editing elsewhere in the same
+file costs nothing, and the drift list doubles as the work list for `--incremental`.
 
 The map is DERIVED from clause -> spec -> run_cmd by running each spec alone under coverage,
 so nobody annotates anything. It answers "I am about to change this line, what am I allowed

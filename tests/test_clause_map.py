@@ -121,7 +121,7 @@ def test_lines_from_json_reads_coverage_output():
 # --- the gate: a derived artifact nobody re-derives is worse than none ----------
 
 from lib.contract import parse as parse_contract          # noqa: E402
-from lib.clause_map import staleness                      # noqa: E402
+from lib.clause_map import digests, merge, staleness, stale_clauses  # noqa: E402
 from lib.seams import seam_map_fresh                      # noqa: E402
 
 GATE_CONTRACT = parse_contract("""# Contract: Gate
@@ -192,31 +192,60 @@ def test_the_gate_hash_moves_when_the_map_goes_stale():
     assert a.artifact_hash != b.artifact_hash
 
 
-def test_a_refactor_that_moves_lines_makes_the_map_stale():
-    """C-9.13 — the subtle one: shifting a file by three lines changes neither the contract
-    nor the specs, so the version pins stay green while every line number in the map points
-    somewhere else. Pinning the SOURCE is what closes it."""
-    cmap = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
-                  _lines("S2", "C-1.2", {"lib/a.py": (2,)})),
-                 contract_version=GATE_CONTRACT.version, scenario_version="scv1",
-                 source_versions={"lib/a.py": "src-v1"})
-    assert cmap["source_versions"] == {"lib/a.py": "src-v1"}
+def test_only_the_clauses_whose_lines_moved_go_stale():
+    """C-9.15 — the pin covers the lines a clause OWNS, so an edit elsewhere in the same
+    file costs nothing; whole-file pinning made the map unkeepable on an active file."""
+    src = {"lib/a.py": "one\ntwo\nthree\nfour\n"}
+    shape = (_lines("S1", "C-1.1", {"lib/a.py": (2,)}),
+             _lines("S2", "C-1.2", {"lib/a.py": (3,)}))
+    cmap = build(shape, contract_version=GATE_CONTRACT.version, scenario_version="scv1")
+    cmap = build(shape, contract_version=GATE_CONTRACT.version, scenario_version="scv1",
+                 clause_digests=digests(cmap, src))
 
-    same = staleness(cmap, GATE_CONTRACT, (), scenario_version="scv1",
-                     source_versions={"lib/a.py": "src-v1"})
-    assert same["is_fresh"] and same["source_drift"] == []
+    untouched = digests(cmap, {"lib/a.py": "one\ntwo\nthree\nEDITED\n"})
+    assert stale_clauses(cmap, untouched) == ()          # line 4 belongs to no clause
 
-    moved = staleness(cmap, GATE_CONTRACT, (), scenario_version="scv1",
-                      source_versions={"lib/a.py": "src-v2"})
-    assert moved["source_drift"] == ["lib/a.py"] and not moved["is_fresh"]
-    # the contract and the specs are untouched: without the source pin this reads as fresh
-    assert not moved["contract_drift"] and not moved["spec_drift"]
-    assert moved["unmapped"] == [] and moved["stale_entries"] == []
+    one_moved = digests(cmap, {"lib/a.py": "one\ntwo\nEDITED\nfour\n"})
+    assert stale_clauses(cmap, one_moved) == ("C-1.2",)  # only the owner of line 3
+
+    shifted = digests(cmap, {"lib/a.py": "NEW\none\ntwo\nthree\nfour\n"})
+    assert stale_clauses(cmap, shifted) == ("C-1.1", "C-1.2")   # everything moved
 
     r = seam_map_fresh(cmap, GATE_CONTRACT, (), scenario_version="scv1",
-                       source_versions={"lib/a.py": "src-v2"})
+                       clause_digests=one_moved)
     assert not r.passed
-    assert any("line numbers moved" in i for i in r.issues)
+    assert any("C-1.2" in i and "owns changed" in i for i in r.issues)
+    # the contract and the specs never moved: without the line pin this reads as fresh
+    rep = staleness(cmap, GATE_CONTRACT, (), scenario_version="scv1",
+                    clause_digests=one_moved)
+    assert not rep["contract_drift"] and not rep["spec_drift"]
+
+
+def test_a_line_that_no_longer_exists_counts_as_moved():
+    """C-9.16 — a clause whose file shrank past its lines must not digest as unchanged."""
+    src = {"lib/a.py": "one\ntwo\nthree\n"}
+    shape = (_lines("S1", "C-1.1", {"lib/a.py": (3,)}),)
+    cmap = build(shape)
+    cmap = build(shape, clause_digests=digests(cmap, src))
+    assert stale_clauses(cmap, digests(cmap, {"lib/a.py": "one\ntwo\n"})) == ("C-1.1",)
+    assert stale_clauses(cmap, digests(cmap, {})) == ("C-1.1",)      # file gone entirely
+
+
+def test_an_incremental_rebuild_keeps_the_clauses_that_still_hold():
+    """C-9.17 — re-deriving one clause must cost one spec run, not the whole suite; the
+    untouched entries are carried over byte-for-byte."""
+    base = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
+                  _lines("S2", "C-1.2", {"lib/a.py": (2,)})),
+                 contract_version="cv", scenario_version="sv",
+                 clause_digests={"C-1.1": "d1", "C-1.2": "d2"})
+    merged = merge(base, (_lines("S2", "C-1.2", {"lib/a.py": (7, 8)}),),
+                   contract_version="cv", scenario_version="sv",
+                   clause_digests={"C-1.2": "d2-new"}, rebuilt=("C-1.2",))
+    assert merged["clauses"]["C-1.1"] == {"lib/a.py": [1]}          # untouched, carried over
+    assert merged["clauses"]["C-1.2"] == {"lib/a.py": [7, 8]}       # replaced, not unioned
+    assert merged["clause_digests"] == {"C-1.1": "d1", "C-1.2": "d2-new"}
+    assert merged["specs"] == {"S1": "C-1.1", "S2": "C-1.2"}
+    assert merged["schema"] == SCHEMA
 
 
 def test_a_map_in_the_previous_schema_is_refused():

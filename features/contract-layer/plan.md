@@ -153,7 +153,11 @@ over it, which is why every task's success_check is an already-green pytest node
 - [ ] T8.3 Gate on map staleness: pins, unmapped clauses, deleted entries, absent file
   - success_check: `python -m pytest tests/test_clause_map.py -q -k "stale or unmapped or fails_closed or gate_hash"`
   - files: `lib/clause_map.py, lib/seams.py, athena.py`
-  - verifies: S9.8, S9.9, S9.10, S9.11, S9.12, S9.13, S9.14
+  - verifies: S9.8, S9.9, S9.10, S9.11, S9.12, S9.14
+- [ ] T8.4 Pin the owned lines per clause and rebuild only what drifted
+  - success_check: `python -m pytest tests/test_clause_map.py -q -k "moved or incremental or no_longer_exists"`
+  - files: `lib/clause_map.py, lib/seams.py, athena.py`
+  - verifies: S9.15, S9.16, S9.17
 ### Manual Verification
 - `python athena.py contract map features/contract-layer/contract.md` maps every live clause.
 - `python athena.py contract owners lib/seams.py:214 --map .athena/clause_map.json` names C-5.8.
