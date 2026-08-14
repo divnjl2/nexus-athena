@@ -752,3 +752,43 @@
 - **Given** the per-clause line map (lib/clause_map.py)
 - **When** the spec `test_lines_from_json_reads_coverage_output` is executed
 - **Then** the collector reads coverage.py's own JSON, so no coverage import leaks into lib/ and the module stays stdlib-only like the rest of the freeze-line.
+
+### S9.8 — a map pinned to another version is stale
+- **verifies:** C-9.8
+- **pins:** 5e01c4cd2a91792e
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_map_pinned_to_another_version_is_stale -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_map_pinned_to_another_version_is_stale` is executed
+- **Then** the pins are the cheap check: a map built before the last edit describes a contract that no longer exists, and says nothing about it.
+
+### S9.9 — a clause added since the map was built is unmapped
+- **verifies:** C-9.9
+- **pins:** 45591269e8897e97
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_clause_added_since_the_map_was_built_is_unmapped -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_clause_added_since_the_map_was_built_is_unmapped` is executed
+- **Then** `owners()` would answer "nobody owns this" for a clause that simply was not in the world yet; the gate must call that stale, not empty.
+
+### S9.10 — a map entry for a deleted clause is stale
+- **verifies:** C-9.10
+- **pins:** a1cc53814652a2c6
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_map_entry_for_a_deleted_clause_is_stale -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_map_entry_for_a_deleted_clause_is_stale` is executed
+- **Then** territory owned by a requirement that no longer exists is a lie about scope.
+
+### S9.11 — the gate fails closed when the map is absent or foreign
+- **verifies:** C-9.11
+- **pins:** ab19e41731ef4375
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_the_gate_fails_closed_when_the_map_is_absent_or_foreign -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_the_gate_fails_closed_when_the_map_is_absent_or_foreign` is executed
+- **Then** "no map" must never read as "nothing to check".
+
+### S9.12 — the gate hash moves when the map goes stale
+- **verifies:** C-9.12
+- **pins:** e1018f374ef72235
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_the_gate_hash_moves_when_the_map_goes_stale -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_the_gate_hash_moves_when_the_map_goes_stale` is executed
+- **Then** the seam's artifact hash fingerprints the pins and the id deltas.

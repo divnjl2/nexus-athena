@@ -265,3 +265,13 @@
   it was built from.
 - **C-9.7** — WHEN coverage output is read THE SYSTEM SHALL parse it without importing a
   coverage library into the pure layer.
+- **C-9.8** — WHEN the map's pins differ from the current contract or specs THE SYSTEM SHALL
+  report the map as stale.
+- **C-9.9** — WHEN a live clause has no entry in the map THE SYSTEM SHALL report it as
+  unmapped.
+- **C-9.10** — WHEN the map holds a clause the contract no longer defines THE SYSTEM SHALL
+  report that entry as stale.
+- **C-9.11** — WHEN the map is absent or carries a foreign schema THE SYSTEM SHALL fail the
+  gate, because "no map" must never read as "nothing to check".
+- **C-9.12** — WHEN the freshness gate runs THE SYSTEM SHALL fingerprint the pins and the id
+  deltas in its artifact hash.

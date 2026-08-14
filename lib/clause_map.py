@@ -155,6 +155,53 @@ def classify(clause_map: dict, suite_lines: dict, *, files: tuple[str, ...] = ()
     return report
 
 
+def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = "") -> dict:
+    """PURE: is this map still describing the contract and the specs in front of us?
+
+    A derived artifact nobody re-derives is worse than no artifact: `owners()` keeps
+    answering, confidently, from a map built two refactors ago. Four independent ways it
+    goes stale, reported separately so the fix is obvious:
+
+      absent          — no map at all, or not this schema
+      contract_drift  — the map's contract pin is not the contract's current version
+      spec_drift      — the map's scenario pin is not the current scenarios.md hash
+      unmapped        — a live clause the map never saw (added since it was built)
+      stale_entries   — a mapped clause the contract no longer defines (removed since)
+
+    `scenario_version` is INJECTED, because hashing a file is I/O and this stays pure.
+    """
+    mapped = (clause_map or {}).get("clauses") or {}
+    schema_ok = (clause_map or {}).get("schema") == SCHEMA
+    absent = not clause_map or not schema_ok or not mapped
+
+    live = {c.id for c in contract.live()} if contract is not None else set()
+    known = {c.id for c in contract.clauses} if contract is not None else set()
+    unmapped = sorted(live - set(mapped))
+    stale_entries = sorted(set(mapped) - known)
+
+    map_contract = (clause_map or {}).get("contract_version", "")
+    map_scenarios = (clause_map or {}).get("scenario_version", "")
+    contract_drift = bool(contract is not None and map_contract
+                          and map_contract != contract.version)
+    spec_drift = bool(scenario_version and map_scenarios
+                      and map_scenarios != scenario_version)
+
+    return {
+        "absent": absent,
+        "contract_drift": contract_drift,
+        "spec_drift": spec_drift,
+        "unmapped": unmapped,
+        "stale_entries": stale_entries,
+        "map_contract_version": map_contract,
+        "contract_version": contract.version if contract is not None else "",
+        "map_scenario_version": map_scenarios,
+        "scenario_version": scenario_version,
+        "specs_mapped": len((clause_map or {}).get("specs") or {}),
+        "specs_now": len(scenarios or ()),
+        "is_fresh": not (absent or contract_drift or spec_drift or unmapped or stale_entries),
+    }
+
+
 def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = ".",
             runner=None, jobs: int = 0) -> tuple[SpecLines, ...]:
     """EFFECTFUL: run every spec alone under coverage and read back the lines it executed.

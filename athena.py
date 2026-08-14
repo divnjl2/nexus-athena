@@ -108,6 +108,29 @@ def cmd_seam(a) -> int:
         except (SpecKitParseError, FileNotFoundError) as e:
             _emit({"seam": "seam.speckit_schema", "passed": False, "issues": [str(e)]})
             return 1
+    if name == "map_fresh":
+        # v3.3 gate: refuse a clause->file:line map that no longer describes this contract.
+        # Reads the sibling contract/scenarios of the front, exactly like contract_bound.
+        from lib.clause_map import staleness  # noqa: F401  (imported by the seam)
+        from lib.versioning import hash_text
+        plan = parse_with_provenance(front, speckit=_speckit(a.speckit))
+        if plan.contract is None:
+            _emit({"seam": "seam.map_fresh", "passed": False,
+                   "issues": [f"no contract.md next to {front}"]})
+            return 1
+        map_path = a.map or ".athena/clause_map.json"
+        try:
+            cmap = json.loads(pathlib.Path(map_path).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            cmap = {}
+        scen = pathlib.Path(front).parent / "scenarios.md"
+        r = seams.seam_map_fresh(
+            cmap, plan.contract, plan.scenarios,
+            scenario_version=hash_text(scen.read_text(encoding="utf-8")) if scen.exists() else "")
+        _emit({"seam": r.name, "passed": r.passed, "issues": list(r.issues),
+               "hash": r.artifact_hash, "map": map_path})
+        return 0 if r.passed else 1
+
     if name == "contract_bound":
         # v3.3 gate: every live clause proved by >=1 spec, no spec pointing at a clause
         # the contract does not define. Needs the sibling contract.md + scenarios.md, so
@@ -343,6 +366,8 @@ def build_parser() -> argparse.ArgumentParser:
     h.set_defaults(fn=cmd_hermes_plan)
     s = sub.add_parser("seam"); s.add_argument("name"); s.add_argument("front", nargs="?", default="")
     s.add_argument("--coverage", default="")
+    s.add_argument("--map", default="", help="clause map for seam.map_fresh "
+                                             "(default .athena/clause_map.json)")
     s.set_defaults(fn=cmd_seam)
     tc = sub.add_parser("trace-coverage"); tc.add_argument("front")
     tc.add_argument("--coverage", required=True)

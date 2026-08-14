@@ -23,3 +23,12 @@ _shakedown/
 
 # swebench eval per-run outputs (regenerate via evals/swebench/run.py)
 evals/swebench/results/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+
+# athena working dir: seams.jsonl, the clause-map build tree, ledgers in flight.
+# The committed PROOF artifacts live in features/<feature>/ instead.
+.athena/

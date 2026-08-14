@@ -116,3 +116,77 @@ def test_lines_from_json_reads_coverage_output():
         "lib/b.py": {"executed_lines": []},
     }})
     assert lines_from_json(text) == {"lib/a.py": (1, 2, 3)}
+
+
+# --- the gate: a derived artifact nobody re-derives is worse than none ----------
+
+from lib.contract import parse as parse_contract          # noqa: E402
+from lib.clause_map import staleness                      # noqa: E402
+from lib.seams import seam_map_fresh                      # noqa: E402
+
+GATE_CONTRACT = parse_contract("""# Contract: Gate
+
+- **C-1.1** — WHEN asked THE SYSTEM SHALL answer.
+- **C-1.2** — WHEN asked twice THE SYSTEM SHALL answer twice.
+""")
+
+
+def _fresh_map():
+    return build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
+                  _lines("S2", "C-1.2", {"lib/a.py": (2,)})),
+                 contract_version=GATE_CONTRACT.version, scenario_version="scv1")
+
+
+def test_a_map_pinned_to_another_version_is_stale():
+    """C-9.8 — the pins are the cheap check: a map built before the last edit describes a
+    contract that no longer exists, and says nothing about it."""
+    cmap = _fresh_map()
+    fresh = staleness(cmap, GATE_CONTRACT, (), scenario_version="scv1")
+    assert fresh["is_fresh"] and not fresh["contract_drift"] and not fresh["spec_drift"]
+
+    moved = dict(cmap, contract_version="0" * 16)
+    assert staleness(moved, GATE_CONTRACT, (), scenario_version="scv1")["contract_drift"]
+    assert staleness(cmap, GATE_CONTRACT, (), scenario_version="other")["spec_drift"]
+
+
+def test_a_clause_added_since_the_map_was_built_is_unmapped():
+    """C-9.9 — `owners()` would answer "nobody owns this" for a clause that simply was not
+    in the world yet; the gate must call that stale, not empty."""
+    grown = parse_contract("""# Contract: Gate
+
+- **C-1.1** — WHEN asked THE SYSTEM SHALL answer.
+- **C-1.2** — WHEN asked twice THE SYSTEM SHALL answer twice.
+- **C-1.3** — WHEN asked thrice THE SYSTEM SHALL answer thrice.
+""")
+    rep = staleness(_fresh_map(), grown, (), scenario_version="scv1")
+    assert rep["unmapped"] == ["C-1.3"] and not rep["is_fresh"]
+
+
+def test_a_map_entry_for_a_deleted_clause_is_stale():
+    """C-9.10 — territory owned by a requirement that no longer exists is a lie about scope."""
+    shrunk = parse_contract("""# Contract: Gate
+
+- **C-1.1** — WHEN asked THE SYSTEM SHALL answer.
+""")
+    rep = staleness(_fresh_map(), shrunk, (), scenario_version="scv1")
+    assert rep["stale_entries"] == ["C-1.2"] and not rep["is_fresh"]
+
+
+def test_the_gate_fails_closed_when_the_map_is_absent_or_foreign():
+    """C-9.11 — "no map" must never read as "nothing to check"."""
+    for empty in ({}, {"schema": "something/else", "clauses": {"C-1.1": {}}},
+                  {"schema": SCHEMA, "clauses": {}}):
+        r = seam_map_fresh(empty, GATE_CONTRACT, (), scenario_version="scv1")
+        assert not r.passed
+        assert any("absent" in i for i in r.issues)
+
+    ok = seam_map_fresh(_fresh_map(), GATE_CONTRACT, (), scenario_version="scv1")
+    assert ok.passed and ok.issues == ()
+
+
+def test_the_gate_hash_moves_when_the_map_goes_stale():
+    """C-9.12 — the seam's artifact hash fingerprints the pins and the id deltas."""
+    a = seam_map_fresh(_fresh_map(), GATE_CONTRACT, (), scenario_version="scv1")
+    b = seam_map_fresh(dict(_fresh_map(), contract_version="0" * 16), GATE_CONTRACT, (),
+                       scenario_version="scv1")
+    assert a.artifact_hash != b.artifact_hash

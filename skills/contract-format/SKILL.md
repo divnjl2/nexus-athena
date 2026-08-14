@@ -91,10 +91,15 @@ athena contract drift contract.md --ledger ... # spec_drift / stale_proof / miss
 `stale` and `stale_proof` are the ones no test suite can tell you: every spec is green, but
 it is proving an older wording of the requirement.
 
-## Gate
+## Gates
 
-`athena seam contract_bound <front>` fails closed when a live clause has no spec or a spec
-names an unknown/withdrawn clause. Wire it before `compile` in CI.
+- `athena seam contract_bound <front>` — a live clause with no spec, or a spec naming an
+  unknown/withdrawn clause, blocks the compile.
+- `athena seam map_fresh <front>` — the clause -> file:line map must still describe THIS
+  contract: absent, wrong pins, an unmapped live clause or an entry for a deleted one all
+  fail closed. Rebuild with `athena contract map`.
+
+Wire both before `compile` in CI.
 
 ## Migration (never renumber)
 

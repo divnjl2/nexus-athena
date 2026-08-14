@@ -58,12 +58,29 @@ python athena.py contract drift contract.md --ledger .athena/spec_ledger.json --
 
 After reconciling, re-pin: `python athena.py contract pin scenarios.md --contract contract.md --write`
 
-## 5. Gate + compile
+## 5. Line ownership — which requirement owns this line
 
 ```bash
-python athena.py seam contract_bound plan.md --speckit off   # fail-closed before compiling
+python athena.py contract map contract.md --source lib       # derive; ~4 min for 94 specs
+python athena.py contract owners lib/seams.py:230            # -> C-5.8, C-5.9 + their text
+```
+
+The map is DERIVED from clause -> spec -> run_cmd by running each spec alone under coverage,
+so nobody annotates anything. It answers "I am about to change this line, what am I allowed
+to break", and it splits a claimed file into code this contract owns, code another feature
+owns, and code nothing reaches at all.
+
+## 6. Gates + compile
+
+```bash
+python athena.py seam contract_bound plan.md --speckit off   # every live clause proved
+python athena.py seam map_fresh      plan.md --speckit off   # the map still describes it
 python athena.py compile plan.md --speckit off               # clause nodes + supersede edges
 ```
+
+`map_fresh` fails closed on a map that is absent, pinned to another contract/spec version,
+missing a live clause, or still holding a deleted one — a derived artifact nobody re-derives
+answers with the confidence of a build product while pointing at lines two refactors old.
 
 ## Adding or changing a requirement
 

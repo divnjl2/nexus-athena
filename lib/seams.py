@@ -236,6 +236,35 @@ def seam_contract_bound(contract, scenarios) -> SeamResult:
     return SeamResult("seam.contract_bound", not issues, tuple(issues), _hash(shape))
 
 
+def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "") -> SeamResult:
+    """Seam 13 (v3.3): the clause->file:line map must describe the contract in front of us.
+
+    The map is DERIVED, which is its strength and its trap: nothing about a stale one looks
+    wrong. `owners()` keeps answering with the confidence of a build artifact while pointing
+    at lines two refactors old. So the gate refuses a map that is absent, pinned to another
+    contract or spec version, missing a live clause, or still holding a clause that is gone.
+    An absent map fails CLOSED — "no map" must never read as "nothing to check".
+    """
+    from lib.clause_map import staleness
+    rep = staleness(clause_map, contract, scenarios, scenario_version=scenario_version)
+    issues: list[str] = []
+    if rep["absent"]:
+        issues.append("clause map is absent or not athena.clause_map/1 — run `contract map`")
+    if rep["contract_drift"]:
+        issues.append(f"map pinned to contract {rep['map_contract_version']}, "
+                      f"contract is now {rep['contract_version']}")
+    if rep["spec_drift"]:
+        issues.append(f"map pinned to scenarios {rep['map_scenario_version']}, "
+                      f"scenarios are now {rep['scenario_version']}")
+    issues += [f"clause {cid} has no lines in the map" for cid in rep["unmapped"]]
+    issues += [f"map holds {cid}, which the contract no longer defines"
+               for cid in rep["stale_entries"]]
+    # already deterministic: the pins are scalars and both id lists come back sorted
+    shape = _hash(repr((rep["map_contract_version"], rep["map_scenario_version"],
+                        tuple(rep["unmapped"]), tuple(rep["stale_entries"]))))
+    return SeamResult("seam.map_fresh", not issues, tuple(issues), shape)
+
+
 def seam_implements_backed(plan: Plan, results) -> SeamResult:
     """Seam 11 (v4): the `implements` edge must pin a REAL commit to a REAL task. Any
     ExecutorResult with an empty/fake sha, or one that implements a task not in the plan, would
