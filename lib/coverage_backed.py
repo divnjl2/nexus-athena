@@ -40,19 +40,47 @@ class FileCoverage:
 class Coverage:
     files: dict           # path -> FileCoverage
 
+    def resolve(self, path: str):
+        """Find the FileCoverage for a path the PLAN declares.
+
+        Cobertura `filename` is relative to each `<source>` root, so a repo that runs
+        `--cov=lib` gets `contract.py` while the plan says `lib/contract.py`. Exact string
+        matching then silently reports EVERY satisfies-edge as fake — a report that lies in
+        the safe-looking direction. Resolution order: exact, then a UNIQUE suffix match
+        (either way round). Ambiguity is never guessed: two files with the same basename
+        resolve to nothing, so the edge shows as unproven and a human looks.
+        """
+        q = _norm(path)
+        fc = self.files.get(q)
+        if fc is not None:
+            return fc
+        cands = [v for k, v in self.files.items()
+                 if k == q or k.endswith("/" + q) or q.endswith("/" + k)]
+        return cands[0] if len(cands) == 1 else None
+
     def covered(self, path: str) -> bool:
-        fc = self.files.get(_norm(path))
+        fc = self.resolve(path)
         return bool(fc and fc.covered_lines)
 
 
 def parse_coverage(xml_text: str) -> Coverage:
     """Cobertura coverage.xml -> per-file covered lines + uncovered branch lines. Deterministic."""
     root = ET.fromstring(xml_text)
+    # Reconstruct repo-relative paths: a <source> that is a DIRECTORY contributes its own
+    # basename as the prefix its class filenames were stripped of (`--cov=lib` -> `lib/`).
+    prefixes = []
+    for s in root.iter("source"):
+        raw = _norm((s.text or "").strip())
+        base = raw.rsplit("/", 1)[-1]
+        if base and not base.endswith(".py"):
+            prefixes.append(base)
     files: dict = {}
     for cls in root.iter("class"):
         path = _norm(cls.get("filename", ""))
         if not path:
             continue
+        if len(prefixes) == 1 and not path.startswith(prefixes[0] + "/"):
+            path = f"{prefixes[0]}/{path}"        # unambiguous single root: prefix it back
         covered = set()
         uncovered_br = set()
         for ln in cls.iter("line"):
@@ -96,8 +124,23 @@ def trace_coverage(plan, cov: Coverage) -> dict:
                     "src": srcs, "covered_src": covered_srcs}
             (proven if covered_srcs else unproven).append(edge)
 
-    spec_gaps = [f"{path}:{ln}" for path, fc in sorted(cov.files.items())
-                 for ln in fc.uncovered_branches]
+    # The reverse leg must distinguish "code no requirement demands" from "code this
+    # contract never claimed". Every file in coverage.xml is NOT in scope: a repo has other
+    # features, and reporting their branches as spec_gaps buries the real signal in noise.
+    scope = {_norm(f) for ph in plan.phases for t in ph.tasks for f in t.files
+             if not _is_test(f)}
+    resolved = {}
+    for src in scope:
+        fc = cov.resolve(src)
+        if fc is not None:
+            resolved[fc.path] = src
+
+    spec_gaps, out_of_scope = [], []
+    for path, fc in sorted(cov.files.items()):
+        target = spec_gaps if path in resolved else out_of_scope
+        target.extend(f"{path}:{ln}" for ln in fc.uncovered_branches)
+
+    unclaimed = sorted({fc.path for fc in cov.files.values()} - set(resolved))
 
     trigger = "satisfies_unproven" if unproven else ("spec_gap" if spec_gaps else None)
     return {
@@ -105,6 +148,8 @@ def trace_coverage(plan, cov: Coverage) -> dict:
         "unproven_edges": unproven,
         "spec_gaps": spec_gaps,
         "spec_gap_count": len(spec_gaps),
+        "out_of_scope_gap_count": len(out_of_scope),
+        "unclaimed_files": unclaimed,
         "proven": len(proven),
         "unproven": len(unproven),
         "replan_trigger": trigger,

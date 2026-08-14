@@ -65,6 +65,54 @@
 - **When** the spec `test_unknown_supersede_target_is_linted_not_crashed` is executed
 - **Then** a dangling reference is a lint issue, not a parse crash.
 
+### S1.8 — attributes may be sub bullets instead of inline markers
+- **verifies:** C-1.8
+- **pins:** 0456b2f3efc812d0
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_attributes_may_be_sub_bullets_instead_of_inline_markers -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_attributes_may_be_sub_bullets_instead_of_inline_markers` is executed
+- **Then** the sub-bullet form is the same statement as the inline marker.
+
+### S1.9 — lint reports an empty clause
+- **verifies:** C-1.9
+- **pins:** c47350855ebf4210
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_lint_reports_an_empty_clause -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_lint_reports_an_empty_clause` is executed
+- **Then** an id with no sentence behind it is a broken reference waiting to happen.
+
+### S1.10 — lint reports a self supersede
+- **verifies:** C-1.10
+- **pins:** 921bac6fea3c62c3
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_lint_reports_a_self_supersede -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_lint_reports_a_self_supersede` is executed
+- **Then** a clause replacing itself makes resolve() meaningless.
+
+### S1.11 — lint reports a superseded clause with no successor
+- **verifies:** C-1.11
+- **pins:** 5fceb4a444353ffd
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_lint_reports_a_superseded_clause_with_no_successor -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_lint_reports_a_superseded_clause_with_no_successor` is executed
+- **Then** "superseded" without a target leaves every old reference dangling.
+
+### S1.12 — lint reports a clause that is both withdrawn and superseded
+- **verifies:** C-1.12
+- **pins:** 29b41c6de4833e93
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_lint_reports_a_clause_that_is_both_withdrawn_and_superseded -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_lint_reports_a_clause_that_is_both_withdrawn_and_superseded` is executed
+- **Then** a requirement is replaced or dropped, never both; the reader cannot tell which one is true.
+
+### S1.13 — lint reports an unknown status
+- **verifies:** C-1.13
+- **pins:** 1658e48809eb4d32
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_lint_reports_an_unknown_status -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_lint_reports_an_unknown_status` is executed
+- **Then** an unrecognised status must not silently read as active.
+
 ---
 
 ## C-2 — proved by the clause parser / resolver (lib/contract.py)
@@ -445,6 +493,22 @@
 - **When** the spec `test_contract_version_tracks_status_changes` is executed
 - **Then** withdrawing a clause moves the registry pin even if no text changed.
 
+### S6.4 — import takes only the named section and falls back to the whole file
+- **verifies:** C-6.4
+- **pins:** 568c3c274a26ef1c
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_import_takes_only_the_named_section_and_falls_back_to_the_whole_file -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_import_takes_only_the_named_section_and_falls_back_to_the_whole_file` is executed
+- **Then** importing must not sweep prose, user stories or edge cases into the contract.
+
+### S6.5 — render keeps group headings and tags
+- **verifies:** C-6.5
+- **pins:** 840be16d92eee670
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_render_keeps_group_headings_and_tags -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_render_keeps_group_headings_and_tags` is executed
+- **Then** a rendered contract must stay human-editable, not just machine-parsable.
+
 ---
 
 ## C-7 — proved by the wording critique (lib/contract.py critique)
@@ -568,3 +632,39 @@
 - **Given** the wording critique (lib/contract.py critique)
 - **When** the spec `test_every_rule_the_linter_defines_fires_on_the_known_bad_contract` is executed
 - **Then** a check that can never fire is decoration; this is the dead-rule guard.
+
+### S7.16 — a clause without an ears trigger is reported as non conforming
+- **verifies:** C-7.16
+- **pins:** 926413bd21aca417
+- **run_cmd:** `python -m pytest tests/test_contract_critique.py::test_a_clause_without_an_ears_trigger_is_reported_as_non_conforming -q`
+- **Given** the wording critique (lib/contract.py critique)
+- **When** the spec `test_a_clause_without_an_ears_trigger_is_reported_as_non_conforming` is executed
+- **Then** "THE SYSTEM SHALL log errors" hides WHEN it must, so nothing can trigger the check; a ubiquitous "THE SYSTEM SHALL ..." opening is legal EARS and passes.
+
+---
+
+## C-8 — proved by the reverse leg (lib/coverage_backed.py)
+
+### S8.1 — is test classifier
+- **verifies:** C-8.1
+- **pins:** b51964d1f823cbf0
+- **run_cmd:** `python -m pytest tests/test_coverage_backed.py::test_is_test_classifier -q`
+- **Given** the reverse leg (lib/coverage_backed.py)
+- **When** the spec `test_is_test_classifier` is executed
+- **Then** cobertura strips the <source> root off every filename, so a plan that says `lib/contract.py` must still find `contract.py` — otherwise every edge reads as fake.
+
+### S8.2 — reverse leg separates in scope gaps from unclaimed code
+- **verifies:** C-8.2
+- **pins:** 38bccf7739463c91
+- **run_cmd:** `python -m pytest tests/test_coverage_backed.py::test_reverse_leg_separates_in_scope_gaps_from_unclaimed_code -q`
+- **Given** the reverse leg (lib/coverage_backed.py)
+- **When** the spec `test_reverse_leg_separates_in_scope_gaps_from_unclaimed_code` is executed
+- **Then** code this contract never claimed is not a spec_gap; burying the real signal under another feature's branches is how a report becomes noise nobody reads.
+
+### S8.3 — an ambiguous basename resolves to nothing
+- **verifies:** C-8.3
+- **pins:** 26af657eb5058403
+- **run_cmd:** `python -m pytest tests/test_coverage_backed.py::test_an_ambiguous_basename_resolves_to_nothing -q`
+- **Given** the reverse leg (lib/coverage_backed.py)
+- **When** the spec `test_an_ambiguous_basename_resolves_to_nothing` is executed
+- **Then** two files named the same must not be silently conflated; an unproven edge a human looks at beats a proven edge that is a guess.

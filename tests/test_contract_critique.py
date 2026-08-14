@@ -198,3 +198,18 @@ def test_the_frames_own_contract_passes_its_own_quality_bar():
     contract = parse(own.read_text(encoding="utf-8"))
     assert lint(contract) == ()
     assert critique(contract) == (), "the contract layer must obey the rules it defines"
+
+
+def test_a_clause_without_an_ears_trigger_is_reported_as_non_conforming():
+    """C-7.16 — "THE SYSTEM SHALL log errors" hides WHEN it must, so nothing can trigger
+    the check; a ubiquitous "THE SYSTEM SHALL ..." opening is legal EARS and passes."""
+    implicit = """# Contract: X
+
+- **C-1.1** — The service SHALL retry the request.
+"""
+    assert "no_ears_shape" in _codes(implicit, "C-1.1")
+    ubiquitous = """# Contract: X
+
+- **C-1.1** — THE SYSTEM SHALL retry the request at most three times.
+"""
+    assert "no_ears_shape" not in _codes(ubiquitous, "C-1.1")

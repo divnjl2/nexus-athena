@@ -120,3 +120,19 @@ over it, which is why every task's success_check is an already-green pytest node
   - autonomy: high
 ### Manual Verification
 - `python athena.py contract import examples/snake_game/spec.md -o /tmp/c.md` keeps `R1.1`.
+
+## Phase 7: The reverse leg made honest
+**Goal:** code->spec answers survive a real coverage.xml and separate unclaimed code from gaps.
+**Depends on:** Phase 5
+### Tasks
+- [ ] T7.1 Resolve coverage paths across source roots without guessing on ambiguity
+  - success_check: `python -m pytest tests/test_coverage_backed.py -q -k "resolve or ambiguous"`
+  - files: `lib/coverage_backed.py, tests/test_coverage_backed.py`
+  - verifies: S8.1, S8.3
+- [ ] T7.2 Separate in-scope spec gaps from code this contract never claimed
+  - success_check: `python -m pytest tests/test_coverage_backed.py -q -k separates`
+  - files: `lib/coverage_backed.py`
+  - verifies: S8.2
+### Manual Verification
+- `python athena.py --speckit off trace-coverage features/contract-layer/plan.md --coverage <xml>`
+  reports 0 unproven edges on a coverage run of the specs themselves.

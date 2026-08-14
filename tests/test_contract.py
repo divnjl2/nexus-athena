@@ -200,3 +200,119 @@ def test_contract_version_tracks_status_changes():
     other = Contract(title=c.title, clauses=(withdrawn,) + c.clauses[1:],
                      version=contract_version((withdrawn,) + c.clauses[1:]))
     assert other.version != c.version
+
+
+# --- v3.3 reverse-leg findings: real behaviour that no clause demanded ----------
+
+def test_attributes_may_be_sub_bullets_instead_of_inline_markers():
+    """C-1.8 — the sub-bullet form is the same statement as the inline marker."""
+    inline = parse("""# Contract: X
+
+- **C-1** *(superseded-by C-2; draft)* — WHEN asked THE SYSTEM SHALL answer.
+- **C-2** — WHEN asked THE SYSTEM SHALL answer twice.
+  - tags: alpha, beta
+""")
+    sub = parse("""# Contract: X
+
+- **C-1** — WHEN asked THE SYSTEM SHALL answer.
+  - status: superseded-by C-2
+- **C-2** — WHEN asked THE SYSTEM SHALL answer twice.
+  - supersedes: C-1
+  - tags: alpha, beta
+  - note: whatever the author needs to remember
+""")
+    for c in (inline, sub):
+        assert c.by_id("C-1").superseded_by == ("C-2",)
+        assert c.by_id("C-2").supersedes == ("C-1",)
+        assert c.by_id("C-2").tags == ("alpha", "beta")
+    # the note never becomes part of the requirement
+    assert "whatever" not in sub.by_id("C-2").text
+    assert sub.by_id("C-2").version == inline.by_id("C-2").version
+
+
+def test_lint_reports_an_empty_clause():
+    """C-1.9 — an id with no sentence behind it is a broken reference waiting to happen."""
+    assert any("empty clause text" in i for i in lint(parse("""# Contract: X
+
+- **C-1** — WHEN asked THE SYSTEM SHALL answer.
+- **C-2** —
+""")))
+
+
+def test_lint_reports_a_self_supersede():
+    """C-1.10 — a clause replacing itself makes resolve() meaningless."""
+    c = parse("""# Contract: X
+
+- **C-1** *(supersedes C-1)* — WHEN asked THE SYSTEM SHALL answer.
+""")
+    assert any("supersedes itself" in i for i in lint(c))
+
+
+def test_lint_reports_a_superseded_clause_with_no_successor():
+    """C-1.11 — "superseded" without a target leaves every old reference dangling."""
+    c = parse("""# Contract: X
+
+- **C-1** — WHEN asked THE SYSTEM SHALL answer.
+  - status: superseded
+""")
+    assert any("names no successor" in i for i in lint(c))
+
+
+def test_lint_reports_a_clause_that_is_both_withdrawn_and_superseded():
+    """C-1.12 — a requirement is replaced or dropped, never both; the reader cannot tell
+    which one is true."""
+    c = parse("""# Contract: X
+
+- **C-1** *(withdrawn; superseded-by C-2)* — WHEN asked THE SYSTEM SHALL answer.
+- **C-2** — WHEN asked THE SYSTEM SHALL answer twice.
+""")
+    assert any("withdrawn AND superseded" in i for i in lint(c))
+
+
+def test_lint_reports_an_unknown_status():
+    """C-1.13 — an unrecognised status must not silently read as active."""
+    c = parse("""# Contract: X
+
+- **C-1** — WHEN asked THE SYSTEM SHALL answer.
+""")
+    broken = dataclasses.replace(c.clauses[0], status="maybe")
+    from lib.ast import Contract as _C
+    assert any("unknown status" in i for i in lint(_C(title="X", clauses=(broken,))))
+
+
+def test_import_takes_only_the_named_section_and_falls_back_to_the_whole_file():
+    """C-6.4 — importing must not sweep prose, user stories or edge cases into the contract."""
+    spec = """# Specification: Thing
+
+## User Scenarios
+- **US-1** — as a user I want things.
+
+## EARS Acceptance Criteria
+- **R1.1** — WHEN it starts THE SYSTEM SHALL do the thing.
+
+## Clarifications
+- **Q1** — resolved.
+"""
+    assert [c.id for c in import_from_spec(spec).clauses] == ["R1.1"]
+    # a file that is already just criteria (no such heading) still imports
+    bare = "- **R9.1** — WHEN it starts THE SYSTEM SHALL do the thing.\n"
+    assert [c.id for c in import_from_spec(bare).clauses] == ["R9.1"]
+
+
+def test_render_keeps_group_headings_and_tags():
+    """C-6.5 — a rendered contract must stay human-editable, not just machine-parsable."""
+    c = parse("""# Contract: X
+
+## C-1 — Startup
+
+- **C-1.1** — WHEN it starts THE SYSTEM SHALL boot.
+  - tags: core
+
+## C-2 — Shutdown
+
+- **C-2.1** — WHEN it stops THE SYSTEM SHALL flush.
+""")
+    text = render(c)
+    assert "## C-1 Startup" in text and "## C-2 Shutdown" in text
+    assert "- tags: core" in text
+    assert [x.group for x in parse(text).clauses] == [x.group for x in c.clauses]

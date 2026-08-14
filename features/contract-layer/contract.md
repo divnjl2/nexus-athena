@@ -24,6 +24,16 @@
   continuation without truncating the tail.
 - **C-1.7** — WHEN a supersede reference names a clause absent from the contract THE
   SYSTEM SHALL report a lint issue rather than fail the parse.
+- **C-1.8** — WHEN a clause states its attributes as indented sub-bullets THE SYSTEM SHALL
+  read them as the inline marker form, leaving notes out of the normative text.
+- **C-1.9** — WHEN a clause carries no normative sentence THE SYSTEM SHALL report it in lint.
+- **C-1.10** — WHEN a clause supersedes itself THE SYSTEM SHALL report it in lint.
+- **C-1.11** — WHEN a clause is marked superseded but names no successor THE SYSTEM SHALL
+  report it in lint.
+- **C-1.12** — WHEN a clause is both withdrawn and superseded THE SYSTEM SHALL report it in
+  lint, because the reader cannot tell which one holds.
+- **C-1.13** — WHEN a clause carries a status the format does not define THE SYSTEM SHALL
+  report it in lint rather than treat it as active.
 
 ## C-2 — Per-clause versioning and pins
 
@@ -174,6 +184,10 @@
   than report an empty green contract.
 - **C-6.3** — WHEN a clause status changes without a text change THE SYSTEM SHALL move the
   registry version.
+- **C-6.4** — WHEN a spec.md is imported THE SYSTEM SHALL take only the named criteria
+  section, falling back to the whole file when that heading is absent.
+- **C-6.5** — WHEN a contract is rendered THE SYSTEM SHALL keep its group headings and tags,
+  so the file stays human-editable.
 
 ## C-7 — The frame judging its own authors
 
@@ -209,6 +223,17 @@
   SYSTEM SHALL report it as unverifiable.
 - **C-7.15** — WHEN the quality rules are exercised against a known-bad contract THE SYSTEM
   SHALL produce at least one finding for every rule code it defines.
+- **C-7.16** — WHEN a clause states an obligation with neither a trigger nor a ubiquitous
+  "THE SYSTEM SHALL" opening THE SYSTEM SHALL report it as non-conforming.
   - note: guards against a dead rule — a check that can never fire is decoration, and a
     linter nobody sees fire is one nobody trusts.
   - note: the rules must hold on the file that states them, or they are decoration.
+
+## C-8 — The reverse leg: code that no requirement demands
+
+- **C-8.1** — WHEN a coverage report strips its source root off every filename THE SYSTEM
+  SHALL still resolve the paths a plan declares.
+- **C-8.3** — WHEN two coverage entries share a basename THE SYSTEM SHALL resolve neither,
+  rather than guess which one the plan meant.
+- **C-8.2** — WHEN the reverse leg reports code no spec exercises THE SYSTEM SHALL separate
+  branches inside files this contract claims from code it never claimed.

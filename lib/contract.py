@@ -140,6 +140,10 @@ def _apply_attr(cur: dict, key: str, value: str) -> None:
 
 def _finish(cur: dict) -> Clause:
     text = _norm_text(cur["text"])
+    # A clause that is only punctuation ("- **C-2** —") carries no obligation. Normalize it
+    # to empty so `lint` reports it, instead of letting a dash pass as a requirement.
+    if not any(ch.isalnum() for ch in text):
+        text = ""
     status = cur["status"]
     superseded_by = tuple(sorted(set(cur["superseded_by"])))
     # A clause with successors IS superseded — the marker is redundant, the edge is truth.
