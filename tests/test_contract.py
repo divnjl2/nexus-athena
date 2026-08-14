@@ -316,3 +316,18 @@ def test_render_keeps_group_headings_and_tags():
     assert "## C-1 Startup" in text and "## C-2 Shutdown" in text
     assert "- tags: core" in text
     assert [x.group for x in parse(text).clauses] == [x.group for x in c.clauses]
+
+
+def test_tags_may_be_declared_in_the_inline_marker():
+    """C-1.14 — the marker accepts every attribute the sub-bullets do, so an author never
+    has to remember which form supports what."""
+    c = parse("""# Contract: X
+
+- **C-1** *(draft; tags alpha beta)* — WHEN asked THE SYSTEM SHALL answer.
+- **C-2** *(nonsense-token)* — WHEN asked THE SYSTEM SHALL answer twice.
+""")
+    assert c.by_id("C-1").tags == ("alpha", "beta")
+    assert c.by_id("C-1").status == CLAUSE_DRAFT
+    # an unrecognised token becomes a note instead of being silently swallowed
+    assert c.by_id("C-2").status == "active"
+    assert lint(c) == ()

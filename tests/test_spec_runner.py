@@ -191,3 +191,33 @@ def test_empty_spec_set_is_an_empty_run_not_an_error():
     """C-3.8 — filtering everything out yields an empty, still-valid ledger."""
     assert run_specs(()) == ()
     assert totals(()) == {"total": 0, "passed": 0, "failed": 0, "duration_ms": 0}
+
+
+def test_a_lane_of_one_worker_runs_its_specs_strictly_one_at_a_time():
+    """C-3.18 — a spec that needs an exclusive external resource (a real database, a `bd`
+    repo) fails when two of them overlap. Tag that clause and run its lane with one worker
+    while everything else still runs wide."""
+    import threading
+
+    lock = threading.Lock()
+    live = {"now": 0, "max": 0}
+
+    def executor(cmd, *, cwd, timeout):
+        with lock:
+            live["now"] += 1
+            live["max"] = max(live["max"], live["now"])
+        try:
+            import time
+            time.sleep(0.02)
+            return 0, ""
+        finally:
+            with lock:
+                live["now"] -= 1
+
+    scenarios = tuple(_scen(i, "C-1.1", cmd=f"cmd{i}") for i in range(6))
+    run_specs(scenarios, jobs=1, executor=executor)
+    assert live["max"] == 1, "jobs=1 must serialise the lane"
+
+    live["max"] = 0
+    run_specs(scenarios, jobs=6, executor=executor)
+    assert live["max"] > 1, "the wide lane must still overlap"

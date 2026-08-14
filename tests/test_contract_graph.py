@@ -164,3 +164,33 @@ def test_the_gate_hash_moves_when_a_clause_changes():
     a = seam_contract_bound(CONTRACT, SCENARIOS)
     b = seam_contract_bound(edited, SCENARIOS)
     assert a.artifact_hash != b.artifact_hash
+
+
+def test_a_sibling_contract_is_attached_and_pinned_by_the_frontend(tmp_path):
+    """C-5.13 — the wiring that turns a flat plan.md into a contract-rooted Plan was only
+    ever exercised through the CLI; the reverse leg found those lines owned by nothing."""
+    from lib.frontend import parse_with_provenance
+
+    (tmp_path / "contract.md").write_text("""# Contract: Wiring
+
+- **C-1.1** — WHEN asked THE SYSTEM SHALL answer.
+""", encoding="utf-8")
+    (tmp_path / "scenarios.md").write_text(
+        "### S1.1 — answers\n- **verifies:** C-1.1\n- **run_cmd:** `true`\n"
+        "- **Then** it answers\n", encoding="utf-8")
+    (tmp_path / "spec.md").write_text("# Specification\n\nprose\n", encoding="utf-8")
+    (tmp_path / "plan.md").write_text(
+        "# Plan: Wiring\n\n## Overview\no\n\n## Out of Scope\n- none\n\n"
+        "## Phase 1: p\n**Goal:** g\n**Depends on:** none\n### Tasks\n"
+        "- [ ] T1.1 do it\n  - success_check: `true`\n  - verifies: S1.1\n", encoding="utf-8")
+
+    plan = parse_with_provenance(str(tmp_path / "plan.md"), speckit=False)
+    assert plan.contract is not None
+    assert [c.id for c in plan.contract.clauses] == ["C-1.1"]
+    assert plan.provenance.contract_version == plan.contract.version
+    assert plan.scenarios[0].requirement_key == "C-1.1"
+
+    # ...and a plan with no sibling contract still parses, unchanged (v3.1 behaviour)
+    (tmp_path / "contract.md").unlink()
+    bare = parse_with_provenance(str(tmp_path / "plan.md"), speckit=False)
+    assert bare.contract is None and bare.provenance.contract_version == ""

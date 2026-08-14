@@ -276,6 +276,48 @@ def cmd_spec_run(a) -> int:
     return 0 if ledger["totals"]["failed"] == 0 else 1
 
 
+def cmd_contract_map(a) -> int:
+    # EFFECTFUL: run each spec ALONE under coverage so its lines can be attributed to the
+    # clause it proves. This is the artifact that upgrades the reverse leg from file-level
+    # ("this contract claims lib/seams.py") to line-level ("it owns these 40 lines of it").
+    from lib.clause_map import build, collect, owned_lines
+    from lib.spec_runner import select
+    from lib.versioning import hash_text
+
+    contract = _load_contract(a)
+    scen_path = a.scenarios or _sibling(a.contract, "scenarios.md")
+    scenarios = select(_load_scenarios(a, anchor=a.contract), clause_prefix=a.clause,
+                       contract=contract, skip_tags=tuple(a.skip_tag))
+    spec_lines = collect(scenarios, sources=tuple(a.source), workdir=a.workdir,
+                         cwd=a.cwd, jobs=a.jobs)
+    cmap = build(spec_lines, contract_version=contract.version,
+                 scenario_version=hash_text(_read(scen_path)))
+    pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
+                                   encoding="utf-8")
+    owned = owned_lines(cmap)
+    _emit({"map": a.out, "clauses_mapped": len(cmap["clauses"]),
+           "specs": len(spec_lines), "files": len(owned),
+           "owned_lines": sum(len(v) for v in owned.values()),
+           "unmapped_clauses": sorted(c.id for c in contract.live()
+                                      if c.id not in cmap["clauses"])})
+    return 0
+
+
+def cmd_contract_owners(a) -> int:
+    # The query a developer actually has: "I am about to change this line — which
+    # requirements am I allowed to break?"
+    from lib.clause_map import owners
+    cmap = json.loads(_read(a.map))
+    path, _, line = a.target.rpartition(":")
+    contract = _load_contract(a) if pathlib.Path(a.contract).exists() else None
+    ids = owners(cmap, path, int(line))
+    _emit({"target": a.target, "owners": list(ids),
+           "text": {i: (contract.by_id(i).text if contract and contract.by_id(i) else "")
+                    for i in ids}})
+    return 0
+
+
 def cmd_trace_coverage(a) -> int:
     # v3.2 third trace axis: is each requirement's code actually covered, and is there
     # code no scenario exercises (spec_gap). Deterministic report; feeds planner_replan.
@@ -337,6 +379,26 @@ def build_parser() -> argparse.ArgumentParser:
     cp.add_argument("--contract", default="contract.md")
     cp.add_argument("--write", action="store_true", help="edit scenarios.md in place")
     cp.set_defaults(fn=cmd_contract_pin)
+
+    cm = csub.add_parser("map", help="derive the per-clause file:line map by running each "
+                                     "spec alone under coverage")
+    cm.add_argument("contract", nargs="?", default="contract.md")
+    cm.add_argument("--scenarios", default="")
+    cm.add_argument("--source", action="append", default=["lib"],
+                    metavar="PKG", help="coverage source root (repeatable)")
+    cm.add_argument("--clause", default="", help="map only this clause prefix")
+    cm.add_argument("--skip-tag", dest="skip_tag", action="append", default=[])
+    cm.add_argument("--cwd", default=".")
+    cm.add_argument("--jobs", type=int, default=0)
+    cm.add_argument("--workdir", default=".athena/clause_map")
+    cm.add_argument("-o", "--out", default=".athena/clause_map.json")
+    cm.set_defaults(fn=cmd_contract_map)
+
+    co = csub.add_parser("owners", help="which clauses own a file:line")
+    co.add_argument("target", metavar="FILE:LINE")
+    co.add_argument("--map", default=".athena/clause_map.json")
+    co.add_argument("--contract", default="contract.md")
+    co.set_defaults(fn=cmd_contract_owners)
 
     ci = csub.add_parser("import"); ci.add_argument("spec")
     ci.add_argument("-o", "--out", default="")

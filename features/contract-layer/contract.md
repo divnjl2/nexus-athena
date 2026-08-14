@@ -34,6 +34,8 @@
   lint, because the reader cannot tell which one holds.
 - **C-1.13** — WHEN a clause carries a status the format does not define THE SYSTEM SHALL
   report it in lint rather than treat it as active.
+- **C-1.14** — WHEN attributes are written inside the inline marker THE SYSTEM SHALL accept
+  every attribute the sub-bullet form accepts, keeping an unrecognised token as a note.
 
 ## C-2 — Per-clause versioning and pins
 
@@ -102,6 +104,12 @@
 - **C-3.12** — WHEN a clause carries a tag THE SYSTEM SHALL be able to include or exclude its
   specs by that tag, so one inherently slow spec cannot hold the fast lane hostage.
   - tags: performance
+- **C-3.18** — WHEN a spec lane is given a single worker THE SYSTEM SHALL run its specs
+  strictly one at a time.
+  - note: found by the ledger, not by reasoning — S5.11 (real `bd` + Dolt) went red only
+    while another bd process ran concurrently, and was green alone. A spec that needs an
+    exclusive external resource needs a lane of one.
+  - tags: performance
 
 ## C-4 — The three questions
 
@@ -165,6 +173,8 @@
   live clauses and on orphan specs, exempting drafts.
 - **C-5.9** — WHEN any clause text or status changes THE SYSTEM SHALL change the gate's
   artifact hash.
+- **C-5.13** — WHEN a plan has a sibling contract file THE SYSTEM SHALL attach it to the plan
+  and pin its version, leaving a plan without one unchanged.
 - **C-5.11** — WHEN the compiled graph is executed against a REAL `bd` THE SYSTEM SHALL have
   its clause nodes materialize with their own version labels and its supersede and
   clause-rooted validates edges accepted by bd's native typed-edge API.
@@ -237,3 +247,21 @@
   rather than guess which one the plan meant.
 - **C-8.2** — WHEN the reverse leg reports code no spec exercises THE SYSTEM SHALL separate
   branches inside files this contract claims from code it never claimed.
+
+## C-9 — The per-clause file:line map
+
+- **C-9.1** — WHEN each spec is run alone under coverage THE SYSTEM SHALL attribute the lines
+  it executes to the clause that spec proves, deriving the map instead of asking anyone to
+  annotate it.
+- **C-9.2** — WHEN a file and line are queried THE SYSTEM SHALL name every clause that owns
+  that line.
+- **C-9.3** — WHEN the map runner builds a command THE SYSTEM SHALL refuse the same shell
+  metacharacters the spec runner refuses.
+- **C-9.4** — WHEN lines of a claimed file are classified THE SYSTEM SHALL separate lines this
+  contract owns from lines only the wider suite reaches.
+- **C-9.5** — WHEN one spec produces no coverage data THE SYSTEM SHALL keep the rest of the
+  map rather than abandon the collection.
+- **C-9.6** — WHEN a map is written THE SYSTEM SHALL pin the contract and scenario versions
+  it was built from.
+- **C-9.7** — WHEN coverage output is read THE SYSTEM SHALL parse it without importing a
+  coverage library into the pure layer.

@@ -136,3 +136,20 @@ over it, which is why every task's success_check is an already-green pytest node
 ### Manual Verification
 - `python athena.py --speckit off trace-coverage features/contract-layer/plan.md --coverage <xml>`
   reports 0 unproven edges on a coverage run of the specs themselves.
+
+## Phase 8: Line-level ownership
+**Goal:** every requirement knows which lines it owns, so "what breaks if I change this" is a query.
+**Depends on:** Phase 7
+### Tasks
+- [ ] T8.1 Derive the per-clause line map by running each spec alone under coverage
+  - success_check: `python -m pytest tests/test_clause_map.py -q`
+  - files: `lib/clause_map.py, tests/test_clause_map.py`
+  - verifies: S9.1, S9.3, S9.5, S9.6, S9.7
+  - autonomy: high
+- [ ] T8.2 Answer line ownership and separate owned code from another feature's code
+  - success_check: `python -m pytest tests/test_clause_map.py -q -k "owners or classification"`
+  - files: `lib/clause_map.py, athena.py`
+  - verifies: S9.2, S9.4
+### Manual Verification
+- `python athena.py contract map features/contract-layer/contract.md` maps every live clause.
+- `python athena.py contract owners lib/seams.py:214 --map .athena/clause_map.json` names C-5.8.

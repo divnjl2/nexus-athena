@@ -113,6 +113,14 @@
 - **When** the spec `test_lint_reports_an_unknown_status` is executed
 - **Then** an unrecognised status must not silently read as active.
 
+### S1.14 — tags may be declared in the inline marker
+- **verifies:** C-1.14
+- **pins:** 777a69d97180cb35
+- **run_cmd:** `python -m pytest tests/test_contract.py::test_tags_may_be_declared_in_the_inline_marker -q`
+- **Given** the clause parser / resolver (lib/contract.py)
+- **When** the spec `test_tags_may_be_declared_in_the_inline_marker` is executed
+- **Then** the marker accepts every attribute the sub-bullets do, so an author never has to remember which form supports what.
+
 ---
 
 ## C-2 — proved by the clause parser / resolver (lib/contract.py)
@@ -264,6 +272,14 @@
 - **Given** the executable-spec runner (lib/spec_runner.py)
 - **When** the spec `test_pinned_env_is_merged_over_the_inherited_environment` is executed
 - **Then** a spec runs in the developer's real env PLUS what the caller pins.
+
+### S3.18 — a lane of one worker runs its specs strictly one at a time
+- **verifies:** C-3.18
+- **pins:** 196a20c19f969f48
+- **run_cmd:** `python -m pytest tests/test_spec_runner.py::test_a_lane_of_one_worker_runs_its_specs_strictly_one_at_a_time -q`
+- **Given** the executable-spec runner (lib/spec_runner.py)
+- **When** the spec `test_a_lane_of_one_worker_runs_its_specs_strictly_one_at_a_time` is executed
+- **Then** a spec that needs an exclusive external resource (a real database, a `bd` repo) fails when two of them overlap. Tag that clause and run its lane with one worker while everything else still runs wide.
 
 ---
 
@@ -464,6 +480,14 @@
 - **Given** the compiled graph against a real bd
 - **When** the spec `test_clause_nodes_and_edges_materialize_in_a_real_bd_graph` is executed
 - **Then** a real bd accepts the clause nodes, the supersede edge and the clause-rooted validates edge; the graph reads back with one clause node per clause.
+
+### S5.13 — a sibling contract is attached and pinned by the frontend
+- **verifies:** C-5.13
+- **pins:** 4bec28b438f082b4
+- **run_cmd:** `python -m pytest tests/test_contract_graph.py::test_a_sibling_contract_is_attached_and_pinned_by_the_frontend -q`
+- **Given** the compiler + gate (lib/plan2beads.py, lib/seams.py)
+- **When** the spec `test_a_sibling_contract_is_attached_and_pinned_by_the_frontend` is executed
+- **Then** the wiring that turns a flat plan.md into a contract-rooted Plan was only ever exercised through the CLI; the reverse leg found those lines owned by nothing.
 
 ---
 
@@ -668,3 +692,63 @@
 - **Given** the reverse leg (lib/coverage_backed.py)
 - **When** the spec `test_an_ambiguous_basename_resolves_to_nothing` is executed
 - **Then** two files named the same must not be silently conflated; an unproven edge a human looks at beats a proven edge that is a guess.
+
+---
+
+## C-9 — proved by the per-clause line map (lib/clause_map.py)
+
+### S9.1 — a clause owns the union of the lines its specs execute
+- **verifies:** C-9.1
+- **pins:** 89788c8488691dde
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_clause_owns_the_union_of_the_lines_its_specs_execute -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_clause_owns_the_union_of_the_lines_its_specs_execute` is executed
+- **Then** the map is DERIVED from the clause->spec binding, never authored by hand, so it cannot drift from the code the way an annotation would.
+
+### S9.2 — owners answers which requirements a line serves
+- **verifies:** C-9.2
+- **pins:** 2a933ab0df796bd4
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_owners_answers_which_requirements_a_line_serves -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_owners_answers_which_requirements_a_line_serves` is executed
+- **Then** "I am about to change this line; what am I allowed to break?" Shared code reports EVERY owner, because two requirements leaning on one line is normal.
+
+### S9.3 — the map runner refuses the same commands the spec runner refuses
+- **verifies:** C-9.3
+- **pins:** 2abb6c2c599d9a85
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_the_map_runner_refuses_the_same_commands_the_spec_runner_refuses -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_the_map_runner_refuses_the_same_commands_the_spec_runner_refuses` is executed
+- **Then** this path executes run_cmds too, so it must not become a way around the shell-less rule; the interpreter is normalized so `coverage run -m` can take its place.
+
+### S9.4 — classification separates owned code from another features code
+- **verifies:** C-9.4
+- **pins:** 8d8f462ea727d991
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_classification_separates_owned_code_from_another_features_code -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_classification_separates_owned_code_from_another_features_code` is executed
+- **Then** code the wider suite tests but no clause of THIS contract demands is not a gap; conflating the two is what made the file-level report unreadable.
+
+### S9.5 — a spec that produces no coverage data is skipped not fatal
+- **verifies:** C-9.5
+- **pins:** c9739b92f2e1a8a8
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal` is executed
+- **Then** a partial map still answers most queries; aborting the whole collection because one spec misbehaved would make the map unbuildable on any real repo.
+
+### S9.6 — the map pins the versions it was built from
+- **verifies:** C-9.6
+- **pins:** 5062eb268c4aa240
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_the_map_pins_the_versions_it_was_built_from -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_the_map_pins_the_versions_it_was_built_from` is executed
+- **Then** a map is a proof artifact: without pins nobody can tell it went stale.
+
+### S9.7 — lines from json reads coverage output
+- **verifies:** C-9.7
+- **pins:** 40a2e411cf0ac65d
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_lines_from_json_reads_coverage_output -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_lines_from_json_reads_coverage_output` is executed
+- **Then** the collector reads coverage.py's own JSON, so no coverage import leaks into lib/ and the module stays stdlib-only like the rest of the freeze-line.
