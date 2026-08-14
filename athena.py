@@ -124,9 +124,13 @@ def cmd_seam(a) -> int:
         except (FileNotFoundError, json.JSONDecodeError):
             cmap = {}
         scen = pathlib.Path(front).parent / "scenarios.md"
+        now_sources = {p: hash_text(pathlib.Path(p).read_text(encoding="utf-8"))
+                       for p in (cmap.get("source_versions") or {})
+                       if pathlib.Path(p).exists()}
         r = seams.seam_map_fresh(
             cmap, plan.contract, plan.scenarios,
-            scenario_version=hash_text(scen.read_text(encoding="utf-8")) if scen.exists() else "")
+            scenario_version=hash_text(scen.read_text(encoding="utf-8")) if scen.exists() else "",
+            source_versions=now_sources)
         _emit({"seam": r.name, "passed": r.passed, "issues": list(r.issues),
                "hash": r.artifact_hash, "map": map_path})
         return 0 if r.passed else 1
@@ -313,8 +317,12 @@ def cmd_contract_map(a) -> int:
                        contract=contract, skip_tags=tuple(a.skip_tag))
     spec_lines = collect(scenarios, sources=tuple(a.source), workdir=a.workdir,
                          cwd=a.cwd, jobs=a.jobs)
+    # pin every file the map touches, so a later refactor of that file is detectable
+    mapped_files = sorted({p for sl in spec_lines for p in sl.files})
+    sources_pins = {p: hash_text(_read(p)) for p in mapped_files if pathlib.Path(p).exists()}
     cmap = build(spec_lines, contract_version=contract.version,
-                 scenario_version=hash_text(_read(scen_path)))
+                 scenario_version=hash_text(_read(scen_path)),
+                 source_versions=sources_pins)
     pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                    encoding="utf-8")

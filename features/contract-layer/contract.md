@@ -275,3 +275,9 @@
   gate, because "no map" must never read as "nothing to check".
 - **C-9.12** — WHEN the freshness gate runs THE SYSTEM SHALL fingerprint the pins and the id
   deltas in its artifact hash.
+- **C-9.13** — WHEN a file the map covers has changed since the map was built THE SYSTEM
+  SHALL report the map as stale, even though the contract and the specs did not move.
+  - note: found by trying it — three blank lines prepended to a mapped file left both
+    version pins green while `owners` for a real line answered nothing.
+- **C-9.14** — WHEN a map carries an earlier schema THE SYSTEM SHALL refuse it rather than
+  trust pins it does not carry.

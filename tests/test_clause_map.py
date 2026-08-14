@@ -190,3 +190,38 @@ def test_the_gate_hash_moves_when_the_map_goes_stale():
     b = seam_map_fresh(dict(_fresh_map(), contract_version="0" * 16), GATE_CONTRACT, (),
                        scenario_version="scv1")
     assert a.artifact_hash != b.artifact_hash
+
+
+def test_a_refactor_that_moves_lines_makes_the_map_stale():
+    """C-9.13 — the subtle one: shifting a file by three lines changes neither the contract
+    nor the specs, so the version pins stay green while every line number in the map points
+    somewhere else. Pinning the SOURCE is what closes it."""
+    cmap = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
+                  _lines("S2", "C-1.2", {"lib/a.py": (2,)})),
+                 contract_version=GATE_CONTRACT.version, scenario_version="scv1",
+                 source_versions={"lib/a.py": "src-v1"})
+    assert cmap["source_versions"] == {"lib/a.py": "src-v1"}
+
+    same = staleness(cmap, GATE_CONTRACT, (), scenario_version="scv1",
+                     source_versions={"lib/a.py": "src-v1"})
+    assert same["is_fresh"] and same["source_drift"] == []
+
+    moved = staleness(cmap, GATE_CONTRACT, (), scenario_version="scv1",
+                      source_versions={"lib/a.py": "src-v2"})
+    assert moved["source_drift"] == ["lib/a.py"] and not moved["is_fresh"]
+    # the contract and the specs are untouched: without the source pin this reads as fresh
+    assert not moved["contract_drift"] and not moved["spec_drift"]
+    assert moved["unmapped"] == [] and moved["stale_entries"] == []
+
+    r = seam_map_fresh(cmap, GATE_CONTRACT, (), scenario_version="scv1",
+                       source_versions={"lib/a.py": "src-v2"})
+    assert not r.passed
+    assert any("line numbers moved" in i for i in r.issues)
+
+
+def test_a_map_in_the_previous_schema_is_refused():
+    """C-9.14 — a v1 map cannot prove source freshness at all, so it fails rather than
+    passing on the strength of pins it does not carry."""
+    old = dict(_fresh_map(), schema="athena.clause_map/1")
+    r = seam_map_fresh(old, GATE_CONTRACT, (), scenario_version="scv1")
+    assert not r.passed and any("absent" in i for i in r.issues)
