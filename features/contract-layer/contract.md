@@ -364,3 +364,7 @@
   wording findings with full coverage.
 - **C-11.10** — WHEN a feature is scaffolded THE SYSTEM SHALL print the next commands,
   including the migration path for an existing spec.md.
+- **C-11.11** — WHEN no clause has drifted THE SYSTEM SHALL skip the mutation sweep rather
+  than fall back to mutating every live clause.
+- **C-11.12** — WHEN a mutant exhausts its spec budget THE SYSTEM SHALL report it as
+  undetermined rather than as a survivor.

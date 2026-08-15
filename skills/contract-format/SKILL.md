@@ -91,6 +91,12 @@ athena contract drift contract.md --ledger ... # spec_drift / stale_proof / miss
 `stale` and `stale_proof` are the ones no test suite can tell you: every spec is green, but
 it is proving an older wording of the requirement.
 
+## One command
+
+`athena check <contract.md> --front <plan.md> --run --text` runs the whole loop and answers
+with one verdict plus the failing leg. Reach for the individual commands below when it fails
+and you need the detail; `athena init <dir>` scaffolds a new feature already wired.
+
 ## Gates
 
 - `athena seam contract_bound <front>` — a live clause with no spec, or a spec naming an

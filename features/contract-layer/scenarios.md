@@ -1080,3 +1080,19 @@
 - **Given** the scaffold (lib/scaffold.py)
 - **When** the spec `test_the_scaffold_tells_the_user_what_to_do_next` is executed
 - **Then** the step after `init` is the one people get wrong; it is printed, not left in a skill file.
+
+### S11.11 — a clean map means the deep lane has nothing to do
+- **verifies:** C-11.11
+- **pins:** 867c513119746240
+- **run_cmd:** `python -m pytest tests/test_check.py::test_a_clean_map_means_the_deep_lane_has_nothing_to_do -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_a_clean_map_means_the_deep_lane_has_nothing_to_do` is executed
+- **Then** with nothing drifted there is nothing new to re-prove. Falling back to a whole-repo sweep looked like diligence and cost 1541 owned lines at up to 129 specs per mutant; a sweep is an explicit choice, never a default.
+
+### S11.12 — a mutant whose spec budget ran out is undetermined not a survivor
+- **verifies:** C-11.12
+- **pins:** 46daafc36ad4f0de
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor` is executed
+- **Then** a line owned by 129 clauses cannot be swept inside a CI budget, and calling the leftover "survived" manufactures a vacuity claim nobody checked. Three outcomes.

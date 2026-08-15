@@ -96,3 +96,21 @@ def test_the_text_view_shows_every_leg_and_the_verdict():
     assert "[ok] contract" in out and "[FAIL] specs_to_code" in out
     assert "verdict: FAIL" in out and "first cause: drift" in out
     assert "PASS" in render(build(**GREEN))
+
+
+def test_a_clean_map_means_the_deep_lane_has_nothing_to_do():
+    """C-11.11 — with nothing drifted there is nothing new to re-prove. Falling back to a
+    whole-repo sweep looked like diligence and cost 1541 owned lines at up to 129 specs per
+    mutant; a sweep is an explicit choice, never a default."""
+    idle = build(**dict(GREEN, mutation={"mutants": 0, "killed": 0, "survived": 0,
+                                         "survivors": [], "scope": [],
+                                         "note": "no clause drifted"}))
+    assert idle["passed"]
+    step = next(s for s in idle["steps"] if s["step"] == "mutation")
+    assert step["ok"] and step["detail"]["mutants"] in (0, None)
+
+    # and a sweep that DID run and found a survivor still reports it
+    swept = build(**dict(GREEN, mutation={"mutants": 12, "killed": 11, "survived": 1,
+                                          "survivors": [{"path": "lib/a.py", "line": 3}]}))
+    assert "mutation" in swept["advisory"]
+    assert swept["steps"][-1]["detail"]["survivors"] == ["lib/a.py:3"]

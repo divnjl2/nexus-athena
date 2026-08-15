@@ -601,7 +601,16 @@ def _deep_mutation(a, contract, scenarios) -> dict:
     from lib.mutation import hunt, isolate, summarize
 
     cmap = json.loads(_read(a.map))
-    drifted = set(stale_clauses(cmap, digests(cmap, _sources_of(cmap)))) or         {c.id for c in contract.live()}
+    drifted = set(stale_clauses(cmap, digests(cmap, _sources_of(cmap))))
+    if not drifted:
+        # Nothing moved, so there is nothing new to re-prove. Falling back to a full sweep
+        # here is the expensive-default trap: 1541 owned lines, up to 129 specs per mutant,
+        # and it looked like diligence. A whole-repo sweep is an explicit choice.
+        if not a.deep_all:
+            return {"mutants": 0, "killed": 0, "survived": 0, "survivors": [],
+                    "blocking": a.strict, "scope": [],
+                    "note": "no clause drifted — nothing to re-prove (use --deep-all to sweep)"}
+        drifted = {c.id for c in contract.live()}
     owned: dict = {}
     for cid, files in (cmap.get("clauses") or {}).items():
         if cid not in drifted:
@@ -626,7 +635,7 @@ def _deep_mutation(a, contract, scenarios) -> dict:
         (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
 
     res = hunt(cmap, _spec_cmds(scenarios), targets, runner=runner, writer=writer,
-               max_mutants=a.max_mutants)
+               max_mutants=a.max_mutants, max_specs=a.max_specs)
     return {**summarize(res), "blocking": a.strict, "scope": sorted(drifted)[:10]}
 
 
@@ -739,6 +748,9 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--map", default=".athena/clause_map.json")
     ck.add_argument("--run", action="store_true", help="run the specs now instead of reading a ledger")
     ck.add_argument("--deep", action="store_true", help="also mutate the drifted clauses")
+    ck.add_argument("--deep-all", dest="deep_all", action="store_true",
+                    help="mutate EVERY live clause, not only the drifted ones (slow: minutes "
+                         "to hours; this is the sweep, not the loop)")
     ck.add_argument("--strict", action="store_true", help="wording + mutation findings block too")
     ck.add_argument("--judge", default="", help="judge corpus, to fold in an advisory score")
     ck.add_argument("--judge-decisions", dest="judge_decisions", default="")
@@ -747,6 +759,9 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--jobs", type=int, default=0)
     ck.add_argument("--timeout", type=int, default=400)
     ck.add_argument("--max-mutants", dest="max_mutants", type=int, default=20)
+    ck.add_argument("--max-specs", dest="max_specs", type=int, default=12,
+                    help="spec budget per mutant; exceeding it reports UNDETERMINED, never "
+                         "'survived' (0 = no budget)")
     ck.add_argument("--mirror", default="")
     ck.add_argument("--cwd", default=".")
     ck.add_argument("--text", action="store_true")
@@ -759,6 +774,7 @@ def build_parser() -> argparse.ArgumentParser:
     mu.add_argument("--clause", default="", help="only clauses with this id prefix")
     mu.add_argument("--source", action="append", default=["lib"])
     mu.add_argument("--per-line", dest="per_line", type=int, default=1)
+    mu.add_argument("--max-specs", dest="max_specs", type=int, default=0)
     mu.add_argument("--max-mutants", dest="max_mutants", type=int, default=0,
                     help="stop after N mutants (0 = no cap)")
     mu.add_argument("--lock", default=".athena/mutation_lock.json")

@@ -135,13 +135,21 @@ def scoped_specs(clause_map: dict, spec_cmds: dict, path: str, line: int) -> tup
 
 
 def summarize(results: tuple[dict, ...]) -> dict:
-    """PURE: the report. `survivors` is the answer to "which specs prove nothing"."""
-    survivors = [r for r in results if not r["killed"]]
+    """PURE: the report. `survivors` is the answer to "which specs prove nothing".
+
+    A mutant whose spec budget ran out is NOT a survivor: it is undetermined, counted apart,
+    and it never claims that anything failed to prove anything.
+    """
+    survivors = [r for r in results if r.get("status", "survived" if not r["killed"]
+                                             else "killed") == "survived"]
+    undetermined = [r for r in results if r.get("status") == "undetermined"]
+    decided = len(results) - len(undetermined)
     return {
         "mutants": len(results),
-        "killed": len(results) - len(survivors),
+        "killed": sum(1 for r in results if r["killed"]),
         "survived": len(survivors),
-        "score": round((len(results) - len(survivors)) / len(results), 4) if results else 1.0,
+        "undetermined": len(undetermined),
+        "score": round(sum(1 for r in results if r["killed"]) / decided, 4) if decided else 1.0,
         "survivors": survivors,
     }
 
@@ -195,7 +203,8 @@ def recover(*, lock_path: str = LOCK, writer=None) -> tuple[str, ...]:
 
 
 def hunt(clause_map: dict, spec_cmds: dict, targets: dict, *, runner, writer,
-         limit_per_line: int = 1, max_mutants: int = 0) -> tuple[dict, ...]:
+         limit_per_line: int = 1, max_mutants: int = 0,
+         max_specs: int = 0) -> tuple[dict, ...]:
     """EFFECTFUL: build mutants, run each against its owners' specs, stop at first killer.
 
     `runner(cmd) -> int` and `writer(path, text) -> None` are injected, so the caller decides
@@ -212,15 +221,23 @@ def hunt(clause_map: dict, spec_cmds: dict, targets: dict, *, runner, writer,
                 continue
             per_line[mut.line] = per_line.get(mut.line, 0) + 1
             cmds = scoped_specs(clause_map, spec_cmds, path, mut.line)
-            killed, killer = False, ""
+            budget = cmds[:max_specs] if max_specs else cmds
+            killed, killer, ran = False, "", 0
             try:
                 writer(path, mut.source)
-                for cmd in cmds:
+                for cmd in budget:
+                    ran += 1
                     if runner(cmd) != 0:
                         killed, killer = True, cmd
                         break
             finally:
                 writer(path, original)
+            # THREE outcomes, not two. A line owned by 129 clauses cannot be swept inside a
+            # CI budget, and calling the leftover "survived" would manufacture vacuity claims
+            # nobody checked. Undetermined is the honest third state.
+            status = "killed" if killed else (
+                "survived" if ran >= len(cmds) else "undetermined")
             results.append({"path": path, "line": mut.line, "kind": mut.kind,
-                            "specs_run": len(cmds), "killed": killed, "killer": killer})
+                            "specs_run": ran, "specs_total": len(cmds),
+                            "status": status, "killed": killed, "killer": killer})
     return tuple(results)

@@ -362,3 +362,32 @@ def test_docstrings_are_stripped_from_both_halves_of_the_corpus():
     assert any("proves the thing" in q.spec_source for q in kept)
     # a spec with nothing but a docstring degrades to a body, not to a syntax error
     assert "pass" in strip_docstrings('def t():\n    """only prose"""\n')
+
+
+def test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor():
+    """C-11.12 — a line owned by 129 clauses cannot be swept inside a CI budget, and calling
+    the leftover "survived" manufactures a vacuity claim nobody checked. Three outcomes."""
+    cmap = {"clauses": {f"C-{i}": {"lib/a.py": [2]} for i in range(1, 6)}}
+    cmds = {f"S{i}": (f"C-{i}", f"pytest {i}") for i in range(1, 6)}
+    src = "def f(a, b):\n    return a == b\n"
+    ran = []
+
+    def runner(cmd):
+        ran.append(cmd)
+        return 0                                   # nothing ever catches it
+
+    res = hunt(cmap, cmds, {"lib/a.py": {"source": src, "lines": [2]}},
+               runner=runner, writer=lambda p, t: None, max_specs=2)
+    assert len(ran) == 2, "the budget is respected"
+    assert res[0]["status"] == "undetermined"
+    assert res[0]["specs_run"] == 2 and res[0]["specs_total"] == 5
+
+    rep = summarize(tuple(res))
+    assert rep["undetermined"] == 1 and rep["survived"] == 0
+    assert rep["score"] == 1.0, "an undetermined mutant must not drag the score either way"
+
+    # with the full budget the same mutant is a real survivor
+    full = hunt(cmap, cmds, {"lib/a.py": {"source": src, "lines": [2]}},
+                runner=lambda c: 0, writer=lambda p, t: None)
+    assert full[0]["status"] == "survived"
+    assert summarize(tuple(full))["survived"] == 1

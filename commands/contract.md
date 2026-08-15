@@ -3,7 +3,20 @@ description: Query the requirement contract — coverage, what is left, and requ
 argument-hint: "[coverage|todo|drift|lint|pin|import|run] [path to contract.md]"
 ---
 
-# /athena.contract — the requirement contract (v3.3)
+# /athena.contract — the requirement contract (v3.3 .. v3.5)
+
+## 0. The two commands most of the time
+
+```bash
+python athena.py init features/my-feature --title "My Feature"   # scaffold, already wired
+python athena.py check features/my-feature/contract.md        --front features/my-feature/plan.md --run --text          # the loop, one exit code
+```
+
+`check` folds everything below into one verdict and names the LEG that failed —
+`specs_to_code` (is every requirement proved?) or `code_to_specs` (is the map still true,
+and do those specs prove anything?). `--deep` adds mutation over the clauses that drifted;
+`--strict` promotes wording findings and surviving mutants to blocking. Everything after
+this section is the same loop taken apart, for when the verdict needs explaining.
 
 `contract.md` holds numbered clauses with immutable ids; `scenarios.md` binds each clause to
 an executable spec. That pairing makes three questions cheap enough to ask on every turn
