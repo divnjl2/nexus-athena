@@ -71,6 +71,42 @@ def spec_function(source: str, name: str) -> str:
     return ""
 
 
+_RAISES = re.compile(r"^(\s*)with\s+(?:pytest\.)?(?:raises|warns)\s*\([^)]*\)\s*(?:as\s+\w+\s*)?:",
+                     re.MULTILINE)
+
+
+def strip_docstrings(code: str) -> str:
+    """PURE: remove docstrings from a spec before a judge sees it.
+
+    A docstring in this repo NAMES the clause it proves ("C-4.1 — the ... answer"). That is
+    a CLAIM, and showing it to a judge asks the judge to trust prose instead of reading the
+    body. Measured on 200 pairs: leaving them in cost 5 points of recall.
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return code
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if not (isinstance(body, list) and body and isinstance(body[0], ast.Expr)):
+            continue
+        first = getattr(body[0], "value", None)
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            node.body = body[1:] or [ast.Pass()]
+    return ast.unparse(ast.fix_missing_locations(tree))
+
+
+def _neutralise_raises(code: str) -> str:
+    """PURE: a `with pytest.raises(...)` block IS an assertion, and gutting the `assert`
+    lines around it leaves a spec that still proves something while labelled vacuous.
+
+    18 of 468 pairs were mislabelled this way, and the judge was RIGHT on 17 of them — the
+    corpus was punishing it for being correct. The block becomes a suppressor, which as TEXT
+    is exactly what a vacuous test looks like (the corpus is read, never executed).
+    """
+    return _RAISES.sub(lambda m: f"{m.group(1)}with contextlib.suppress(Exception):", code)
+
+
 def degrade(pair: Pair, defect: str, *, other_clause: str = "",
             other_text: str = "") -> Pair:
     """PURE: break a proving pair in one named way. Deterministic, no model, no cleverness.
@@ -89,7 +125,7 @@ def degrade(pair: Pair, defect: str, *, other_clause: str = "",
         return replace(pair, id=f"{pair.id}#misbound", clause_id=other_clause or pair.clause_id,
                        clause_text=other_text or pair.clause_text, label="vacuous",
                        defect=defect)
-    body = pair.spec_source
+    body = _neutralise_raises(pair.spec_source)
     if defect == "assert_true":
         body = re.sub(r"^(\s*)assert .*$", r"\1assert True", body, flags=re.MULTILINE)
     elif defect == "no_assert":
@@ -104,13 +140,17 @@ def degrade(pair: Pair, defect: str, *, other_clause: str = "",
                    defect=defect)
 
 
-def build_corpus(pairs: tuple[Pair, ...], *, defects: tuple[str, ...] = DEFECTS) -> tuple[Pair, ...]:
+def build_corpus(pairs: tuple[Pair, ...], *, defects: tuple[str, ...] = DEFECTS,
+                 strip_docs: bool = True) -> tuple[Pair, ...]:
     """PURE: the labelled set — every proving pair plus one degradation of each kind.
 
     Balance is deliberate but the labels are not a judgement call: the good half is what the
     repo's own gates already prove, and the bad half is a mechanical edit of it.
     """
     out: list[Pair] = []
+    if strip_docs:
+        # both halves, so the good pairs lose their claim too and the comparison stays fair
+        pairs = tuple(replace(p, spec_source=strip_docstrings(p.spec_source)) for p in pairs)
     ids = [p.clause_id for p in pairs]
     for i, p in enumerate(pairs):
         out.append(p)

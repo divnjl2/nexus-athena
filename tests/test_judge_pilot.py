@@ -322,3 +322,43 @@ def test_the_prompt_template_is_pinned_so_changing_it_is_visible():
     # v1 asks for a boolean, v2 for a categorical verdict — both stay addressable
     assert "refuted" in prompt_for(GOOD, variant="v1")[1]
     assert "vacuous" in prompt_for(GOOD, variant="v2")[1]
+
+
+def test_a_surviving_raises_block_is_neutralised_in_a_degraded_pair():
+    """C-10.20 — `with pytest.raises(...)` IS an assertion. Gutting only the `assert` lines
+    left 18 of 468 pairs labelled vacuous while still proving something, and the judge was
+    RIGHT on 17 of them: the corpus was punishing correctness."""
+    from lib.judge import build_corpus
+
+    p = Pair(id="C-1/S1", clause_id="C-1", clause_text="req", spec_id="S1", label="proves",
+             spec_source=("def test_x():\n"
+                          "    with pytest.raises(ValueError):\n"
+                          "        boom()\n"
+                          "    assert ok() == 1\n"))
+    bad = {q.defect: q for q in build_corpus((p,)) if q.label == "vacuous"}
+    for defect in ("assert_true", "no_assert", "weakened"):
+        body = bad[defect].spec_source
+        assert "pytest.raises" not in body, f"{defect} left a live assertion"
+        assert "contextlib.suppress" in body, f"{defect} must read as vacuous"
+    assert "assert ok() == 1" not in bad["no_assert"].spec_source
+
+
+def test_docstrings_are_stripped_from_both_halves_of_the_corpus():
+    """C-10.21 — a docstring here NAMES the clause it proves. That is a claim, and showing
+    it to a judge asks it to trust prose over the body; measured cost, 5 points of recall."""
+    from lib.judge import build_corpus, strip_docstrings
+
+    p = Pair(id="C-1/S1", clause_id="C-1", clause_text="req", spec_id="S1", label="proves",
+             spec_source=('def test_x():\n'
+                          '    """C-1 — proves the thing."""\n'
+                          '    assert ok() == 1\n'))
+    corpus = build_corpus((p,))
+    assert all("proves the thing" not in q.spec_source for q in corpus)
+    assert "assert ok() == 1" in corpus[0].spec_source, "the body survives"
+    # both halves lose it, so the comparison stays fair
+    assert not any('"""' in q.spec_source for q in corpus)
+    # opting out is possible and explicit
+    kept = build_corpus((p,), strip_docs=False)
+    assert any("proves the thing" in q.spec_source for q in kept)
+    # a spec with nothing but a docstring degrades to a body, not to a syntax error
+    assert "pass" in strip_docstrings('def t():\n    """only prose"""\n')

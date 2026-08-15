@@ -980,3 +980,19 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_the_prompt_template_is_pinned_so_changing_it_is_visible` is executed
 - **Then** the first pin hashed the system prompt twice and the user template never, so swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record byte-identical. A pin that cannot see the change it exists to record is decoration.
+
+### S10.20 — a surviving raises block is neutralised in a degraded pair
+- **verifies:** C-10.20
+- **pins:** 620abefcf18c5f49
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_surviving_raises_block_is_neutralised_in_a_degraded_pair -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_surviving_raises_block_is_neutralised_in_a_degraded_pair` is executed
+- **Then** `with pytest.raises(...)` IS an assertion. Gutting only the `assert` lines left 18 of 468 pairs labelled vacuous while still proving something, and the judge was RIGHT on 17 of them: the corpus was punishing correctness.
+
+### S10.21 — docstrings are stripped from both halves of the corpus
+- **verifies:** C-10.21
+- **pins:** 17cee234644a80b9
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_docstrings_are_stripped_from_both_halves_of_the_corpus -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_docstrings_are_stripped_from_both_halves_of_the_corpus` is executed
+- **Then** a docstring here NAMES the clause it proves. That is a claim, and showing it to a judge asks it to trust prose over the body; measured cost, 5 points of recall.

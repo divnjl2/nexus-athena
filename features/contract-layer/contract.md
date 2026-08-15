@@ -333,6 +333,10 @@
   repository, leaving the working tree untouched.
 - **C-10.19** — WHEN a judge prompt template changes THE SYSTEM SHALL produce a different
   pin for it.
+- **C-10.20** — WHEN a spec is degraded THE SYSTEM SHALL neutralise its exception-expecting
+  blocks, so a pair labelled vacuous carries no surviving assertion.
+- **C-10.21** — WHEN the corpus is built THE SYSTEM SHALL strip docstrings from both halves,
+  so a judge reads the body rather than a claim about it.
   - note: the first pin hashed the system prompt twice and the user template never, so
     swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record identical.
   - note: `finally` lost twice to a timeout. Isolation is the fix that does not depend on
