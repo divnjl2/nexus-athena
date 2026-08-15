@@ -996,3 +996,87 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_docstrings_are_stripped_from_both_halves_of_the_corpus` is executed
 - **Then** a docstring here NAMES the clause it proves. That is a claim, and showing it to a judge asks it to trust prose over the body; measured cost, 5 points of recall.
+
+---
+
+## C-11 — proved by the one-command loop (lib/check.py)
+
+### S11.1 — the loop answers with one verdict and names the failing leg
+- **verifies:** C-11.1
+- **pins:** 71c4a265a4d3424a
+- **run_cmd:** `python -m pytest tests/test_check.py::test_the_loop_answers_with_one_verdict_and_names_the_failing_leg -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_the_loop_answers_with_one_verdict_and_names_the_failing_leg` is executed
+- **Then** eight commands in a remembered order is a library; one verdict is a product.
+
+### S11.2 — the first cause is the most upstream failure not the loudest
+- **verifies:** C-11.2
+- **pins:** 07ffe4e92d7f7906
+- **run_cmd:** `python -m pytest tests/test_check.py::test_the_first_cause_is_the_most_upstream_failure_not_the_loudest -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_the_first_cause_is_the_most_upstream_failure_not_the_loudest` is executed
+- **Then** a broken contract makes every downstream report meaningless, so it is reported as the cause instead of the ten consequences it produces.
+
+### S11.3 — a step that did not run is skipped never passed
+- **verifies:** C-11.3
+- **pins:** cfc5a713e63441bf
+- **run_cmd:** `python -m pytest tests/test_check.py::test_a_step_that_did_not_run_is_skipped_never_passed -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_a_step_that_did_not_run_is_skipped_never_passed` is executed
+- **Then** silence must not read as proof: an absent report is absent, not green.
+
+### S11.4 — wording and mutation are advisory until asked to block
+- **verifies:** C-11.4
+- **pins:** b03d23554a5f47ba
+- **run_cmd:** `python -m pytest tests/test_check.py::test_wording_and_mutation_are_advisory_until_asked_to_block -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_wording_and_mutation_are_advisory_until_asked_to_block` is executed
+- **Then** a linter that fails the build on style, or on a partial mutation sweep, gets switched off; both become gates only on --strict.
+
+### S11.5 — the judge can never block the verdict
+- **verifies:** C-11.5
+- **pins:** 10d3688a77159fe5
+- **run_cmd:** `python -m pytest tests/test_check.py::test_the_judge_can_never_block_the_verdict -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_the_judge_can_never_block_the_verdict` is executed
+- **Then** a local model's opinion is advisory by construction; the only door to a gate is a scored corpus, and it is not this file.
+
+### S11.6 — the map gate belongs to the reverse leg
+- **verifies:** C-11.6
+- **pins:** ed0b831b73d33c70
+- **run_cmd:** `python -m pytest tests/test_check.py::test_the_map_gate_belongs_to_the_reverse_leg -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_the_map_gate_belongs_to_the_reverse_leg` is executed
+- **Then** map freshness is a code->specs question; putting it under the forward leg would hide which direction actually broke.
+
+### S11.7 — the text view shows every leg and the verdict
+- **verifies:** C-11.7
+- **pins:** 074a4c32b9a2a6a4
+- **run_cmd:** `python -m pytest tests/test_check.py::test_the_text_view_shows_every_leg_and_the_verdict -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_the_text_view_shows_every_leg_and_the_verdict` is executed
+- **Then** the answer has to be readable in a terminal without a JSON parser.
+
+### S11.8 — a scaffolded feature is already wired clause to spec to task
+- **verifies:** C-11.8
+- **pins:** de3a22acb1c37ab8
+- **run_cmd:** `python -m pytest tests/test_scaffold.py::test_a_scaffolded_feature_is_already_wired_clause_to_spec_to_task -q`
+- **Given** the scaffold (lib/scaffold.py)
+- **When** the spec `test_a_scaffolded_feature_is_already_wired_clause_to_spec_to_task` is executed
+- **Then** the three files reference each other on creation; a scaffold whose parts do not connect teaches the user the tool is broken, not that their contract is empty.
+
+### S11.9 — a fresh scaffold passes the gates it will be judged by
+- **verifies:** C-11.9
+- **pins:** 45305c30f415fe5a
+- **run_cmd:** `python -m pytest tests/test_scaffold.py::test_a_fresh_scaffold_passes_the_gates_it_will_be_judged_by -q`
+- **Given** the scaffold (lib/scaffold.py)
+- **When** the spec `test_a_fresh_scaffold_passes_the_gates_it_will_be_judged_by` is executed
+- **Then** the first `check` on a new project must be green, or the frame reads as broken before the user has written a single requirement.
+
+### S11.10 — the scaffold tells the user what to do next
+- **verifies:** C-11.10
+- **pins:** 6c99657035721ea1
+- **run_cmd:** `python -m pytest tests/test_scaffold.py::test_the_scaffold_tells_the_user_what_to_do_next -q`
+- **Given** the scaffold (lib/scaffold.py)
+- **When** the spec `test_the_scaffold_tells_the_user_what_to_do_next` is executed
+- **Then** the step after `init` is the one people get wrong; it is printed, not left in a skill file.

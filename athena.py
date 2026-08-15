@@ -506,6 +506,130 @@ def cmd_judge_eval(a) -> int:
     return 0 if rep["passes"] else 1
 
 
+def cmd_init(a) -> int:
+    """Scaffold a feature already wired clause -> spec -> task, so the first check PASSES."""
+    from lib.scaffold import next_steps, render_files
+    dest = pathlib.Path(a.path)
+    dest.mkdir(parents=True, exist_ok=True)
+    files = render_files(title=a.title or dest.name.replace("-", " ").title(),
+                         run_cmd=a.run_cmd, files=a.files)
+    written = []
+    for name, text in sorted(files.items()):
+        target = dest / name
+        if target.exists() and not a.force:
+            continue                      # never clobber a real contract by accident
+        target.write_text(text, encoding="utf-8")
+        written.append(str(target))
+    print(next_steps(str(dest), len(written)))
+    _emit({"created": written, "skipped": sorted(set(str(dest / n) for n in files) - set(written))})
+    return 0
+
+
+def cmd_check(a) -> int:
+    """The product surface: the whole loop, one verdict, one exit code.
+
+    Order is upstream-first — a broken contract makes every downstream report meaningless,
+    so it fails there and says so instead of drowning the user in consequences.
+    """
+    import datetime
+    from lib.check import build, render
+    from lib.contract import critique, lint
+    from lib.contract_report import coverage as cov_report, drift as drift_report, todo as todo_report
+    from lib.spec_runner import load_ledger, make_ledger, run_specs, select, write_ledger
+    from lib.versioning import hash_text
+
+    contract = _load_contract(a)
+    scen_path = a.scenarios or _sibling(a.contract, "scenarios.md")
+    scenarios = _load_scenarios(a, anchor=a.contract)
+
+    ledger = load_ledger(a.ledger) if a.ledger else {}
+    if a.run:
+        picked = select(scenarios, contract=contract, skip_tags=tuple(a.skip_tag))
+        env = dict(kv.split("=", 1) for kv in a.env if "=" in kv) or None
+        results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env)
+        ledger = make_ledger(results, contract=contract,
+                             scenario_version=hash_text(_read(scen_path)),
+                             ts=datetime.datetime.now(datetime.timezone.utc)
+                             .isoformat(timespec="seconds"))
+        if a.ledger:
+            write_ledger(ledger, a.ledger)
+
+    gates = {}
+    if a.front:
+        plan = parse_with_provenance(a.front, speckit=_speckit(a.speckit))
+        if plan.contract is not None:
+            r = seams.seam_contract_bound(plan.contract, plan.scenarios)
+            gates["contract_bound"] = {"passed": r.passed, "issues": list(r.issues)}
+            if a.map and pathlib.Path(a.map).exists():
+                from lib.clause_map import digests
+                cmap = json.loads(_read(a.map))
+                scen = pathlib.Path(a.front).parent / "scenarios.md"
+                mr = seams.seam_map_fresh(
+                    cmap, plan.contract, plan.scenarios,
+                    scenario_version=hash_text(scen.read_text(encoding="utf-8"))
+                    if scen.exists() else "",
+                    clause_digests=digests(cmap, _sources_of(cmap)))
+                gates["map_fresh"] = {"passed": mr.passed, "issues": list(mr.issues)}
+
+    mutation = None
+    if a.deep and a.map and pathlib.Path(a.map).exists():
+        mutation = _deep_mutation(a, contract, scenarios)
+
+    judge = None
+    if a.judge and pathlib.Path(a.judge).exists():
+        from lib.judge import Pair, score
+        payload = json.loads(_read(a.judge))
+        decisions = json.loads(_read(a.judge_decisions)) if a.judge_decisions else {}
+        judge = score(tuple(Pair(**p) for p in payload["pairs"]),
+                      decisions.get("decisions", decisions))
+
+    report = build(lint_issues=lint(contract), critique_warnings=critique(contract),
+                   coverage=cov_report(contract, scenarios),
+                   ledger_totals=ledger.get("totals") if ledger else None,
+                   todo=todo_report(contract, scenarios, ledger),
+                   drift=drift_report(contract, scenarios, ledger),
+                   gates=gates, mutation=mutation, judge=judge,
+                   strict_wording=a.strict)
+    print(render(report) if a.text else json.dumps(report, ensure_ascii=False, sort_keys=True))
+    return 0 if report["passed"] else 1
+
+
+def _deep_mutation(a, contract, scenarios) -> dict:
+    """Mutation over the clauses that DRIFTED — the sweep nobody can afford whole-repo."""
+    import subprocess
+    from lib.clause_map import digests, stale_clauses
+    from lib.mutation import hunt, isolate, summarize
+
+    cmap = json.loads(_read(a.map))
+    drifted = set(stale_clauses(cmap, digests(cmap, _sources_of(cmap)))) or         {c.id for c in contract.live()}
+    owned: dict = {}
+    for cid, files in (cmap.get("clauses") or {}).items():
+        if cid not in drifted:
+            continue
+        for p, lines in files.items():
+            owned[p] = sorted(set(owned.get(p, ())) | set(lines))
+    targets = {p: {"source": _read(p), "lines": lines} for p, lines in sorted(owned.items())
+               if pathlib.Path(p).exists()}
+    if not targets:
+        return {"mutants": 0, "killed": 0, "survived": 0, "survivors": [],
+                "blocking": a.strict, "scope": sorted(drifted)[:10]}
+    mirror = isolate(".", a.mirror or ".athena/check_mirror")
+
+    def runner(cmd):
+        try:
+            return subprocess.run(cmd.split(), cwd=mirror, capture_output=True, text=True,
+                                  timeout=a.timeout).returncode
+        except subprocess.TimeoutExpired:
+            return 124
+
+    def writer(path, text):
+        (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
+
+    res = hunt(cmap, _spec_cmds(scenarios), targets, runner=runner, writer=writer,
+               max_mutants=a.max_mutants)
+    return {**summarize(res), "blocking": a.strict, "scope": sorted(drifted)[:10]}
+
+
 def cmd_trace_coverage(a) -> int:
     # v3.2 third trace axis: is each requirement's code actually covered, and is there
     # code no scenario exercises (spec_gap). Deterministic report; feeds planner_replan.
@@ -597,6 +721,36 @@ def build_parser() -> argparse.ArgumentParser:
     ci.add_argument("--section", default="EARS Acceptance Criteria")
     ci.add_argument("--title", default="")
     ci.set_defaults(fn=cmd_contract_import)
+
+    ini = sub.add_parser("init", help="scaffold contract/scenarios/plan for a new feature")
+    ini.add_argument("path")
+    ini.add_argument("--title", default="")
+    ini.add_argument("--run-cmd", dest="run_cmd",
+                     default="pytest tests/test_example.py::test_it -q")
+    ini.add_argument("--files", default="src/example.py, tests/test_example.py")
+    ini.add_argument("--force", action="store_true", help="overwrite existing files")
+    ini.set_defaults(fn=cmd_init)
+
+    ck = sub.add_parser("check", help="the whole loop: one verdict, one exit code")
+    ck.add_argument("contract", nargs="?", default="contract.md")
+    ck.add_argument("--scenarios", default="")
+    ck.add_argument("--front", default="", help="plan.md, to also run the fail-closed gates")
+    ck.add_argument("--ledger", default=".athena/spec_ledger.json")
+    ck.add_argument("--map", default=".athena/clause_map.json")
+    ck.add_argument("--run", action="store_true", help="run the specs now instead of reading a ledger")
+    ck.add_argument("--deep", action="store_true", help="also mutate the drifted clauses")
+    ck.add_argument("--strict", action="store_true", help="wording + mutation findings block too")
+    ck.add_argument("--judge", default="", help="judge corpus, to fold in an advisory score")
+    ck.add_argument("--judge-decisions", dest="judge_decisions", default="")
+    ck.add_argument("--skip-tag", dest="skip_tag", action="append", default=[])
+    ck.add_argument("--env", action="append", default=[], metavar="KEY=VALUE")
+    ck.add_argument("--jobs", type=int, default=0)
+    ck.add_argument("--timeout", type=int, default=400)
+    ck.add_argument("--max-mutants", dest="max_mutants", type=int, default=20)
+    ck.add_argument("--mirror", default="")
+    ck.add_argument("--cwd", default=".")
+    ck.add_argument("--text", action="store_true")
+    ck.set_defaults(fn=cmd_check)
 
     mu = sub.add_parser("mutate", help="break the lines a clause owns; do its specs notice?")
     mu.add_argument("contract", nargs="?", default="contract.md")

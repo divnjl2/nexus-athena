@@ -129,6 +129,17 @@ def test_unspecified_clause_carries_its_text_so_an_agent_can_act():
     assert ids == ["C-1.2", "C-1.5"]
     assert rep["unspecified"][0]["text"].startswith("WHEN it starts")
 
+    # the clause has a SECOND half — a red clause carries its failing run commands — and the
+    # spec used to ignore it entirely. (Judge's counterexample, executed: emptying run_cmds
+    # left this test green.)
+    scenarios = (_scen("S1", "C-1.1"), _scen("S2", "C-1.2", cmd="pytest -q -k two"),
+                 _scen("S3", "C-1.5"))
+    ledger = make_ledger((SpecResult("S2", "C-1.2", False, 1, 7),), contract=CONTRACT, ts="T")
+    red = todo(CONTRACT, scenarios, ledger)["red"]
+    assert red and red[0]["clause"] == "C-1.2"
+    assert red[0]["run_cmds"] == ["pytest -q -k two"], "an actionable answer names the command"
+    assert red[0]["text"].startswith("WHEN it starts")
+
 
 def test_drift_flags_a_spec_pinned_to_an_older_clause_version():
     """C-4.7 — the requirement moved, the executable spec did not follow."""

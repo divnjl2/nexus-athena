@@ -1,0 +1,55 @@
+# Athena contract gate — copy into .github/workflows/ and adjust the paths.
+#
+# Two lanes on purpose:
+#   fast   every push: lint + coverage + the specs that are not tagged slow (seconds)
+#   full   on demand / nightly: the slow lane, the clause map, and mutation over the
+#          clauses that drifted — minutes, and it must not sit in a push loop
+name: athena-check
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pytest
+      - name: contract loop (fast lane)
+        run: |
+          python athena.py --speckit off check features/contract-layer/contract.md \
+            --front features/contract-layer/plan.md \
+            --ledger .athena/spec_ledger.json \
+            --run --skip-tag slow --text
+        # exit 1 = a requirement is unproved, drifted, unbound or red. The report names the leg.
+
+  full:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pytest coverage
+      - name: rebuild the clause map (incremental)
+        run: |
+          python athena.py contract map features/contract-layer/contract.md \
+            --source lib -o .athena/clause_map.json --incremental
+      - name: full loop + mutation over drifted clauses
+        run: |
+          python athena.py --speckit off check features/contract-layer/contract.md \
+            --front features/contract-layer/plan.md \
+            --ledger .athena/spec_ledger.json --map .athena/clause_map.json \
+            --run --deep --jobs 4 --text
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: athena-artifacts
+          path: |
+            .athena/spec_ledger.json
+            .athena/clause_map.json

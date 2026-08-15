@@ -182,3 +182,20 @@ over it, which is why every task's success_check is an already-green pytest node
 ### Manual Verification
 - `python athena.py judge corpus` builds 98 proving pairs and 392 mechanical degradations.
 - `python athena.py judge eval` prints gate_eligible and changes no gate.
+
+## Phase 10: The product surface
+**Goal:** one command answers both legs; a new project can start without hand-wiring three files.
+**Depends on:** Phase 9
+### Tasks
+- [ ] T10.1 Fold every report into one verdict that names the failing leg and the first cause
+  - success_check: `python -m pytest tests/test_check.py -q`
+  - files: `lib/check.py, athena.py, tests/test_check.py`
+  - verifies: S11.1, S11.2, S11.3, S11.4, S11.5, S11.6, S11.7
+  - autonomy: high
+- [ ] T10.2 Scaffold a feature already wired clause -> spec -> task
+  - success_check: `python -m pytest tests/test_scaffold.py -q`
+  - files: `lib/scaffold.py, athena.py, tests/test_scaffold.py`
+  - verifies: S11.8, S11.9, S11.10
+### Manual Verification
+- `athena init <dir>` then `athena check <dir>/contract.md --front <dir>/plan.md --text` is green.
+- `ci/athena-check.yml` runs the fast lane on push and the deep lane nightly.

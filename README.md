@@ -91,6 +91,40 @@ flowchart TB
   supersede/branch semantics become the graph ROOT (`kind:clause`), each with its OWN version
   hash, and each spec pins the clause wording it was written against.
 
+## Quick start (v3.5)
+
+```bash
+athena init features/my-feature --title "My Feature"   # contract + specs + plan, already wired
+athena check features/my-feature/contract.md      --front features/my-feature/plan.md --run --text  # the whole loop, one exit code
+```
+
+```
+[ok] contract
+   ok   contract.lint
+   ok   contract.wording
+[ok] specs_to_code
+   ok   coverage               live=129
+   ok   spec.run               passed=129, total=129
+   ok   todo                   counts={'unspecified': 0, 'red': 0, 'unrun': 0, 'stale': 0, 'done': 129}
+   ok   drift
+   ok   seam.contract_bound
+[ok] code_to_specs
+   ok   seam.map_fresh
+
+verdict: PASS
+```
+
+Two legs, answered separately because they are different questions:
+
+| leg | asks | fails when |
+|---|---|---|
+| `specs_to_code` | is every requirement proved by a bound, pinned, green spec? | uncovered / red / unrun / stale / drifted |
+| `code_to_specs` | is the code the specs claim to own still the code they own — and do those specs prove anything? | the clause map is stale, or a mutant survived |
+
+`--deep` adds mutation over the clauses that drifted; `--strict` promotes wording findings and
+surviving mutants from advisory to blocking. A CI recipe with both lanes is in
+[`ci/athena-check.yml`](./ci/athena-check.yml).
+
 ## Requirement contract (v3.3)
 
 A spec.md is prose with implicit numbering: renumber it and every `verifies: R4.2` written

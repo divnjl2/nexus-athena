@@ -232,11 +232,16 @@ def test_attributes_may_be_sub_bullets_instead_of_inline_markers():
 
 def test_lint_reports_an_empty_clause():
     """C-1.9 — an id with no sentence behind it is a broken reference waiting to happen."""
-    assert any("empty clause text" in i for i in lint(parse("""# Contract: X
+    issues = lint(parse("""# Contract: X
 
 - **C-1** — WHEN asked THE SYSTEM SHALL answer.
 - **C-2** —
-""")))
+"""))
+    # named, and ONLY the empty one: reporting every clause as empty also "contains the
+    # string" and would have passed the previous assertion. (Judge's counterexample,
+    # executed: exit 0 with a false-positive storm.)
+    assert any(i.startswith("C-2:") and "empty clause text" in i for i in issues)
+    assert not any(i.startswith("C-1:") and "empty clause text" in i for i in issues)
 
 
 def test_lint_reports_a_self_supersede():
@@ -254,8 +259,21 @@ def test_lint_reports_a_superseded_clause_with_no_successor():
 
 - **C-1** — WHEN asked THE SYSTEM SHALL answer.
   - status: superseded
+- **C-2** — WHEN asked twice THE SYSTEM SHALL answer twice.
+- **C-3** *(supersedes C-2)* — WHEN asked twice THE SYSTEM SHALL answer differently.
+  - status: superseded
 """)
-    assert any("names no successor" in i for i in lint(c))
+    issues = lint(c)
+    # C-3 is the chained case: it REPLACES a predecessor and is itself marked superseded
+    # with no successor named. A rule that accepts "names something in either direction"
+    # goes silent exactly here — the most likely way a dangling chain actually occurs.
+    assert any(i.startswith("C-3:") and "names no successor" in i for i in issues)
+    # the issue must NAME the offending clause: a message that merely contains the phrase
+    # would pass while pointing at the wrong clause. (Found by a local judge, confirmed by
+    # executing its counterexample: the previous assertion stayed green when lint named
+    # someone else.)
+    assert any(i.startswith("C-1:") and "names no successor" in i for i in issues)
+    assert not any(i.startswith("C-2:") for i in issues), "no false positive on a fine clause"
 
 
 def test_lint_reports_a_clause_that_is_both_withdrawn_and_superseded():

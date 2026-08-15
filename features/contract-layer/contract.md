@@ -341,3 +341,26 @@
     swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record identical.
   - note: `finally` lost twice to a timeout. Isolation is the fix that does not depend on
     the dying process cooperating.
+
+## C-11 — The product surface: one command, and a way to start
+
+- **C-11.1** — WHEN the loop is run THE SYSTEM SHALL answer with one verdict and name the
+  leg that failed.
+- **C-11.2** — WHEN several steps fail THE SYSTEM SHALL name the most upstream one as the
+  cause.
+- **C-11.3** — WHEN a step did not run THE SYSTEM SHALL report it as absent rather than as
+  passed.
+- **C-11.4** — WHEN wording findings or surviving mutants exist THE SYSTEM SHALL keep them
+  advisory unless the caller asks for a strict run.
+- **C-11.5** — WHEN a judge score is folded into the loop THE SYSTEM SHALL leave it unable
+  to fail the verdict.
+- **C-11.6** — WHEN map freshness is reported THE SYSTEM SHALL count it under the
+  code-to-specs leg.
+- **C-11.7** — WHEN the verdict is rendered as text THE SYSTEM SHALL show every leg and the
+  first cause.
+- **C-11.8** — WHEN a feature is scaffolded THE SYSTEM SHALL emit a clause, a spec that
+  names it and a task that names the spec.
+- **C-11.9** — WHEN a fresh scaffold is checked THE SYSTEM SHALL find it free of lint and
+  wording findings with full coverage.
+- **C-11.10** — WHEN a feature is scaffolded THE SYSTEM SHALL print the next commands,
+  including the migration path for an existing spec.md.
