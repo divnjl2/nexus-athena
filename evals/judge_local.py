@@ -11,8 +11,10 @@ Usage:
 
 Notes learned on the way, kept because they are the difference between a measurement and a
 mess: `response_format={"type":"json_object"}` is what makes this model answer in ~30 tokens
-instead of reasoning for 500 and being cut off mid-thought; temperature is 0 so a re-run is
-comparable; and every decision carries the pin, so a model swap shows up in the artifact.
+DEFAULT IS UNMUZZLED: no max_tokens, no response_format. Forcing a JSON grammar made this
+model answer in ~30 tokens instead of ~500 and measured the grammar rather than the model —
+the operator rule this repeatedly violated is in memory/feedback_dont_cap_reasoning_be_patient.
+Temperature is 0 so a re-run is comparable; every decision carries the pin.
 """
 from __future__ import annotations
 
@@ -33,12 +35,23 @@ from lib.judge import Pair, pin, prompt_for, template_fingerprint  # noqa: E402
 _JSON = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
 
-def ask(endpoint: str, model: str, system: str, user: str, *, timeout: int = 180,
-        max_tokens: int = 400) -> dict:
-    """One judgement. Returns the parsed JSON, or {} when the model produced nothing usable."""
+def ask(endpoint: str, model: str, system: str, user: str, *, timeout: int = 600,
+        max_tokens: int = 0, reason: bool = True) -> dict:
+    """One judgement. Returns the parsed JSON, or {} when the model produced nothing usable.
+
+    `reason=True` drops the JSON grammar and lets the model think first, then extracts the
+    trailing object. Forcing `response_format` makes it answer in ~30 tokens instead of
+    ~500 — fast, and possibly at the cost of the very reasoning the task needs. Which of
+    those matters more is a measurement, not an opinion, so both modes exist.
+    """
     body = {
-        "model": model, "temperature": 0, "max_tokens": max_tokens,
-        "response_format": {"type": "json_object"},
+        "model": model, "temperature": 0,
+        # No cap by default and no decoding grammar: this is a reasoning distillate, and
+        # both of those muzzle the thinking rather than the answer. Operator rule, broken
+        # three times: see memory/feedback_dont_cap_reasoning_be_patient.md. Parse the
+        # trailing JSON out of the tail instead.
+        **({"max_tokens": max_tokens} if max_tokens else {}),
+        **({} if reason else {"response_format": {"type": "json_object"}}),
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
     }
@@ -70,7 +83,10 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="judge_decisions.json")
     ap.add_argument("--limit", type=int, default=0, help="first N pairs (0 = all)")
     ap.add_argument("--jobs", type=int, default=6)
-    ap.add_argument("--timeout", type=int, default=180)
+    ap.add_argument("--timeout", type=int, default=600)
+    ap.add_argument("--muzzle", dest="reason", action="store_false", default=True,
+                    help="force a JSON grammar and skip reasoning (measures the grammar, "
+                         "not the model — kept only to reproduce the old numbers)")
     ap.add_argument("--variant", default="v2", choices=("v1", "v2"),
                     help="which pinned prompt to measure")
     a = ap.parse_args(argv)
@@ -82,7 +98,8 @@ def main(argv=None) -> int:
 
     def judge(p: Pair) -> tuple[str, dict]:
         system, user = prompt_for(p, variant=a.variant)
-        got = ask(a.endpoint, a.model, system, user, timeout=a.timeout)
+        got = ask(a.endpoint, a.model, system, user, timeout=a.timeout,
+                  reason=a.reason)
         if "_error" in got:
             # a failed call is NOT a verdict: it must not read as "the spec is fine"
             return p.id, {"decision": "error", "error": got["_error"]}
@@ -104,7 +121,8 @@ def main(argv=None) -> int:
     out = {"schema": "athena.judge_decisions/1",
            "pin": {**pin(model=a.model, prompt=template_fingerprint(a.variant),
                          temperature=0.0), "variant": a.variant},
-           "endpoint": a.endpoint, "variant": a.variant, "pairs": len(pairs),
+           "endpoint": a.endpoint, "variant": a.variant, "reason": a.reason,
+           "pairs": len(pairs),
            "seconds": round(elapsed, 1), "decisions": decisions}
     pathlib.Path(a.out).write_text(json.dumps(out, indent=2, ensure_ascii=False,
                                               sort_keys=True) + "\n", encoding="utf-8")
