@@ -391,3 +391,65 @@ def test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor():
                 runner=lambda c: 0, writer=lambda p, t: None)
     assert full[0]["status"] == "survived"
     assert summarize(tuple(full))["survived"] == 1
+
+
+def test_a_line_no_spec_owns_is_unowned_not_survived():
+    """C-11.15 — with no owner there is no witness, so nothing was asked to notice the
+    break. `0 >= 0` used to class that as a survivor: a vacuity claim nobody tested."""
+    from lib.mutation import summarize
+
+    ran = []
+    res = hunt({"clauses": {}}, {}, {"m.py": {"source": "def f(a):\n    return a == 1\n",
+                                              "lines": [2]}},
+               runner=lambda c: ran.append(c) or 0, writer=lambda p, t: None)
+    assert res[0]["status"] == "unowned" and res[0]["specs_total"] == 0
+    assert ran == [], "no spec exists, so nothing should have been executed"
+    rep = summarize(tuple(res))
+    assert rep["survived"] == 0 and rep["unowned"] == 1
+    assert rep["score"] == 1.0, "an unowned mutant proves nothing either way"
+
+
+def test_a_spec_that_is_already_red_cannot_be_a_witness():
+    """C-11.16 — hunt reads any non-zero exit as "the spec noticed". Without a baseline that
+    includes a spec which was failing before anything was mutated, or a collection error."""
+    from lib.mutation import baseline
+
+    red = baseline({}, ["pytest ok", "pytest broken", "pytest ok"],
+                   runner=lambda c: 1 if c == "pytest broken" else 0)
+    assert red == ("pytest broken",), "deduplicated, and only the red ones"
+
+    cmap = {"clauses": {"C-1": {"m.py": [2]}, "C-2": {"m.py": [2]}}}
+    cmds = {"S1": ("C-1", "pytest broken"), "S2": ("C-2", "pytest ok")}
+    ran = []
+    res = hunt(cmap, cmds, {"m.py": {"source": "def f(a):\n    return a == 1\n", "lines": [2]}},
+               runner=lambda c: ran.append(c) or (1 if c == "pytest broken" else 0),
+               writer=lambda p, t: None, exclude=red)
+    assert "pytest broken" not in ran, "a spec red on clean source is not asked"
+    assert res[0]["status"] == "survived" and res[0]["specs_total"] == 1
+
+
+def test_the_mirror_refuses_to_delete_anything_that_is_not_its_own():
+    """C-11.17 — `isolate` is rm -rf pointed at a user path. An audit ran
+    `mutate --mirror vendor` and it DELETED the vendor directory, reporting success."""
+    import pytest as _pytest
+
+    from lib.mutation import MIRROR_MARKER, UnsafeMirror, isolate
+
+    repo = pathlib.Path(__file__).resolve().parents[1]
+    scratch = pathlib.Path(
+        r"D:/tmp/claude/C--Users----Desktop/eb1d9f80-8e10-4c2d-854e-213fa77f8048/scratchpad/mirror-spec")
+    import shutil
+    shutil.rmtree(scratch, ignore_errors=True)
+    (scratch / "precious").mkdir(parents=True)
+    (scratch / "precious" / "keep.txt").write_text("keep me", encoding="utf-8")
+
+    with _pytest.raises(UnsafeMirror, match="not a previous athena mirror"):
+        isolate(str(repo), str(scratch / "precious"))
+    assert (scratch / "precious" / "keep.txt").exists(), "the guard must not delete first"
+
+    with _pytest.raises(UnsafeMirror, match="into the repo itself"):
+        isolate(str(repo), str(repo / "lib"))
+
+    mine = pathlib.Path(isolate(str(repo), str(scratch / "mine")))
+    assert (mine / MIRROR_MARKER).exists()
+    assert pathlib.Path(isolate(str(repo), str(mine))).exists(), "its own mirror is reusable"

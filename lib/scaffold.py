@@ -12,6 +12,8 @@ owns the writing, so the templates are golden-testable.
 """
 from __future__ import annotations
 
+QUOTE3 = chr(34) * 3
+
 CONTRACT_TEMPLATE = """# Contract: {title}
 
 > Numbered requirement clauses. Ids are allocated ONCE and never reused: a requirement that
@@ -77,16 +79,35 @@ migrating an existing spec.md instead:
 """
 
 
-def render_files(*, title: str, group: str = "First requirements",
-                 run_cmd: str = "pytest tests/test_example.py::test_it -q",
-                 files: str = "src/example.py, tests/test_example.py") -> dict:
+EXAMPLE_TEST = QUOTE3 + """Example spec for the scaffolded clause - replace it with a real one.""" + QUOTE3 + """
+
+
+def version() -> str:
+    return "0.1.0"
+
+
+def test_the_system_reports_its_version():
+    assert version() == "0.1.0"
+"""
+
+
+def render_files(*, title: str, group: str = "First requirements", run_cmd: str = "",
+                 files: str = "", dir_hint: str = "features/my-feature") -> dict:
     """PURE: {filename: text} for a fresh feature, already wired clause -> spec -> task.
 
     The example is deliberately complete rather than a stub with TODOs: a scaffold whose
     first `check` fails teaches the user that the tool is broken, not that their contract is
     empty. (`TODO` in a live clause is also exactly what C-10.12 refuses.)
     """
+    # The scaffold ships a WORKING example test as a fourth file, because its promise is
+    # that the first `athena check` passes. The first cut pointed the spec at
+    # tests/test_example.py, a path init never created: an audit ran the quick start on a
+    # clean directory and the very first check failed on a missing file.
+    hint = dir_hint.replace("\\", "/").rstrip("/")
+    run_cmd = run_cmd or f"pytest {hint}/test_example.py::test_the_system_reports_its_version -q"
+    files = files or f"{hint}/test_example.py"
     return {
+        "test_example.py": EXAMPLE_TEST,
         "contract.md": CONTRACT_TEMPLATE.format(
             title=title, group=group,
             trigger="the system starts",

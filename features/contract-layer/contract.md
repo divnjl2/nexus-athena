@@ -368,3 +368,28 @@
   than fall back to mutating every live clause.
 - **C-11.12** — WHEN a mutant exhausts its spec budget THE SYSTEM SHALL report it as
   undetermined rather than as a survivor.
+- **C-11.13** — WHEN a named input path is absent THE SYSTEM SHALL fail the verdict rather
+  than omit the step that needed it.
+- **C-11.14** — WHEN mutation results are reported THE SYSTEM SHALL show every outcome the
+  runner can produce.
+- **C-11.15** — WHEN no spec owns a mutated line THE SYSTEM SHALL report the mutant as
+  unowned rather than as a survivor.
+- **C-11.16** — WHEN a spec is already red on unmutated source THE SYSTEM SHALL exclude it
+  from the witnesses that can kill a mutant.
+- **C-11.17** — WHEN a mirror destination is not empty and not a previous mirror THE SYSTEM
+  SHALL refuse to delete it.
+  - note: found by an audit that ran `mutate --mirror vendor` and watched the harness delete
+    the repository's vendor directory while reporting success.
+- **C-11.18** — WHEN a path is not given THE SYSTEM SHALL resolve its default next to the
+  contract rather than next to the current directory.
+- **C-11.19** — WHEN a spec names an executable node THE SYSTEM SHALL require that node to
+  document the same clause the spec verifies.
+  - note: an audit found C-8.1 bound to a test about something else, reported as proved for
+    months. The generator's regex had skipped a function body and paired one name with a
+    later docstring.
+- **C-11.20** — WHEN the binding guard is exercised THE SYSTEM SHALL show it able to reject
+  a mis-binding.
+- **C-11.21** — WHEN a feature is scaffolded THE SYSTEM SHALL also write the test its
+  example spec points at.
+  - note: checking a scaffolded project from inside this repo judged it against THIS repo's
+    clause map — a gate answering about the wrong codebase.

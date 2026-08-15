@@ -29,12 +29,18 @@ def _step(name: str, ok: bool, detail: dict, *, leg: str, blocking: bool = True)
 
 def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=None,
           todo=None, drift=None, gates=None, mutation=None, judge=None,
-          strict_wording: bool = False) -> dict:
+          strict_wording: bool = False, missing_inputs=(), allow_partial: bool = False) -> dict:
     """PURE: fold every report into one verdict.
 
-    `None` means "not run" — never "passed". A step that did not run is reported as skipped
-    and cannot make the verdict green, because the whole point of this layer is that silence
-    never reads as proof.
+    `None` means "not run" — and an audit caught this file breaking its own rule: a step that
+    did not run simply vanished from `steps`, `by_leg` computed `all()` over an EMPTY list,
+    and a run with a mis-typed --map printed `verdict: PASS` having checked nothing. Silence
+    read as proof, which is the exact failure this whole layer exists to prevent.
+
+    So a leg that produced no evidence is now INCOMPLETE, not green, and `missing_inputs`
+    (a path that was named but absent) is a hard failure — naming a file you do not have is
+    a mistake, not a choice. `allow_partial` is the explicit opt-out for a fast lane that
+    knowingly skips the reverse leg.
     """
     steps: list[dict] = []
 
@@ -80,9 +86,15 @@ def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=
         # A surviving mutant means a spec is green for code that no longer does what its
         # clause demands. Advisory by default: mutation is a sweep, and a partial sweep
         # must not fail a build. `--deep --strict` is what turns it into a gate.
+        # Every outcome the runner can produce is shown. The first cut whitelisted three
+        # keys and silently dropped `undetermined` — a run of 20 mutants where NONE was
+        # decided rendered as a clean "ok mutation" row.
         steps.append(_step("mutation", mutation.get("survived", 0) == 0, {
             "mutants": mutation.get("mutants"), "killed": mutation.get("killed"),
             "survived": mutation.get("survived"),
+            "undetermined": mutation.get("undetermined"),
+            "unowned": mutation.get("unowned"),
+            "note": mutation.get("note", ""),
             "survivors": [f"{s['path']}:{s['line']}" for s in mutation.get("survivors", [])][:10],
         }, leg="code_to_specs", blocking=bool(mutation.get("blocking"))))
 
@@ -94,18 +106,31 @@ def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=
             "gate_eligible": judge.get("passes", False),
         }, leg="code_to_specs", blocking=False))
 
+    for path in sorted(missing_inputs):
+        # A named-but-absent input used to make its whole step disappear. It is now its own
+        # blocking step, so a typo in --map can never be mistaken for "nothing to check".
+        steps.append(_step("input.missing", False, {"path": path},
+                           leg="contract", blocking=True))
+
     failed = [s for s in steps if not s["ok"] and s["blocking"]]
     advisory = [s for s in steps if not s["ok"] and not s["blocking"]]
-    by_leg = {leg: all(s["ok"] for s in steps if s["leg"] == leg and s["blocking"])
-              for leg in LEGS}
+
+    by_leg: dict = {}
+    for leg in LEGS:
+        rows = [s for s in steps if s["leg"] == leg and s["blocking"]]
+        by_leg[leg] = (all(s["ok"] for s in rows) if rows else
+                       (True if allow_partial else "incomplete"))
+    incomplete = [leg for leg, state in by_leg.items() if state == "incomplete"]
 
     return {
-        "schema": "athena.check/1",
-        "passed": not failed,
+        "schema": "athena.check/2",
+        "passed": not failed and not incomplete,
         "legs": by_leg,
+        "incomplete": incomplete,
         "failed": [s["step"] for s in failed],
         "advisory": [s["step"] for s in advisory],
-        "first_cause": failed[0]["step"] if failed else "",
+        "first_cause": failed[0]["step"] if failed else
+                       (f"{incomplete[0]}: no evidence" if incomplete else ""),
         "steps": steps,
     }
 
@@ -116,9 +141,12 @@ def render(report: dict) -> str:
     lines = []
     for leg in LEGS:
         rows = [s for s in report["steps"] if s["leg"] == leg]
+        leg_state = report["legs"].get(leg, True)
         if not rows:
+            if leg_state == "incomplete":
+                lines.append(f"[????] {leg}   nothing ran — no evidence either way")
             continue
-        state = "ok" if report["legs"].get(leg, True) else "FAIL"
+        state = {True: "ok", False: "FAIL", "incomplete": "????"}[leg_state]
         lines.append(f"[{state}] {leg}")
         for s in rows:
             tag = mark[s["ok"]] if s["blocking"] else ("ok  " if s["ok"] else "warn")
@@ -126,7 +154,9 @@ def render(report: dict) -> str:
                                if v not in (None, [], {}, 0))
             lines.append(f"   {tag} {s['step']:22} {detail[:96]}")
     lines.append("")
-    lines.append(f"verdict: {'PASS' if report['passed'] else 'FAIL'}"
+    verdict = "PASS" if report["passed"] else (
+        "INCOMPLETE" if report.get("incomplete") and not report["failed"] else "FAIL")
+    lines.append(f"verdict: {verdict}"
                  + (f"  first cause: {report['first_cause']}" if report["first_cause"] else "")
                  + (f"  advisory: {', '.join(report['advisory'])}" if report["advisory"] else ""))
     return "\n".join(lines)

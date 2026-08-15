@@ -669,12 +669,12 @@
 
 ## C-8 — proved by the reverse leg (lib/coverage_backed.py)
 
-### S8.1 — is test classifier
+### S8.1 — coverage paths resolve across source roots
 - **verifies:** C-8.1
 - **pins:** b51964d1f823cbf0
-- **run_cmd:** `python -m pytest tests/test_coverage_backed.py::test_is_test_classifier -q`
+- **run_cmd:** `python -m pytest tests/test_coverage_backed.py::test_coverage_paths_resolve_across_source_roots -q`
 - **Given** the reverse leg (lib/coverage_backed.py)
-- **When** the spec `test_is_test_classifier` is executed
+- **When** the spec `test_coverage_paths_resolve_across_source_roots` is executed
 - **Then** cobertura strips the <source> root off every filename, so a plan that says `lib/contract.py` must still find `contract.py` — otherwise every edge reads as fake.
 
 ### S8.2 — reverse leg separates in scope gaps from unclaimed code
@@ -1017,13 +1017,13 @@
 - **When** the spec `test_the_first_cause_is_the_most_upstream_failure_not_the_loudest` is executed
 - **Then** a broken contract makes every downstream report meaningless, so it is reported as the cause instead of the ten consequences it produces.
 
-### S11.3 — a step that did not run is skipped never passed
+### S11.3 — a leg with no evidence is incomplete never green
 - **verifies:** C-11.3
 - **pins:** cfc5a713e63441bf
-- **run_cmd:** `python -m pytest tests/test_check.py::test_a_step_that_did_not_run_is_skipped_never_passed -q`
+- **run_cmd:** `python -m pytest tests/test_check.py::test_a_leg_with_no_evidence_is_incomplete_never_green -q`
 - **Given** the one-command loop (lib/check.py)
-- **When** the spec `test_a_step_that_did_not_run_is_skipped_never_passed` is executed
-- **Then** silence must not read as proof: an absent report is absent, not green.
+- **When** the spec `test_a_leg_with_no_evidence_is_incomplete_never_green` is executed
+- **Then** silence must not read as proof. The first cut computed `all()` over an EMPTY list of steps, so a leg that never ran was True and a run with a mis-typed --map printed `verdict: PASS` having checked nothing. An audit reproduced exactly that.
 
 ### S11.4 — wording and mutation are advisory until asked to block
 - **verifies:** C-11.4
@@ -1096,3 +1096,75 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor` is executed
 - **Then** a line owned by 129 clauses cannot be swept inside a CI budget, and calling the leftover "survived" manufactures a vacuity claim nobody checked. Three outcomes.
+
+### S11.13 — a named but absent input fails instead of vanishing
+- **verifies:** C-11.13
+- **pins:** 505682789ef8d4b6
+- **run_cmd:** `python -m pytest tests/test_check.py::test_a_named_but_absent_input_fails_instead_of_vanishing -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_a_named_but_absent_input_fails_instead_of_vanishing` is executed
+- **Then** a path the user typed and the tool cannot find is a mistake, not a choice; it used to make its whole step disappear and the verdict read PASS.
+
+### S11.14 — every mutation outcome reaches the report
+- **verifies:** C-11.14
+- **pins:** f962bbd9048182f3
+- **run_cmd:** `python -m pytest tests/test_check.py::test_every_mutation_outcome_reaches_the_report -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_every_mutation_outcome_reaches_the_report` is executed
+- **Then** the detail whitelist dropped `undetermined`, so a run of 20 mutants where NONE was decided rendered as a clean "ok mutation" row. All four states are shown.
+
+### S11.15 — a line no spec owns is unowned not survived
+- **verifies:** C-11.15
+- **pins:** 3b0c44f5875fb36d
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_line_no_spec_owns_is_unowned_not_survived -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_line_no_spec_owns_is_unowned_not_survived` is executed
+- **Then** with no owner there is no witness, so nothing was asked to notice the break. `0 >= 0` used to class that as a survivor: a vacuity claim nobody tested.
+
+### S11.16 — a spec that is already red cannot be a witness
+- **verifies:** C-11.16
+- **pins:** 88ab6eff4273f022
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_spec_that_is_already_red_cannot_be_a_witness -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_spec_that_is_already_red_cannot_be_a_witness` is executed
+- **Then** hunt reads any non-zero exit as "the spec noticed". Without a baseline that includes a spec which was failing before anything was mutated, or a collection error.
+
+### S11.17 — the mirror refuses to delete anything that is not its own
+- **verifies:** C-11.17
+- **pins:** 7d04d175efa243c2
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_mirror_refuses_to_delete_anything_that_is_not_its_own -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_mirror_refuses_to_delete_anything_that_is_not_its_own` is executed
+- **Then** `isolate` is rm -rf pointed at a user path. An audit ran `mutate --mirror vendor` and it DELETED the vendor directory, reporting success.
+
+### S11.18 — default paths are resolved next to the contract
+- **verifies:** C-11.18
+- **pins:** 6bb6d047be8eebbd
+- **run_cmd:** `python -m pytest tests/test_check.py::test_default_paths_are_resolved_next_to_the_contract -q`
+- **Given** the one-command loop (lib/check.py)
+- **When** the spec `test_default_paths_are_resolved_next_to_the_contract` is executed
+- **Then** an audit checked a scaffolded project from inside this repo and the reverse leg judged it against THIS repo's clause map. A gate answering about the wrong codebase is worse than one that does not run.
+
+### S11.19 — every spec resolves to a test that names the same clause
+- **verifies:** C-11.19
+- **pins:** a03587e191babc34
+- **run_cmd:** `python -m pytest tests/test_binding_guard.py::test_every_spec_resolves_to_a_test_that_names_the_same_clause -q`
+- **Given** the clause<->spec binding guard
+- **When** the spec `test_every_spec_resolves_to_a_test_that_names_the_same_clause` is executed
+- **Then** a binding nobody checks is how a clause gets reported as proved by a test that never mentions it.
+
+### S11.20 — the guard would notice a mis binding
+- **verifies:** C-11.20
+- **pins:** f93488578608a0a2
+- **run_cmd:** `python -m pytest tests/test_binding_guard.py::test_the_guard_would_notice_a_mis_binding -q`
+- **Given** the clause<->spec binding guard
+- **When** the spec `test_the_guard_would_notice_a_mis_binding` is executed
+- **Then** a guard that cannot fail proves nothing; this is its negative control.
+
+### S11.21 — the scaffold ships the test its spec points at
+- **verifies:** C-11.21
+- **pins:** 13d7eef8e97f5eab
+- **run_cmd:** `python -m pytest tests/test_scaffold.py::test_the_scaffold_ships_the_test_its_spec_points_at -q`
+- **Given** the scaffold (lib/scaffold.py)
+- **When** the spec `test_the_scaffold_ships_the_test_its_spec_points_at` is executed
+- **Then** an audit ran the quick start on a clean directory and the first `check` failed: the spec named tests/test_example.py, a path `init` never created.

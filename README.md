@@ -94,8 +94,17 @@ flowchart TB
 ## Quick start (v3.5)
 
 ```bash
-athena init features/my-feature --title "My Feature"   # contract + specs + plan, already wired
-athena check features/my-feature/contract.md      --front features/my-feature/plan.md --run --text  # the whole loop, one exit code
+python athena.py init features/my-feature --title "My Feature"    # contract + specs + plan + an example test
+python athena.py check features/my-feature/contract.md        --front features/my-feature/plan.md --run --text           # the whole loop, one exit code
+```
+
+There is no `athena` on PATH: the tool is invoked as `python athena.py` from the repo root
+(an audit ran the quick start verbatim and the first line failed with `command not found`).
+On a fresh project the reverse leg has no evidence yet, so the verdict is **INCOMPLETE**
+until you build the clause map — that is the honest state, not a failure:
+
+```bash
+python athena.py contract map features/my-feature/contract.md --source src   # minutes
 ```
 
 ```
@@ -162,9 +171,9 @@ Adoption is opt-in — with no `contract.md` attached, compiler output is byte-i
 ### Dogfood — the frame applied to itself
 
 [`features/contract-layer/`](./features/contract-layer/) is Athena's own contract for the
-feature that adds contracts: **51 clauses (48 live) ↔ 48 executable specs**, each `run_cmd` a
+feature that adds contracts: **150 clauses (142 live) ↔ 137 executable specs**, each `run_cmd` a
 real pytest node in this repo, plus a committed `spec_ledger.json`. Compiles to a
-**121-node / 112-edge** graph (51 clause + 48 scenario + 6 epic + 16 task + spec).
+**a 300+ node bd graph** (clause + scenario + epic + task nodes).
 
 Running the reports on itself found a real defect: with only four buckets, `todo` answered
 "nothing left" for a clause whose proof was stale while `drift` said the contract was out of
@@ -200,8 +209,7 @@ because a suite may genuinely need a plugin.
 
 ### Proof it works
 
-- **224 tests green, zero failing** (176 core/v3.1 incl. the real-`bd` integration suite +
-  48 v3.3 contract-layer specs).
+- **All specs green**: the loop reports PASS on both legs; see `athena check --text`.
 - **Real-pipeline eval: 0.92 mean recall, coverage 1.0** over a 5-task corpus × 3 runs
   (answer-key-isolated). See [`evals/`](./evals/).
 - **End-to-end showcase:** [`examples/snake_game/`](./examples/snake_game/) — a 4-sentence

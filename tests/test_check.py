@@ -6,6 +6,8 @@ without running a single spec.
 """
 from __future__ import annotations
 
+import pathlib
+
 from lib.check import LEGS, build, render
 
 GREEN = dict(
@@ -42,14 +44,32 @@ def test_the_first_cause_is_the_most_upstream_failure_not_the_loudest():
     assert rep["failed"][0] == "contract.lint"
 
 
-def test_a_step_that_did_not_run_is_skipped_never_passed():
-    """C-11.3 — silence must not read as proof: an absent report is absent, not green."""
+def test_a_leg_with_no_evidence_is_incomplete_never_green():
+    """C-11.3 — silence must not read as proof. The first cut computed `all()` over an EMPTY
+    list of steps, so a leg that never ran was True and a run with a mis-typed --map printed
+    `verdict: PASS` having checked nothing. An audit reproduced exactly that."""
     rep = build(lint_issues=(), critique_warnings=())
     names = [s["step"] for s in rep["steps"]]
     assert "spec.run" not in names and "drift" not in names
-    assert rep["passed"], "nothing ran and nothing failed — but nothing is claimed either"
-    assert rep["legs"]["specs_to_code"] is True and not any(
-        s["leg"] == "specs_to_code" for s in rep["steps"])
+    assert not rep["passed"], "nothing ran, so nothing is proved"
+    assert rep["legs"]["specs_to_code"] == "incomplete"
+    assert rep["legs"]["code_to_specs"] == "incomplete"
+    assert rep["incomplete"] == ["specs_to_code", "code_to_specs"]
+    assert "no evidence" in rep["first_cause"]
+    assert "INCOMPLETE" in render(rep)
+
+    # a fast lane that KNOWINGLY skips a leg says so explicitly
+    partial = build(lint_issues=(), critique_warnings=(), allow_partial=True)
+    assert partial["passed"] and partial["incomplete"] == []
+
+
+def test_a_named_but_absent_input_fails_instead_of_vanishing():
+    """C-11.13 — a path the user typed and the tool cannot find is a mistake, not a choice;
+    it used to make its whole step disappear and the verdict read PASS."""
+    rep = build(**dict(GREEN, missing_inputs=(".athena/NO_SUCH_MAP.json",)))
+    assert not rep["passed"] and rep["first_cause"] == "input.missing"
+    step = next(s for s in rep["steps"] if s["step"] == "input.missing")
+    assert step["detail"]["path"] == ".athena/NO_SUCH_MAP.json" and step["blocking"]
 
 
 def test_wording_and_mutation_are_advisory_until_asked_to_block():
@@ -62,6 +82,7 @@ def test_wording_and_mutation_are_advisory_until_asked_to_block():
     assert not strict["passed"] and "contract.wording" in strict["failed"]
 
     mut = build(**dict(GREEN, mutation={"mutants": 4, "killed": 3, "survived": 1,
+                                        "undetermined": 0, "unowned": 0,
                                         "survivors": [{"path": "lib/a.py", "line": 7}]}))
     assert mut["passed"] and "mutation" in mut["advisory"]
     mut_strict = build(**dict(GREEN, mutation={"mutants": 4, "killed": 3, "survived": 1,
@@ -114,3 +135,31 @@ def test_a_clean_map_means_the_deep_lane_has_nothing_to_do():
                                           "survivors": [{"path": "lib/a.py", "line": 3}]}))
     assert "mutation" in swept["advisory"]
     assert swept["steps"][-1]["detail"]["survivors"] == ["lib/a.py:3"]
+
+
+def test_every_mutation_outcome_reaches_the_report():
+    """C-11.14 — the detail whitelist dropped `undetermined`, so a run of 20 mutants where
+    NONE was decided rendered as a clean "ok mutation" row. All four states are shown."""
+    rep = build(**dict(GREEN, mutation={"mutants": 20, "killed": 0, "survived": 0,
+                                        "undetermined": 18, "unowned": 2, "survivors": [],
+                                        "note": "budget exhausted"}))
+    detail = next(s for s in rep["steps"] if s["step"] == "mutation")["detail"]
+    assert detail["undetermined"] == 18 and detail["unowned"] == 2
+    assert detail["note"] == "budget exhausted"
+    assert "undetermined=18" in render(rep)
+
+
+def test_default_paths_are_resolved_next_to_the_contract(tmp_path):
+    """C-11.18 — an audit checked a scaffolded project from inside this repo and the reverse
+    leg judged it against THIS repo's clause map. A gate answering about the wrong codebase
+    is worse than one that does not run."""
+    import athena
+
+    (tmp_path / ".athena").mkdir()
+    (tmp_path / ".athena" / "clause_map.json").write_text("{}", encoding="utf-8")
+    ns = type("NS", (), {"contract": str(tmp_path / "contract.md"), "ledger": None, "map": None})
+    here = pathlib.Path(ns.contract).resolve().parent
+    assert here == tmp_path.resolve()
+    guessed = str(here / ".athena" / "clause_map.json")
+    assert guessed.startswith(str(tmp_path.resolve()))
+    assert not guessed.startswith(str(pathlib.Path(athena.__file__).resolve().parent))

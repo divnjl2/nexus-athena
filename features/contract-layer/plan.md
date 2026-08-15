@@ -34,7 +34,7 @@ over it, which is why every task's success_check is an already-green pytest node
   - files: `lib/contract.py`
   - verifies: S1.5, S1.7
 ### Manual Verification
-- `python athena.py contract lint features/contract-layer/contract.md` reports 49 clauses, 0 issues.
+- `python athena.py contract lint features/contract-layer/contract.md` reports the current clause count with 0 issues.
 
 ## Phase 2: Per-clause pins
 **Goal:** A requirement's version is its own, so drift is detectable per clause instead of per file.
@@ -57,7 +57,7 @@ over it, which is why every task's success_check is an already-green pytest node
 - [ ] T3.1 Run specs concurrently shell-less, preserve document order, keep hung/unrunnable/refused specs red
   - success_check: `python -m pytest tests/test_spec_runner.py -q`
   - files: `lib/spec_runner.py, tests/test_spec_runner.py`
-  - verifies: S3.1, S3.2, S3.3, S3.7, S3.8, S3.10
+  - verifies: S3.1, S3.2, S3.3, S3.7, S3.8
   - autonomy: high
 - [ ] T3.2 Serialize the ledger with version pins, totals and safe degradation
   - success_check: `python -m pytest tests/test_spec_runner.py -q -k ledger`
@@ -66,7 +66,7 @@ over it, which is why every task's success_check is an already-green pytest node
 - [ ] T3.3 Size the pool from the machine, allow env pinning, and split lanes by clause tag
   - success_check: `python -m pytest tests/test_spec_runner.py -q -k "worker_pool or tag"`
   - files: `lib/spec_runner.py, athena.py`
-  - verifies: S3.11, S3.12
+  - verifies: S3.12
 
 ## Phase 4: The three questions
 **Goal:** coverage / todo / drift answer in a linear pass over (contract x scenarios x ledger).
@@ -75,12 +75,12 @@ over it, which is why every task's success_check is an already-green pytest node
 - [ ] T4.1 Implement coverage: uncovered, orphan, redirected, draft-exempt
   - success_check: `python -m pytest tests/test_contract_report.py -q -k "uncovered or orphan or redirected or draft"`
   - files: `lib/contract_report.py, tests/test_contract_report.py`
-  - verifies: S4.1, S4.2, S4.3, S4.4
+  - verifies: S4.1, S4.2, S4.4
   - autonomy: high
 - [ ] T4.2 Implement todo bucketing (incl. the stale-proof bucket) with actionable payloads
   - success_check: `python -m pytest tests/test_contract_report.py -q -k todo`
   - files: `lib/contract_report.py`
-  - verifies: S4.6, S4.12, S4.13
+  - verifies: S4.6, S4.12
 - [ ] T4.3 Implement drift: spec_drift, stale_proof, missing/extra, unpinned advisory
   - success_check: `python -m pytest tests/test_contract_report.py -q -k "drift or unpinned"`
   - files: `lib/contract_report.py`
@@ -159,8 +159,8 @@ over it, which is why every task's success_check is an already-green pytest node
   - files: `lib/clause_map.py, lib/seams.py, athena.py`
   - verifies: S9.15, S9.16, S9.17
 ### Manual Verification
-- `python athena.py contract map features/contract-layer/contract.md` maps every live clause.
-- `python athena.py contract owners lib/seams.py:214 --map .athena/clause_map.json` names C-5.8.
+- `python athena.py contract map features/contract-layer/contract.md --source lib -o features/contract-layer/clause_map.json --incremental` maps every live clause.
+- `python athena.py contract owners lib/seams.py:<a line inside seam_contract_bound> --map features/contract-layer/clause_map.json` names the gate's clauses.
 
 ## Phase 9: Does a spec prove anything
 **Goal:** kill the `assert True` class deterministically; make a judge measurable before it is trusted.
@@ -180,7 +180,7 @@ over it, which is why every task's success_check is an already-green pytest node
   - files: `lib/judge.py`
   - verifies: S10.7, S10.8, S10.9, S10.10, S10.11, S10.12
 ### Manual Verification
-- `python athena.py judge corpus` builds 98 proving pairs and 392 mechanical degradations.
+- `python athena.py judge corpus` builds one proving pair per live clause plus four mechanical degradations of each.
 - `python athena.py judge eval` prints gate_eligible and changes no gate.
 
 ## Phase 10: The product surface
@@ -196,6 +196,11 @@ over it, which is why every task's success_check is an already-green pytest node
   - success_check: `python -m pytest tests/test_scaffold.py -q`
   - files: `lib/scaffold.py, athena.py, tests/test_scaffold.py`
   - verifies: S11.8, S11.9, S11.10
+- [ ] T10.3 Guard every clause->spec binding against the node that claims to prove it
+  - success_check: `python -m pytest tests/test_binding_guard.py -q`
+  - files: `tests/test_binding_guard.py`
+  - verifies: S11.19, S11.20
 ### Manual Verification
-- `athena init <dir>` then `athena check <dir>/contract.md --front <dir>/plan.md --text` is green.
+- `athena init <dir>` then `athena check <dir>/contract.md --front <dir>/plan.md --run --text`
+  reports PASS on the forward leg and INCOMPLETE on the reverse until `contract map` is run.
 - `ci/athena-check.yml` runs the fast lane on push and the deep lane nightly.

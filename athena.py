@@ -506,13 +506,27 @@ def cmd_judge_eval(a) -> int:
     return 0 if rep["passes"] else 1
 
 
+def _parse_front_auto(front: str, speckit_arg: str):
+    """Read plan.md OR tasks.md without making the user know which parser to ask for.
+
+    `init` scaffolds a canonical plan.md while the toggle defaults to Spec-Kit, so the two
+    quick-start lines contradicted each other and the second one failed. Auto-detect: try the
+    toggle, fall back to the other front on a parse error.
+    """
+    try:
+        return parse_with_provenance(front, speckit=_speckit(speckit_arg))
+    except ParseError:
+        return parse_with_provenance(front, speckit=not (_speckit(speckit_arg) is not False))
+
+
 def cmd_init(a) -> int:
     """Scaffold a feature already wired clause -> spec -> task, so the first check PASSES."""
     from lib.scaffold import next_steps, render_files
     dest = pathlib.Path(a.path)
     dest.mkdir(parents=True, exist_ok=True)
     files = render_files(title=a.title or dest.name.replace("-", " ").title(),
-                         run_cmd=a.run_cmd, files=a.files)
+                         run_cmd=a.run_cmd, files=a.files,
+                         dir_hint=str(dest).replace("\\", "/"))
     written = []
     for name, text in sorted(files.items()):
         target = dest / name
@@ -542,7 +556,21 @@ def cmd_check(a) -> int:
     scen_path = a.scenarios or _sibling(a.contract, "scenarios.md")
     scenarios = _load_scenarios(a, anchor=a.contract)
 
-    ledger = load_ledger(a.ledger) if a.ledger else {}
+    # A path the user NAMED but that is absent is an error; a path the tool GUESSED and did
+    # not find simply means that step cannot run. An audit showed --map with a typo printing
+    # "verdict: PASS" having checked nothing, so the two cases are now distinguished here.
+    named = [p for p in ((a.ledger if not a.run else None), a.map, a.judge or None,
+                         a.front or None) if p]
+    missing = [p for p in named if not pathlib.Path(p).exists()]
+    # Guessed defaults live NEXT TO THE CONTRACT, not in the current directory. An audit ran
+    # `check` on a scaffolded project from inside this repo and the reverse leg silently
+    # judged it against THIS repo's .athena/clause_map.json — a gate answering about the
+    # wrong codebase is worse than one that does not run.
+    here = pathlib.Path(a.contract).resolve().parent
+    ledger_path = a.ledger or str(here / ".athena" / "spec_ledger.json")
+    map_path = a.map or str(here / ".athena" / "clause_map.json")
+
+    ledger = load_ledger(ledger_path) if pathlib.Path(ledger_path).exists() else {}
     if a.run:
         picked = select(scenarios, contract=contract, skip_tags=tuple(a.skip_tag))
         env = dict(kv.split("=", 1) for kv in a.env if "=" in kv) or None
@@ -551,18 +579,24 @@ def cmd_check(a) -> int:
                              scenario_version=hash_text(_read(scen_path)),
                              ts=datetime.datetime.now(datetime.timezone.utc)
                              .isoformat(timespec="seconds"))
-        if a.ledger:
-            write_ledger(ledger, a.ledger)
+        write_ledger(ledger, ledger_path)
 
     gates = {}
-    if a.front:
-        plan = parse_with_provenance(a.front, speckit=_speckit(a.speckit))
+    if a.front and pathlib.Path(a.front).exists():
+        plan = _parse_front_auto(a.front, a.speckit)
         if plan.contract is not None:
             r = seams.seam_contract_bound(plan.contract, plan.scenarios)
             gates["contract_bound"] = {"passed": r.passed, "issues": list(r.issues)}
-            if a.map and pathlib.Path(a.map).exists():
+            # compile is part of the loop: a front that names a retired spec raises here,
+            # and before this step `check` reported PASS while `compile` was broken.
+            try:
+                compile(plan)
+                gates["compile"] = {"passed": True, "issues": []}
+            except CompileError as e:
+                gates["compile"] = {"passed": False, "issues": [str(e)]}
+            if pathlib.Path(map_path).exists():
                 from lib.clause_map import digests
-                cmap = json.loads(_read(a.map))
+                cmap = json.loads(_read(map_path))
                 scen = pathlib.Path(a.front).parent / "scenarios.md"
                 mr = seams.seam_map_fresh(
                     cmap, plan.contract, plan.scenarios,
@@ -572,7 +606,7 @@ def cmd_check(a) -> int:
                 gates["map_fresh"] = {"passed": mr.passed, "issues": list(mr.issues)}
 
     mutation = None
-    if a.deep and a.map and pathlib.Path(a.map).exists():
+    if a.deep and pathlib.Path(map_path).exists():
         mutation = _deep_mutation(a, contract, scenarios)
 
     judge = None
@@ -583,7 +617,8 @@ def cmd_check(a) -> int:
         judge = score(tuple(Pair(**p) for p in payload["pairs"]),
                       decisions.get("decisions", decisions))
 
-    report = build(lint_issues=lint(contract), critique_warnings=critique(contract),
+    report = build(missing_inputs=tuple(missing), allow_partial=a.allow_partial,
+                   lint_issues=lint(contract), critique_warnings=critique(contract),
                    coverage=cov_report(contract, scenarios),
                    ledger_totals=ledger.get("totals") if ledger else None,
                    todo=todo_report(contract, scenarios, ledger),
@@ -600,7 +635,7 @@ def _deep_mutation(a, contract, scenarios) -> dict:
     from lib.clause_map import digests, stale_clauses
     from lib.mutation import hunt, isolate, summarize
 
-    cmap = json.loads(_read(a.map))
+    cmap = json.loads(_read(a.map or ".athena/clause_map.json"))
     drifted = set(stale_clauses(cmap, digests(cmap, _sources_of(cmap))))
     if not drifted:
         # Nothing moved, so there is nothing new to re-prove. Falling back to a full sweep
@@ -734,9 +769,10 @@ def build_parser() -> argparse.ArgumentParser:
     ini = sub.add_parser("init", help="scaffold contract/scenarios/plan for a new feature")
     ini.add_argument("path")
     ini.add_argument("--title", default="")
-    ini.add_argument("--run-cmd", dest="run_cmd",
-                     default="pytest tests/test_example.py::test_it -q")
-    ini.add_argument("--files", default="src/example.py, tests/test_example.py")
+    ini.add_argument("--run-cmd", dest="run_cmd", default="",
+                     help="the command that proves the first clause (default: the example "
+                          "test the scaffold writes next to it)")
+    ini.add_argument("--files", default="")
     ini.add_argument("--force", action="store_true", help="overwrite existing files")
     ini.set_defaults(fn=cmd_init)
 
@@ -744,8 +780,11 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("contract", nargs="?", default="contract.md")
     ck.add_argument("--scenarios", default="")
     ck.add_argument("--front", default="", help="plan.md, to also run the fail-closed gates")
-    ck.add_argument("--ledger", default=".athena/spec_ledger.json")
-    ck.add_argument("--map", default=".athena/clause_map.json")
+    # default=None distinguishes "the user named this path" from "the tool guessed one".
+    # A NAMED path that is absent is an error; a guessed one that is absent simply means the
+    # step cannot run, and the leg is reported INCOMPLETE rather than green.
+    ck.add_argument("--ledger", default=None)
+    ck.add_argument("--map", default=None)
     ck.add_argument("--run", action="store_true", help="run the specs now instead of reading a ledger")
     ck.add_argument("--deep", action="store_true", help="also mutate the drifted clauses")
     ck.add_argument("--deep-all", dest="deep_all", action="store_true",
@@ -765,6 +804,8 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--mirror", default="")
     ck.add_argument("--cwd", default=".")
     ck.add_argument("--text", action="store_true")
+    ck.add_argument("--allow-partial", dest="allow_partial", action="store_true",
+                    help="accept a run where a whole leg produced no evidence (fast lane)")
     ck.set_defaults(fn=cmd_check)
 
     mu = sub.add_parser("mutate", help="break the lines a clause owns; do its specs notice?")

@@ -15,7 +15,9 @@ def test_a_scaffolded_feature_is_already_wired_clause_to_spec_to_task():
     """C-11.8 — the three files reference each other on creation; a scaffold whose parts do
     not connect teaches the user the tool is broken, not that their contract is empty."""
     files = render_files(title="Payment Retry", run_cmd="pytest tests/test_retry.py::test_x -q")
-    assert set(files) == {"contract.md", "scenarios.md", "plan.md"}
+    # four files: the example TEST ships too, because the scaffold's promise is that the
+    # first check passes and a spec pointing at a file init never wrote cannot deliver that
+    assert set(files) == {"contract.md", "scenarios.md", "plan.md", "test_example.py"}
 
     contract = parse(files["contract.md"])
     scenarios = parse_scenarios(files["scenarios.md"])
@@ -26,6 +28,21 @@ def test_a_scaffolded_feature_is_already_wired_clause_to_spec_to_task():
     assert plan.phases[0].tasks[0].verifies == ("S1.1",), "the task names the spec"
     assert scenarios[0].run_cmd == "pytest tests/test_retry.py::test_x -q"
     assert plan.phases[0].tasks[0].success_check == scenarios[0].run_cmd
+
+
+def test_the_scaffold_ships_the_test_its_spec_points_at():
+    """C-11.21 — an audit ran the quick start on a clean directory and the first `check`
+    failed: the spec named tests/test_example.py, a path `init` never created."""
+    files = render_files(title="Demo", dir_hint="features/demo")
+    assert "test_example.py" in files
+    # the BULLET, not the prose in the header that also says "run_cmd" (a selector this
+    # loose is the same sloppiness the audit caught elsewhere)
+    run_cmd = next(ln for ln in files["scenarios.md"].splitlines()
+                   if ln.startswith("- **run_cmd:**"))
+    assert "features/demo/test_example.py" in run_cmd, "the spec points at the file it ships"
+    assert "test_the_system_reports_its_version" in files["test_example.py"]
+    # and the shipped test is a real assertion, not a placeholder that proves nothing
+    assert "assert version() ==" in files["test_example.py"]
 
 
 def test_a_fresh_scaffold_passes_the_gates_it_will_be_judged_by():

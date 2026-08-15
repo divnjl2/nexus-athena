@@ -140,18 +140,29 @@ def summarize(results: tuple[dict, ...]) -> dict:
     A mutant whose spec budget ran out is NOT a survivor: it is undetermined, counted apart,
     and it never claims that anything failed to prove anything.
     """
-    survivors = [r for r in results if r.get("status", "survived" if not r["killed"]
-                                             else "killed") == "survived"]
-    undetermined = [r for r in results if r.get("status") == "undetermined"]
-    decided = len(results) - len(undetermined)
+    def status_of(r):
+        return r.get("status", "killed" if r["killed"] else "survived")
+
+    survivors = [r for r in results if status_of(r) == "survived"]
+    undetermined = [r for r in results if status_of(r) == "undetermined"]
+    unowned = [r for r in results if status_of(r) == "unowned"]
+    decided = len(results) - len(undetermined) - len(unowned)
     return {
         "mutants": len(results),
         "killed": sum(1 for r in results if r["killed"]),
         "survived": len(survivors),
         "undetermined": len(undetermined),
+        "unowned": len(unowned),
         "score": round(sum(1 for r in results if r["killed"]) / decided, 4) if decided else 1.0,
         "survivors": survivors,
     }
+
+
+MIRROR_MARKER = ".athena-mirror"
+
+
+class UnsafeMirror(RuntimeError):
+    """The mirror path is not something this harness is allowed to delete."""
 
 
 def isolate(repo: str, mirror: str, *, skip: frozenset = frozenset(_SKIP_DIRS)) -> str:
@@ -159,11 +170,25 @@ def isolate(repo: str, mirror: str, *, skip: frozenset = frozenset(_SKIP_DIRS)) 
 
     This is the answer to a harness that was killed twice mid-mutation. A copy costs a
     second; a mutant left in `lib/` costs trust in every green run after it.
+
+    It is also `rm -rf` pointed at a user-supplied path, and an audit demonstrated the
+    consequence: `--mirror vendor` silently DELETED the vendor directory of the repo under
+    test and reported success. So a destination is now refused unless it is empty, absent,
+    or a previous mirror of ours (it carries `.athena-mirror`), and never inside the repo.
     """
-    src, dst = pathlib.Path(repo).resolve(), pathlib.Path(mirror)
+    src, dst = pathlib.Path(repo).resolve(), pathlib.Path(mirror).resolve()
+    if dst == src or src in dst.parents:
+        raise UnsafeMirror(f"refusing to mirror into the repo itself: {dst}")
     if dst.exists():
+        if not dst.is_dir():
+            raise UnsafeMirror(f"refusing to overwrite a file: {dst}")
+        if any(dst.iterdir()) and not (dst / MIRROR_MARKER).exists():
+            raise UnsafeMirror(
+                f"refusing to delete non-empty {dst}: it is not a previous athena mirror "
+                f"(no {MIRROR_MARKER}). Point --mirror at a scratch directory.")
         shutil.rmtree(dst, ignore_errors=True)
     shutil.copytree(src, dst, ignore=shutil.ignore_patterns(*skip), dirs_exist_ok=False)
+    (dst / MIRROR_MARKER).write_text("written by lib/mutation.isolate\n", encoding="utf-8")
     return str(dst)
 
 
@@ -202,9 +227,20 @@ def recover(*, lock_path: str = LOCK, writer=None) -> tuple[str, ...]:
     return tuple(restored)
 
 
+def baseline(spec_cmds: dict, cmds, *, runner) -> tuple[str, ...]:
+    """EFFECTFUL: which of these specs are RED before anything is mutated.
+
+    Without this, `hunt` reads any non-zero exit as "the spec noticed" — including a spec
+    that was already failing, or a collection error, or a missing dependency. An audit
+    proved the consequence: a mutant was reported killed by a spec that never passed in the
+    first place. A spec that is red on clean source cannot be a witness.
+    """
+    return tuple(cmd for cmd in dict.fromkeys(cmds) if runner(cmd) != 0)
+
+
 def hunt(clause_map: dict, spec_cmds: dict, targets: dict, *, runner, writer,
          limit_per_line: int = 1, max_mutants: int = 0,
-         max_specs: int = 0) -> tuple[dict, ...]:
+         max_specs: int = 0, exclude: tuple[str, ...] = ()) -> tuple[dict, ...]:
     """EFFECTFUL: build mutants, run each against its owners' specs, stop at first killer.
 
     `runner(cmd) -> int` and `writer(path, text) -> None` are injected, so the caller decides
@@ -220,7 +256,16 @@ def hunt(clause_map: dict, spec_cmds: dict, targets: dict, *, runner, writer,
             if per_line.get(mut.line, 0) >= limit_per_line:
                 continue
             per_line[mut.line] = per_line.get(mut.line, 0) + 1
-            cmds = scoped_specs(clause_map, spec_cmds, path, mut.line)
+            cmds = tuple(c for c in scoped_specs(clause_map, spec_cmds, path, mut.line)
+                         if c not in exclude)
+            if not cmds:
+                # No spec owns this line, so nothing was asked to notice the break. Calling
+                # that "survived" asserts a vacuity nobody tested — an audit caught exactly
+                # this: `0 >= 0` classed a never-run mutant as a survivor.
+                results.append({"path": path, "line": mut.line, "kind": mut.kind,
+                                "specs_run": 0, "specs_total": 0, "status": "unowned",
+                                "killed": False, "killer": ""})
+                continue
             budget = cmds[:max_specs] if max_specs else cmds
             killed, killer, ran = False, "", 0
             try:
