@@ -300,3 +300,25 @@ def test_mutation_runs_in_a_mirror_and_never_touches_the_working_tree(tmp_path):
     assert not (mirror / "lib" / "stale.py").exists()
 
 
+
+
+def test_the_prompt_template_is_pinned_so_changing_it_is_visible():
+    """C-10.19 — the first pin hashed the system prompt twice and the user template never,
+    so swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record
+    byte-identical. A pin that cannot see the change it exists to record is decoration."""
+    from lib.judge import prompt_for, template_fingerprint
+
+    v1, v2 = template_fingerprint("v1"), template_fingerprint("v2")
+    assert v1 != v2 and len(v1) == 16
+    assert template_fingerprint("v2") == v2, "the fingerprint is deterministic"
+
+    # the fingerprint describes the TEMPLATE, not whichever pair happened to be first
+    other = Pair(id="x", clause_id="C-9.9", clause_text="WHEN idle THE SYSTEM SHALL nap.",
+                 spec_id="S9.9", spec_source="def test_y():\n    assert nap()\n",
+                 label="proves")
+    assert prompt_for(other, variant="v2")[1] != prompt_for(GOOD, variant="v2")[1]
+    assert template_fingerprint("v2") == v2
+
+    # v1 asks for a boolean, v2 for a categorical verdict — both stay addressable
+    assert "refuted" in prompt_for(GOOD, variant="v1")[1]
+    assert "vacuous" in prompt_for(GOOD, variant="v2")[1]

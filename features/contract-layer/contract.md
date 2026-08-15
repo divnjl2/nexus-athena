@@ -331,5 +331,9 @@
   managed to run.
 - **C-10.18** — WHEN mutants are run THE SYSTEM SHALL execute them in a mirror of the
   repository, leaving the working tree untouched.
+- **C-10.19** — WHEN a judge prompt template changes THE SYSTEM SHALL produce a different
+  pin for it.
+  - note: the first pin hashed the system prompt twice and the user template never, so
+    swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record identical.
   - note: `finally` lost twice to a timeout. Isolation is the fix that does not depend on
     the dying process cooperating.

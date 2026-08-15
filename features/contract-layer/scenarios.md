@@ -972,3 +972,11 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_mutation_runs_in_a_mirror_and_never_touches_the_working_tree` is executed
 - **Then** two runs were killed mid-mutation and left a mutant in lib/ despite `finally`. The harness now mirrors the repo and mutates the copy: the worst a kill can leave behind is a temp folder.
+
+### S10.19 — the prompt template is pinned so changing it is visible
+- **verifies:** C-10.19
+- **pins:** 4f3000f976a5c14a
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_prompt_template_is_pinned_so_changing_it_is_visible -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_prompt_template_is_pinned_so_changing_it_is_visible` is executed
+- **Then** the first pin hashed the system prompt twice and the user template never, so swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record byte-identical. A pin that cannot see the change it exists to record is decoration.
