@@ -824,3 +824,151 @@
 - **Given** the per-clause line map (lib/clause_map.py)
 - **When** the spec `test_an_incremental_rebuild_keeps_the_clauses_that_still_hold` is executed
 - **Then** re-deriving one clause must cost one spec run, not the whole suite; the untouched entries are carried over byte-for-byte.
+
+---
+
+## C-10 — proved by the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+
+### S10.1 — mutations are ast level and skip prose
+- **verifies:** C-10.1
+- **pins:** 2b289d163041f18e
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_mutations_are_ast_level_and_skip_prose -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_mutations_are_ast_level_and_skip_prose` is executed
+- **Then** a regex mutation hits comments and docstrings and produces equivalent mutants that "survive" while meaning nothing; the first probe of this idea drowned in exactly that noise.
+
+### S10.2 — a mutant is run against every owner of its line
+- **verifies:** C-10.2
+- **pins:** 484147558acc46fd
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_mutant_is_run_against_every_owner_of_its_line -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_mutant_is_run_against_every_owner_of_its_line` is executed
+- **Then** scoping to the owning clause alone reported false vacuity: a line owned by 93 clauses is proved by whichever of them asserts it.
+
+### S10.3 — the hunt restores the file and stops at the first killer
+- **verifies:** C-10.3
+- **pins:** d2a6361c6acddce6
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_hunt_restores_the_file_and_stops_at_the_first_killer -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_hunt_restores_the_file_and_stops_at_the_first_killer` is executed
+- **Then** a harness that leaves the tree dirty on a crash is worse than none, and a mutant needs one killer, not a full sweep.
+
+### S10.4 — the summary names the survivors
+- **verifies:** C-10.4
+- **pins:** d3ab09f6a162543f
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_summary_names_the_survivors -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_summary_names_the_survivors` is executed
+- **Then** the answer wanted is "which specs prove nothing", not a percentage.
+
+### S10.5 — the corpus labels come from mechanical edits not from a model
+- **verifies:** C-10.5
+- **pins:** 334a3e4bcef23727
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model` is executed
+- **Then** ground truth a model produced would make the whole measurement circular.
+
+### S10.6 — a misbound spec is labelled vacuous for the clause it names
+- **verifies:** C-10.6
+- **pins:** 8374b8af391986ef
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_misbound_spec_is_labelled_vacuous_for_the_clause_it_names -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_misbound_spec_is_labelled_vacuous_for_the_clause_it_names` is executed
+- **Then** a perfectly good spec bound to the wrong clause proves nothing about it.
+
+### S10.7 — a refutation without an executable counterexample is discarded
+- **verifies:** C-10.7
+- **pins:** 2b781b52ff1e9853
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_refutation_without_an_executable_counterexample_is_discarded -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_refutation_without_an_executable_counterexample_is_discarded` is executed
+- **Then** the model proposes, the runner disposes: an opinion cannot reject a spec.
+
+### S10.8 — thresholds are fixed before any judge runs and decide eligibility
+- **verifies:** C-10.8
+- **pins:** 0fd36bd4b42989fb
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_thresholds_are_fixed_before_any_judge_runs_and_decide_eligibility -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_thresholds_are_fixed_before_any_judge_runs_and_decide_eligibility` is executed
+- **Then** the promotion from advisory to gate is a number, not an impression.
+
+### S10.9 — a false reject costs more than a miss
+- **verifies:** C-10.9
+- **pins:** 9f1572d662e63ff8
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_false_reject_costs_more_than_a_miss -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_false_reject_costs_more_than_a_miss` is executed
+- **Then** rejecting a good spec is what gets a gate switched off, so it is scored separately and per defect kind.
+
+### S10.10 — the judge is pinned like every other artifact
+- **verifies:** C-10.10
+- **pins:** 5808de4541765070
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_judge_is_pinned_like_every_other_artifact -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_judge_is_pinned_like_every_other_artifact` is executed
+- **Then** swapping the model must be drift in the record, not silence.
+
+### S10.11 — clause text is neutralised before it reaches a prompt
+- **verifies:** C-10.11
+- **pins:** 5582f1adc6720fdf
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_clause_text_is_neutralised_before_it_reaches_a_prompt -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_clause_text_is_neutralised_before_it_reaches_a_prompt` is executed
+- **Then** a note in a contract is untrusted input the moment a model reads it.
+
+### S10.12 — disagreement with the mutation runner demotes the judge
+- **verifies:** C-10.12
+- **pins:** 719577111bab1cfe
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_disagreement_with_the_mutation_runner_demotes_the_judge -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_disagreement_with_the_mutation_runner_demotes_the_judge` is executed
+- **Then** the dangerous direction is the judge granting a green light the deterministic runner refuses; that alone is enough to demote it.
+
+### S10.13 — a spec function is extracted from its module by name
+- **verifies:** C-10.13
+- **pins:** 0d6cb9d6aa5a18a4
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_spec_function_is_extracted_from_its_module_by_name -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_spec_function_is_extracted_from_its_module_by_name` is executed
+- **Then** the corpus needs the spec's own source, not the whole test file.
+
+### S10.14 — degrading an unknown defect is refused
+- **verifies:** C-10.14
+- **pins:** 34dd359ef66f306b
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_degrading_an_unknown_defect_is_refused -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_degrading_an_unknown_defect_is_refused` is executed
+- **Then** the corpus may only contain degradations this module knows how to make.
+
+### S10.15 — a mutant carries where the break is
+- **verifies:** C-10.15
+- **pins:** 76cf503b7939b184
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_mutant_carries_where_the_break_is -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_mutant_carries_where_the_break_is` is executed
+- **Then** a survivor is only actionable if it says which line stopped mattering.
+
+### S10.16 — a killed run is recoverable from disk
+- **verifies:** C-10.16
+- **pins:** 87f1faf279309a09
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_killed_run_is_recoverable_from_disk -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_killed_run_is_recoverable_from_disk` is executed
+- **Then** `finally` does not survive a kill. The first real run of this harness was stopped by a timeout and left a mutant sitting in lib/, so the pristine sources go to disk BEFORE the first mutation and recovery belongs to the next invocation.
+
+### S10.17 — the hunt stops at the mutant cap
+- **verifies:** C-10.17
+- **pins:** 6e316e87365b7d68
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_hunt_stops_at_the_mutant_cap -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_hunt_stops_at_the_mutant_cap` is executed
+- **Then** an uncapped sweep ran for ten minutes and was killed; a cap makes the harness usable in CI, and a partial report is still a report.
+
+### S10.18 — mutation runs in a mirror and never touches the working tree
+- **verifies:** C-10.18
+- **pins:** c3afb2b9f5f7e4fd
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_mutation_runs_in_a_mirror_and_never_touches_the_working_tree -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_mutation_runs_in_a_mirror_and_never_touches_the_working_tree` is executed
+- **Then** two runs were killed mid-mutation and left a mutant in lib/ despite `finally`. The harness now mirrors the repo and mutates the copy: the worst a kill can leave behind is a temp folder.

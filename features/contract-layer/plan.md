@@ -161,3 +161,24 @@ over it, which is why every task's success_check is an already-green pytest node
 ### Manual Verification
 - `python athena.py contract map features/contract-layer/contract.md` maps every live clause.
 - `python athena.py contract owners lib/seams.py:214 --map .athena/clause_map.json` names C-5.8.
+
+## Phase 9: Does a spec prove anything
+**Goal:** kill the `assert True` class deterministically; make a judge measurable before it is trusted.
+**Depends on:** Phase 8
+### Tasks
+- [ ] T9.1 AST mutation scoped by the clause map, owners-wide spec runs, restore-always
+  - success_check: `python -m pytest tests/test_judge_pilot.py -q -k "mutation or mutant or hunt or summary"`
+  - files: `lib/mutation.py, tests/test_judge_pilot.py`
+  - verifies: S10.1, S10.2, S10.3, S10.4, S10.15
+  - autonomy: high
+- [ ] T9.2 Labelled corpus from mechanical degradations, never from a model
+  - success_check: `python -m pytest tests/test_judge_pilot.py -q -k "corpus or misbound or unknown_defect or spec_function"`
+  - files: `lib/judge.py, athena.py`
+  - verifies: S10.5, S10.6, S10.13, S10.14
+- [ ] T9.3 Counterexample protocol, fixed thresholds, pins, sanitisation, trust metric
+  - success_check: `python -m pytest tests/test_judge_pilot.py -q -k "counterexample or thresholds or false_reject or pinned or neutralised or disagreement"`
+  - files: `lib/judge.py`
+  - verifies: S10.7, S10.8, S10.9, S10.10, S10.11, S10.12
+### Manual Verification
+- `python athena.py judge corpus` builds 98 proving pairs and 392 mechanical degradations.
+- `python athena.py judge eval` prints gate_eligible and changes no gate.

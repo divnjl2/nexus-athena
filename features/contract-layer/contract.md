@@ -291,3 +291,45 @@
   drifted and unseen clauses, carrying the rest of the map over unchanged.
 - **C-9.14** — WHEN a map carries an earlier schema THE SYSTEM SHALL refuse it rather than
   trust pins it does not carry.
+
+## C-10 — Does a spec prove anything: the deterministic runner and the judge pilot
+
+- **C-10.1** — WHEN mutants are generated THE SYSTEM SHALL mutate the syntax tree and leave
+  docstrings alone, so an equivalent mutant cannot masquerade as a survivor.
+- **C-10.2** — WHEN a mutant is run THE SYSTEM SHALL use the specs of every clause that owns
+  the mutated line.
+- **C-10.3** — WHEN the hunt finishes a mutant THE SYSTEM SHALL restore the original source
+  and stop at the first spec that goes red.
+- **C-10.4** — WHEN the hunt is summarised THE SYSTEM SHALL name the surviving mutants with
+  their file and line.
+- **C-10.5** — WHEN the judge corpus is built THE SYSTEM SHALL derive its labels from
+  mechanical degradations of pairs this repo already proves.
+- **C-10.6** — WHEN a spec is bound to a different clause THE SYSTEM SHALL label that pair
+  vacuous for the clause it names.
+- **C-10.7** — WHEN a refutation carries no executable counterexample THE SYSTEM SHALL
+  discard it rather than let it reject a spec.
+- **C-10.8** — WHEN a judge is scored THE SYSTEM SHALL decide gate eligibility from the
+  thresholds fixed before the run.
+- **C-10.9** — WHEN a judge rejects a proving pair THE SYSTEM SHALL count it as a false
+  reject, separately from its recall.
+- **C-10.10** — WHEN a judge runs THE SYSTEM SHALL record its model id, prompt hash and
+  temperature.
+- **C-10.11** — WHEN clause text reaches a prompt THE SYSTEM SHALL neutralise instruction
+  markers inside it while keeping the requirement readable.
+- **C-10.12** — WHEN a judge greenlights a pair the mutation runner calls vacuous THE SYSTEM
+  SHALL demote the judge to advisory.
+- **C-10.13** — WHEN a spec's source is needed THE SYSTEM SHALL extract that one function
+  from its module.
+- **C-10.14** — WHEN an unknown degradation is requested THE SYSTEM SHALL refuse it.
+- **C-10.15** — WHEN a mutant is reported THE SYSTEM SHALL carry the file and line of the
+  break it introduced.
+- **C-10.16** — WHEN a mutation run is killed THE SYSTEM SHALL leave the pristine sources on
+  disk so a later invocation can restore them.
+  - note: not theory — the first real run hit a ten-minute timeout and left a mutated
+    `lib/judge.py` in the tree, because a kill takes the process out past `finally`.
+- **C-10.17** — WHEN a mutant cap is given THE SYSTEM SHALL stop at it and report what it
+  managed to run.
+- **C-10.18** — WHEN mutants are run THE SYSTEM SHALL execute them in a mirror of the
+  repository, leaving the working tree untouched.
+  - note: `finally` lost twice to a timeout. Isolation is the fix that does not depend on
+    the dying process cooperating.

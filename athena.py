@@ -382,6 +382,130 @@ def cmd_contract_owners(a) -> int:
     return 0
 
 
+def _spec_cmds(scenarios) -> dict:
+    """{scenario id: (clause id, run_cmd)} — the binding both the mutation runner and the
+    judge corpus need."""
+    return {s.id: (s.requirement_key, s.run_cmd) for s in scenarios}
+
+
+def cmd_mutate(a) -> int:
+    if getattr(a, "restore", False):
+        from lib.mutation import recover
+        restored = recover(lock_path=a.lock)
+        _emit({"restored": list(restored), "lock": a.lock})
+        return 0
+
+    # EFFECTFUL and destructive-in-flight: it rewrites source files and restores them. Runs
+    # only what the map says is affected, and never touches the gates.
+    import subprocess
+    from lib.clause_map import owned_lines
+    from lib.mutation import hunt, isolate, recover, snapshot, summarize
+
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    cmap = json.loads(_read(a.map))
+    owned = owned_lines(cmap)
+    if a.clause:
+        picked = {cid: files for cid, files in (cmap.get("clauses") or {}).items()
+                  if cid.startswith(a.clause)}
+        owned = {}
+        for files in picked.values():
+            for p, lines in files.items():
+                owned[p] = owned.get(p, frozenset()) | frozenset(lines)
+    targets = {p: {"source": _read(p), "lines": sorted(lines)}
+               for p, lines in sorted(owned.items())
+               if p.startswith(tuple(a.source)) and pathlib.Path(p).exists()}
+
+    def runner(cmd):
+        try:
+            return subprocess.run(cmd.split(), cwd=a.cwd, capture_output=True, text=True,
+                                  timeout=a.timeout).returncode
+        except subprocess.TimeoutExpired:
+            return 124
+
+    def writer(path, text):
+        pathlib.Path(path).write_text(text, encoding="utf-8")
+
+    # The harness does not mutate the working tree. Two runs were killed mid-mutation and
+    # left a mutant in lib/ despite `finally`, so everything happens in a mirror: the worst
+    # a kill can leave behind now is a temp folder.
+    mirror = isolate(".", a.mirror or ".athena/mutation_mirror") if a.isolate else "."
+    if a.isolate:
+        def writer(path, text):                                   # noqa: F811
+            (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
+
+        def runner(cmd):                                          # noqa: F811
+            try:
+                return subprocess.run(cmd.split(), cwd=mirror, capture_output=True,
+                                      text=True, timeout=a.timeout).returncode
+            except subprocess.TimeoutExpired:
+                return 124
+    else:
+        snapshot(targets, lock_path=a.lock)
+    try:
+        res = hunt(cmap, _spec_cmds(scenarios), targets, runner=runner, writer=writer,
+                   limit_per_line=a.per_line, max_mutants=a.max_mutants)
+    finally:
+        if not a.isolate:
+            recover(lock_path=a.lock)
+    rep = summarize(res)
+    if a.out:
+        pathlib.Path(a.out).write_text(json.dumps(rep, indent=2, sort_keys=True) + "\n",
+                                       encoding="utf-8")
+    _emit({k: rep[k] for k in ("mutants", "killed", "survived", "score")}
+          | {"survivors": [f"{s['path']}:{s['line']} ({s['kind']})" for s in rep["survivors"]][:20],
+             "out": a.out})
+    return 0
+
+
+def cmd_judge_corpus(a) -> int:
+    # Builds the LABELLED set from pairs this repo already proves, plus mechanical
+    # degradations. No model is involved in producing the ground truth (step 1).
+    import re as _re
+    from lib.judge import Pair, build_corpus, spec_function
+
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    pairs = []
+    for s in scenarios:
+        clause = contract.by_id(s.requirement_key)
+        node = next((tok for tok in s.run_cmd.split() if "::" in tok), "")
+        path, _, func = node.partition("::")
+        if not (clause and path and func and pathlib.Path(path).exists()):
+            continue
+        src = spec_function(_read(path), _re.sub(r"\[.*", "", func))
+        if not src:
+            continue
+        pairs.append(Pair(id=f"{clause.id}/{s.id}", clause_id=clause.id,
+                          clause_text=clause.text, spec_id=s.id, spec_source=src,
+                          label="proves"))
+    corpus = build_corpus(tuple(pairs))
+    payload = {"schema": "athena.judge_corpus/1", "contract_version": contract.version,
+               "pairs": [vars(p) for p in corpus]}
+    pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    pathlib.Path(a.out).write_text(json.dumps(payload, indent=2, ensure_ascii=False,
+                                              sort_keys=True) + "\n", encoding="utf-8")
+    from collections import Counter
+    _emit({"corpus": a.out, "pairs": len(corpus),
+           "proves": sum(1 for p in corpus if p.label == "proves"),
+           "vacuous": sum(1 for p in corpus if p.label == "vacuous"),
+           "by_defect": dict(Counter(p.defect for p in corpus if p.defect))})
+    return 0
+
+
+def cmd_judge_eval(a) -> int:
+    # Scores a judge's decisions against the labelled corpus and the fixed thresholds.
+    # ADVISORY by construction: it prints eligibility, it never wires anything (step 0).
+    from lib.judge import Pair, is_gate_eligible, score
+    payload = json.loads(_read(a.corpus))
+    corpus = tuple(Pair(**p) for p in payload["pairs"])
+    decisions = json.loads(_read(a.decisions)) if a.decisions else {}
+    rep = score(corpus, decisions)
+    _emit({**rep, "gate_eligible": is_gate_eligible(rep),
+           "note": "advisory only — no gate reads this"})
+    return 0 if rep["passes"] else 1
+
+
 def cmd_trace_coverage(a) -> int:
     # v3.2 third trace axis: is each requirement's code actually covered, and is there
     # code no scenario exercises (spec_gap). Deterministic report; feeds planner_replan.
@@ -473,6 +597,37 @@ def build_parser() -> argparse.ArgumentParser:
     ci.add_argument("--section", default="EARS Acceptance Criteria")
     ci.add_argument("--title", default="")
     ci.set_defaults(fn=cmd_contract_import)
+
+    mu = sub.add_parser("mutate", help="break the lines a clause owns; do its specs notice?")
+    mu.add_argument("contract", nargs="?", default="contract.md")
+    mu.add_argument("--scenarios", default="")
+    mu.add_argument("--map", default=".athena/clause_map.json")
+    mu.add_argument("--clause", default="", help="only clauses with this id prefix")
+    mu.add_argument("--source", action="append", default=["lib"])
+    mu.add_argument("--per-line", dest="per_line", type=int, default=1)
+    mu.add_argument("--max-mutants", dest="max_mutants", type=int, default=0,
+                    help="stop after N mutants (0 = no cap)")
+    mu.add_argument("--lock", default=".athena/mutation_lock.json")
+    mu.add_argument("--mirror", default="",
+                    help="scratch tree the mutation runs in (default: a temp mirror)")
+    mu.add_argument("--in-place", dest="isolate", action="store_false", default=True,
+                    help="mutate the working tree itself (NOT recommended; uses the lock)")
+    mu.add_argument("--restore", action="store_true",
+                    help="put back sources left behind by a killed run, then exit")
+    mu.add_argument("--cwd", default="."); mu.add_argument("--timeout", type=int, default=180)
+    mu.add_argument("-o", "--out", default="")
+    mu.set_defaults(fn=cmd_mutate)
+
+    ju = sub.add_parser("judge", help="the judge PILOT: corpus + scoring, never a gate")
+    jsub = ju.add_subparsers(dest="judge_cmd", required=True)
+    jc = jsub.add_parser("corpus"); jc.add_argument("contract", nargs="?", default="contract.md")
+    jc.add_argument("--scenarios", default="")
+    jc.add_argument("-o", "--out", default=".athena/judge_corpus.json")
+    jc.set_defaults(fn=cmd_judge_corpus)
+    je = jsub.add_parser("eval"); je.add_argument("corpus", nargs="?",
+                                                  default=".athena/judge_corpus.json")
+    je.add_argument("--decisions", default="")
+    je.set_defaults(fn=cmd_judge_eval)
 
     sr = sub.add_parser("spec", help="run the executable specs")
     srsub = sr.add_subparsers(dest="spec_cmd", required=True)
