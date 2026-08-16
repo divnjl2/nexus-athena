@@ -323,13 +323,17 @@ def cmd_contract_map(a) -> int:
     # EFFECTFUL: run each spec ALONE under coverage so its lines can be attributed to the
     # clause it proves. This is the artifact that upgrades the reverse leg from file-level
     # ("this contract claims lib/seams.py") to line-level ("it owns these 40 lines of it").
-    from lib.clause_map import collect, digests, owned_lines, stale_clauses
+    from lib.clause_map import (collect, digests, owned_lines, spec_digests,
+                                stale_clauses, stale_specs)
     from lib.spec_runner import select
 
     contract = _load_contract(a)
     scen_path = a.scenarios or _sibling(a.contract, "scenarios.md")
     scenarios = select(_load_scenarios(a, anchor=a.contract), clause_prefix=a.clause,
                        contract=contract, skip_tags=tuple(a.skip_tag))
+    # the incremental branch narrows `scenarios` to what must be re-derived; the spec-body
+    # pins have to cover ALL of them or a skipped spec would never be seen changing again
+    all_scenarios = scenarios
 
     # Incremental: re-derive ONLY the clauses whose owned lines moved (plus any clause the
     # map has never seen). Everything else in the map is still true, and re-running its
@@ -339,6 +343,13 @@ def cmd_contract_map(a) -> int:
         base = json.loads(_read(a.out))
         current = digests(base, _sources_of(base))
         drifted = set(stale_clauses(base, current))
+        # ...and a clause whose SPEC BODY moved. Pinning only the clause text and the owned
+        # code missed the third input: strengthening a test to cover the arm it had been
+        # skipping changed the branch evidence and moved no digest, so the rebuild said
+        # "nothing to re-derive" and `partial` kept answering from before the fix.
+        now_specs = spec_digests(scenarios, _test_sources(scenarios))
+        moved = set(stale_specs(base, now_specs))
+        drifted |= {s.requirement_key for s in scenarios if s.id in moved}
         unseen = {c.id for c in contract.live()} - set(base.get("clauses") or {})
         rebuilt = tuple(sorted(drifted | unseen))
         scenarios = tuple(s for s in scenarios if s.requirement_key in set(rebuilt))
@@ -348,7 +359,8 @@ def cmd_contract_map(a) -> int:
             # changing what anybody owns. Returning here without re-pinning left the map
             # permanently stale to `seam.map_fresh`, with no incremental way back: the only
             # cure was a full rebuild that would have derived byte-identical ownership.
-            cmap = _finish_map((), contract, scen_path, base=base, rebuilt=())
+            cmap = _finish_map((), contract, scen_path, scenarios=all_scenarios,
+                               base=base, rebuilt=())
             pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                            encoding="utf-8")
             _emit({"map": a.out, "rebuilt": [], "kept": len(cmap.get("clauses") or {}),
@@ -357,7 +369,8 @@ def cmd_contract_map(a) -> int:
             return 0
     spec_lines = collect(scenarios, sources=tuple(a.source), workdir=a.workdir,
                          cwd=a.cwd, jobs=a.jobs)
-    cmap = _finish_map(spec_lines, contract, scen_path, base=base, rebuilt=rebuilt)
+    cmap = _finish_map(spec_lines, contract, scen_path, scenarios=all_scenarios,
+                       base=base, rebuilt=rebuilt)
     pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                    encoding="utf-8")
@@ -396,15 +409,28 @@ def _sources_of(cmap: dict) -> dict:
     return out
 
 
-def _finish_map(spec_lines, contract, scen_path, *, base=None, rebuilt=()) -> dict:
+def _test_sources(scenarios) -> dict:
+    """{path: text} for every test module a run_cmd names. I/O, so it lives here."""
+    out = {}
+    for sc in scenarios or ():
+        node = next((tok for tok in sc.run_cmd.split() if "::" in tok), "")
+        path = node.partition("::")[0].replace("\\", "/").strip().lstrip("./")
+        if path and path not in out and pathlib.Path(path).exists():
+            out[path] = _read(path)
+    return out
+
+
+def _finish_map(spec_lines, contract, scen_path, *, scenarios=(), base=None,
+                rebuilt=()) -> dict:
     """Fold the collected lines into a map and pin each clause to the lines it owns."""
-    from lib.clause_map import build, digests, merge
+    from lib.clause_map import build, digests, merge, spec_digests
     from lib.versioning import hash_text
     sv = hash_text(_read(str(scen_path)))
+    sd = spec_digests(scenarios, _test_sources(scenarios))
     draft = (merge(base, spec_lines, contract_version=contract.version, scenario_version=sv,
-                   rebuilt=tuple(rebuilt))
+                   spec_digests=sd, rebuilt=tuple(rebuilt))
              if base else build(spec_lines, contract_version=contract.version,
-                                scenario_version=sv))
+                                scenario_version=sv, spec_digests=sd))
     # second pass: the digests can only be computed once the final line sets are known
     return merge(draft, (), contract_version=contract.version, scenario_version=sv,
                  clause_digests=digests(draft, _sources_of(draft)))

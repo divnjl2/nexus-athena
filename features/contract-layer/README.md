@@ -123,9 +123,18 @@ athena mutate contract.md --map clause_map.json --ledger spec_ledger.json \
 `exclusive` keeps lines exactly one clause owns (one spec decides, no attribution argument);
 `half-proved` keeps the branch layer's suspects; `+` intersects them. Specs the ledger already
 records as red are disqualified as witnesses — a spec failing on clean source cannot notice
-anything. The first such run on this repo: **17 mutants, 7 killed, 7 survived**, and the seven
-survivors are guards whose other arm nothing exercises — in `check.py`, `clause_map.py`,
-`contract_report.py`, `coverage_backed.py`, `scenario_parser.py`. Every spec was green.
+anything.
+
+The first run on this repo found **7 survivors out of 17 mutants with every spec green** —
+guards whose other arm nothing exercised, in `check.py`, `clause_map.py`, `contract_report.py`,
+`coverage_backed.py` and `scenario_parser.py`. Closing them meant strengthening seven specs,
+after which the same sweep scores **11 killed of 14**. What remains is two lines of
+`bd_client.py` whose guard the real-`bd` spec cannot reach without inventing a command shape:
+the argv rewriter needs a unit-level spec, not a bigger integration one.
+
+One of the seven took two attempts, and the second attempt is the lesson: the assertion first
+landed in a NEARBY test that no clause binds, so it passed, proved nothing to the frame, and
+the mutant lived on. A test outside the contract is not evidence the contract can use.
 
 ## The judge is a local model, and it is not a gate
 

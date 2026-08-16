@@ -105,6 +105,24 @@ def test_coverage_paths_resolve_across_source_roots():
     assert cov.resolve("lib/contract.py").path == "lib/contract.py"
     assert cov.resolve("nowhere/other.py") is None
 
+    # a <source> naming a FILE is not a root and contributes no prefix; nor does an empty
+    # one. (Mutation: `base and not base.endswith(".py")` -> `or` turned both into prefixes,
+    # and every filename got re-rooted under them without a single spec noticing.)
+    filey = parse_coverage('''<coverage>
+ <sources><source>C:/repo/setup.py</source></sources>
+ <packages><package><classes>
+  <class filename="pkg/a.py" line-rate="1"><lines><line number="1" hits="1"/></lines></class>
+ </classes></package></packages>
+</coverage>''')
+    assert list(filey.files) == ["pkg/a.py"], "a file root must not re-root the filenames"
+    empty_root = parse_coverage('''<coverage>
+ <sources><source>   </source></sources>
+ <packages><package><classes>
+  <class filename="pkg/a.py" line-rate="1"><lines><line number="1" hits="1"/></lines></class>
+ </classes></package></packages>
+</coverage>''')
+    assert list(empty_root.files) == ["pkg/a.py"], "nor may an empty one"
+
 
 def test_an_ambiguous_basename_resolves_to_nothing():
     """C-8.3 — two files named the same must not be silently conflated; an unproven edge a
@@ -129,3 +147,12 @@ def test_reverse_leg_separates_in_scope_gaps_from_unclaimed_code():
     assert rep["out_of_scope_gap_count"] == 0          # b.py has no uncovered BRANCH
     assert rep["unclaimed_files"] == ["pkg/b.py"]      # ...but it is still unclaimed
     assert rep["proven"] == 1 and rep["unproven"] == 0
+    # BOTH halves of "harness task" are skips, not one: a task that verifies something but
+    # touches only tests has no edge to prove, exactly like a task that names no scenario.
+    # (Mutation: `not t.verifies or not srcs` -> `and` filed the first kind as UNPROVEN.)
+    meta = _plan(_task("T1", ("tests/test_a.py",), ("S1",)),
+                 _task("T2", ("pkg/a.py",), ()))
+    only_meta = trace_coverage(meta, parse_coverage(COV))
+    assert only_meta["proven"] == 0 and only_meta["unproven"] == 0
+    assert only_meta["unproven_edges"] == []
+

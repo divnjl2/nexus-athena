@@ -97,6 +97,9 @@ def test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal():
     got = collect(scenarios, sources=("lib",), workdir="D:/tmp/claude/na", runner=runner, jobs=2)
     assert [s.scenario_id for s in got] == ["S1", "S2"]
     assert all(s.files == {} for s in got)
+    # the INJECTED runner is the one that ran: without this the suite passes while the
+    # collector silently shells out to real coverage, which is what `runner is None` decides
+    assert calls and any("pytest" in " ".join(a) for a in calls)
     # the refused command never reached the runner
     assert all("rm" not in " ".join(a) for a in calls)
 
@@ -320,6 +323,16 @@ def test_the_map_reads_branch_evidence_not_only_executed_lines():
     assert half == {"lib/a.py": (10,)}, "line 40 is not owned, so it is uncovered not partial"
     assert partial_lines({"lib/a.py": (10, 11, 20)}, {}) == {}, "no branch data, no claim"
 
+    # a file where NOTHING was taken is the most partial file there is: it must not be
+    # dropped for want of an executed arm (mutation: `ex or ms` -> `and` lost exactly these)
+    nothing_taken = branches_from_json(json.dumps({"files": {"lib/b.py": {
+        "executed_lines": [5], "executed_branches": [], "missing_branches": [[5, 6]]}}}))
+    assert nothing_taken["lib/b.py"]["missing"] == ((5, 6),)
+    assert partial_lines({"lib/b.py": (5,)}, nothing_taken) == {"lib/b.py": (5,)}
+    all_taken = branches_from_json(json.dumps({"files": {"lib/c.py": {
+        "executed_lines": [7], "executed_branches": [[7, 8]], "missing_branches": []}}}))
+    assert all_taken["lib/c.py"]["executed"] == ((7, 8),)
+
 
 def test_two_specs_of_one_clause_can_prove_both_arms_between_them():
     """C-9.23 - partiality is a property of the CLAUSE, not of one spec: if one spec takes
@@ -341,3 +354,35 @@ def test_two_specs_of_one_clause_can_prove_both_arms_between_them():
     grown = merge(build((a,), contract_version="v", scenario_version="s"), (other,),
                   contract_version="v", scenario_version="s", rebuilt=("C-1.2",))
     assert grown["partial"] == {"C-1.1": {"lib/a.py": [10]}, "C-1.2": {"lib/a.py": [50]}}
+
+
+def test_a_strengthened_spec_invalidates_the_clause_it_proves():
+    """C-9.24 - the map is derived from three inputs and only two were pinned: covering the
+    arm a test had been skipping changes the branch evidence and moves no digest."""
+    from lib.clause_map import node_source, spec_digests, stale_specs
+
+    module = (
+        "def test_one():\n"
+        "    assert answer() == 1\n"
+        "\n"
+        "def test_two():\n"
+        "    assert answer() == 2\n"
+    )
+    sc = Scenario("S1", "C-1.1", "G/W/T", "python -m pytest tests/t.py::test_one -q")
+    other = Scenario("S2", "C-1.2", "G/W/T", "python -m pytest tests/t.py::test_two -q")
+    whole = Scenario("S3", "C-1.3", "G/W/T", "python -m pytest tests/t.py -q")
+
+    assert node_source(sc.run_cmd, module).splitlines()[0] == "def test_one():"
+    assert node_source(whole.run_cmd, module) == "", "no node named, nothing to pin"
+
+    before = spec_digests((sc, other, whole), {"tests/t.py": module})
+    assert before["S3"] == "" and before["S1"] and before["S1"] != before["S2"]
+
+    stronger = module.replace("    assert answer() == 1\n",
+                              "    assert answer() == 1\n    assert answer() != 0\n")
+    after = spec_digests((sc, other, whole), {"tests/t.py": stronger})
+    assert after["S1"] != before["S1"] and after["S2"] == before["S2"]
+
+    cmap = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),), spec_digests=before)
+    assert stale_specs(cmap, before) == ()
+    assert stale_specs(cmap, after) == ("S1",), "only the spec that actually moved"

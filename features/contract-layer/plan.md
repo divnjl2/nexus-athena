@@ -267,7 +267,7 @@ sweep that flattered itself, a mirror that deleted a user directory — cannot r
 - [ ] T14.1 Collect coverage from every source root, and tell "owns nothing" from "learned nothing"
   - success_check: `python -m pytest tests/test_clause_map.py -q`
   - files: `lib/clause_map.py, athena.py, tests/test_clause_map.py`
-  - verifies: S9.18, S9.20, S9.21, S9.22, S9.23
+  - verifies: S9.18, S9.20, S9.21, S9.22, S9.23, S9.24
 - [ ] T14.2 Make a long judge measurement survivable
   - success_check: `python -m pytest tests/test_judge_pilot.py -q -k resume`
   - files: `lib/judge.py, evals/judge_local.py, tests/test_judge_pilot.py`

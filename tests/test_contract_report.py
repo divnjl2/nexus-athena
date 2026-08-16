@@ -196,3 +196,9 @@ def test_render_produces_a_readable_table_for_any_report():
     text = render(coverage(CONTRACT, (_scen("S1", "C-9.9"),)), title="coverage")
     assert "# coverage" in text and "uncovered" in text and "C-9.9" in text
     assert "passed: False" in text
+    assert "rate=" in text and "live=" in text, "the coverage summary line is the point"
+
+    # ...and it belongs to coverage ALONE: todo and drift carry a counts dict instead, and
+    # printing `rate=None` under them was what flipping `in` to `not in` did unnoticed.
+    other = render(todo(CONTRACT, (_scen("S1", "C-9.9"),), None), title="todo")
+    assert "rate=" not in other and "live=" not in other

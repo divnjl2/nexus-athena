@@ -155,6 +155,18 @@ def test_scenario_parser_reads_the_pin():
     assert a.clause_version == "abc123def456"
     assert b.clause_version == ""
 
+    # an indented line arriving BEFORE any Given/When/Then has nothing to continue: the
+    # guard reads `gwt and indented and non-blank`, and mutation showed that turning that
+    # first `and` into `or` makes this input raise IndexError with nobody watching.
+    early = "\n".join(("### S2.1 - t",
+                       "- **verifies:** C-1.1",
+                       "- **run_cmd:** `pytest -q`",
+                       "   stray indented prose with no marker",
+                       "- **Then** it works",
+                       ""))
+    (only,) = parse_scenarios(early)
+    assert only.id == "S2.1" and "it works" in only.gwt_text
+
 
 def test_render_round_trips_through_parse():
     """C-2.5 — render(parse(x)) preserves ids, statuses, links and the registry pin."""

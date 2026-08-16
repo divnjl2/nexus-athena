@@ -330,6 +330,13 @@
     specs per clause worth writing: the report layer has always accepted them, and now they
     compose into evidence instead of just adding rows.
 
+- **C-9.24** — WHEN the body of a spec's test changes THE SYSTEM SHALL treat the clause it
+  verifies as needing re-derivation.
+  - note: the map is derived from three inputs — the clause, the code and the spec that
+    connects them — and only the first two were pinned. Strengthening seven tests to cover
+    the arms they had been skipping changed the branch evidence, moved no digest, and the
+    incremental rebuild answered "every clause still owns the lines it owned".
+
 ## C-10 — Does a spec prove anything: the deterministic runner and the judge pilot
 
 - **C-10.1** — WHEN mutants are generated THE SYSTEM SHALL mutate the syntax tree and leave

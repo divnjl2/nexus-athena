@@ -58,9 +58,15 @@ def test_a_leg_with_no_evidence_is_incomplete_never_green():
     assert "no evidence" in rep["first_cause"]
     assert "INCOMPLETE" in render(rep)
 
+    assert "[????] specs_to_code" in render(rep), "an empty leg is named, not omitted"
+
     # a fast lane that KNOWINGLY skips a leg says so explicitly
     partial = build(lint_issues=(), critique_warnings=(), allow_partial=True)
     assert partial["passed"] and partial["incomplete"] == []
+    # ...and its empty legs are then SILENT: the "nothing ran" line is tied to the
+    # incomplete state, not to the emptiness. (Found by mutation: flipping that `==` to
+    # `!=` printed the banner on every opted-out leg and no spec noticed.)
+    assert "[????]" not in render(partial) and "no evidence either way" not in render(partial)
 
 
 def test_a_named_but_absent_input_fails_instead_of_vanishing():

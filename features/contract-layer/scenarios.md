@@ -865,6 +865,14 @@
 - **When** the spec `test_two_specs_of_one_clause_can_prove_both_arms_between_them` is executed
 - **Then** partiality is a property of the clause, so one spec taking the true arm and another the false one leaves the branch proved.
 
+### S9.24 — a strengthened spec invalidates the clause it proves
+- **verifies:** C-9.24
+- **pins:** 12e2ea2e128b812e
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_strengthened_spec_invalidates_the_clause_it_proves -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_strengthened_spec_invalidates_the_clause_it_proves` is executed
+- **Then** a changed test body moves that spec's digest and only that one, and a run_cmd naming no node pins nothing.
+
 ### S10.1 — mutations are ast level and skip prose
 - **verifies:** C-10.1
 - **pins:** 2b289d163041f18e

@@ -157,7 +157,8 @@ def partial_lines(files: dict, branches: dict) -> dict:
 
 
 def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
-          scenario_version: str = "", clause_digests: dict | None = None) -> dict:
+          scenario_version: str = "", clause_digests: dict | None = None,
+          spec_digests: dict | None = None) -> dict:
     """PURE: fold per-spec line sets into the clause map artifact.
 
     A clause owns the UNION of the lines its specs execute. Two clauses may own the same
@@ -195,6 +196,9 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
         # file changes neither the contract nor the specs, so those two pins stay green
         # while every line number in the map silently points somewhere else.
         "clause_digests": dict(sorted((clause_digests or {}).items())),
+        # The third input: the spec bodies themselves. Pinning only clause and code let
+        # a strengthened test change the branch evidence with every digest unmoved.
+        "spec_digests": dict(sorted((spec_digests or {}).items())),
         # Owned lines with an arm never taken. Kept BESIDE `clauses` rather than inside it so
         # `owners()`, `classify()` and the per-clause digests keep their shape: a half-proved
         # line is still owned, and the pin must still move when its content changes.
@@ -229,6 +233,53 @@ def clause_digest(files: dict, sources: dict) -> str:
     return _sha16("\n".join(parts))
 
 
+def node_source(run_cmd: str, text: str) -> str:
+    """PURE: the source of the ONE test function a run_cmd names, out of its module text.
+
+    Empty when the command names no `path::function` node — a whole-file or `-k` command has
+    no single function to hash, and pretending otherwise would invent evidence.
+    """
+    import ast as _ast
+    node = next((tok for tok in run_cmd.split() if "::" in tok), "")
+    func = node.rpartition("::")[2]
+    if not func:
+        return ""
+    try:
+        tree = _ast.parse(text)
+    except SyntaxError:
+        return ""
+    for n in tree.body:
+        if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and n.name == func:
+            return _ast.get_source_segment(text, n) or ""
+    return ""
+
+
+def spec_digests(scenarios, sources: dict) -> dict:
+    """PURE: {scenario id: digest of the test function that spec runs}.
+
+    The map is derived from THREE things — the clause, the code, and the spec that connects
+    them — and only the first two were pinned. So strengthening a test to cover the arm it
+    had been missing changed the branch evidence, moved no digest, and an incremental rebuild
+    reported "every clause still owns the lines it owned" while `partial` kept the answer
+    from before the fix. Evidence that improves in silence rots exactly like evidence that
+    decays in silence.
+    """
+    out = {}
+    for sc in scenarios or ():
+        node = next((tok for tok in sc.run_cmd.split() if "::" in tok), "")
+        path = _norm(node.partition("::")[0])
+        body = node_source(sc.run_cmd, sources.get(path, ""))
+        out[sc.id] = _sha16(path + chr(10) + body) if body else ""
+    return dict(sorted(out.items()))
+
+
+def stale_specs(clause_map: dict, current: dict) -> tuple[str, ...]:
+    """PURE: the scenario ids whose test function no longer holds what it held."""
+    pinned = (clause_map or {}).get("spec_digests") or {}
+    return tuple(sorted(sid for sid, d in pinned.items()
+                        if sid in current and current[sid] != d))
+
+
 def digests(clause_map: dict, sources: dict) -> dict:
     """PURE: {clause id: digest of the lines it owns} for every clause in the map."""
     return {cid: clause_digest(files, sources)
@@ -245,7 +296,7 @@ def stale_clauses(clause_map: dict, current: dict) -> tuple[str, ...]:
 
 def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
           scenario_version: str = "", clause_digests: dict | None = None,
-          rebuilt: tuple[str, ...] = ()) -> dict:
+          spec_digests: dict | None = None, rebuilt: tuple[str, ...] = ()) -> dict:
     """PURE: fold freshly collected specs into an existing map, keeping what stayed true.
 
     Only the clauses in `rebuilt` are replaced; the rest of the map is carried over intact.
@@ -276,6 +327,8 @@ def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: st
         "collected": sorted(c for c in got if c in clauses),
         "partial": {c: half[c] for c in sorted(half) if c in clauses and half[c]},
         "clause_digests": {c: kept[c] for c in sorted(kept) if c in clauses},
+        "spec_digests": {**((base or {}).get("spec_digests") or {}),
+                         **(spec_digests or {})},
         "clauses": {c: clauses[c] for c in sorted(clauses)},
         "specs": {s: specs[s] for s in sorted(specs)},
     }
