@@ -32,7 +32,10 @@ import pathlib
 import shlex
 from dataclasses import dataclass
 
-SCHEMA = "athena.clause_map/3"   # /3 pins the OWNED LINES per clause, not whole files
+#: /3 pinned the OWNED LINES per clause instead of whole files. /4 adds `collected`: which
+#: clauses actually produced coverage data, so "this spec ran and touched none of the source
+#: roots" stops being indistinguishable from "the coverage run failed and told us nothing".
+SCHEMA = "athena.clause_map/4"
 
 
 def _norm(p: str) -> str:
@@ -45,10 +48,17 @@ def _sha16(text: str) -> str:
 
 @dataclass(frozen=True)
 class SpecLines:
-    """Lines one spec executed, per file. The atom the map is folded from."""
+    """Lines one spec executed, per file. The atom the map is folded from.
+
+    `collected` separates the two ways `files` can be empty. A spec that ran and touched
+    none of the source roots (the binding guard reads artifacts, not modules) legitimately
+    owns nothing. A spec whose coverage run FAILED also reports nothing — and treating those
+    the same is how a rebuild wiped 25 clauses' ownership without a single warning.
+    """
     scenario_id: str
     clause_id: str
     files: dict            # normalized path -> tuple[int, ...]
+    collected: bool = True
 
 
 def run_argv(run_cmd: str, data_file: str, sources: tuple[str, ...]) -> list[str]:
@@ -71,8 +81,16 @@ def run_argv(run_cmd: str, data_file: str, sources: tuple[str, ...]) -> list[str
         argv = argv[1:]
     if argv[:1] != ["-m"]:
         argv = ["-m", *argv]
-    return ["python", "-m", "coverage", "run", f"--data-file={data_file}",
-            *[f"--source={s}" for s in sources], *argv]
+    # ONE `--source`, comma-joined. coverage.py takes a list here and LAST FLAG WINS when
+    # the option repeats, so `--source=lib --source=athena.py` measured athena.py alone —
+    # a module pytest never imports. Every spec then collected nothing, and because an
+    # empty result is indistinguishable from "owns no lines", an incremental rebuild wiped
+    # the line ownership of 25 clauses and reported `unmapped_clauses: []`.
+    # Deduplicated in order: `--source` is an argparse `append` over a non-empty default,
+    # so the default root arrives again every time a caller names it explicitly.
+    roots = list(dict.fromkeys(sources))
+    src = [f"--source={','.join(roots)}"] if roots else []
+    return ["python", "-m", "coverage", "run", f"--data-file={data_file}", *src, *argv]
 
 
 def json_argv(data_file: str, out_file: str) -> list[str]:
@@ -101,14 +119,21 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
     owners() query returns both.
     """
     clauses: dict = {}
+    collected: set = set()
     for sl in spec_lines:
         per_clause = clauses.setdefault(sl.clause_id, {})
+        if sl.collected:
+            collected.add(sl.clause_id)
         for path, lines in sl.files.items():
             per_clause[path] = sorted(set(per_clause.get(path, ())) | set(lines))
     return {
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
+        # The clauses whose coverage actually ran. Owning no lines is a legitimate answer
+        # for a spec that reads artifacts rather than modules; owning no lines because the
+        # run failed is not an answer at all, and the two must stay distinguishable.
+        "collected": sorted(collected),
         # Pinning the owned LINES is what closes the last hole: a refactor that shifts a
         # file changes neither the contract nor the specs, so those two pins stay green
         # while every line number in the map silently points somewhere else.
@@ -175,10 +200,14 @@ def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: st
     specs.update(fresh["specs"])
     kept = dict((base or {}).get("clause_digests") or {})
     kept.update(clause_digests or {})
+    # A rebuilt clause carries whatever THIS run found out; the rest keep what the base said.
+    got = set((base or {}).get("collected") or ()) - set(rebuilt)
+    got |= set(fresh.get("collected") or ())
     return {
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
+        "collected": sorted(c for c in got if c in clauses),
         "clause_digests": {c: kept[c] for c in sorted(kept) if c in clauses},
         "clauses": {c: clauses[c] for c in sorted(clauses)},
         "specs": {s: specs[s] for s in sorted(specs)},
@@ -240,7 +269,11 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
       absent          — no map at all, or not this schema
       contract_drift  — the map's contract pin is not the contract's current version
       spec_drift      — the map's scenario pin is not the current scenarios.md hash
-      unmapped        — a live clause the map never saw (added since it was built)
+      unmapped        — a live clause the map never saw (added since it was built), or one
+                        whose entry is EMPTY: owning no lines is not a state a clause can be
+                        proved in, and an empty entry is exactly what a failed coverage run
+                        leaves behind. Counting it as "mapped" is how a rebuild silently
+                        dropped 25 clauses' ownership while this gate stayed green.
       stale_entries   — a mapped clause the contract no longer defines (removed since)
       clause_drift    — a mapped CLAUSE whose owned lines no longer hold what they held:
                         the code moved even though the requirements did not
@@ -253,7 +286,12 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
 
     live = {c.id for c in contract.live()} if contract is not None else set()
     known = {c.id for c in contract.clauses} if contract is not None else set()
-    unmapped = sorted(live - set(mapped))
+    # A clause counts as mapped when it owns lines, OR when its coverage ran and honestly
+    # found none in the source roots (the binding guard reads artifacts, not modules). An
+    # entry that is empty because the run FAILED is in neither set, and stays unmapped.
+    owning = {cid for cid, files in mapped.items() if files}
+    owning |= set((clause_map or {}).get("collected") or ()) & set(mapped)
+    unmapped = sorted(live - owning)
     stale_entries = sorted(set(mapped) - known)
 
     clause_drift = list(stale_clauses(clause_map, clause_digests or {}))
@@ -305,13 +343,18 @@ def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = "."
         stem = sc.id.replace("/", "_").replace(".", "_")
         data = work / f"{stem}.coverage"
         js = work / f"{stem}.json"
+        got = False
         try:
             runner(run_argv(sc.run_cmd, str(data), sources), cwd)
             runner(json_argv(str(data), str(js)), cwd)
-            files = lines_from_json(js.read_text(encoding="utf-8")) if js.exists() else {}
+            # `js` exists only when coverage had data to report. That file is the whole
+            # difference between "this spec owns no lines" and "we learned nothing".
+            got = js.exists()
+            files = lines_from_json(js.read_text(encoding="utf-8")) if got else {}
         except (ValueError, OSError, json.JSONDecodeError):
-            files = {}
-        return SpecLines(scenario_id=sc.id, clause_id=sc.requirement_key, files=files)
+            files, got = {}, False
+        return SpecLines(scenario_id=sc.id, clause_id=sc.requirement_key, files=files,
+                         collected=got)
 
     if not scenarios:
         return ()

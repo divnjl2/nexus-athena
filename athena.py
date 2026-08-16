@@ -225,6 +225,24 @@ def cmd_contract_coverage(a) -> int:
     return 0 if rep["passed"] or not a.gate else 1
 
 
+def cmd_contract_outline(a) -> int:
+    # "What are the parts of this system?" — answered from the artifacts rather than from a
+    # hand-written architecture page that nobody re-derives.
+    from lib.contract_report import coverage
+    from lib.outline import outline, render
+
+    c = _load_contract(a)
+    cov = coverage(c, _load_scenarios(a, anchor=a.contract))
+    map_path = a.map or str(pathlib.Path(a.contract).with_name("clause_map.json"))
+    cmap = json.loads(_read(map_path)) if pathlib.Path(map_path).exists() else {}
+    rep = outline(c, cov, cmap)
+    if a.text:
+        print(render(rep))
+    else:
+        _emit(rep)
+    return 0
+
+
 def cmd_contract_todo(a) -> int:
     from lib.contract_report import todo
     c = _load_contract(a)
@@ -325,8 +343,17 @@ def cmd_contract_map(a) -> int:
         rebuilt = tuple(sorted(drifted | unseen))
         scenarios = tuple(s for s in scenarios if s.requirement_key in set(rebuilt))
         if not scenarios:
-            _emit({"map": a.out, "rebuilt": [], "kept": len(base.get("clauses") or {}),
-                   "note": "every clause still owns the lines it owned; nothing to re-derive"})
+            # Nothing to re-derive, but the CONTRACT pin may still have moved — a note, a
+            # draft clause, any edit that owns no lines changes `contract.version` without
+            # changing what anybody owns. Returning here without re-pinning left the map
+            # permanently stale to `seam.map_fresh`, with no incremental way back: the only
+            # cure was a full rebuild that would have derived byte-identical ownership.
+            cmap = _finish_map((), contract, scen_path, base=base, rebuilt=())
+            pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
+                                           encoding="utf-8")
+            _emit({"map": a.out, "rebuilt": [], "kept": len(cmap.get("clauses") or {}),
+                   "repinned": cmap["contract_version"],
+                   "note": "every clause still owns the lines it owned; re-pinned only"})
             return 0
     spec_lines = collect(scenarios, sources=tuple(a.source), workdir=a.workdir,
                          cwd=a.cwd, jobs=a.jobs)
@@ -338,8 +365,15 @@ def cmd_contract_map(a) -> int:
     _emit({"map": a.out, "clauses_mapped": len(cmap["clauses"]),
            "specs": len(spec_lines), "files": len(owned),
            "owned_lines": sum(len(v) for v in owned.values()),
-           "unmapped_clauses": sorted(c.id for c in contract.live()
-                                      if c.id not in cmap["clauses"])})
+           # A clause whose entry is EMPTY is not mapped, whatever the key count says. The
+           # first cut tested `c.id not in cmap["clauses"]`, so 25 clauses that collected
+           # no coverage at all were written as `{}` and reported as fully mapped. A spec
+           # that ran and honestly touched none of the source roots is the exception, and
+           # `collected` is how the map tells the two apart.
+           "unmapped_clauses": sorted(
+               c.id for c in contract.live()
+               if not (cmap["clauses"].get(c.id) or {})
+               and c.id not in set(cmap.get("collected") or ()))})
     return 0
 
 
@@ -753,6 +787,14 @@ def build_parser() -> argparse.ArgumentParser:
     cm.add_argument("--incremental", action="store_true",
                     help="re-derive only the clauses whose owned lines moved")
     cm.set_defaults(fn=cmd_contract_map)
+
+    cot = csub.add_parser("outline", help="the shape of the system, derived: what each "
+                                          "clause group guarantees and which modules it owns")
+    cot.add_argument("contract", nargs="?", default="contract.md")
+    cot.add_argument("--scenarios", default="")
+    cot.add_argument("--map", default="", help="clause map (default: beside the contract)")
+    cot.add_argument("--text", action="store_true")
+    cot.set_defaults(fn=cmd_contract_outline)
 
     co = csub.add_parser("owners", help="which clauses own a file:line")
     co.add_argument("target", metavar="FILE:LINE")

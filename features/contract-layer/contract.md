@@ -291,6 +291,29 @@
   drifted and unseen clauses, carrying the rest of the map over unchanged.
 - **C-9.14** — WHEN a map carries an earlier schema THE SYSTEM SHALL refuse it rather than
   trust pins it does not carry.
+- **C-9.18** — WHEN more than one coverage source root is given THE SYSTEM SHALL pass them
+  in a single option.
+  - note: coverage.py lets the LAST repetition of `--source` win. `--source=lib
+    --source=athena.py` therefore measured `athena.py` alone — a module pytest never
+    imports — and every spec collected nothing.
+- **C-9.19** *(superseded-by C-9.20)* — WHEN a live clause's entry in the map holds no lines
+  THE SYSTEM SHALL report that clause as unmapped.
+  - note: an empty entry is what a failed coverage run leaves behind, and counting it as
+    mapped is how an incremental rebuild dropped the line ownership of 25 clauses while
+    `seam.map_fresh` stayed green and the rebuild printed `unmapped_clauses: []`.
+- **C-9.20** *(supersedes C-9.19)* — WHEN a live clause's map entry holds no lines and no
+  coverage data was collected for it THE SYSTEM SHALL report that clause as unmapped.
+  - note: C-9.19 was too strong and the first rebuild under it proved so: C-11.19 and
+    C-11.20 are proved by the binding guard, which reads the artifacts with the standard
+    library and imports nothing from `lib/`. Owning no lines is its correct answer. What
+    must never pass is owning no lines because the coverage run failed, so the map now
+    records which clauses produced data at all.
+
+- **C-9.21** — WHEN an incremental rebuild finds nothing to re-derive THE SYSTEM SHALL
+  re-pin the map to the current contract and spec versions.
+  - note: an edit that owns no lines — a note, a draft clause — still moves the contract
+    version. The early return skipped the write, so the map stayed stale to the gate with
+    no incremental way back: only a full rebuild, deriving byte-identical ownership.
 
 ## C-10 — Does a spec prove anything: the deterministic runner and the judge pilot
 
@@ -337,6 +360,24 @@
   blocks, so a pair labelled vacuous carries no surviving assertion.
 - **C-10.21** — WHEN the corpus is built THE SYSTEM SHALL strip docstrings from both halves,
   so a judge reads the body rather than a claim about it.
+- **C-10.24** — WHEN a judge is scored THE SYSTEM SHALL report how many pairs of each
+  label went unjudged, and refuse eligibility while any remain.
+  - note: measured, not assumed — this judge takes a median 259s on a proving pair against
+    121s on a degraded one, so timeouts land on the good half. Three of the first four
+    timeouts were proving pairs, which are only a fifth of the corpus. A partial score
+    therefore flatters recall and starves the false-reject estimate.
+- **C-10.23** *(draft)* — WHEN a judge clears the fixed thresholds on the whole corpus THE
+  SYSTEM SHALL let it block the code-to-specs leg.
+  - note: draft on purpose, and the only honest status for it. The thresholds are recall
+    >= 0.95 and false rejects <= 0.02; the local 9B judge measured 0.933 unmuzzled on a
+    subset, so this is a promise conditional on a number that has not landed. A draft
+    clause is stated but not owed a proof — it shows up as backlog in `todo`, never as an
+    uncovered requirement.
+- **C-10.22** — WHEN a judge run is resumed THE SYSTEM SHALL re-judge every pair whose
+  verdict is absent, errored, or recorded under a different pin, and keep the rest.
+  - note: the full unmuzzled sweep was killed twice at a session boundary with an hour of
+    model time lost, because the driver wrote its record only at the end. An errored call
+    stays in the re-judge set on purpose: resuming must not launder a timeout into a verdict.
   - note: the first pin hashed the system prompt twice and the user template never, so
     swapping v1 for v2 — which moved recall from 0.056 to 0.420 — left the record identical.
   - note: `finally` lost twice to a timeout. Isolation is the fix that does not depend on
@@ -393,3 +434,17 @@
   example spec points at.
   - note: checking a scaffolded project from inside this repo judged it against THIS repo's
     clause map — a gate answering about the wrong codebase.
+- **C-11.22** — WHEN the outline names the modules of a clause group THE SYSTEM SHALL rank
+  them by how exclusively that group owns them, and mark the rest as shared.
+  - note: ranking by owned line count made the parser the home of every group, because every
+    spec runs it on the way to anything else. That is execution reach, not architecture.
+- **C-11.23** — WHEN the outline summarises a clause group THE SYSTEM SHALL report its live,
+  draft, superseded and withdrawn counts separately from the clauses it proves.
+- **C-11.24** — WHEN no clause map is available THE SYSTEM SHALL still outline the contract
+  and say that the module column is missing.
+- **C-11.25** — WHEN a module is reached by several clause groups THE SYSTEM SHALL still
+  call it the home of a group that owns lines in it no other group owns.
+  - note: exclusivity is measured per LINE, because that is the granularity the map has.
+    Counting how many groups touch a FILE called `lib/contract.py` shared for everyone, so
+    C-1 (the parser) and C-7 (the wording critique) both came out homeless and the modules
+    they merely pass through were promoted in their place.

@@ -254,3 +254,48 @@ def test_a_map_in_the_previous_schema_is_refused():
     old = dict(_fresh_map(), schema="athena.clause_map/1")
     r = seam_map_fresh(old, GATE_CONTRACT, (), scenario_version="scv1")
     assert not r.passed and any("absent" in i for i in r.issues)
+
+
+def test_every_source_root_reaches_the_coverage_command():
+    """C-9.18 - more than one coverage source root is passed as ONE option, because
+    coverage.py lets the last repetition of the flag win."""
+    argv = run_argv("python -m pytest t.py::x -q", "d.coverage", ("lib", "athena.py"))
+    srcs = [a for a in argv if a.startswith("--source")]
+    assert srcs == ["--source=lib,athena.py"], (
+        "repeating the flag drops every root but the last: the real run measured athena.py "
+        "alone, a module pytest never imports, and collected nothing for 26 specs")
+    assert [a for a in run_argv("python -m pytest t.py -q", "d", ()) if "source" in a] == []
+    dup = run_argv("python -m pytest t.py -q", "d", ("lib", "lib", "athena.py"))
+    assert "--source=lib,athena.py" in dup, "argparse append over a default repeats the root"
+
+
+def test_a_spec_that_ran_and_owns_nothing_is_not_a_failed_collection():
+    """C-9.20 - the binding guard imports nothing from lib/, so owning no lines is its
+    correct answer; owning no lines because coverage never ran is not an answer at all."""
+    ran = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
+                 SpecLines(scenario_id="S2", clause_id="C-1.2", files={}, collected=True)),
+                contract_version=GATE_CONTRACT.version, scenario_version="scv1")
+    assert ran["collected"] == ["C-1.1", "C-1.2"]
+    assert staleness(ran, GATE_CONTRACT, (), scenario_version="scv1")["unmapped"] == []
+
+    blind = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
+                   SpecLines(scenario_id="S2", clause_id="C-1.2", files={}, collected=False)),
+                  contract_version=GATE_CONTRACT.version, scenario_version="scv1")
+    assert blind["collected"] == ["C-1.1"]
+    assert staleness(blind, GATE_CONTRACT, (), scenario_version="scv1")["unmapped"] == ["C-1.2"]
+
+    carried = merge(ran, (), contract_version=GATE_CONTRACT.version, scenario_version="scv1")
+    assert carried["collected"] == ["C-1.1", "C-1.2"], "an untouched clause keeps its answer"
+
+
+def test_merging_nothing_re_pins_the_map():
+    """C-9.21 - an edit that owns no lines (a note, a draft clause) still moves the contract
+    version, and an incremental rebuild that finds nothing to re-derive must re-pin anyway."""
+    base = _fresh_map()
+    same = merge(base, (), contract_version="new-contract-version", scenario_version="scv2")
+
+    assert same["clauses"] == base["clauses"], "nothing was re-derived, so nothing may move"
+    assert same["collected"] == base["collected"]
+    assert (same["contract_version"], same["scenario_version"]) == ("new-contract-version",
+                                                                    "scv2")
+    assert staleness(same, GATE_CONTRACT, (), scenario_version="scv2")["spec_drift"] is False

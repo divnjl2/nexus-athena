@@ -825,9 +825,29 @@
 - **When** the spec `test_an_incremental_rebuild_keeps_the_clauses_that_still_hold` is executed
 - **Then** re-deriving one clause must cost one spec run, not the whole suite; the untouched entries are carried over byte-for-byte.
 
----
+### S9.18 — every source root reaches the coverage command
+- **verifies:** C-9.18
+- **pins:** 17b24da5f23c0301
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_every_source_root_reaches_the_coverage_command -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_every_source_root_reaches_the_coverage_command` is executed
+- **Then** more than one coverage source root is passed as one option, because coverage.py lets the last repetition of the flag win.
 
-## C-10 — proved by the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+### S9.20 — a spec that ran and owns nothing is not a failed collection
+- **verifies:** C-9.20
+- **pins:** 308e05b9aef9a1d0
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_spec_that_ran_and_owns_nothing_is_not_a_failed_collection -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_a_spec_that_ran_and_owns_nothing_is_not_a_failed_collection` is executed
+- **Then** a spec that imports nothing from the source roots owns no lines and is still mapped, while a spec whose coverage never ran leaves its clause unmapped.
+
+### S9.21 — merging nothing re-pins the map
+- **verifies:** C-9.21
+- **pins:** 59cc61fada482100
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_merging_nothing_re_pins_the_map -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_merging_nothing_re_pins_the_map` is executed
+- **Then** an incremental rebuild with nothing to re-derive still updates the contract and spec pins, and moves no ownership.
 
 ### S10.1 — mutations are ast level and skip prose
 - **verifies:** C-10.1
@@ -996,6 +1016,14 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_docstrings_are_stripped_from_both_halves_of_the_corpus` is executed
 - **Then** a docstring here NAMES the clause it proves. That is a claim, and showing it to a judge asks it to trust prose over the body; measured cost, 5 points of recall.
+
+### S10.22 — resume reuses only verdicts from the same run
+- **verifies:** C-10.22
+- **pins:** 3c31e0fc478fb159
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_resume_reuses_only_verdicts_from_the_same_run -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_resume_reuses_only_verdicts_from_the_same_run` is executed
+- **Then** a resumed judge run re-judges every pair whose verdict is absent, errored, or recorded under a different pin.
 
 ---
 
@@ -1168,3 +1196,43 @@
 - **Given** the scaffold (lib/scaffold.py)
 - **When** the spec `test_the_scaffold_ships_the_test_its_spec_points_at` is executed
 - **Then** an audit ran the quick start on a clean directory and the first `check` failed: the spec named tests/test_example.py, a path `init` never created.
+
+### S11.22 — the outline names each group's home by exclusivity, not by reach
+- **verifies:** C-11.22
+- **pins:** d5d297e32478f68b
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_names_each_group_home_by_exclusivity_not_by_reach -q`
+- **Given** the derived outline (lib/outline.py)
+- **When** the spec `test_the_outline_names_each_group_home_by_exclusivity_not_by_reach` is executed
+- **Then** the module a group owns is named as its home, and the module every group merely passes through is marked shared.
+
+### S11.23 — the outline separates the four statuses and counts proofs
+- **verifies:** C-11.23
+- **pins:** 31097ea97251ce82
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_separates_the_four_statuses_and_counts_proofs -q`
+- **Given** the derived outline (lib/outline.py)
+- **When** the spec `test_the_outline_separates_the_four_statuses_and_counts_proofs` is executed
+- **Then** a withdrawn clause is not owed a proof and is not counted live; the outline is where this format's status vocabulary becomes visible.
+
+### S11.24 — the outline says so when there is no map
+- **verifies:** C-11.24
+- **pins:** cb34381162a7fba2
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_says_so_when_there_is_no_map -q`
+- **Given** the derived outline (lib/outline.py)
+- **When** the spec `test_the_outline_says_so_when_there_is_no_map` is executed
+- **Then** without a clause map the outline still answers about the contract and says the module column is missing rather than rendering an empty one.
+
+### S11.25 — a module many groups reach is still a home when it holds lines only one owns
+- **verifies:** C-11.25
+- **pins:** 642fb591aece0905
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_a_module_many_groups_reach_is_still_a_home_when_it_holds_lines_only_one_owns -q`
+- **Given** the derived outline (lib/outline.py)
+- **When** the spec `test_a_module_many_groups_reach_is_still_a_home_when_it_holds_lines_only_one_owns` is executed
+- **Then** exclusivity is measured per line, so a module several groups execute is still the home of the group that owns lines in it nobody else owns.
+
+### S10.24 — a partial run reports what it never judged and cannot pass
+- **verifies:** C-10.24
+- **pins:** 1ae65c2c7c49230b
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_partial_run_reports_what_it_never_judged_and_cannot_pass -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_partial_run_reports_what_it_never_judged_and_cannot_pass` is executed
+- **Then** the score names the unjudged pairs per label, and perfect recall over the half it managed to judge does not open the gate.

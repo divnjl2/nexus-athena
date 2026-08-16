@@ -271,6 +271,16 @@ def score(corpus: tuple[Pair, ...], decisions: dict, *,
     rejected = [p for p in proves if decisions.get(p.id, {}).get("decision") == "vacuous"]
     discarded = [pid for pid, d in decisions.items() if d.get("decision") == "discarded"]
 
+    # How many pairs never got a verdict, PER LABEL. A run that dies or times out does not
+    # lose pairs uniformly: this judge thinks twice as long when there is nothing to refute
+    # (median 259s on a proving pair against 121s on a degraded one), so timeouts fall
+    # disproportionately on the good half. A partial score therefore flatters recall and
+    # starves the false-reject estimate, and must say so rather than print two numbers.
+    silent = {"vacuous": sum(1 for p in vacuous if not decisions.get(p.id, {}).get("decision")
+                             or decisions.get(p.id, {}).get("decision") == "error"),
+              "proves": sum(1 for p in proves if not decisions.get(p.id, {}).get("decision")
+                            or decisions.get(p.id, {}).get("decision") == "error")}
+
     recall = round(len(caught) / len(vacuous), 4) if vacuous else 0.0
     false_reject = round(len(rejected) / len(proves), 4) if proves else 0.0
     per_defect = {d: round(
@@ -281,9 +291,14 @@ def score(corpus: tuple[Pair, ...], decisions: dict, *,
         "pairs": len(corpus), "vacuous": len(vacuous), "proves": len(proves),
         "recall": recall, "false_reject": false_reject,
         "recall_by_defect": per_defect,
+        "unjudged": silent,
+        "complete": not (silent["vacuous"] or silent["proves"]),
         "discarded_verdicts": len(discarded),
         "thresholds": th,
-        "passes": recall >= th["recall_min"] and false_reject <= th["false_reject_max"],
+        # A partial corpus can never clear the bar: gate eligibility off a run that skipped
+        # the pairs it found hardest is the same mistake as a green leg with no evidence.
+        "passes": (recall >= th["recall_min"] and false_reject <= th["false_reject_max"]
+                   and not (silent["vacuous"] or silent["proves"])),
     }
 
 
@@ -316,6 +331,28 @@ def pin(*, model: str, prompt: str, temperature: float) -> dict:
     """PURE (step 4): what must be recorded so a model swap is drift, not silence."""
     return {"model": model, "prompt_sha": _sha16(prompt), "temperature": temperature,
             "thresholds_sha": _sha16(repr(sorted(THRESHOLDS.items())))}
+
+
+def resume_split(pairs: tuple[Pair, ...], previous: dict, *,
+                 expected_pin: dict) -> tuple[tuple[Pair, ...], dict]:
+    """PURE: which pairs still need a verdict, and which recorded verdicts may be reused.
+
+    A 595-pair unmuzzled run takes the better part of an hour, and this one was killed twice
+    at a session boundary with nothing on disk to show for it. Restarting from zero is not a
+    measurement discipline, it is a reason the measurement never lands.
+
+    A recorded verdict survives only when BOTH hold: the file was written under the same pin
+    (another model, prompt or temperature is another experiment, not a partial one), and the
+    entry is an actual decision. An errored call is explicitly not reusable — the driver
+    already refuses to let a failed call read as "proves", and resuming must not launder it
+    into one by keeping it.
+    """
+    kept: dict = {}
+    if previous and previous.get("pin") == expected_pin:
+        kept = {pid: d for pid, d in (previous.get("decisions") or {}).items()
+                if d.get("decision") in ("proves", "vacuous")}
+    todo = tuple(p for p in pairs if p.id not in kept)
+    return todo, {pid: d for pid, d in kept.items() if pid in {p.id for p in pairs}}
 
 
 def agreement(decisions: dict, mutation_survivors: dict) -> dict:

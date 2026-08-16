@@ -134,6 +134,24 @@ Two legs, answered separately because they are different questions:
 surviving mutants from advisory to blocking. A CI recipe with both lanes is in
 [`ci/athena-check.yml`](./ci/athena-check.yml).
 
+The fastest way into an existing contract is the derived outline — no architecture page to
+write or to outgrow, because it is read out of the clause map:
+
+```bash
+python athena.py contract outline features/contract-layer/contract.md --text
+```
+
+```
+C-9 The per-clause file:line map  (20 live, 2 superseded)  proved 20/20
+    home: lib/clause_map.py (136 lines)  lib/seams.py (66 lines)
+    shared: lib/contract.py, lib/ast.py, lib/versioning.py
+```
+
+A group's **home** is a module holding lines only that group owns; a module it merely
+executes on the way in is **shared** and credited to nobody. Exclusivity is per line, so one
+file can be the home of two groups that live in different parts of it — `lib/contract.py`
+belongs to both the parser (C-1) and the wording critique (C-7).
+
 ## Requirement contract (v3.3)
 
 A spec.md is prose with implicit numbering: renumber it and every `verifies: R4.2` written
@@ -171,9 +189,11 @@ Adoption is opt-in — with no `contract.md` attached, compiler output is byte-i
 ### Dogfood — the frame applied to itself
 
 [`features/contract-layer/`](./features/contract-layer/) is Athena's own contract for the
-feature that adds contracts: **150 clauses (142 live) ↔ 137 executable specs**, each `run_cmd` a
-real pytest node in this repo, plus a committed `spec_ledger.json`. Compiles to a
-**a 300+ node bd graph** (clause + scenario + epic + task nodes).
+feature that adds contracts: **159 clauses (149 live) ↔ 149 executable specs**, each `run_cmd` a
+real pytest node in this repo, plus a committed `spec_ledger.json` and a `clause_map.json`
+owning 1657 lines across 20 modules. Compiles to a **300+ node bd graph** (clause + scenario
++ epic + task nodes). [`features/contract-layer/README.md`](./features/contract-layer/README.md)
+is the way in: what each of the seven artifacts is, who writes it, and the format on one screen.
 
 Running the reports on itself found a real defect: with only four buckets, `todo` answered
 "nothing left" for a clause whose proof was stale while `drift` said the contract was out of

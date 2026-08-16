@@ -204,3 +204,78 @@ over it, which is why every task's success_check is an already-green pytest node
 - `athena init <dir>` then `athena check <dir>/contract.md --front <dir>/plan.md --run --text`
   reports PASS on the forward leg and INCOMPLETE on the reverse until `contract map` is run.
 - `ci/athena-check.yml` runs the fast lane on push and the deep lane nightly.
+
+## Phase 11: The frame judging its own authors
+**Goal:** the wording rules the layer demands of a contract are enforced on this contract too.
+**Depends on:** Phase 4
+### Tasks
+- [ ] T11.1 Refuse the wording defects that make a clause uncheckable
+  - success_check: `python -m pytest tests/test_contract_critique.py -q`
+  - files: `lib/contract.py, tests/test_contract_critique.py`
+  - verifies: S7.1, S7.2, S7.3, S7.4, S7.5, S7.6, S7.7, S7.8
+- [ ] T11.2 Exempt what only MENTIONS a defect, and keep the critique advisory by default
+  - success_check: `python -m pytest tests/test_contract_critique.py -q`
+  - files: `lib/contract.py, athena.py, tests/test_contract_critique.py`
+  - verifies: S7.9, S7.10, S7.11, S7.12, S7.13, S7.14, S7.15, S7.16
+### Manual Verification
+- `athena contract lint features/contract-layer/contract.md --strict` is clean on this contract.
+
+## Phase 12: Parser, runner and report hardening
+**Goal:** the pieces the whole layer rests on survive the inputs a real repo produces.
+**Depends on:** Phase 3
+### Tasks
+- [ ] T12.1 Parse the clause forms this format actually allows
+  - success_check: `python -m pytest tests/test_contract.py -q`
+  - files: `lib/contract.py, tests/test_contract.py`
+  - verifies: S1.8, S1.9, S1.10, S1.11, S1.12, S1.13, S1.14, S6.4, S6.5
+- [ ] T12.2 Run specs shell-lessly, in parallel, and select them by tag
+  - success_check: `python -m pytest tests/test_spec_runner.py -q`
+  - files: `lib/spec_runner.py, athena.py, tests/test_spec_runner.py`
+  - verifies: S3.13, S3.14, S3.15, S3.16, S3.18
+- [ ] T12.3 Report the states a clause can be in without collapsing them
+  - success_check: `python -m pytest tests/test_contract_report.py tests/test_contract_graph.py -q`
+  - files: `lib/contract_report.py, lib/plan2beads.py, tests/test_contract_report.py`
+  - verifies: S4.14, S4.15, S4.16, S4.17, S5.13
+### Manual Verification
+- `athena spec run features/contract-layer/scenarios.md --jobs 12` is green on every live clause.
+
+## Phase 13: Surviving an external audit
+**Goal:** the failures a five-lens audit found — a green verdict over no evidence, a mutation
+sweep that flattered itself, a mirror that deleted a user directory — cannot recur.
+**Depends on:** Phase 10
+### Tasks
+- [ ] T13.1 Refuse to call a leg green when nothing ran, and fail on a named-but-missing input
+  - success_check: `python -m pytest tests/test_check.py -q`
+  - files: `lib/check.py, athena.py, tests/test_check.py`
+  - verifies: S11.11, S11.13, S11.14, S11.18
+- [ ] T13.2 Make the mutation sweep report what it actually learned
+  - success_check: `python -m pytest tests/test_judge_pilot.py -q`
+  - files: `lib/mutation.py, tests/test_judge_pilot.py`
+  - verifies: S10.16, S10.17, S10.18, S10.19, S10.20, S10.21, S11.12, S11.15, S11.16, S11.17
+- [ ] T13.3 Ship the test the scaffolded spec points at, so a fresh project checks green
+  - success_check: `python -m pytest tests/test_scaffold.py -q`
+  - files: `lib/scaffold.py, tests/test_scaffold.py`
+  - verifies: S11.21
+### Manual Verification
+- `athena check` on a directory made by `athena init` passes without editing anything.
+
+## Phase 14: The map made honest, and the shape derived
+**Goal:** an empty line map can no longer pass for a proved one, and the artifacts answer
+"what are the parts of this system" without a hand-written architecture page.
+**Depends on:** Phase 8
+### Tasks
+- [ ] T14.1 Collect coverage from every source root, and tell "owns nothing" from "learned nothing"
+  - success_check: `python -m pytest tests/test_clause_map.py -q`
+  - files: `lib/clause_map.py, athena.py, tests/test_clause_map.py`
+  - verifies: S9.18, S9.20, S9.21
+- [ ] T14.2 Make a long judge measurement survivable
+  - success_check: `python -m pytest tests/test_judge_pilot.py -q -k resume`
+  - files: `lib/judge.py, evals/judge_local.py, tests/test_judge_pilot.py`
+  - verifies: S10.22, S10.24
+- [ ] T14.3 Derive the outline: what each clause group guarantees and which modules it owns
+  - success_check: `python -m pytest tests/test_outline.py -q`
+  - files: `lib/outline.py, athena.py, tests/test_outline.py`
+  - verifies: S11.22, S11.23, S11.24, S11.25
+### Manual Verification
+- `athena contract outline features/contract-layer/contract.md --text` names a home module for
+  every group and marks the modules every group passes through as shared.

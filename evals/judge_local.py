@@ -26,11 +26,11 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from lib.judge import Pair, pin, prompt_for, template_fingerprint  # noqa: E402
+from lib.judge import Pair, pin, prompt_for, resume_split, template_fingerprint  # noqa: E402
 
 _JSON = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
@@ -84,6 +84,11 @@ def main(argv=None) -> int:
     ap.add_argument("--limit", type=int, default=0, help="first N pairs (0 = all)")
     ap.add_argument("--jobs", type=int, default=6)
     ap.add_argument("--timeout", type=int, default=600)
+    ap.add_argument("--resume", action="store_true",
+                    help="keep the verdicts already in --out that were recorded under this "
+                         "exact pin, and judge only the rest")
+    ap.add_argument("--checkpoint", type=int, default=20,
+                    help="write the partial record every N verdicts")
     ap.add_argument("--muzzle", dest="reason", action="store_false", default=True,
                     help="force a JSON grammar and skip reasoning (measures the grammar, "
                          "not the model — kept only to reproduce the old numbers)")
@@ -98,34 +103,62 @@ def main(argv=None) -> int:
 
     def judge(p: Pair) -> tuple[str, dict]:
         system, user = prompt_for(p, variant=a.variant)
+        started = time.time()
         got = ask(a.endpoint, a.model, system, user, timeout=a.timeout,
                   reason=a.reason)
+        took = round(time.time() - started, 1)
         if "_error" in got:
             # a failed call is NOT a verdict: it must not read as "the spec is fine"
-            return p.id, {"decision": "error", "error": got["_error"]}
+            return p.id, {"decision": "error", "error": got["_error"], "seconds": took}
         # v1 answers a boolean named `refuted`; v2 answers a categorical `verdict`.
         vacuous = (str(got.get("verdict", "")).lower() == "vacuous" if "verdict" in got
                    else bool(got.get("refuted")))
         return p.id, {"decision": "vacuous" if vacuous else "proves",
                       "counterexample": str(got.get("counterexample", ""))[:300],
-                      "reason": str(got.get("reason", ""))[:200]}
-
-    t0 = time.time()
-    with ThreadPoolExecutor(max_workers=a.jobs) as pool:
-        decisions = dict(pool.map(judge, pairs))
-    elapsed = time.time() - t0
+                      "reason": str(got.get("reason", ""))[:200], "seconds": took}
 
     # Pin the TEMPLATE, not one pair's rendered prompt: the first cut hashed the system
     # prompt twice and the user template never, so v1 -> v2 (recall 0.056 -> 0.417) left
     # the pin byte-identical — a prompt change the record could not see.
-    out = {"schema": "athena.judge_decisions/1",
-           "pin": {**pin(model=a.model, prompt=template_fingerprint(a.variant),
-                         temperature=0.0), "variant": a.variant},
-           "endpoint": a.endpoint, "variant": a.variant, "reason": a.reason,
-           "pairs": len(pairs),
-           "seconds": round(elapsed, 1), "decisions": decisions}
-    pathlib.Path(a.out).write_text(json.dumps(out, indent=2, ensure_ascii=False,
-                                              sort_keys=True) + "\n", encoding="utf-8")
+    stamp = {**pin(model=a.model, prompt=template_fingerprint(a.variant),
+                   temperature=0.0), "variant": a.variant}
+    dest = pathlib.Path(a.out)
+    previous = {}
+    if a.resume and dest.exists():
+        previous = json.loads(dest.read_text(encoding="utf-8"))
+    todo, decisions = resume_split(tuple(pairs), previous, expected_pin=stamp)
+    if previous:
+        print(f"[resume] {len(decisions)} kept, {len(todo)} to judge", flush=True)
+
+    def flush(elapsed: float) -> None:
+        out = {"schema": "athena.judge_decisions/1", "pin": stamp,
+               "endpoint": a.endpoint, "variant": a.variant, "reason": a.reason,
+               "pairs": len(pairs), "judged": len(decisions),
+               "seconds": round(elapsed, 1), "decisions": decisions}
+        # Write beside the target and replace: a kill during the write must not shred the
+        # partial record it is there to protect.
+        tmp = dest.with_suffix(dest.suffix + ".part")
+        tmp.write_text(json.dumps(out, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+                       encoding="utf-8")
+        tmp.replace(dest)
+
+    t0 = time.time()
+    with ThreadPoolExecutor(max_workers=a.jobs) as pool:
+        # as_completed, NOT `pool.map`: map yields in SUBMISSION order, so one slow pair at
+        # the front holds back every verdict behind it. An hour into the first attempt,
+        # dozens of pairs were done and the checkpoint file did not exist yet.
+        futures = [pool.submit(judge, p) for p in todo]
+        for n, fut in enumerate(as_completed(futures), 1):
+            pid, verdict = fut.result()
+            decisions[pid] = verdict
+            # Checkpoint. This run was killed twice at a session boundary with an hour of
+            # model time on the floor, because the driver only wrote at the end.
+            if n % a.checkpoint == 0:
+                flush(time.time() - t0)
+                print(f"[{n}/{len(todo)}] {round(time.time() - t0)}s", flush=True)
+    elapsed = time.time() - t0
+    flush(elapsed)
+
     errs = sum(1 for d in decisions.values() if d["decision"] == "error")
     withce = sum(1 for d in decisions.values()
                  if d["decision"] == "vacuous" and d.get("counterexample", "").strip())

@@ -147,7 +147,9 @@ def test_thresholds_are_fixed_before_any_judge_runs_and_decide_eligibility():
     corpus = build_corpus((GOOD,))
     vacuous = [p for p in corpus if p.label == "vacuous"]
 
-    perfect = {p.id: {"decision": "vacuous"} for p in vacuous}
+    # every pair gets a verdict: since C-10.24 an unjudged half cannot clear the bar, so a
+    # fixture that only answers about the broken pairs is an incomplete run, not a perfect one
+    perfect = {p.id: {"decision": p.label} for p in corpus}
     rep = score(corpus, perfect)
     assert rep["recall"] == 1.0 and rep["false_reject"] == 0.0
     assert rep["passes"] and is_gate_eligible(rep)
@@ -453,3 +455,61 @@ def test_the_mirror_refuses_to_delete_anything_that_is_not_its_own():
     mine = pathlib.Path(isolate(str(repo), str(scratch / "mine")))
     assert (mine / MIRROR_MARKER).exists()
     assert pathlib.Path(isolate(str(repo), str(mine))).exists(), "its own mirror is reusable"
+
+
+def test_resume_reuses_only_verdicts_from_the_same_run():
+    """C-10.22 - a resumed judge run re-judges every pair whose verdict is absent,
+    errored, or recorded under a different pin."""
+    from lib.judge import Pair, resume_split
+
+    def p(i):
+        return Pair(id=f"P{i}", clause_id="C-1.1", clause_text="WHEN x THE SYSTEM SHALL y.",
+                    spec_id="S1.1", spec_source="def test_x():\n    assert 1\n", label="proves")
+
+    pairs = tuple(p(i) for i in range(4))
+    mine = {"model": "m", "prompt_sha": "abc", "temperature": 0.0, "thresholds_sha": "t"}
+    previous = {"pin": mine, "decisions": {
+        "P0": {"decision": "proves"},
+        "P1": {"decision": "error", "error": "URLError: timed out"},
+        "P2": {"decision": "vacuous", "counterexample": "assert answer() == 2"},
+        "P9": {"decision": "proves"},
+    }}
+
+    todo, kept = resume_split(pairs, previous, expected_pin=mine)
+    assert [x.id for x in todo] == ["P1", "P3"], "an errored call is not a verdict to keep"
+    assert set(kept) == {"P0", "P2"}, "a verdict for a pair outside this corpus is dropped"
+
+    other = {**mine, "model": "another-model"}
+    todo2, kept2 = resume_split(pairs, previous, expected_pin=other)
+    assert len(todo2) == 4 and kept2 == {}, "a different pin is a different experiment"
+
+    todo3, kept3 = resume_split(pairs, {}, expected_pin=mine)
+    assert len(todo3) == 4 and kept3 == {}
+
+
+def test_a_partial_run_reports_what_it_never_judged_and_cannot_pass():
+    """C-10.24 - this judge thinks twice as long when there is nothing to refute, so
+    timeouts land on the good half; a partial score flatters recall and must say so."""
+    from lib.judge import Pair, is_gate_eligible, score
+
+    def p(i, label):
+        return Pair(id=f"P{i}", clause_id="C-1.1", clause_text="WHEN x THE SYSTEM SHALL y.",
+                    spec_id="S1.1", spec_source="def test_x():\n    assert 1\n",
+                    label=label, defect="no_assert" if label == "vacuous" else "")
+
+    corpus = (p(1, "vacuous"), p(2, "vacuous"), p(3, "proves"), p(4, "proves"))
+    full = {"P1": {"decision": "vacuous"}, "P2": {"decision": "vacuous"},
+            "P3": {"decision": "proves"}, "P4": {"decision": "proves"}}
+
+    whole = score(corpus, full)
+    assert whole["unjudged"] == {"vacuous": 0, "proves": 0} and whole["complete"]
+    assert whole["recall"] == 1.0 and whole["false_reject"] == 0.0
+    assert whole["passes"] and is_gate_eligible(whole)
+
+    partial = score(corpus, {"P1": {"decision": "vacuous"}, "P2": {"decision": "vacuous"},
+                             "P3": {"decision": "error", "error": "TimeoutError"}})
+    assert partial["unjudged"] == {"vacuous": 0, "proves": 2}, "an error is not a verdict"
+    assert not partial["complete"]
+    assert partial["recall"] == 1.0, "the numbers are still reported"
+    assert not partial["passes"] and not is_gate_eligible(partial), (
+        "perfect recall over the half it managed to judge must not open the gate")
