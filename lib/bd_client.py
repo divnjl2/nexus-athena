@@ -43,6 +43,36 @@ def _athena_label_refs(argv: tuple[str, ...]) -> list[str]:
             if i > 0 and argv[i - 1] == "--label" and a.startswith(f"{EXTERNAL_KEY_PREFIX}:")]
 
 
+def resolve_refs(argv, label_to_id: dict) -> list:
+    """PURE: substitute external labels with real bd issue ids in ONE command's argv.
+
+    Lifted out of `execute` because the only witness it had was the real-`bd` integration
+    spec, and that spec cannot reach the guards below: it only ever emits well-formed
+    `bd dep add <from> <to>`, so breaking `len(argv) > 3` changed nothing it could see. A
+    mutation sweep found both of them alive. An effectful caller is not a place to prove
+    argument handling.
+    """
+    argv = list(argv)
+    out: list = []
+    i = 0
+    while i < len(argv):
+        if argv[i] in ("--parent", "--blocked-by") and i + 1 < len(argv):
+            out += [argv[i], label_to_id.get(argv[i + 1], argv[i + 1])]
+            i += 2
+        else:
+            out.append(argv[i])
+            i += 1
+    if out[:3] == ["bd", "dep", "add"]:
+        # resolve positional issue refs: arg[3] = subject; optional arg[4] = object
+        # (typed edges `bd dep add <from> <to> --type validates/tracks`). Flag-form values
+        # (--blocked-by/--depends-on) were already resolved by the generic pass above, and
+        # a slot that is simply absent must not be indexed.
+        for slot in (3, 4):
+            if len(out) > slot and not out[slot].startswith("--"):
+                out[slot] = label_to_id.get(out[slot], out[slot])
+    return out
+
+
 def execute(result: CompileResult, *, run) -> None:
     """
     Run the compiled commands, resolving external labels -> real bd issue IDs at runtime.
@@ -67,25 +97,8 @@ def execute(result: CompileResult, *, run) -> None:
         # silently — exactly the silent-failure class that hid the v3 edge bugs. Log it.
         _log.warning("bd_client: could not seed label->id map from existing graph: %s", exc)
 
-    def resolve(tok: str) -> str:
-        return label_to_id.get(tok, tok)
-
     for cmd in result.commands:
-        argv: list[str] = []
-        i, src = 0, list(cmd.argv)
-        while i < len(src):
-            if src[i] in ("--parent", "--blocked-by") and i + 1 < len(src):
-                argv += [src[i], resolve(src[i + 1])]; i += 2
-            else:
-                argv.append(src[i]); i += 1
-        if argv[:3] == ["bd", "dep", "add"]:
-            # resolve positional issue refs: arg[3] = subject; optional arg[4] = object
-            # (typed edges `bd dep add <from> <to> --type validates/tracks`). Flag-form
-            # values (--blocked-by/--depends-on) are resolved by the generic pass above.
-            if len(argv) > 3 and not argv[3].startswith("--"):
-                argv[3] = resolve(argv[3])
-            if len(argv) > 4 and not argv[4].startswith("--"):
-                argv[4] = resolve(argv[4])
+        argv = resolve_refs(cmd.argv, label_to_id)
 
         is_create = argv[:2] == ["bd", "create"]
         if is_create:

@@ -237,7 +237,7 @@ def seam_contract_bound(contract, scenarios) -> SeamResult:
 
 
 def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "",
-                   clause_digests: dict | None = None) -> SeamResult:
+                   clause_digests: dict | None = None, subject: str = "") -> SeamResult:
     """Seam 13 (v3.3): the clause->file:line map must describe the contract in front of us.
 
     The map is DERIVED, which is its strength and its trap: nothing about a stale one looks
@@ -253,10 +253,13 @@ def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "
     """
     from lib.clause_map import SCHEMA, staleness
     rep = staleness(clause_map, contract, scenarios, scenario_version=scenario_version,
-                    clause_digests=clause_digests)
+                    clause_digests=clause_digests, subject=subject)
     issues: list[str] = []
     if rep["absent"]:
         issues.append(f"clause map is absent or not {SCHEMA} — run `contract map`")
+    if rep["foreign_subject"]:
+        issues.append(f"map describes {rep['map_subject']}, this check is about "
+                      f"{rep['subject']} — a gate answering about another codebase")
     if rep["contract_drift"]:
         issues.append(f"map pinned to contract {rep['map_contract_version']}, "
                       f"contract is now {rep['contract_version']}")
@@ -269,7 +272,8 @@ def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "
     issues += [f"clause {cid}: the lines it owns changed since the map was built"
                for cid in rep["clause_drift"]]
     # already deterministic: the pins are scalars and both id lists come back sorted
-    shape = _hash(repr((rep["map_contract_version"], rep["map_scenario_version"],
+    shape = _hash(repr((rep["map_subject"], rep["map_contract_version"],
+                        rep["map_scenario_version"],
                         tuple(rep["unmapped"]), tuple(rep["stale_entries"]),
                         tuple(rep["clause_drift"]))))
     return SeamResult("seam.map_fresh", not issues, tuple(issues), shape)

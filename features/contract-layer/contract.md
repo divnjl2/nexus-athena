@@ -186,6 +186,16 @@
   - note: this was the v3.1 requirement, retro-documented so the change is auditable. It is
     superseded, not deleted — a reference to C-5.10 still resolves, forward to C-5.3.
 
+- **C-5.14** — WHEN a compiled command references an external label THE SYSTEM SHALL
+  substitute the bd issue id that label resolves to.
+- **C-5.15** — WHEN a positional slot of a `bd dep add` command is absent or holds a flag
+  THE SYSTEM SHALL leave that slot untouched.
+  - note: the only witness these two guards had was the real-`bd` integration spec, which
+    only ever emits well-formed `bd dep add <from> <to>` — so breaking `len(argv) > 3`
+    changed nothing it could see and a mutation sweep found both alive. The rewriting is
+    now a pure function with a unit-level spec; an effectful caller is not a place to prove
+    argument handling.
+
 ## C-6 — Migration and file hygiene
 
 - **C-6.1** — WHEN an existing spec.md is imported THE SYSTEM SHALL preserve its EARS ids
@@ -488,3 +498,74 @@
     Counting how many groups touch a FILE called `lib/contract.py` shared for everyone, so
     C-1 (the parser) and C-7 (the wording critique) both came out homeless and the modules
     they merely pass through were promoted in their place.
+
+## C-12 — Clause to document: the reference that rots
+
+> Mechanism and vocabulary are Doorstop's, on purpose: a link carries the fingerprint of what
+> was reviewed, and a moved target is a SUSPECT LINK. Inventing a third word would help nobody.
+
+- **C-12.1** — WHEN a clause references a document THE SYSTEM SHALL accept `target@fingerprint`
+  and treat the fingerprint as optional.
+- **C-12.2** — WHEN a referenced document has changed since it was reviewed THE SYSTEM SHALL
+  report that reference as a suspect link.
+- **C-12.3** — WHEN a reference names a document that is absent THE SYSTEM SHALL report it as
+  broken, apart from a reference this tool cannot read at all.
+- **C-12.4** — WHEN references are re-pinned THE SYSTEM SHALL name only those whose target moved.
+  - note: re-pinning is REVIEWING. The command reports the edits so a human reads the diff
+    rather than the tool quietly agreeing with whatever the document says today.
+- **C-12.5** — WHEN a contract is rendered THE SYSTEM SHALL preserve its document references.
+
+## C-13 — Code to clause: the annotation, and the evidence for it
+
+> Notation is StrictDoc's, because two grammars already exist and a third would help nobody.
+> What is ours is refusing to take the annotation at its word.
+
+- **C-13.1** — WHEN source is scanned THE SYSTEM SHALL read relation markers with
+  comma-separated ids and an optional scope.
+- **C-13.2** — WHEN a marker declares a scope THE SYSTEM SHALL resolve it to the lines it
+  claims: a line, an enclosing function, an enclosing class, a range or the file.
+- **C-13.3** — WHEN the clause map does not show the marked clause reaching the claimed lines
+  THE SYSTEM SHALL report that marker as unbacked.
+  - note: the sharp one. An annotation is a claim, and a comment naming a clause over code no
+    spec of that clause ever executes is decoration, not traceability.
+- **C-13.4** — WHEN a marker names an unknown clause, a retired one, or a scope that cannot be
+  resolved THE SYSTEM SHALL report each case apart from the others.
+- **C-13.5** — WHEN a marker appears inside a code span or a fenced block THE SYSTEM SHALL
+  treat it as a mention rather than a marker.
+  - note: the same distinction `critique` already draws between using a word and quoting one.
+    The first scan of this repository reported the EXAMPLES in these docstrings as three
+    broken markers.
+
+## C-14 — Publishing the contract for another repository
+
+> Shapes are borrowed: the sphinx-needs index (the answer to cross-project referencing that
+> predates us) and OpenFastTrace specobject XML. An index nothing can read is a file.
+
+- **C-14.1** — WHEN the clause index is exported THE SYSTEM SHALL emit the shape a
+  sphinx-needs consumer already reads.
+- **C-14.2** — WHEN the index is exported with a coverage report and a map THE SYSTEM SHALL
+  carry whether each clause is proved and how much code it owns.
+  - note: the only part of this export nobody else's index has. A requirements index says a
+    requirement exists; this one says whether anything proves it.
+- **C-14.3** — WHEN an unchanged contract is exported twice THE SYSTEM SHALL produce
+  byte-identical output.
+- **C-14.4** — WHEN the index is exported for OpenFastTrace THE SYSTEM SHALL emit specobject
+  XML its tracer can ingest.
+
+## C-15 — Which codebase a map describes
+
+> A package URL names a repository independently of where anyone checked it out. A path says
+> where somebody cloned something, and that is exactly what must not matter.
+
+- **C-15.1** — WHEN a codebase is named THE SYSTEM SHALL accept a package URL and refuse a
+  string that is not one.
+- **C-15.2** — WHEN two package URLs differ only in version THE SYSTEM SHALL treat them as the
+  same codebase.
+  - note: the per-clause digests already answer whether the CODE moved. Comparing versions
+    here would make every commit look like a different project.
+- **C-15.3** — WHEN either side names no codebase THE SYSTEM SHALL report that as not the same
+  rather than as agreement.
+- **C-15.4** — WHEN a clause map names a different codebase than the one being checked THE
+  SYSTEM SHALL fail the freshness gate.
+  - note: an audit checked a scaffolded project from inside this repo and the reverse leg
+    silently judged it by THIS repo's map. The map now says whose code it describes.

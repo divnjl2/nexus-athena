@@ -235,7 +235,7 @@ over it, which is why every task's success_check is an already-green pytest node
 - [ ] T12.3 Report the states a clause can be in without collapsing them
   - success_check: `python -m pytest tests/test_contract_report.py tests/test_contract_graph.py -q`
   - files: `lib/contract_report.py, lib/plan2beads.py, tests/test_contract_report.py`
-  - verifies: S4.14, S4.15, S4.16, S4.17, S5.13
+  - verifies: S4.14, S4.15, S4.16, S4.17, S5.13, S5.14, S5.15
 ### Manual Verification
 - `athena spec run features/contract-layer/scenarios.md --jobs 12` is green on every live clause.
 
@@ -279,3 +279,29 @@ sweep that flattered itself, a mirror that deleted a user directory — cannot r
 ### Manual Verification
 - `athena contract outline features/contract-layer/contract.md --text` names a home module for
   every group and marks the modules every group passes through as shared.
+
+## Phase 15: Independent of the repository
+**Goal:** documents, code and the contract stay linked when they do not share a checkout,
+using the notations that already exist rather than three new ones.
+**Depends on:** Phase 14
+### Tasks
+- [ ] T15.1 Clause to document links, with Doorstop's fingerprint and Doorstop's word for drift
+  - success_check: `python -m pytest tests/test_docrefs.py -q`
+  - files: `lib/docrefs.py, lib/contract.py, lib/ast.py, athena.py, tests/test_docrefs.py`
+  - verifies: S12.1, S12.2, S12.3, S12.4, S12.5
+- [ ] T15.2 Read StrictDoc markers and refuse the ones the map cannot back
+  - success_check: `python -m pytest tests/test_markers.py -q`
+  - files: `lib/markers.py, athena.py, tests/test_markers.py`
+  - verifies: S13.1, S13.2, S13.3, S13.4, S13.5
+- [ ] T15.3 Publish the clause index in shapes other tools already read
+  - success_check: `python -m pytest tests/test_export.py -q`
+  - files: `lib/export.py, athena.py, tests/test_export.py`
+  - verifies: S14.1, S14.2, S14.3, S14.4
+- [ ] T15.4 Name the codebase a map describes, and refuse a map about another one
+  - success_check: `python -m pytest tests/test_purl.py -q`
+  - files: `lib/purl.py, lib/clause_map.py, lib/seams.py, athena.py, tests/test_purl.py`
+  - verifies: S15.1, S15.2, S15.3, S15.4
+### Manual Verification
+- `athena contract refs <contract> --text` reports suspect and broken links apart.
+- `athena contract markers <contract> --map <map> --source lib` confirms every marker.
+- `athena contract export <contract> --project <name> -o clauses.needs.json` round-trips.

@@ -65,7 +65,8 @@ _CLAUSE_RE = re.compile(
     rf"^-\s*\*\*({CLAUSE_ID})\*\*\s*(?:\*\(([^)]*)\)\*)?\s*(?:[—\-]\s+)?(.*)$"
 )
 _ATTR_RE = re.compile(
-    r"^\s+-\s*(status|supersedes|superseded[-_]by|tags|note)\s*:\s*(.*)$", re.IGNORECASE
+    r"^\s+-\s*(status|supersedes|superseded[-_]by|tags|note|see|ref)\s*:\s*(.*)$",
+    re.IGNORECASE
 )
 _ID_LIST_SPLIT = re.compile(r"[,\s]+")
 
@@ -134,6 +135,10 @@ def _apply_attr(cur: dict, key: str, value: str) -> None:
         cur["supersedes"] += _ids(value)
     elif key == "tags":
         cur["tags"] += _ids(value)
+    elif key in ("see", "ref"):
+        # one target per bullet; the optional fingerprint is parsed by lib.docrefs, because
+        # a malformed reference belongs in a report and not in a parse error
+        cur["refs"] += (value,)
     else:
         cur["notes"] += (value,)
 
@@ -160,6 +165,7 @@ def _finish(cur: dict) -> Clause:
         parent=cid.rsplit(".", 1)[0] if "." in cid else "",
         group=cur["group"],
         tags=tuple(sorted(set(cur["tags"]))),
+        refs=tuple(cur["refs"]),
         source_line=cur["line"],
     )
 
@@ -196,6 +202,7 @@ def parse(text: str) -> Contract:
             flush()
             cur = {"id": mc.group(1), "text": mc.group(3) or "", "status": CLAUSE_ACTIVE,
                    "superseded_by": (), "supersedes": (), "tags": (), "notes": (),
+                   "refs": (),
                    "group": group, "line": lineno, "last": "text"}
             if mc.group(2):
                 _apply_marker(cur, mc.group(2))
@@ -529,6 +536,10 @@ def render(contract: Contract) -> str:
         out.append(f"- **{c.id}**{marker} — {c.text}")
         if c.tags:
             out.append(f"  - tags: {', '.join(c.tags)}")
+        # references round-trip too: a render that silently dropped them would turn
+        # `render(parse(x))` from a canonicaliser into a data-loss step
+        for ref in c.refs:
+            out.append(f"  - see: {ref}")
     out.append("")
     return "\n".join(out)
 

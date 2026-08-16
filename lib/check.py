@@ -28,7 +28,7 @@ def _step(name: str, ok: bool, detail: dict, *, leg: str, blocking: bool = True)
 
 
 def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=None,
-          todo=None, drift=None, gates=None, mutation=None, judge=None,
+          todo=None, drift=None, gates=None, mutation=None, judge=None, refs=None,
           strict_wording: bool = False, missing_inputs=(), allow_partial: bool = False) -> dict:
     """PURE: fold every report into one verdict.
 
@@ -49,6 +49,17 @@ def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=
     steps.append(_step("contract.wording", not critique_warnings,
                        {"warnings": list(critique_warnings)},
                        leg="contract", blocking=strict_wording))
+
+    if refs is not None:
+        # Upstream with the contract, not with the code: a clause citing a document that has
+        # been rewritten is a claim nobody re-read. `suspect` is Doorstop's word for it and
+        # is kept verbatim, because a reader who knows that tool already knows this row.
+        steps.append(_step("contract.refs", refs.get("passed", False), {
+            "suspect": [r["clause"] for r in refs.get("suspect", ())],
+            "broken": [r["target"] for r in refs.get("broken", ())],
+            "unpinned": len(refs.get("unpinned", ())),
+            "external": len(refs.get("external", ())),
+        }, leg="contract"))
 
     if coverage is not None:
         steps.append(_step("coverage", coverage.get("passed", False), {

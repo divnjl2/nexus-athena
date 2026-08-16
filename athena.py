@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -225,6 +226,90 @@ def cmd_contract_coverage(a) -> int:
     return 0 if rep["passed"] or not a.gate else 1
 
 
+def _scan_markers(roots, cwd: str = "."):
+    """EFFECTFUL: (markers, {path: text}) for every source file under the given roots."""
+    from lib.markers import scan
+    base = pathlib.Path(cwd)
+    found, sources = [], {}
+    for root in roots:
+        rp = base / root
+        files = [rp] if rp.is_file() else sorted(rp.rglob("*.py")) if rp.exists() else []
+        for f in files:
+            rel = f.relative_to(base).as_posix() if f.is_relative_to(base) else f.as_posix()
+            text = _read(str(f))
+            hits = scan(text, path=rel)
+            if hits:
+                sources[rel] = text
+                found.extend(hits)
+    return tuple(found), sources
+
+
+def cmd_contract_markers(a) -> int:
+    # `@relation(C-9.22, scope=function)` — StrictDoc's notation, verified against OUR map:
+    # an annotation nobody can back with executed lines is decoration, not traceability.
+    from lib.markers import check
+    contract = _load_contract(a)
+    map_path = a.map or str(pathlib.Path(a.contract).with_name("clause_map.json"))
+    cmap = json.loads(_read(map_path)) if pathlib.Path(map_path).exists() else {"clauses": {}}
+    markers, sources = _scan_markers(a.source or ["lib"], cwd=a.cwd)
+    rep = check(markers, contract, cmap, sources)
+    _report_out(a, rep, title="code -> clause markers")
+    return 0 if rep["passed"] or not a.gate else 1
+
+
+def cmd_contract_export(a) -> int:
+    # Publish the clause index so ANOTHER repository can reference these requirements
+    # without a checkout. Shapes are borrowed (sphinx-needs, OpenFastTrace) on purpose.
+    from lib.contract_report import coverage
+    from lib.export import render_needs, to_needs, to_oft
+
+    contract = _load_contract(a)
+    scen = _load_scenarios(a, anchor=a.contract)
+    map_path = a.map or str(pathlib.Path(a.contract).with_name("clause_map.json"))
+    cmap = json.loads(_read(map_path)) if pathlib.Path(map_path).exists() else {}
+
+    if a.format == "oft":
+        text = to_oft(contract, doc_id=a.project or contract.title)
+    else:
+        text = render_needs(to_needs(contract, project=a.project, version=a.version,
+                                     coverage=coverage(contract, scen), clause_map=cmap))
+    if a.out:
+        pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(a.out).write_text(text, encoding="utf-8")
+        _emit({"export": a.out, "format": a.format, "clauses": len(contract.clauses),
+               "project": a.project or contract.title})
+    else:
+        print(text, end="")
+    return 0
+
+
+def cmd_contract_refs(a) -> int:
+    # Clause -> DOCUMENT links, checked the way Doorstop checks them: a link carries the
+    # fingerprint of what was reviewed, and a moved target is a SUSPECT LINK, not a failure
+    # of the code. Targets resolve relative to the CONTRACT, never to the caller's cwd.
+    from lib.docrefs import apply_repin, check, repin, targets
+
+    contract = _load_contract(a)
+    base = pathlib.Path(a.contract).resolve().parent
+    sources = {}
+    for tgt in targets(contract):
+        path = (base / tgt)
+        sources[tgt] = _read(str(path)) if path.exists() else None
+
+    if a.write:
+        edits = repin(contract, sources)
+        text, applied = apply_repin(_read(a.contract), edits)
+        if applied:
+            pathlib.Path(a.contract).write_text(text, encoding="utf-8")
+        _emit({"contract": a.contract, "repinned": applied,
+               "clauses": sorted(edits), "note": "re-pinning is REVIEWING: read the diff"})
+        return 0
+
+    rep = check(contract, sources)
+    _report_out(a, rep, title="clause -> document references")
+    return 0 if rep["passed"] or not a.gate else 1
+
+
 def cmd_contract_outline(a) -> int:
     # "What are the parts of this system?" — answered from the artifacts rather than from a
     # hand-written architecture page that nobody re-derives.
@@ -334,6 +419,9 @@ def cmd_contract_map(a) -> int:
     # the incremental branch narrows `scenarios` to what must be re-derived; the spec-body
     # pins have to cover ALL of them or a skipped spec would never be seen changing again
     all_scenarios = scenarios
+    # WHICH codebase this map is about. Recorded so a map can never answer about a
+    # project it has not seen; derived from the git remote when nobody says.
+    subject = a.purl if a.purl != "auto" else _git_purl(a.cwd)
 
     # Incremental: re-derive ONLY the clauses whose owned lines moved (plus any clause the
     # map has never seen). Everything else in the map is still true, and re-running its
@@ -360,7 +448,7 @@ def cmd_contract_map(a) -> int:
             # permanently stale to `seam.map_fresh`, with no incremental way back: the only
             # cure was a full rebuild that would have derived byte-identical ownership.
             cmap = _finish_map((), contract, scen_path, scenarios=all_scenarios,
-                               base=base, rebuilt=())
+                               base=base, rebuilt=(), subject=subject)
             pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                            encoding="utf-8")
             _emit({"map": a.out, "rebuilt": [], "kept": len(cmap.get("clauses") or {}),
@@ -370,7 +458,7 @@ def cmd_contract_map(a) -> int:
     spec_lines = collect(scenarios, sources=tuple(a.source), workdir=a.workdir,
                          cwd=a.cwd, jobs=a.jobs)
     cmap = _finish_map(spec_lines, contract, scen_path, scenarios=all_scenarios,
-                       base=base, rebuilt=rebuilt)
+                       base=base, rebuilt=rebuilt, subject=subject)
     pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                    encoding="utf-8")
@@ -409,6 +497,32 @@ def _sources_of(cmap: dict) -> dict:
     return out
 
 
+def _git_purl(root: str = ".") -> str:
+    """EFFECTFUL: derive `pkg:<host>/<owner>/<repo>` from the git remote, or "" if unknown.
+
+    A default nobody has to type is the difference between a subject that gets recorded and
+    one that does not. Best-effort on purpose: no remote, no git, no subject — and an
+    unstated subject is simply not checked rather than guessed at.
+    """
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", root, "remote", "get-url", "origin"],
+                             capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    url = (out.stdout or "").strip()
+    if out.returncode != 0 or not url:
+        return ""
+    url = url.removesuffix(".git")
+    m = re.search(r"(?:https?://|git@|ssh://git@)([^/:]+)[/:](.+)$", url)
+    if not m:
+        return ""
+    host, path = m.group(1).lower(), m.group(2).strip("/")
+    kind = {"github.com": "github", "gitlab.com": "gitlab",
+            "bitbucket.org": "bitbucket"}.get(host, "generic")
+    return f"pkg:{kind}/{path}" if kind != "generic" else f"pkg:generic/{path.split('/')[-1]}"
+
+
 def _test_sources(scenarios) -> dict:
     """{path: text} for every test module a run_cmd names. I/O, so it lives here."""
     out = {}
@@ -421,16 +535,16 @@ def _test_sources(scenarios) -> dict:
 
 
 def _finish_map(spec_lines, contract, scen_path, *, scenarios=(), base=None,
-                rebuilt=()) -> dict:
+                rebuilt=(), subject: str = "") -> dict:
     """Fold the collected lines into a map and pin each clause to the lines it owns."""
     from lib.clause_map import build, digests, merge, spec_digests
     from lib.versioning import hash_text
     sv = hash_text(_read(str(scen_path)))
     sd = spec_digests(scenarios, _test_sources(scenarios))
     draft = (merge(base, spec_lines, contract_version=contract.version, scenario_version=sv,
-                   spec_digests=sd, rebuilt=tuple(rebuilt))
+                   spec_digests=sd, subject=subject, rebuilt=tuple(rebuilt))
              if base else build(spec_lines, contract_version=contract.version,
-                                scenario_version=sv, spec_digests=sd))
+                                scenario_version=sv, spec_digests=sd, subject=subject))
     # second pass: the digests can only be computed once the final line sets are known
     return merge(draft, (), contract_version=contract.version, scenario_version=sv,
                  clause_digests=digests(draft, _sources_of(draft)))
@@ -682,8 +796,18 @@ def cmd_check(a) -> int:
                     cmap, plan.contract, plan.scenarios,
                     scenario_version=hash_text(scen.read_text(encoding="utf-8"))
                     if scen.exists() else "",
-                    clause_digests=digests(cmap, _sources_of(cmap)))
+                    clause_digests=digests(cmap, _sources_of(cmap)),
+                    subject=a.purl if a.purl != "auto" else _git_purl(a.cwd))
                 gates["map_fresh"] = {"passed": mr.passed, "issues": list(mr.issues)}
+
+    # Clause -> DOCUMENT links belong upstream with the contract: a clause citing an ADR
+    # that has been rewritten is a claim nobody re-read, and the code cannot answer for it.
+    from lib.docrefs import check as refs_check, targets as ref_targets
+    ref_sources = {}
+    for tgt in ref_targets(contract):
+        tp = here / tgt
+        ref_sources[tgt] = _read(str(tp)) if tp.exists() else None
+    refs = refs_check(contract, ref_sources) if ref_sources else None
 
     mutation = None
     if a.deep and pathlib.Path(map_path).exists():
@@ -703,7 +827,7 @@ def cmd_check(a) -> int:
                    ledger_totals=ledger.get("totals") if ledger else None,
                    todo=todo_report(contract, scenarios, ledger),
                    drift=drift_report(contract, scenarios, ledger),
-                   gates=gates, mutation=mutation, judge=judge,
+                   gates=gates, mutation=mutation, judge=judge, refs=refs,
                    strict_wording=a.strict)
     print(render(report) if a.text else json.dumps(report, ensure_ascii=False, sort_keys=True))
     return 0 if report["passed"] else 1
@@ -830,9 +954,43 @@ def build_parser() -> argparse.ArgumentParser:
     cm.add_argument("--jobs", type=int, default=0)
     cm.add_argument("--workdir", default=".athena/clause_map")
     cm.add_argument("-o", "--out", default=".athena/clause_map.json")
+    cm.add_argument("--purl", default="auto",
+                    help="package URL of the codebase this map describes "
+                         "(default: derived from the git remote; '' to omit)")
     cm.add_argument("--incremental", action="store_true",
                     help="re-derive only the clauses whose owned lines moved")
     cm.set_defaults(fn=cmd_contract_map)
+
+    cr = csub.add_parser("refs", help="clause -> document links: suspect, broken, unpinned")
+    cr.add_argument("contract", nargs="?", default="contract.md")
+    cr.add_argument("--write", action="store_true",
+                    help="re-pin every moved reference (that is a REVIEW: read the diff)")
+    cr.add_argument("--text", action="store_true")
+    cr.add_argument("--gate", action="store_true", help="exit 1 on a suspect or broken link")
+    cr.set_defaults(fn=cmd_contract_refs)
+
+    cex = csub.add_parser("export", help="publish the clause index for other repositories")
+    cex.add_argument("contract", nargs="?", default="contract.md")
+    cex.add_argument("--scenarios", default="")
+    cex.add_argument("--map", default="")
+    cex.add_argument("--format", default="needs", choices=("needs", "oft"),
+                     help="needs = sphinx-needs needs.json; oft = OpenFastTrace specobject XML")
+    cex.add_argument("--project", default="", help="namespace a consumer prefixes our ids with")
+    cex.add_argument("--version", default="", help="index version (default: contract version)")
+    cex.add_argument("-o", "--out", default="")
+    cex.set_defaults(fn=cmd_contract_export)
+
+    cmk = csub.add_parser("markers", help="@relation(...) markers in code, checked "
+                                          "against the clause map")
+    cmk.add_argument("contract", nargs="?", default="contract.md")
+    cmk.add_argument("--source", action="append", default=[], metavar="PATH",
+                     help="where to look for markers (repeatable, default: lib)")
+    cmk.add_argument("--map", default="", help="clause map (default: beside the contract)")
+    cmk.add_argument("--cwd", default=".")
+    cmk.add_argument("--text", action="store_true")
+    cmk.add_argument("--gate", action="store_true",
+                     help="exit 1 on an unknown, retired or unbacked marker")
+    cmk.set_defaults(fn=cmd_contract_markers)
 
     cot = csub.add_parser("outline", help="the shape of the system, derived: what each "
                                           "clause group guarantees and which modules it owns")
@@ -890,6 +1048,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="spec budget per mutant; exceeding it reports UNDETERMINED, never "
                          "'survived' (0 = no budget)")
     ck.add_argument("--mirror", default="")
+    ck.add_argument("--purl", default="auto",
+                    help="package URL of the codebase under check "
+                         "(default: derived from the git remote)")
     ck.add_argument("--cwd", default=".")
     ck.add_argument("--text", action="store_true")
     ck.add_argument("--allow-partial", dest="allow_partial", action="store_true",

@@ -151,9 +151,20 @@ C-9 The per-clause file:line map  (20 live, 2 superseded)  proved 20/20
 ```
 
 A group's **home** is a module holding lines only that group owns; a module it merely
-executes on the way in is **shared** and credited to nobody. Exclusivity is per line, so one
-file can be the home of two groups that live in different parts of it — `lib/contract.py`
-belongs to both the parser (C-1) and the wording critique (C-7).
+executes on the way in is **shared** and credited to nobody.
+
+**Living apart from the code (v3.8).** Three links survive a repository boundary, each in a
+notation that already exists: `- see: doc@fingerprint` on a clause (Doorstop's mechanism and
+its word, **suspect link**, for a target that moved); `@relation(C-9.22, scope=function)` in
+source (StrictDoc's notation — but a marker the clause map cannot back is reported `unbacked`,
+because an annotation is a claim); and `athena contract export` publishing the clause index in
+the sphinx-needs shape, so another repository references these requirements without a checkout.
+The map records the codebase it describes as a package URL, and refuses to answer about
+another one.
+
+Exclusivity is per line, so one file can be the home of two groups that live in different
+parts of it — `lib/contract.py` belongs to both the parser (C-1) and the wording critique
+(C-7).
 
 ## Requirement contract (v3.3)
 

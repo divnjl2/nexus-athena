@@ -493,6 +493,22 @@
 
 ## C-6 — proved by the clause parser / resolver (lib/contract.py)
 
+### S5.14 — label references resolve to bd issue ids
+- **verifies:** C-5.14
+- **pins:** bf26febf12152e1a
+- **run_cmd:** `python -m pytest tests/test_contract_graph.py::test_label_references_resolve_to_bd_issue_ids -q`
+- **Given** the compiler + gate (lib/plan2beads.py, lib/seams.py)
+- **When** the spec `test_label_references_resolve_to_bd_issue_ids` is executed
+- **Then** every external label in a compiled command is replaced by the issue id it resolves to, and an unknown label is left as it stands.
+
+### S5.15 — an absent or flag-shaped positional is left alone
+- **verifies:** C-5.15
+- **pins:** df375683915cd369
+- **run_cmd:** `python -m pytest tests/test_contract_graph.py::test_an_absent_or_flag_shaped_positional_is_left_alone -q`
+- **Given** the compiler + gate (lib/plan2beads.py, lib/seams.py)
+- **When** the spec `test_an_absent_or_flag_shaped_positional_is_left_alone` is executed
+- **Then** a `bd dep add` with no positional refs is returned unchanged, and a flag sitting in a positional slot is not treated as an issue reference.
+
 ### S6.1 — import from spec preserves ears ids verbatim
 - **verifies:** C-6.1
 - **pins:** 6abb6b0b28a70982
@@ -1292,3 +1308,148 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_the_default_mirror_is_somewhere_the_guard_will_accept` is executed
 - **Then** the sweep's default scratch tree sits outside the repository, carries the mirror marker and is reusable on the next run.
+
+### S12.1 — a reference carries the fingerprint of what was reviewed
+- **verifies:** C-12.1
+- **pins:** c6a143840b1875b3
+- **run_cmd:** `python -m pytest tests/test_docrefs.py::test_a_reference_carries_the_fingerprint_of_what_was_reviewed -q`
+- **Given** tests/test_docrefs.py
+- **When** the spec `test_a_reference_carries_the_fingerprint_of_what_was_reviewed` is executed
+- **Then** `target@fingerprint` parses both ways round and the fingerprint stays optional.
+
+### S12.2 — a target that moved since review is a suspect link
+- **verifies:** C-12.2
+- **pins:** e6e395ef8fdd4f55
+- **run_cmd:** `python -m pytest tests/test_docrefs.py::test_a_target_that_moved_since_review_is_a_suspect_link -q`
+- **Given** tests/test_docrefs.py
+- **When** the spec `test_a_target_that_moved_since_review_is_a_suspect_link` is executed
+- **Then** a reference whose document changed since review is reported as a suspect link.
+
+### S12.3 — a missing target is broken and a url is not checked at all
+- **verifies:** C-12.3
+- **pins:** 579826c0cf848823
+- **run_cmd:** `python -m pytest tests/test_docrefs.py::test_a_missing_target_is_broken_and_a_url_is_not_checked_at_all -q`
+- **Given** tests/test_docrefs.py
+- **When** the spec `test_a_missing_target_is_broken_and_a_url_is_not_checked_at_all` is executed
+- **Then** an absent document is broken, a URL is external, and an unpinned reference is neither.
+
+### S12.4 — repinning names only the references that moved
+- **verifies:** C-12.4
+- **pins:** a25fd9ebb57443ec
+- **run_cmd:** `python -m pytest tests/test_docrefs.py::test_repinning_names_only_the_references_that_moved -q`
+- **Given** tests/test_docrefs.py
+- **When** the spec `test_repinning_names_only_the_references_that_moved` is executed
+- **Then** re-pinning reports the edits for a human to read rather than agreeing silently.
+
+### S12.5 — references survive a render round trip
+- **verifies:** C-12.5
+- **pins:** 699e145aa31b0081
+- **run_cmd:** `python -m pytest tests/test_docrefs.py::test_references_survive_a_render_round_trip -q`
+- **Given** tests/test_docrefs.py
+- **When** the spec `test_references_survive_a_render_round_trip` is executed
+- **Then** a render round-trip keeps every reference, so canonicalising is not a data-loss step.
+
+### S13.1 — the marker notation is strictdocs and is read whole
+- **verifies:** C-13.1
+- **pins:** 37d9710c4df86d66
+- **run_cmd:** `python -m pytest tests/test_markers.py::test_the_marker_notation_is_strictdocs_and_is_read_whole -q`
+- **Given** tests/test_markers.py
+- **When** the spec `test_the_marker_notation_is_strictdocs_and_is_read_whole` is executed
+- **Then** markers are read with comma-separated ids and an optional scope.
+
+### S13.2 — each scope resolves to the lines it claims
+- **verifies:** C-13.2
+- **pins:** 48270fcba55f298c
+- **run_cmd:** `python -m pytest tests/test_markers.py::test_each_scope_resolves_to_the_lines_it_claims -q`
+- **Given** tests/test_markers.py
+- **When** the spec `test_each_scope_resolves_to_the_lines_it_claims` is executed
+- **Then** every scope resolves to the lines it claims, at the granularity the clause map speaks.
+
+### S13.3 — a marker the map does not back is decorative
+- **verifies:** C-13.3
+- **pins:** 2506c7de64858b4e
+- **run_cmd:** `python -m pytest tests/test_markers.py::test_a_marker_the_map_does_not_back_is_decorative -q`
+- **Given** tests/test_markers.py
+- **When** the spec `test_a_marker_the_map_does_not_back_is_decorative` is executed
+- **Then** a marker the map cannot back is reported unbacked: decoration, not traceability.
+
+### S13.4 — unknown retired and unresolvable markers are reported apart
+- **verifies:** C-13.4
+- **pins:** da32e38df85ebc75
+- **run_cmd:** `python -m pytest tests/test_markers.py::test_unknown_retired_and_unresolvable_markers_are_reported_apart -q`
+- **Given** tests/test_markers.py
+- **When** the spec `test_unknown_retired_and_unresolvable_markers_are_reported_apart` is executed
+- **Then** unknown, retired and unresolvable markers are reported apart, calling for different fixes.
+
+### S13.5 — a marker shown in backticks is a mention not a marker
+- **verifies:** C-13.5
+- **pins:** 9df45cc6c4abffc3
+- **run_cmd:** `python -m pytest tests/test_markers.py::test_a_marker_shown_in_backticks_is_a_mention_not_a_marker -q`
+- **Given** tests/test_markers.py
+- **When** the spec `test_a_marker_shown_in_backticks_is_a_mention_not_a_marker` is executed
+- **Then** a marker inside backticks or a fenced block is a mention, and line numbering survives.
+
+### S14.1 — the index is the needs json shape a consumer already reads
+- **verifies:** C-14.1
+- **pins:** baa081e6c3dfda54
+- **run_cmd:** `python -m pytest tests/test_export.py::test_the_index_is_the_needs_json_shape_a_consumer_already_reads -q`
+- **Given** tests/test_export.py
+- **When** the spec `test_the_index_is_the_needs_json_shape_a_consumer_already_reads` is executed
+- **Then** the index carries their status vocabulary with ours beside it, and their id links.
+
+### S14.2 — the index carries what a requirements index cannot say
+- **verifies:** C-14.2
+- **pins:** 9490e074a5f28159
+- **run_cmd:** `python -m pytest tests/test_export.py::test_the_index_carries_what_a_requirements_index_cannot_say -q`
+- **Given** tests/test_export.py
+- **When** the spec `test_the_index_carries_what_a_requirements_index_cannot_say` is executed
+- **Then** proved-or-not, owned lines and half-proved lines travel with the ids.
+
+### S14.3 — the export is byte stable
+- **verifies:** C-14.3
+- **pins:** 86493cfaf133544e
+- **run_cmd:** `python -m pytest tests/test_export.py::test_the_export_is_byte_stable -q`
+- **Given** tests/test_export.py
+- **When** the spec `test_the_export_is_byte_stable` is executed
+- **Then** re-exporting an unchanged contract is a no-op in git.
+
+### S14.4 — the oft export is specobject xml their tracer can ingest
+- **verifies:** C-14.4
+- **pins:** 2e61a9e5574aed7c
+- **run_cmd:** `python -m pytest tests/test_export.py::test_the_oft_export_is_specobject_xml_their_tracer_can_ingest -q`
+- **Given** tests/test_export.py
+- **When** the spec `test_the_oft_export_is_specobject_xml_their_tracer_can_ingest` is executed
+- **Then** the export parses as specobject XML, drops withdrawn clauses and escapes its text.
+
+### S15.1 — a codebase is named by package url not by a path
+- **verifies:** C-15.1
+- **pins:** d267296836d69987
+- **run_cmd:** `python -m pytest tests/test_purl.py::test_a_codebase_is_named_by_package_url_not_by_a_path -q`
+- **Given** tests/test_purl.py
+- **When** the spec `test_a_codebase_is_named_by_package_url_not_by_a_path` is executed
+- **Then** a package URL parses into type, namespace, name and version; anything else is refused.
+
+### S15.2 — the same codebase at two commits is the same subject
+- **verifies:** C-15.2
+- **pins:** 097f1432a9c774c5
+- **run_cmd:** `python -m pytest tests/test_purl.py::test_the_same_codebase_at_two_commits_is_the_same_subject -q`
+- **Given** tests/test_purl.py
+- **When** the spec `test_the_same_codebase_at_two_commits_is_the_same_subject` is executed
+- **Then** two package URLs differing only in version name one codebase.
+
+### S15.3 — an unnamed subject is not agreement
+- **verifies:** C-15.3
+- **pins:** 8a0aaf48a646dc8a
+- **run_cmd:** `python -m pytest tests/test_purl.py::test_an_unnamed_subject_is_not_agreement -q`
+- **Given** tests/test_purl.py
+- **When** the spec `test_an_unnamed_subject_is_not_agreement` is executed
+- **Then** an absent or malformed subject on either side is not a match.
+
+### S15.4 — a map from another codebase cannot answer about this one
+- **verifies:** C-15.4
+- **pins:** a014331bcbd94815
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_map_from_another_codebase_cannot_answer_about_this_one -q`
+- **Given** tests/test_clause_map.py
+- **When** the spec `test_a_map_from_another_codebase_cannot_answer_about_this_one` is executed
+- **Then** a map naming another codebase fails the gate, and an unstated subject is not checked.
+

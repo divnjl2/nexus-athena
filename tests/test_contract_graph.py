@@ -194,3 +194,33 @@ def test_a_sibling_contract_is_attached_and_pinned_by_the_frontend(tmp_path):
     (tmp_path / "contract.md").unlink()
     bare = parse_with_provenance(str(tmp_path / "plan.md"), speckit=False)
     assert bare.contract is None and bare.provenance.contract_version == ""
+
+
+def test_label_references_resolve_to_bd_issue_ids():
+    """C-5.14 - the compiler is pure and emits label references; real bd resolves edges by
+    ISSUE ID, so the effectful layer substitutes before running anything."""
+    from lib.bd_client import resolve_refs
+
+    ids = {"athena:demo:C-1.1": "bd-7", "athena:demo:S1.1": "bd-9"}
+    assert resolve_refs(["bd", "create", "x", "--parent", "athena:demo:C-1.1"], ids) == [
+        "bd", "create", "x", "--parent", "bd-7"]
+    assert resolve_refs(
+        ["bd", "dep", "add", "athena:demo:S1.1", "athena:demo:C-1.1", "--type", "validates"],
+        ids) == ["bd", "dep", "add", "bd-9", "bd-7", "--type", "validates"]
+    assert resolve_refs(["bd", "dep", "add", "unknown-label"], ids)[3] == "unknown-label"
+
+
+def test_an_absent_or_flag_shaped_positional_is_left_alone():
+    """C-5.15 - the only witness these guards had was the real-bd spec, which only ever
+    emits well-formed `bd dep add <from> <to>`; a mutation sweep found both alive."""
+    from lib.bd_client import resolve_refs
+
+    ids = {"athena:demo:C-1.1": "bd-7"}
+    # no positional at all: indexing past the command would raise
+    assert resolve_refs(["bd", "dep", "add"], ids) == ["bd", "dep", "add"]
+    assert resolve_refs(["bd", "dep", "add", "athena:demo:C-1.1"], ids) == [
+        "bd", "dep", "add", "bd-7"]
+    # a flag sitting where a positional would be is not an issue reference
+    flagged = resolve_refs(["bd", "dep", "add", "--blocked-by", "athena:demo:C-1.1"], ids)
+    assert flagged == ["bd", "dep", "add", "--blocked-by", "bd-7"], (
+        "the generic pass resolves the flag's VALUE; the positional pass must not touch it")

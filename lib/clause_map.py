@@ -37,7 +37,9 @@ from dataclasses import dataclass, field
 #: roots" stops being indistinguishable from "the coverage run failed and told us nothing".
 #: /5 adds `partial`: owned lines whose other arm was never taken, because a line is a weak
 #: unit of proof — `if x:` reads as executed the moment control reaches it.
-SCHEMA = "athena.clause_map/5"
+#: /6 adds `subject`: the purl of the codebase the map was derived from, so a map can no
+#: longer be mistaken for one describing a different project.
+SCHEMA = "athena.clause_map/6"
 
 
 def _norm(p: str) -> str:
@@ -143,6 +145,8 @@ def partial_lines(files: dict, branches: dict) -> dict:
     true arm and spec B the false one, the clause has proved both and the line is not partial.
     Only lines the clause owns count — an arm out of a line nobody ran is plain uncovered,
     and saying "half-proved" about it would be flattering.
+
+    @relation(C-9.22, scope=function)
     """
     out = {}
     for path, lines in files.items():
@@ -158,7 +162,7 @@ def partial_lines(files: dict, branches: dict) -> dict:
 
 def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
           scenario_version: str = "", clause_digests: dict | None = None,
-          spec_digests: dict | None = None) -> dict:
+          spec_digests: dict | None = None, subject: str = "") -> dict:
     """PURE: fold per-spec line sets into the clause map artifact.
 
     A clause owns the UNION of the lines its specs execute. Two clauses may own the same
@@ -188,6 +192,9 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
+        # WHICH codebase this describes, as a package URL. Not a path: a path says where
+        # somebody checked something out, and that is exactly what must not matter.
+        "subject": subject,
         # The clauses whose coverage actually ran. Owning no lines is a legitimate answer
         # for a spec that reads artifacts rather than modules; owning no lines because the
         # run failed is not an answer at all, and the two must stay distinguishable.
@@ -296,7 +303,8 @@ def stale_clauses(clause_map: dict, current: dict) -> tuple[str, ...]:
 
 def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
           scenario_version: str = "", clause_digests: dict | None = None,
-          spec_digests: dict | None = None, rebuilt: tuple[str, ...] = ()) -> dict:
+          spec_digests: dict | None = None, subject: str = "",
+          rebuilt: tuple[str, ...] = ()) -> dict:
     """PURE: fold freshly collected specs into an existing map, keeping what stayed true.
 
     Only the clauses in `rebuilt` are replaced; the rest of the map is carried over intact.
@@ -324,6 +332,7 @@ def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: st
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
+        "subject": subject or (base or {}).get("subject", ""),
         "collected": sorted(c for c in got if c in clauses),
         "partial": {c: half[c] for c in sorted(half) if c in clauses and half[c]},
         "clause_digests": {c: kept[c] for c in sorted(kept) if c in clauses},
@@ -379,7 +388,7 @@ def classify(clause_map: dict, suite_lines: dict, *, files: tuple[str, ...] = ()
 
 
 def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = "",
-              clause_digests: dict | None = None) -> dict:
+              clause_digests: dict | None = None, subject: str = "") -> dict:
     """PURE: is this map still describing the contract and the specs in front of us?
 
     A derived artifact nobody re-derives is worse than no artifact: `owners()` keeps
@@ -416,6 +425,13 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
 
     clause_drift = list(stale_clauses(clause_map, clause_digests or {}))
 
+    # A map from ANOTHER codebase answers with the confidence of a build artifact about
+    # code it has never seen. Checked only when both sides name a subject: inventing an
+    # identity for a map that does not claim one would be a different kind of lie.
+    from lib.purl import same_subject
+    map_subject = (clause_map or {}).get("subject", "")
+    foreign_subject = bool(subject and map_subject and not same_subject(subject, map_subject))
+
     map_contract = (clause_map or {}).get("contract_version", "")
     map_scenarios = (clause_map or {}).get("scenario_version", "")
     contract_drift = bool(contract is not None and map_contract
@@ -425,6 +441,9 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
 
     return {
         "absent": absent,
+        "foreign_subject": foreign_subject,
+        "map_subject": map_subject,
+        "subject": subject,
         "contract_drift": contract_drift,
         "spec_drift": spec_drift,
         "unmapped": unmapped,
@@ -436,8 +455,8 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
         "scenario_version": scenario_version,
         "specs_mapped": len((clause_map or {}).get("specs") or {}),
         "specs_now": len(scenarios or ()),
-        "is_fresh": not (absent or contract_drift or spec_drift or unmapped
-                         or stale_entries or clause_drift),
+        "is_fresh": not (absent or foreign_subject or contract_drift or spec_drift
+                         or unmapped or stale_entries or clause_drift),
     }
 
 

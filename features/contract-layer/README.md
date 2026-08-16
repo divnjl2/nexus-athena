@@ -11,7 +11,7 @@ artifact said it in one place. This page is that place.
 
 ---
 
-## The seven artifacts
+## The eight artifacts
 
 | File | Written by | Answers |
 |---|---|---|
@@ -22,8 +22,9 @@ artifact said it in one place. This page is that place.
 | `clause_map.json` | `athena contract map` | which lines of which files each clause owns |
 | `judge_corpus.json` | `athena judge corpus` | labelled spec pairs for measuring a judge |
 | `judge_decisions.json` | `evals/judge_local.py` | what one judge said about them |
+| `clauses.needs.json` | `athena contract export` | the index another repository references |
 
-The first three are written by hand and are the only source of truth. The last four are
+The first three are written by hand and are the only source of truth. The last five are
 **derived** — delete any of them and one command rebuilds it. That asymmetry is the design:
 a derived artifact may never be edited, and a hand-written one may never be inferred.
 
@@ -98,6 +99,63 @@ athena init              --dir features/my-feature               # start a new c
 `athena contract outline --text` is the fastest way in: it prints each clause group, how many
 of its clauses are live and proved, and which modules its specs actually execute — the
 architecture, measured rather than claimed.
+
+## Living apart from the code
+
+A contract that shares a checkout with its code can leave everything implicit. One that lives
+in a docs repository, a wiki or a vault cannot — so three links are made explicit, each using
+a notation that already exists rather than a new one.
+
+**Clause to document.** A clause may cite an ADR, a runbook, a standard. The mechanism and the
+word are Doorstop's: the reference carries the fingerprint of what was reviewed, and a target
+that changed since is a **suspect link**.
+
+```markdown
+- **C-9.22** — WHEN a spec is run under coverage THE SYSTEM SHALL ...
+  - see: docs/adr/0007-branch-evidence.md@3f9a1c02b7e3d5a8
+  - see: https://coverage.readthedocs.io/en/latest/branch.html
+```
+
+```bash
+athena contract refs contract.md --text       # suspect / broken / unpinned / external
+athena contract refs contract.md --write      # re-pin: that is a REVIEW, read the diff
+```
+
+**Code to clause.** The notation is StrictDoc's; what is ours is refusing to believe it. A
+marker names a clause, and the clause map must show that clause actually reaching the lines
+the marker claims — otherwise the annotation is decoration and the report says `unbacked`.
+
+```python
+def partial_lines(files, branches):
+    """...
+
+    @relation(C-9.22, scope=function)
+    """
+```
+
+```bash
+athena contract markers contract.md --map clause_map.json --source lib
+```
+
+Scopes are `line`, `function`, `class`, `range_start`/`range_end`, `file`. A marker shown
+inside backticks or a fenced block is a mention, not a marker — the same distinction the
+wording critique already draws.
+
+**Another repository referencing us.** Nobody clones anything: the contract publishes an index
+and the other side consumes it, exactly as sphinx-needs and intersphinx do.
+
+```bash
+athena contract export contract.md --project nexus-athena -o clauses.needs.json
+athena contract export contract.md --format oft        # OpenFastTrace specobject XML
+```
+
+The index carries the one thing a requirements index cannot: whether each clause is **proved**,
+how many lines it owns, and how many of those are half-proved.
+
+**Which codebase a map is about.** Recorded as a package URL (`pkg:github/owner/repo`), derived
+from the git remote by default. A map naming a different project fails the freshness gate — an
+audit once had this repo's map silently judging a scaffolded project elsewhere. Version is
+ignored on purpose: the per-clause digests already answer whether the code moved.
 
 ## How deep is a proof? Two measures, cheap then expensive
 

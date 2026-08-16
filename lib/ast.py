@@ -78,6 +78,11 @@ class Clause:
     parent: str = ""
     group: str = ""
     tags: tuple[str, ...] = ()
+    #: `- see:` targets — other DOCUMENTS this clause leans on (an ADR, a runbook, a note),
+    #: each optionally carrying the fingerprint of the version that was reviewed. Kept OUT
+    #: of `version`: a reference is context, not the obligation, so citing a design note
+    #: must not invalidate the spec that proves the rule.
+    refs: tuple[str, ...] = ()
     source_line: int = 0
 
     @property

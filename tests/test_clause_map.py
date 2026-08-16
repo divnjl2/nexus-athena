@@ -386,3 +386,30 @@ def test_a_strengthened_spec_invalidates_the_clause_it_proves():
     cmap = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),), spec_digests=before)
     assert stale_specs(cmap, before) == ()
     assert stale_specs(cmap, after) == ("S1",), "only the spec that actually moved"
+
+
+def test_a_map_from_another_codebase_cannot_answer_about_this_one():
+    """C-15.4 - an audit checked a scaffolded project from inside this repo and the reverse
+    leg silently judged it by THIS repo's map; the map now says whose code it describes."""
+    mine = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),
+                  _lines("S2", "C-1.2", {"lib/a.py": (2,)})),
+                 contract_version=GATE_CONTRACT.version, scenario_version="scv1",
+                 subject="pkg:github/divnjl2/nexus-athena@bae35c6")
+    assert mine["subject"] == "pkg:github/divnjl2/nexus-athena@bae35c6"
+
+    same = staleness(mine, GATE_CONTRACT, (), scenario_version="scv1",
+                     subject="pkg:github/divnjl2/nexus-athena@0000000")
+    assert not same["foreign_subject"] and same["is_fresh"], "another commit, same codebase"
+
+    other = staleness(mine, GATE_CONTRACT, (), scenario_version="scv1",
+                      subject="pkg:github/divnjl2/some-other-project")
+    assert other["foreign_subject"] and not other["is_fresh"]
+    r = seam_map_fresh(mine, GATE_CONTRACT, (), scenario_version="scv1",
+                       subject="pkg:github/divnjl2/some-other-project")
+    assert not r.passed and any("another codebase" in i for i in r.issues)
+
+    # an unstated subject on either side is not checked — and not silently approved either
+    quiet = staleness(mine, GATE_CONTRACT, (), scenario_version="scv1")
+    assert not quiet["foreign_subject"] and quiet["is_fresh"]
+    assert merge(mine, (), contract_version=GATE_CONTRACT.version,
+                 scenario_version="scv1")["subject"] == mine["subject"], "carried on rebuild"
