@@ -59,7 +59,7 @@ def test_the_map_runner_refuses_the_same_commands_the_spec_runner_refuses():
     """C-9.3 — this path executes run_cmds too, so it must not become a way around the
     shell-less rule; the interpreter is normalized so `coverage run -m` can take its place."""
     assert run_argv("python -m pytest tests/t.py::x -q", "d.cov", ("lib",)) == [
-        "python", "-m", "coverage", "run", "--data-file=d.cov", "--source=lib",
+        "python", "-m", "coverage", "run", "--branch", "--data-file=d.cov", "--source=lib",
         "-m", "pytest", "tests/t.py::x", "-q"]
     # a bare `pytest ...` is turned into `-m pytest ...` (a console script cannot be run
     # by `coverage run` on Windows)
@@ -299,3 +299,45 @@ def test_merging_nothing_re_pins_the_map():
     assert (same["contract_version"], same["scenario_version"]) == ("new-contract-version",
                                                                     "scv2")
     assert staleness(same, GATE_CONTRACT, (), scenario_version="scv2")["spec_drift"] is False
+
+
+def test_the_map_reads_branch_evidence_not_only_executed_lines():
+    """C-9.22 - a line is a weak unit of proof: `if x:` reads as executed the moment
+    control reaches it, so a guard exercised only on its happy path looks fully owned."""
+    from lib.clause_map import branches_from_json, partial_lines
+
+    # chr(92) is a backslash: coverage.py reports Windows paths and the reader normalizes
+    text = json.dumps({"files": {"lib" + chr(92) + "a.py": {
+        "executed_lines": [10, 11, 20],
+        "executed_branches": [[10, 11]],
+        "missing_branches": [[10, 30], [40, 41]],
+    }}})
+    arms = branches_from_json(text)
+    assert arms["lib/a.py"]["executed"] == ((10, 11),)
+    assert arms["lib/a.py"]["missing"] == ((10, 30), (40, 41))
+
+    half = partial_lines({"lib/a.py": (10, 11, 20)}, arms)
+    assert half == {"lib/a.py": (10,)}, "line 40 is not owned, so it is uncovered not partial"
+    assert partial_lines({"lib/a.py": (10, 11, 20)}, {}) == {}, "no branch data, no claim"
+
+
+def test_two_specs_of_one_clause_can_prove_both_arms_between_them():
+    """C-9.23 - partiality is a property of the CLAUSE, not of one spec: if one spec takes
+    the true arm and another the false one, the clause has proved the branch."""
+    a = SpecLines(scenario_id="S1", clause_id="C-1.1", files={"lib/a.py": (10, 11)},
+                  branches={"lib/a.py": {"executed": ((10, 11),), "missing": ((10, 30),)}})
+    b = SpecLines(scenario_id="S2", clause_id="C-1.1", files={"lib/a.py": (10, 30)},
+                  branches={"lib/a.py": {"executed": ((10, 30),), "missing": ((10, 11),)}})
+
+    assert build((a,), contract_version="v", scenario_version="s")["partial"] == {
+        "C-1.1": {"lib/a.py": [10]}}, "one spec alone leaves the other arm untaken"
+    together = build((a, b), contract_version="v", scenario_version="s")
+    assert together["partial"] == {}, "between them the clause takes both arms"
+    assert together["clauses"]["C-1.1"] == {"lib/a.py": [10, 11, 30]}
+
+    # and an incremental rebuild carries the verdict of every clause it did not re-derive
+    other = SpecLines(scenario_id="S3", clause_id="C-1.2", files={"lib/a.py": (50,)},
+                      branches={"lib/a.py": {"executed": (), "missing": ((50, 60),)}})
+    grown = merge(build((a,), contract_version="v", scenario_version="s"), (other,),
+                  contract_version="v", scenario_version="s", rebuilt=("C-1.2",))
+    assert grown["partial"] == {"C-1.1": {"lib/a.py": [10]}, "C-1.2": {"lib/a.py": [50]}}

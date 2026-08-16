@@ -267,15 +267,15 @@ sweep that flattered itself, a mirror that deleted a user directory — cannot r
 - [ ] T14.1 Collect coverage from every source root, and tell "owns nothing" from "learned nothing"
   - success_check: `python -m pytest tests/test_clause_map.py -q`
   - files: `lib/clause_map.py, athena.py, tests/test_clause_map.py`
-  - verifies: S9.18, S9.20, S9.21
+  - verifies: S9.18, S9.20, S9.21, S9.22, S9.23
 - [ ] T14.2 Make a long judge measurement survivable
   - success_check: `python -m pytest tests/test_judge_pilot.py -q -k resume`
   - files: `lib/judge.py, evals/judge_local.py, tests/test_judge_pilot.py`
-  - verifies: S10.22, S10.24
+  - verifies: S10.22, S10.24, S10.25, S10.26, S11.27
 - [ ] T14.3 Derive the outline: what each clause group guarantees and which modules it owns
   - success_check: `python -m pytest tests/test_outline.py -q`
   - files: `lib/outline.py, athena.py, tests/test_outline.py`
-  - verifies: S11.22, S11.23, S11.24, S11.25
+  - verifies: S11.22, S11.23, S11.24, S11.25, S11.26
 ### Manual Verification
 - `athena contract outline features/contract-layer/contract.md --text` names a home module for
   every group and marks the modules every group passes through as shared.

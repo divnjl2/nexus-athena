@@ -131,7 +131,10 @@ Two legs, answered separately because they are different questions:
 | `code_to_specs` | is the code the specs claim to own still the code they own — and do those specs prove anything? | the clause map is stale, or a mutant survived |
 
 `--deep` adds mutation over the clauses that drifted; `--strict` promotes wording findings and
-surviving mutants from advisory to blocking. A CI recipe with both lanes is in
+surviving mutants from advisory to blocking. Depth is measured twice — the map records
+**half-proved** lines (owned, but with a branch arm nothing took: 231 of 1724 here), and
+`athena mutate --only exclusive+half-proved` breaks exactly those to see whether a bound spec
+notices. First run on this repo: 17 mutants, 7 survived, with every spec green. A CI recipe with both lanes is in
 [`ci/athena-check.yml`](./ci/athena-check.yml).
 
 The fastest way into an existing contract is the derived outline — no architecture page to

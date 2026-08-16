@@ -33,6 +33,7 @@ import copy
 import json
 import pathlib
 import shutil
+import tempfile
 from dataclasses import dataclass
 
 _FLIP_CMP = {ast.Eq: ast.NotEq, ast.NotEq: ast.Eq, ast.Lt: ast.GtE, ast.GtE: ast.Lt,
@@ -165,6 +166,18 @@ class UnsafeMirror(RuntimeError):
     """The mirror path is not something this harness is allowed to delete."""
 
 
+def default_mirror(repo: str) -> str:
+    """PURE-ish (reads the platform temp dir): where a sweep runs when nobody says where.
+
+    The documented default was `.athena/mutation_mirror`, which is INSIDE the repo — and
+    `isolate` refuses that, correctly, because mirroring a tree into itself recurses. So
+    every `athena mutate` without an explicit --mirror died on the safety rail meant to
+    protect it. The rail was right and the default was wrong.
+    """
+    name = pathlib.Path(repo).resolve().name or "repo"
+    return str(pathlib.Path(tempfile.gettempdir()) / f"athena-mutation-{name}")
+
+
 def isolate(repo: str, mirror: str, *, skip: frozenset = frozenset(_SKIP_DIRS)) -> str:
     """EFFECTFUL: mirror the repo into a scratch tree so mutation never touches the original.
 
@@ -225,6 +238,66 @@ def recover(*, lock_path: str = LOCK, writer=None) -> tuple[str, ...]:
         restored.append(path)
     p.unlink()
     return tuple(restored)
+
+
+def target_lines(clause_map: dict, *, clause_prefix: str = "", only: str = "all") -> dict:
+    """PURE: {path: frozenset(lines)} the sweep should attack.
+
+    A full sweep over every owned line is not a thing anyone runs: this contract owns 1657
+    lines, and a line owned by twenty clauses costs twenty spec runs per mutant. So the
+    selector is part of the measure, not a convenience:
+
+      all           every line the selected clauses own
+      exclusive     lines exactly one clause owns — unambiguous attribution and one spec to
+                    run, which makes it the cheapest honest sweep
+      half-proved   lines the branch layer flagged: owned, but with an arm nothing took.
+                    Branch coverage is the cheap detector, mutation the expensive confirmer,
+                    and this is the wire between them.
+
+    Filters compose with `+`. `exclusive+half-proved` is the sharpest sweep this contract
+    admits — on 1716 owned lines it selects 26: suspect by branch evidence, owned by exactly
+    one clause, so one spec run decides each and the verdict needs no attribution argument.
+    """
+    wanted = [f.strip() for f in only.split("+") if f.strip()]
+    if not wanted or any(f not in ("all", "exclusive", "half-proved") for f in wanted):
+        raise ValueError(f"refused: unknown target selector {only!r}")
+    clauses = (clause_map or {}).get("clauses") or {}
+    picked = {cid: files for cid, files in clauses.items()
+              if not clause_prefix or cid.startswith(clause_prefix)}
+
+    if "half-proved" in wanted:
+        source = {cid: (clause_map.get("partial") or {}).get(cid) or {} for cid in picked}
+    else:
+        source = picked
+
+    owners_count: dict = {}
+    if "exclusive" in wanted:
+        for files in clauses.values():
+            for path, lines in files.items():
+                for ln in lines:
+                    owners_count[(path, ln)] = owners_count.get((path, ln), 0) + 1
+
+    out: dict = {}
+    for files in source.values():
+        for path, lines in files.items():
+            keep = [ln for ln in lines
+                    if "exclusive" not in wanted or owners_count.get((path, ln)) == 1]
+            if keep:
+                out[path] = out.get(path, frozenset()) | frozenset(keep)
+    return out
+
+
+def red_specs(spec_cmds: dict, ledger: dict | None) -> tuple[str, ...]:
+    """PURE: the run_cmds of specs the ledger already recorded as failing.
+
+    The cheap half of `baseline`. Re-running every candidate on clean source costs a second
+    full suite; the ledger is an artifact this repo maintains anyway and answers the same
+    question. A spec with NO verdict is deliberately not excluded — unknown is not red, and
+    silently dropping unrun specs would gut the sweep whenever the ledger lags.
+    """
+    idx = {r.get("scenario", ""): r for r in (ledger or {}).get("results", [])}
+    return tuple(sorted({cmd for sid, (_, cmd) in spec_cmds.items()
+                         if sid in idx and not idx[sid].get("passed")}))
 
 
 def baseline(spec_cmds: dict, cmds, *, runner) -> tuple[str, ...]:

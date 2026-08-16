@@ -513,3 +513,72 @@ def test_a_partial_run_reports_what_it_never_judged_and_cannot_pass():
     assert partial["recall"] == 1.0, "the numbers are still reported"
     assert not partial["passes"] and not is_gate_eligible(partial), (
         "perfect recall over the half it managed to judge must not open the gate")
+
+
+def test_the_sweep_can_be_aimed_at_the_lines_worth_attacking():
+    """C-10.25 - a full sweep over 1657 owned lines is not a thing anyone runs; the
+    selector is part of the measure, and half-proved is the wire from the cheap detector
+    (branch coverage) to the expensive confirmer (mutation)."""
+    import pytest as _pytest
+
+    from lib.mutation import target_lines
+
+    cmap = {"schema": "athena.clause_map/5",
+            "clauses": {"C-1.1": {"lib/a.py": [1, 2, 3]},
+                        "C-1.2": {"lib/a.py": [3, 4]},
+                        "C-2.1": {"lib/b.py": [7]}},
+            "partial": {"C-1.1": {"lib/a.py": [2]}}}
+
+    assert target_lines(cmap) == {"lib/a.py": frozenset({1, 2, 3, 4}),
+                                  "lib/b.py": frozenset({7})}
+    assert target_lines(cmap, only="exclusive") == {"lib/a.py": frozenset({1, 2, 4}),
+                                                    "lib/b.py": frozenset({7})}
+    assert target_lines(cmap, only="half-proved") == {"lib/a.py": frozenset({2})}
+    assert target_lines(cmap, clause_prefix="C-2") == {"lib/b.py": frozenset({7})}
+    # filters compose: suspect by branch evidence AND owned by exactly one clause, which is
+    # the sweep where one spec run decides the verdict and nobody argues about attribution
+    assert target_lines(cmap, only="exclusive+half-proved") == {"lib/a.py": frozenset({2})}
+    cmap2 = dict(cmap, partial={"C-1.1": {"lib/a.py": [3]}})   # line 3 is owned by two
+    assert target_lines(cmap2, only="half-proved") == {"lib/a.py": frozenset({3})}
+    assert target_lines(cmap2, only="exclusive+half-proved") == {}
+    for bad in ("everything", "", "exclusive+nonsense"):
+        with _pytest.raises(ValueError, match="refused"):
+            target_lines(cmap, only=bad)
+
+
+def test_a_spec_the_ledger_calls_red_is_not_a_witness():
+    """C-10.26 - the rule that a red spec cannot witness a mutant was proved in the library
+    and then passed by no caller, so the product path never had it."""
+    from lib.mutation import red_specs
+
+    spec_cmds = {"S1": ("C-1.1", "pytest a"), "S2": ("C-1.2", "pytest b"),
+                 "S3": ("C-1.3", "pytest c")}
+    ledger = {"results": [{"scenario": "S1", "passed": True},
+                          {"scenario": "S2", "passed": False}]}
+    assert red_specs(spec_cmds, ledger) == ("pytest b",)
+    assert red_specs(spec_cmds, {}) == (), "no ledger, no claim about anyone"
+
+    # and the hunt must not let an excluded spec be the killer
+    ran = []
+    res = hunt({"clauses": {"C-1.2": {"m.py": [2]}}},
+               {"S2": ("C-1.2", "pytest b")},
+               {"m.py": {"source": "def f(a):\n    return a == 1\n", "lines": [2]}},
+               runner=lambda c: ran.append(c) or 1, writer=lambda p, t: None,
+               exclude=red_specs(spec_cmds, ledger))
+    assert ran == [] and res[0]["status"] == "unowned", (
+        "with its only owner disqualified, nobody was asked — that is not a survivor")
+
+
+def test_the_default_mirror_is_somewhere_the_guard_will_accept():
+    """C-11.27 - the documented default was inside the repo, which `isolate` refuses (and
+    must), so every sweep that did not name a --mirror died on its own safety rail."""
+    from lib.mutation import MIRROR_MARKER, default_mirror, isolate
+
+    repo = pathlib.Path(__file__).resolve().parents[1]
+    dst = pathlib.Path(default_mirror(str(repo)))
+    assert repo not in dst.parents and dst != repo, "a tree cannot be mirrored into itself"
+    assert repo.name in dst.name, "two checkouts must not fight over one scratch tree"
+
+    made = pathlib.Path(isolate(str(repo), str(dst)))
+    assert (made / MIRROR_MARKER).exists() and (made / "lib" / "mutation.py").exists()
+    assert pathlib.Path(isolate(str(repo), str(made))).exists(), "and it is reusable"

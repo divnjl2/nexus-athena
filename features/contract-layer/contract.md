@@ -315,6 +315,21 @@
     version. The early return skipped the write, so the map stayed stale to the gate with
     no incremental way back: only a full rebuild, deriving byte-identical ownership.
 
+- **C-9.22** — WHEN a spec is run under coverage THE SYSTEM SHALL record which arms out of
+  its lines were taken, and report an owned line with an arm nothing took as half-proved.
+  - note: a line is a weak unit of proof. `if x:` reads as executed the moment control
+    reaches it, so a guard exercised only on its happy path looks fully owned. The judge
+    kept saying this in its own words — "the test covers one case, the requirement is
+    universal" — at a 64% false-reject rate; branch evidence answers it deterministically.
+  - note: report it DISTINCT, like the owned count. The first summary summed the per-clause
+    figures and printed 2113 half-proved against 1694 owned — more than all of them — by
+    comparing a sum-with-repeats to a union. The real number is 229, 14% of the surface.
+- **C-9.23** — WHEN two specs of one clause take opposite arms of a branch THE SYSTEM SHALL
+  count that branch as proved rather than half-proved.
+  - note: partiality belongs to the CLAUSE, not to one spec. This is also what makes several
+    specs per clause worth writing: the report layer has always accepted them, and now they
+    compose into evidence instead of just adding rows.
+
 ## C-10 — Does a spec prove anything: the deterministic runner and the judge pilot
 
 - **C-10.1** — WHEN mutants are generated THE SYSTEM SHALL mutate the syntax tree and leave
@@ -366,6 +381,16 @@
     121s on a degraded one, so timeouts land on the good half. Three of the first four
     timeouts were proving pairs, which are only a fifth of the corpus. A partial score
     therefore flatters recall and starves the false-reject estimate.
+- **C-10.25** — WHEN a mutation sweep is aimed THE SYSTEM SHALL accept every owned line,
+  only the lines exactly one clause owns, or only the lines the branch layer calls
+  half-proved.
+  - note: 1657 owned lines and a line owned by twenty clauses costing twenty spec runs per
+    mutant — the selector is part of the measure, not a convenience. `half-proved` is the
+    wire between the cheap detector and the expensive confirmer.
+- **C-10.26** — WHEN a mutation sweep runs THE SYSTEM SHALL disqualify the specs already
+  recorded red, so a spec that fails on clean source cannot witness a mutant.
+  - note: the rule was written down, proved in the library, and then passed by no caller.
+    `hunt` took an `exclude` argument that both product paths left empty for weeks.
 - **C-10.23** *(draft)* — WHEN a judge clears the fixed thresholds on the whole corpus THE
   SYSTEM SHALL let it block the code-to-specs leg.
   - note: draft on purpose, and the only honest status for it. The thresholds are recall
@@ -444,6 +469,14 @@
   and say that the module column is missing.
 - **C-11.25** — WHEN a module is reached by several clause groups THE SYSTEM SHALL still
   call it the home of a group that owns lines in it no other group owns.
+- **C-11.26** — WHEN a clause group is outlined THE SYSTEM SHALL report how many of its
+  owned lines are half-proved, and say nothing when none are.
+- **C-11.27** — WHEN no mirror is named for a mutation sweep THE SYSTEM SHALL pick one
+  outside the repository.
+  - note: the documented default was `.athena/mutation_mirror`, inside the repo, which
+    `isolate` refuses — correctly, since mirroring a tree into itself recurses. So every
+    sweep that did not name a `--mirror` died on the safety rail meant to protect it. Found
+    by running the product path, not by reading it.
   - note: exclusivity is measured per LINE, because that is the granularity the map has.
     Counting how many groups touch a FILE called `lib/contract.py` shared for everyone, so
     C-1 (the parser) and C-7 (the wording critique) both came out homeless and the modules

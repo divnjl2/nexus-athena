@@ -849,6 +849,22 @@
 - **When** the spec `test_merging_nothing_re_pins_the_map` is executed
 - **Then** an incremental rebuild with nothing to re-derive still updates the contract and spec pins, and moves no ownership.
 
+### S9.22 — the map reads branch evidence, not only executed lines
+- **verifies:** C-9.22
+- **pins:** eb3052927088b188
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_the_map_reads_branch_evidence_not_only_executed_lines -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_the_map_reads_branch_evidence_not_only_executed_lines` is executed
+- **Then** an owned line with an arm nothing took is reported half-proved, while an arm out of a line nobody ran stays plain uncovered.
+
+### S9.23 — two specs of one clause can prove both arms between them
+- **verifies:** C-9.23
+- **pins:** 258c225775c9dcb5
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_two_specs_of_one_clause_can_prove_both_arms_between_them -q`
+- **Given** the per-clause line map (lib/clause_map.py)
+- **When** the spec `test_two_specs_of_one_clause_can_prove_both_arms_between_them` is executed
+- **Then** partiality is a property of the clause, so one spec taking the true arm and another the false one leaves the branch proved.
+
 ### S10.1 — mutations are ast level and skip prose
 - **verifies:** C-10.1
 - **pins:** 2b289d163041f18e
@@ -1028,6 +1044,22 @@
 ---
 
 ## C-11 — proved by the one-command loop (lib/check.py)
+
+### S10.25 — the sweep can be aimed at the lines worth attacking
+- **verifies:** C-10.25
+- **pins:** 6ceff51c75e60a21
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_sweep_can_be_aimed_at_the_lines_worth_attacking -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_sweep_can_be_aimed_at_the_lines_worth_attacking` is executed
+- **Then** the sweep targets every owned line, the exclusively owned ones, or the half-proved ones, and refuses a selector it does not know.
+
+### S10.26 — a spec the ledger calls red is not a witness
+- **verifies:** C-10.26
+- **pins:** 0bae9e39d0c6fe7f
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_spec_the_ledger_calls_red_is_not_a_witness -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_a_spec_the_ledger_calls_red_is_not_a_witness` is executed
+- **Then** a spec failing on clean source is disqualified, and a mutant whose only owner is disqualified is unowned rather than survived.
 
 ### S11.1 — the loop answers with one verdict and names the failing leg
 - **verifies:** C-11.1
@@ -1236,3 +1268,19 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_a_partial_run_reports_what_it_never_judged_and_cannot_pass` is executed
 - **Then** the score names the unjudged pairs per label, and perfect recall over the half it managed to judge does not open the gate.
+
+### S11.26 — the outline names the half-proved lines of a group
+- **verifies:** C-11.26
+- **pins:** b5d52c3428661753
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_names_the_half_proved_lines_of_a_group -q`
+- **Given** the derived outline (lib/outline.py)
+- **When** the spec `test_the_outline_names_the_half_proved_lines_of_a_group` is executed
+- **Then** depth sits next to size in the outline, and the line is absent when nothing is half-proved.
+
+### S11.27 — the default mirror is somewhere the guard will accept
+- **verifies:** C-11.27
+- **pins:** d3fbb848c4664e15
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_default_mirror_is_somewhere_the_guard_will_accept -q`
+- **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
+- **When** the spec `test_the_default_mirror_is_somewhere_the_guard_will_accept` is executed
+- **Then** the sweep's default scratch tree sits outside the repository, carries the mirror marker and is reusable on the next run.

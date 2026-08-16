@@ -30,12 +30,14 @@ import hashlib
 import json
 import pathlib
 import shlex
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 #: /3 pinned the OWNED LINES per clause instead of whole files. /4 adds `collected`: which
 #: clauses actually produced coverage data, so "this spec ran and touched none of the source
 #: roots" stops being indistinguishable from "the coverage run failed and told us nothing".
-SCHEMA = "athena.clause_map/4"
+#: /5 adds `partial`: owned lines whose other arm was never taken, because a line is a weak
+#: unit of proof — `if x:` reads as executed the moment control reaches it.
+SCHEMA = "athena.clause_map/5"
 
 
 def _norm(p: str) -> str:
@@ -59,6 +61,7 @@ class SpecLines:
     clause_id: str
     files: dict            # normalized path -> tuple[int, ...]
     collected: bool = True
+    branches: dict = field(default_factory=dict)   # path -> {"executed"/"missing": ((a,b)…)}
 
 
 def run_argv(run_cmd: str, data_file: str, sources: tuple[str, ...]) -> list[str]:
@@ -90,7 +93,10 @@ def run_argv(run_cmd: str, data_file: str, sources: tuple[str, ...]) -> list[str
     # so the default root arrives again every time a caller names it explicitly.
     roots = list(dict.fromkeys(sources))
     src = [f"--source={','.join(roots)}"] if roots else []
-    return ["python", "-m", "coverage", "run", f"--data-file={data_file}", *src, *argv]
+    # --branch always: half a guard is not a proved guard, and the cost is a few percent
+    # of a run that already takes minutes.
+    return ["python", "-m", "coverage", "run", "--branch", f"--data-file={data_file}",
+            *src, *argv]
 
 
 def json_argv(data_file: str, out_file: str) -> list[str]:
@@ -110,6 +116,46 @@ def lines_from_json(text: str) -> dict:
     return out
 
 
+def branches_from_json(text: str) -> dict:
+    """PURE: coverage.py JSON -> {path: {"executed": ((a,b)...), "missing": ((a,b)...)}}.
+
+    A line is a weak unit of proof: `if x:` counts as executed the moment control reaches it,
+    whether or not the other way out was ever taken. The spec that runs a guard only on its
+    happy path OWNS that line under a line map and proves half of what the clause says.
+
+    Present only when the run enabled `--branch`; an older data file simply yields nothing,
+    which reads as "no branch evidence" rather than "no missing branches".
+    """
+    data = json.loads(text)
+    out = {}
+    for path, entry in sorted((data.get("files") or {}).items()):
+        ex = tuple(sorted(tuple(b) for b in (entry.get("executed_branches") or ())))
+        ms = tuple(sorted(tuple(b) for b in (entry.get("missing_branches") or ())))
+        if ex or ms:
+            out[_norm(path)] = {"executed": ex, "missing": ms}
+    return out
+
+
+def partial_lines(files: dict, branches: dict) -> dict:
+    """PURE: {path: (line, ...)} for OWNED lines with an outgoing branch never taken.
+
+    Computed against the clause's whole branch evidence, not one spec's: if spec A takes the
+    true arm and spec B the false one, the clause has proved both and the line is not partial.
+    Only lines the clause owns count — an arm out of a line nobody ran is plain uncovered,
+    and saying "half-proved" about it would be flattering.
+    """
+    out = {}
+    for path, lines in files.items():
+        ev = branches.get(path) or {}
+        owned = set(lines)
+        taken = set(ev.get("executed") or ())
+        half = sorted({a for a, b in (ev.get("missing") or ())
+                       if a in owned and (a, b) not in taken})
+        if half:
+            out[path] = tuple(half)
+    return out
+
+
 def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
           scenario_version: str = "", clause_digests: dict | None = None) -> dict:
     """PURE: fold per-spec line sets into the clause map artifact.
@@ -120,12 +166,23 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
     """
     clauses: dict = {}
     collected: set = set()
+    branch_ev: dict = {}
     for sl in spec_lines:
         per_clause = clauses.setdefault(sl.clause_id, {})
         if sl.collected:
             collected.add(sl.clause_id)
         for path, lines in sl.files.items():
             per_clause[path] = sorted(set(per_clause.get(path, ())) | set(lines))
+        # Branch evidence unions across the clause's specs BEFORE anything is called partial.
+        ev = branch_ev.setdefault(sl.clause_id, {})
+        for path, arms in (sl.branches or {}).items():
+            slot = ev.setdefault(path, {"executed": set(), "missing": set()})
+            slot["executed"] |= set(arms.get("executed") or ())
+            slot["missing"] |= set(arms.get("missing") or ())
+    partial = {cid: partial_lines(files, {p: {"executed": tuple(v["executed"]),
+                                              "missing": tuple(v["missing"])}
+                                          for p, v in (branch_ev.get(cid) or {}).items()})
+               for cid, files in clauses.items()}
     return {
         "schema": SCHEMA,
         "contract_version": contract_version,
@@ -138,6 +195,11 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
         # file changes neither the contract nor the specs, so those two pins stay green
         # while every line number in the map silently points somewhere else.
         "clause_digests": dict(sorted((clause_digests or {}).items())),
+        # Owned lines with an arm never taken. Kept BESIDE `clauses` rather than inside it so
+        # `owners()`, `classify()` and the per-clause digests keep their shape: a half-proved
+        # line is still owned, and the pin must still move when its content changes.
+        "partial": {cid: {p: list(partial[cid][p]) for p in sorted(partial[cid])}
+                    for cid in sorted(partial) if partial[cid]},
         "clauses": {cid: {p: clauses[cid][p] for p in sorted(clauses[cid])}
                     for cid in sorted(clauses)},
         "specs": {sl.scenario_id: sl.clause_id for sl in sorted(spec_lines,
@@ -203,11 +265,16 @@ def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: st
     # A rebuilt clause carries whatever THIS run found out; the rest keep what the base said.
     got = set((base or {}).get("collected") or ()) - set(rebuilt)
     got |= set(fresh.get("collected") or ())
+    # `partial` follows the same rule as ownership: a rebuilt clause takes this run's answer,
+    # every other clause keeps the one already on record.
+    half = {c: v for c, v in ((base or {}).get("partial") or {}).items() if c not in rebuilt}
+    half.update(fresh.get("partial") or {})
     return {
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
         "collected": sorted(c for c in got if c in clauses),
+        "partial": {c: half[c] for c in sorted(half) if c in clauses and half[c]},
         "clause_digests": {c: kept[c] for c in sorted(kept) if c in clauses},
         "clauses": {c: clauses[c] for c in sorted(clauses)},
         "specs": {s: specs[s] for s in sorted(specs)},
@@ -350,11 +417,13 @@ def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = "."
             # `js` exists only when coverage had data to report. That file is the whole
             # difference between "this spec owns no lines" and "we learned nothing".
             got = js.exists()
-            files = lines_from_json(js.read_text(encoding="utf-8")) if got else {}
+            raw = js.read_text(encoding="utf-8") if got else ""
+            files = lines_from_json(raw) if got else {}
+            arms = branches_from_json(raw) if got else {}
         except (ValueError, OSError, json.JSONDecodeError):
-            files, got = {}, False
+            files, arms, got = {}, {}, False
         return SpecLines(scenario_id=sc.id, clause_id=sc.requirement_key, files=files,
-                         collected=got)
+                         collected=got, branches=arms)
 
     if not scenarios:
         return ()

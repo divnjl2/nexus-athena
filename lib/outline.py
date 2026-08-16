@@ -30,13 +30,15 @@ def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> 
     """
     groups: dict = {}
     owners = (clause_map or {}).get("clauses") or {}
+    half = (clause_map or {}).get("partial") or {}
     covered = set(coverage_report.get("covered", ()))
     uncovered = set(coverage_report.get("uncovered", ()))
 
     for c in contract.clauses:
         key = c.group or "(ungrouped)"
         g = groups.setdefault(key, {"clauses": 0, "live": 0, "superseded": 0, "draft": 0,
-                                    "withdrawn": 0, "proved": 0, "unproved": [], "files": {}})
+                                    "withdrawn": 0, "proved": 0, "unproved": [],
+                                    "half_proved": set(), "files": {}})
         g["clauses"] += 1
         g[c.status if c.status in ("superseded", "draft", "withdrawn") else "live"] += 1
         if c.id in covered:
@@ -45,6 +47,11 @@ def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> 
             g["unproved"].append(c.id)
         for path, lines in (owners.get(c.id) or {}).items():
             g["files"].setdefault(path, set()).update(lines)
+        # Depth, not size: lines this group owns whose other arm nothing ever took.
+        # DISTINCT — two clauses of one group flagging the same line is one hole, not two.
+        # Summing the per-clause counts printed "274 half-proved" for a group owning 290.
+        for path, lns in (half.get(c.id) or {}).items():
+            g["half_proved"].update((path, ln) for ln in lns)
 
     # Ranking by raw line count made lib/contract.py the "home" of every group, because every
     # spec executes the parser on its way to anything else. That is execution reach, not
@@ -57,6 +64,9 @@ def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> 
     #
     # Exclusivity is per LINE, which is the granularity the map already has. The lines only
     # this group owns are its own; a file where it owns no such line is one it visits.
+    for g in groups.values():
+        g["half_proved"] = len(g["half_proved"])
+
     owners_of: dict = {}
     for g in groups.values():
         for path, lines in g["files"].items():
@@ -92,6 +102,9 @@ def render(o: dict) -> str:
         lines.append(head)
         if g["unproved"]:
             lines.append(f"    unproved: {', '.join(g['unproved'])}")
+        if g.get("half_proved"):
+            lines.append(f"    half-proved: {g['half_proved']} owned lines have an arm "
+                         f"nothing takes")
         home = [f for f in g["files"] if not f["shared"]]
         shared = [f for f in g["files"] if f["shared"]]
         if home:

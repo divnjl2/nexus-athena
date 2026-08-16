@@ -91,13 +91,41 @@ athena contract drift    <contract>          # where requirement, spec and proof
 athena contract map      <contract> --source lib --incremental   # rebuild line ownership
 athena contract owners   lib/judge.py:271    # which clauses may I break by editing this
 athena spec run          <scenarios> --jobs 12                   # run every spec
-athena mutate            <contract> --deep   # break owned lines; do the specs notice
+athena mutate            <contract> --only exclusive+half-proved   # do the specs notice
 athena init              --dir features/my-feature               # start a new contract
 ```
 
 `athena contract outline --text` is the fastest way in: it prints each clause group, how many
 of its clauses are live and proved, and which modules its specs actually execute — the
 architecture, measured rather than claimed.
+
+## How deep is a proof? Two measures, cheap then expensive
+
+Counting specs measures nothing — this contract had exactly one per clause for months. Counting
+*owned lines* over-claims: the median clause "owns" 250 of the 1724 lines in the map, because
+coverage credits everything its test executed on the way in. So depth is measured twice:
+
+**Branch evidence (cheap, always on).** The map runs coverage with `--branch`, so a line whose
+other arm no spec of that clause ever took is recorded as **half-proved**. On this contract
+that is **231 of 1724 owned lines (13%)**. Partiality belongs to the clause, not the spec: if
+one spec takes the true arm and another the false one, the branch is proved — which is the
+first real reason to write more than one spec per clause (the report layer always accepted it).
+
+**Mutation (expensive, aimed).** Break an owned line and see whether any bound spec goes red.
+The selector is part of the measure, because a full sweep is unaffordable and a line owned by
+twenty clauses costs twenty spec runs:
+
+```bash
+athena mutate contract.md --map clause_map.json --ledger spec_ledger.json \
+    --only exclusive+half-proved     # 1724 owned -> 231 half-proved -> 26 lines
+```
+
+`exclusive` keeps lines exactly one clause owns (one spec decides, no attribution argument);
+`half-proved` keeps the branch layer's suspects; `+` intersects them. Specs the ledger already
+records as red are disqualified as witnesses — a spec failing on clean source cannot notice
+anything. The first such run on this repo: **17 mutants, 7 killed, 7 survived**, and the seven
+survivors are guards whose other arm nothing exercises — in `check.py`, `clause_map.py`,
+`contract_report.py`, `coverage_backed.py`, `scenario_parser.py`. Every spec was green.
 
 ## The judge is a local model, and it is not a gate
 
@@ -123,13 +151,14 @@ part being measured.
 ### What the measurement says so far
 
 A 9B local model, unmuzzled (no token cap, no forced JSON grammar), takes about a minute per
-pair — the full 595-pair corpus is roughly ten hours of GPU time on one RTX 3060. Two things
-the numbers already show:
+pair — the full 595-pair corpus is roughly ten hours of GPU time on one RTX 3060. Over the
+first **411 scored pairs**: recall **0.954** (bar: 0.95), false rejects **0.469** (bar: 0.02).
 
-- **Recall is not the problem, false rejects are.** The degraded halves get caught; the
-  model's failure mode is calling a *valid* spec vacuous. Three such rejections were checked
-  by hand in an earlier round and all three turned out to be real weaknesses in the spec —
-  which is useful, and still not a gate.
+- **Recall is not the problem, false rejects are.** The degraded halves get caught — weakest
+  is the subtlest defect, `weakened`, at 0.87. The failure mode is calling a *valid* spec
+  vacuous, and it does that to nearly half of them. The recurring reason it gives is "the
+  test covers one case, the requirement is universal", which no single unit test satisfies;
+  the deterministic answer to that same question is the mutation sweep above.
 - **A partial run is biased, so it is never eligible.** The judge thinks about twice as long
   when there is nothing to refute (median 259s on a proving pair against 121s on a degraded
   one), so timeouts fall on the good half: three of the first four were proving pairs, which

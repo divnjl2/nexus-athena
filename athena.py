@@ -362,9 +362,17 @@ def cmd_contract_map(a) -> int:
     pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                    encoding="utf-8")
     owned = owned_lines(cmap)
+    half = cmap.get("partial") or {}
     _emit({"map": a.out, "clauses_mapped": len(cmap["clauses"]),
            "specs": len(spec_lines), "files": len(owned),
            "owned_lines": sum(len(v) for v in owned.values()),
+           # Owned lines with an arm never taken: the depth signal the line count hides.
+           # DISTINCT, like owned_lines. The first cut summed the per-clause counts and
+           # printed 2113 next to 1694 owned — a "more than all of them" number, produced by
+           # comparing a sum-with-repeats against a union. The real figure was 229.
+           "half_proved_lines": len({(p, ln) for f in half.values()
+                                     for p, lns in f.items() for ln in lns}),
+           "clauses_with_half_proved": len(half),
            # A clause whose entry is EMPTY is not mapped, whatever the key count says. The
            # first cut tested `c.id not in cmap["clauses"]`, so 25 clauses that collected
            # no coverage at all were written as `{}` and reported as fully mapped. A spec
@@ -432,23 +440,29 @@ def cmd_mutate(a) -> int:
     # EFFECTFUL and destructive-in-flight: it rewrites source files and restores them. Runs
     # only what the map says is affected, and never touches the gates.
     import subprocess
-    from lib.clause_map import owned_lines
-    from lib.mutation import hunt, isolate, recover, snapshot, summarize
+    from lib.mutation import (default_mirror, hunt, isolate, recover, red_specs,
+                              scoped_specs, snapshot, summarize, target_lines)
 
     contract = _load_contract(a)
     scenarios = _load_scenarios(a, anchor=a.contract)
     cmap = json.loads(_read(a.map))
-    owned = owned_lines(cmap)
-    if a.clause:
-        picked = {cid: files for cid, files in (cmap.get("clauses") or {}).items()
-                  if cid.startswith(a.clause)}
-        owned = {}
-        for files in picked.values():
-            for p, lines in files.items():
-                owned[p] = owned.get(p, frozenset()) | frozenset(lines)
+    owned = target_lines(cmap, clause_prefix=a.clause, only=a.only)
     targets = {p: {"source": _read(p), "lines": sorted(lines)}
                for p, lines in sorted(owned.items())
                if p.startswith(tuple(a.source)) and pathlib.Path(p).exists()}
+
+    # A spec that is RED on clean source cannot witness anything: its non-zero exit would
+    # read as "the mutant was noticed". The rule was written down as a clause and proved in
+    # the library, and then no caller passed `exclude` — so the product path never had it.
+    # The ledger already records every spec's verdict, which makes the cheap answer the
+    # honest one; `--baseline run` re-measures when the ledger is not trusted.
+    spec_cmds = _spec_cmds(scenarios)
+    excluded, unrun = (), 0
+    if a.baseline == "ledger":
+        led = _ledger(a) or {}
+        excluded = red_specs(spec_cmds, led)
+        seen = {r.get("scenario", "") for r in led.get("results", [])}
+        unrun = sum(1 for sid in spec_cmds if sid not in seen)
 
     def runner(cmd):
         try:
@@ -463,7 +477,7 @@ def cmd_mutate(a) -> int:
     # The harness does not mutate the working tree. Two runs were killed mid-mutation and
     # left a mutant in lib/ despite `finally`, so everything happens in a mirror: the worst
     # a kill can leave behind now is a temp folder.
-    mirror = isolate(".", a.mirror or ".athena/mutation_mirror") if a.isolate else "."
+    mirror = isolate(".", a.mirror or default_mirror(".")) if a.isolate else "."
     if a.isolate:
         def writer(path, text):                                   # noqa: F811
             (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
@@ -477,8 +491,14 @@ def cmd_mutate(a) -> int:
     else:
         snapshot(targets, lock_path=a.lock)
     try:
-        res = hunt(cmap, _spec_cmds(scenarios), targets, runner=runner, writer=writer,
-                   limit_per_line=a.per_line, max_mutants=a.max_mutants)
+        if a.baseline == "run":
+            from lib.mutation import baseline as measure_baseline
+            candidates = {c for path, spec in targets.items() for ln in spec["lines"]
+                          for c in scoped_specs(cmap, spec_cmds, path, ln)}
+            excluded = measure_baseline(spec_cmds, sorted(candidates), runner=runner)
+        res = hunt(cmap, spec_cmds, targets, runner=runner, writer=writer,
+                   limit_per_line=a.per_line, max_mutants=a.max_mutants,
+                   max_specs=a.max_specs, exclude=tuple(excluded))
     finally:
         if not a.isolate:
             recover(lock_path=a.lock)
@@ -667,7 +687,7 @@ def _deep_mutation(a, contract, scenarios) -> dict:
     """Mutation over the clauses that DRIFTED — the sweep nobody can afford whole-repo."""
     import subprocess
     from lib.clause_map import digests, stale_clauses
-    from lib.mutation import hunt, isolate, summarize
+    from lib.mutation import default_mirror, hunt, isolate, summarize
 
     cmap = json.loads(_read(a.map or ".athena/clause_map.json"))
     drifted = set(stale_clauses(cmap, digests(cmap, _sources_of(cmap))))
@@ -691,7 +711,7 @@ def _deep_mutation(a, contract, scenarios) -> dict:
     if not targets:
         return {"mutants": 0, "killed": 0, "survived": 0, "survivors": [],
                 "blocking": a.strict, "scope": sorted(drifted)[:10]}
-    mirror = isolate(".", a.mirror or ".athena/check_mirror")
+    mirror = isolate(".", a.mirror or default_mirror("."))
 
     def runner(cmd):
         try:
@@ -858,6 +878,14 @@ def build_parser() -> argparse.ArgumentParser:
     mu.add_argument("--source", action="append", default=["lib"])
     mu.add_argument("--per-line", dest="per_line", type=int, default=1)
     mu.add_argument("--max-specs", dest="max_specs", type=int, default=0)
+    mu.add_argument("--only", default="all", metavar="FILTER[+FILTER]",
+                    help="which owned lines to attack: all | exclusive (owned by exactly "
+                         "one clause) | half-proved (an arm nothing took). Compose with "
+                         "'+', e.g. exclusive+half-proved for the sharpest sweep")
+    mu.add_argument("--baseline", default="ledger", choices=("ledger", "run", "none"),
+                    help="how to find specs that are red BEFORE mutating (they cannot be "
+                         "witnesses): read the ledger, re-run them, or skip the check")
+    mu.add_argument("--ledger", default="")
     mu.add_argument("--max-mutants", dest="max_mutants", type=int, default=0,
                     help="stop after N mutants (0 = no cap)")
     mu.add_argument("--lock", default=".athena/mutation_lock.json")

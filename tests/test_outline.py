@@ -96,3 +96,18 @@ def test_a_module_many_groups_reach_is_still_a_home_when_it_holds_lines_only_one
     assert [f["path"] for f in c2 if not f["shared"]] == ["lib/core.py"]
     assert c1[0]["exclusive"] == 3 and c1[0]["lines"] == 6
     assert c2[0]["exclusive"] == 2 and c2[0]["lines"] == 5
+
+
+def test_the_outline_names_the_half_proved_lines_of_a_group():
+    """C-11.26 - depth belongs next to size: a group owning 200 lines of which 40 have an
+    arm nothing takes is not the same as a group owning 200 proved ones."""
+    cmap = dict(CMAP, partial={"C-1.1": {"lib/parser.py": [2, 3]},
+                               "C-2.1": {"lib/report.py": [10]}})
+    o = outline(CONTRACT, coverage(CONTRACT, ()), cmap)
+    assert o["groups"]["C-1 Parsing"]["half_proved"] == 2
+    assert o["groups"]["C-2 Reporting"]["half_proved"] == 1
+    assert "half-proved: 2 owned lines have an arm nothing takes" in render(o)
+
+    clean = outline(CONTRACT, coverage(CONTRACT, ()), CMAP)
+    assert clean["groups"]["C-1 Parsing"]["half_proved"] == 0
+    assert "half-proved" not in render(clean), "silence only when there is nothing to say"
