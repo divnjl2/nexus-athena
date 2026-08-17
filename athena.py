@@ -700,6 +700,51 @@ def cmd_judge_eval(a) -> int:
     return 0 if rep["passes"] else 1
 
 
+def cmd_judge_graph(a) -> int:
+    """Put a judge run's steps in the provenance graph — as an INDEX, never as proof.
+
+    Reads the records the two-stage driver wrote (verdict + reasoning fingerprint) and emits
+    one `kind:judgement` node per pair. Emitting is ALL it does by default: `--run` is what
+    touches the graph, because a command that writes to a durable store on a dry run is not
+    a dry run.
+    """
+    import subprocess
+
+    from lib.judgement_graph import compile_judgements, summarize
+
+    payload = json.loads(_read(a.decisions))
+    records = list((payload.get("records") or {}).values())
+    if not records:
+        _emit({"judgements": 0, "commands": 0,
+               "note": "no records — the one-call driver keeps no reasoning, "
+                       "use evals/judge_twostage.py"})
+        return 0
+
+    def run(argv):
+        return subprocess.run(argv, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace").stdout
+
+    existing = frozenset()
+    if a.run:
+        from lib.bd_client import fetch_existing_keys
+        existing = fetch_existing_keys(a.slug, run=run)
+
+    cmds = compile_judgements(records, slug=a.slug, pin=payload.get("pin"),
+                              existing_keys=existing)
+    rep = {**summarize(records), "commands": len(cmds), "slug": a.slug, "ran": False}
+    if a.run:
+        from lib.bd_client import execute
+        from lib.plan2beads import CompileResult
+        execute(CompileResult(commands=tuple(cmds)), run=run)
+        rep["ran"] = True
+    elif a.out:
+        lines = [" ".join(c.argv) for c in cmds]
+        pathlib.Path(a.out).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        rep["out"] = a.out
+    _emit(rep)
+    return 0
+
+
 def _parse_front_auto(front: str, speckit_arg: str):
     """Read plan.md OR tasks.md without making the user know which parser to ask for.
 
@@ -1096,6 +1141,15 @@ def build_parser() -> argparse.ArgumentParser:
                                                   default=".athena/judge_corpus.json")
     je.add_argument("--decisions", default="")
     je.set_defaults(fn=cmd_judge_eval)
+
+    jg = jsub.add_parser("graph", help="record a judge run's steps in the provenance graph")
+    jg.add_argument("decisions", nargs="?", default="judge_decisions.json")
+    jg.add_argument("--slug", default="contract-layer",
+                    help="the slug the clause and scenario nodes were compiled under")
+    jg.add_argument("--run", action="store_true",
+                    help="actually write to bd (default: emit the commands only)")
+    jg.add_argument("-o", "--out", default="", help="write the commands to a file")
+    jg.set_defaults(fn=cmd_judge_graph)
 
     sr = sub.add_parser("spec", help="run the executable specs")
     srsub = sr.add_subparsers(dest="spec_cmd", required=True)
