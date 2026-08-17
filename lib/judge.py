@@ -228,6 +228,80 @@ def prompt_for(pair: Pair, *, variant: str = "v2") -> tuple[str, str]:
     return JUDGE_SYSTEM, user
 
 
+#: Stage 1 asks for the thinking to be MARKED, so the server can be told where to stop.
+#: Measured on a pair that had been running to the context ceiling: 32s and 1067 tokens
+#: against 932s and 30475 tokens, and it closed with a conclusion instead of being cut off
+#: mid-"Wait, I need to check". This model reasons in prose and tags nothing on its own, so
+#: vLLM's `--reasoning-parser` has nothing to split — the tag has to be asked for.
+THINK_OPEN, THINK_CLOSE = "<think>", "</think>"
+
+_STAGE1_RULE = (
+    "\n\nWork through it inside " + THINK_OPEN + " and " + THINK_CLOSE + ". Close the tag as"
+    " soon as you have a verdict — do not restate the analysis, and do not answer after it."
+)
+
+_STAGE2_RULE = (
+    "Below is your own analysis of a test against a requirement. State the verdict it"
+    " reached. Do not reconsider it and do not add reasoning.\n\nANALYSIS:\n"
+)
+
+
+def strip_think(text: str) -> str:
+    """PURE: the reasoning without its tags, whether or not the model closed them.
+
+    A stop sequence CONSUMES the closing tag, so stage 1 normally comes back open. Treating
+    that as malformed would throw away the only thing the call produced.
+    """
+    body = (text or "").split(THINK_OPEN, 1)[-1]
+    return body.split(THINK_CLOSE, 1)[0]
+
+
+def stage1_prompt(pair: Pair, *, variant: str = "v2") -> tuple[str, str]:
+    """PURE: the reasoning call — the pinned prompt plus a place for the thinking to END.
+
+    This does NOT cut the model, which is the operator rule: no token budget, no grammar. It
+    gives the reasoning a terminator, which is what the run was missing. A completion that
+    runs into the context ceiling is being truncated by the lane, silently — the same kind of
+    lie the rest of this frame exists to refuse.
+    """
+    system, user = prompt_for(pair, variant=variant)
+    return system + _STAGE1_RULE, user
+
+
+def stage2_prompt(pair: Pair, reasoning: str, *, variant: str = "v2") -> tuple[str, str]:
+    """PURE: the verdict call — the analysis handed back as data, and a shape to fill.
+
+    Two calls rather than one because a grammar applied from the first token measures the
+    grammar: forcing `response_format` up front collapsed this model to ~30 tokens. Applied
+    to the SECOND call it constrains nothing but the answer. The tail of the analysis is what
+    is kept when it is long, because the verdict lives at the end of the reasoning.
+    """
+    _, user = prompt_for(pair, variant=variant)
+    schema = user.split("Answer JSON:")[-1].strip()
+    body = strip_think(reasoning).strip()[-6000:]
+    return JUDGE_SYSTEM, _STAGE2_RULE + body + "\n\nAnswer JSON: " + schema
+
+
+def judgement_record(pair: Pair, reasoning: str, verdict: dict) -> dict:
+    """PURE: what is kept about one judgement — the verdict, and a handle on the reasoning.
+
+    The reasoning TEXT stays in the decisions artifact; what travels into the graph is its
+    fingerprint. A provenance graph holding thirty thousand tokens per node stops being an
+    index and becomes a slow blob store.
+    """
+    body = strip_think(reasoning).strip()
+    return {
+        "pair": pair.id,
+        "clause": pair.clause_id,
+        "spec": pair.spec_id,
+        "decision": verdict.get("decision", ""),
+        "counterexample": str(verdict.get("counterexample", ""))[:300],
+        "reason": str(verdict.get("reason", ""))[:200],
+        "reasoning_sha": _sha16(body) if body else "",
+        "reasoning_chars": len(body),
+    }
+
+
 @dataclass(frozen=True)
 class Verdict:
     """What a judge is allowed to return: a refutation ATTEMPT, with a way to check it."""

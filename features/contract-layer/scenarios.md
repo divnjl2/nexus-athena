@@ -1453,3 +1453,58 @@
 - **When** the spec `test_a_map_from_another_codebase_cannot_answer_about_this_one` is executed
 - **Then** a map naming another codebase fails the gate, and an unstated subject is not checked.
 
+### S16.1 — the thinking is given a place to end
+- **verifies:** C-16.1
+- **pins:** ad6b75de3e68d4d1
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_the_thinking_is_given_a_place_to_end -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_the_thinking_is_given_a_place_to_end` is executed
+- **Then** the reasoning call asks for a marked thinking block and caps nothing.
+
+### S16.2 — the verdict call gets the analysis as data and only a shape to fill
+- **verifies:** C-16.2
+- **pins:** f1dd8d23c50fa2b3
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_the_verdict_call_gets_the_analysis_as_data_and_only_a_shape_to_fill -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_the_verdict_call_gets_the_analysis_as_data_and_only_a_shape_to_fill` is executed
+- **Then** the verdict call carries the analysis as data and the answer schema, keeping its tail.
+
+### S16.3 — a stop sequence eats the closing tag and that is not malformed
+- **verifies:** C-16.3
+- **pins:** eb090aeb32b171f0
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_a_stop_sequence_eats_the_closing_tag_and_that_is_not_malformed -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_a_stop_sequence_eats_the_closing_tag_and_that_is_not_malformed` is executed
+- **Then** an unclosed thinking block still yields its reasoning.
+
+### S16.4 — the record keeps the verdict and a handle on the reasoning
+- **verifies:** C-16.4
+- **pins:** 1410bfe45342ae3e
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_the_record_keeps_the_verdict_and_a_handle_on_the_reasoning -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_the_record_keeps_the_verdict_and_a_handle_on_the_reasoning` is executed
+- **Then** the record keeps the verdict and a fingerprint, never the reasoning text.
+
+### S16.5 — a judgement node is an index and never claims proof
+- **verifies:** C-16.5
+- **pins:** 4f558feea0447cae
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_a_judgement_node_is_an_index_and_never_claims_proof -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_a_judgement_node_is_an_index_and_never_claims_proof` is executed
+- **Then** a judgement node carries the pin, links as related, and never claims proof.
+
+### S16.6 — a judgement already in the graph is emitted no second time
+- **verifies:** C-16.7
+- **pins:** 24e1b121348cf546
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_a_judgement_already_in_the_graph_is_emitted_no_second_time -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_a_judgement_already_in_the_graph_is_emitted_no_second_time` is executed
+- **Then** re-running a judge run over a corpus already recorded emits nothing and duplicates nothing.
+
+### S16.8 — a judgement whose end the graph lacks is still recorded
+- **verifies:** C-16.8
+- **pins:** ce55270c07ebd773
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_a_judgement_whose_end_the_graph_lacks_is_still_recorded -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_a_judgement_whose_end_the_graph_lacks_is_still_recorded` is executed
+- **Then** the node is kept while the link the graph cannot resolve is simply not emitted.

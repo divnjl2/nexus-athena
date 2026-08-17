@@ -305,3 +305,19 @@ using the notations that already exist rather than three new ones.
 - `athena contract refs <contract> --text` reports suspect and broken links apart.
 - `athena contract markers <contract> --map <map> --source lib` confirms every marker.
 - `athena contract export <contract> --project <name> -o clauses.needs.json` round-trips.
+
+## Phase 16: The judge answers, and its steps are provenance
+**Goal:** the reasoning has somewhere to end, and what it produced has an id in the graph.
+**Depends on:** Phase 15
+### Tasks
+- [ ] T16.1 Split the judge call in two so the reasoning terminates instead of hitting the ceiling
+  - success_check: `python -m pytest tests/test_judgement_graph.py -q`
+  - files: `lib/judge.py, evals/judge_twostage.py, tests/test_judgement_graph.py`
+  - verifies: S16.1, S16.2, S16.3, S16.4
+- [ ] T16.2 Record each judgement in the provenance graph as an index, never as proof
+  - success_check: `python -m pytest tests/test_judgement_graph.py -q`
+  - files: `lib/judgement_graph.py, tests/test_judgement_graph.py`
+  - verifies: S16.5, S16.6, S16.8
+### Manual Verification
+- `python evals/judge_twostage.py --limit 6` finishes stage 1 with `stop`, not `length`.
+- `athena judge eval` scores the two-stage decisions the same way it scored the one-call run.

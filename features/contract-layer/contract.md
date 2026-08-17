@@ -569,3 +569,40 @@
   SYSTEM SHALL fail the freshness gate.
   - note: an audit checked a scaffolded project from inside this repo and the reverse leg
     silently judged it by THIS repo's map. The map now says whose code it describes.
+
+## C-16 — The judge's steps: two calls, and a reasoning that has an id
+
+> The single-call driver ran 9% of the corpus into the context ceiling. Measured on one such
+> pair, same lane: as it was, 932s / finish=length / 30475 tokens, cut off mid-sentence; with
+> a sampling penalty, 454s but degenerated into rows of dots; with a marked thinking block and
+> a stop, 32s / 1067 tokens / closed with a conclusion. The cure is a terminator, not a budget.
+
+- **C-16.1** — WHEN the reasoning call is prepared THE SYSTEM SHALL ask for the thinking to be
+  marked, without capping its length.
+  - note: the operator rule is that the model is not cut by token budget — and the context
+    ceiling was cutting it anyway, silently, which is the same lie the rest of this frame
+    refuses. vLLM can split a marked thinking block server-side, but this model reasons in
+    prose and tags nothing on its own, so the tag has to be asked for.
+- **C-16.2** — WHEN the verdict call is prepared THE SYSTEM SHALL pass the analysis as data
+  and ask only for the answer shape.
+  - note: a grammar applied from the first token measures the grammar — forcing a JSON format
+    up front collapsed this model to about thirty tokens. Applied to the second call it
+    constrains nothing but the answer.
+- **C-16.3** — WHEN a stop sequence consumes the closing tag THE SYSTEM SHALL still read the
+  reasoning it produced.
+- **C-16.4** — WHEN a judgement is recorded THE SYSTEM SHALL keep the verdict with a
+  fingerprint of the reasoning rather than its text.
+- **C-16.5** — WHEN a judgement enters the graph THE SYSTEM SHALL link it as related and
+  carry the model, prompt and variant that produced it.
+  - note: never `validates`. The edge that means "this proves that" is reserved for evidence
+    a runner produced, and a model is not a runner.
+- **C-16.6** *(superseded-by C-16.7 C-16.8)* — WHEN a judgement is already in the graph THE
+  SYSTEM SHALL emit nothing for it, and SHALL record a judgement whose clause is absent
+  without inventing the missing end.
+  - note: written and refused the same minute, by this contract's own wording critique: two
+    SHALL obligations in one id, which no single spec can prove. Superseded rather than
+    edited, like every other wrong guess on this record.
+- **C-16.7** *(supersedes C-16.6)* — WHEN a judgement is already in the graph THE SYSTEM SHALL
+  emit nothing for it.
+- **C-16.8** *(supersedes C-16.6)* — WHEN a judgement names an end the graph does not hold THE
+  SYSTEM SHALL record the judgement without that link.
