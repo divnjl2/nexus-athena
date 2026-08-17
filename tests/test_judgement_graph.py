@@ -124,3 +124,23 @@ def test_a_judgement_whose_end_the_graph_lacks_is_still_recorded():
     edges = [list(c.argv) for c in half if list(c.argv)[:3] == ["bd", "dep", "add"]]
     assert len(edges) == 1 and edges[0][4] == clause_key("demo", "C-1.1"), (
         "the end that exists is linked; the one that does not is left alone")
+
+
+def test_a_generation_that_cycles_is_told_apart_from_one_that_is_merely_long():
+    """C-16.9 - the runaway is not long thinking, it is REPEATED thinking; that difference
+    is what makes stopping it legitimate where a token budget would not be."""
+    from lib.judge import looping
+
+    cycle = ("So the test passes.\nSo the test is vacuous.\n\n"
+             "Wait, I need to check if the requirement is violated.\n"
+             "If I change the system to report for all clauses, it is not violated here.\n") * 12
+    assert looping(cycle), "this is the verbatim shape the ceiling-hitting transcripts had"
+
+    progress = "".join(f"Step {i}: a distinct aspect of the requirement, considered once.\n"
+                       for i in range(80))
+    assert not looping(progress), "long is not the same as looping"
+    assert not looping("too short to judge") and not looping("")
+
+    # conservative on purpose: two repeats of a span are not yet a cycle
+    twice = ("the same sentence repeated, with nothing else around it at all. " * 2)
+    assert not looping(twice * 1, probe=60, repeats=3)

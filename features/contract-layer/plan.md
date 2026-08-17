@@ -313,7 +313,7 @@ using the notations that already exist rather than three new ones.
 - [ ] T16.1 Split the judge call in two so the reasoning terminates instead of hitting the ceiling
   - success_check: `python -m pytest tests/test_judgement_graph.py -q`
   - files: `lib/judge.py, evals/judge_twostage.py, tests/test_judgement_graph.py`
-  - verifies: S16.1, S16.2, S16.3, S16.4
+  - verifies: S16.1, S16.2, S16.3, S16.4, S16.9
 - [ ] T16.2 Record each judgement in the provenance graph as an index, never as proof
   - success_check: `python -m pytest tests/test_judgement_graph.py -q`
   - files: `lib/judgement_graph.py, tests/test_judgement_graph.py`

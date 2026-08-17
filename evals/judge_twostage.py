@@ -38,8 +38,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from lib.judge import (THINK_CLOSE, Pair, judgement_record, pin, resume_split,  # noqa: E402
-                       stage1_prompt, stage2_prompt, template_fingerprint)
+from lib.judge import (THINK_CLOSE, Pair, judgement_record, looping, pin,  # noqa: E402
+                       resume_split, stage1_prompt, stage2_prompt,
+                       template_fingerprint)
 
 _JSON = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
@@ -52,20 +53,71 @@ def _post(endpoint: str, body: dict, timeout: int) -> dict:
         return json.load(resp)
 
 
-def think(endpoint: str, model: str, pair: Pair, *, variant: str, timeout: int) -> dict:
-    """Stage 1: reasoning, stopped at the closing tag. No cap, no grammar."""
+def think(endpoint: str, model: str, pair: Pair, *, variant: str, timeout: int,
+          detect_loop: bool = True) -> dict:
+    """Stage 1: reasoning, stopped at the closing tag — or at a detected LOOP.
+
+    Streamed so the loop can be seen while it happens. The runaway is not long thinking, it
+    is repeated thinking, and a pair that cycles holds one of the lane's eight slots for
+    twenty minutes producing the same four sentences. Stopping THAT is not a token budget:
+    the cut is recorded per pair as `stop_reason`, so it lives in the data instead of being
+    the silent truncation the context ceiling was already doing.
+    """
     system, user = stage1_prompt(pair, variant=variant)
-    body = {"model": model, "temperature": 0, "stop": [THINK_CLOSE],
+    body = {"model": model, "temperature": 0, "stop": [THINK_CLOSE], "stream": bool(detect_loop),
             "messages": [{"role": "system", "content": system},
                          {"role": "user", "content": user}]}
+    if detect_loop:
+        # a stream returns no usage block by default, and losing the token count would
+        # cost the one number that says whether the reasoning is getting shorter
+        body["stream_options"] = {"include_usage": True}
+    if not detect_loop:
+        try:
+            got = _post(endpoint, body, timeout)
+        except (urllib.error.URLError, KeyError, json.JSONDecodeError, TimeoutError) as e:
+            return {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+        ch = got["choices"][0]
+        return {"text": ch["message"]["content"] or "", "stop_reason": ch.get("finish_reason"),
+                "finish_reason": ch.get("finish_reason"),
+                "tokens": got.get("usage", {}).get("completion_tokens")}
+
+    req = urllib.request.Request(f"{endpoint}/v1/chat/completions",
+                                 data=json.dumps(body).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"})
+    parts: list[str] = []
+    finish, chunks, used = None, 0, None
     try:
-        got = _post(endpoint, body, timeout)
-    except (urllib.error.URLError, KeyError, json.JSONDecodeError, TimeoutError) as e:
-        return {"error": f"{type(e).__name__}: {str(e)[:120]}"}
-    ch = got["choices"][0]
-    return {"text": ch["message"]["content"] or "",
-            "finish_reason": ch.get("finish_reason"),
-            "tokens": got.get("usage", {}).get("completion_tokens")}
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            for raw in resp:
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    ev = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                if ev.get("usage"):
+                    used = ev["usage"].get("completion_tokens")
+                if not ev.get("choices"):
+                    continue
+                choice = ev["choices"][0]
+                parts.append(choice.get("delta", {}).get("content") or "")
+                finish = choice.get("finish_reason") or finish
+                chunks += 1
+                # checked periodically, not per token: the detector scans a 2.4k tail and
+                # doing that on every delta would cost more than the generation it guards
+                if chunks % 64 == 0 and looping("".join(parts)):
+                    return {"text": "".join(parts), "stop_reason": "loop",
+                            "finish_reason": "loop", "tokens": chunks, "chunks": chunks}
+    except (urllib.error.URLError, TimeoutError) as e:
+        if not parts:
+            return {"error": f"{type(e).__name__}: {str(e)[:120]}"}
+        finish = finish or "interrupted"
+    return {"text": "".join(parts), "stop_reason": finish, "finish_reason": finish,
+            "tokens": used if used is not None else chunks, "chunks": chunks}
 
 
 def _verdict_plain(endpoint: str, model: str, pair: Pair, reasoning: str, *,
@@ -134,6 +186,9 @@ def main(argv=None) -> int:
     ap.add_argument("--retries", type=int, default=2,
                     help="instructor re-asks with the validation error (0 disables)")
     ap.add_argument("--no-instructor", dest="instructor", action="store_false", default=True)
+    ap.add_argument("--no-loop-guard", dest="detect_loop", action="store_false",
+                    default=True,
+                    help="do not stop stage 1 on a detected repetition loop")
     a = ap.parse_args(argv)
 
     payload = json.loads(pathlib.Path(a.corpus).read_text(encoding="utf-8"))
@@ -155,7 +210,7 @@ def main(argv=None) -> int:
 
     stamp = {**pin(model=a.model, prompt=template_fingerprint(a.variant), temperature=0.0),
              "variant": a.variant, "driver": "twostage",
-             "instructor": bool(client)}
+             "instructor": bool(client), "loop_guard": bool(a.detect_loop)}
     dest = pathlib.Path(a.out)
     previous = json.loads(dest.read_text(encoding="utf-8")) if a.resume and dest.exists() else {}
     todo, decisions = resume_split(tuple(pairs), previous, expected_pin=stamp)
@@ -165,7 +220,8 @@ def main(argv=None) -> int:
         print(f"[resume] {len(decisions)} kept, {len(todo)} to judge", flush=True)
 
     def one(p: Pair) -> tuple[str, dict, dict, str]:
-        first = think(a.endpoint, a.model, p, variant=a.variant, timeout=a.timeout)
+        first = think(a.endpoint, a.model, p, variant=a.variant, timeout=a.timeout,
+                      detect_loop=a.detect_loop)
         if "error" in first:
             return p.id, {"decision": "error", "error": first["error"]}, {}, ""
         text = first["text"]
@@ -177,6 +233,8 @@ def main(argv=None) -> int:
                                  variant=a.variant, timeout=a.timeout)
         got["stage1_tokens"] = first.get("tokens")
         got["stage1_finish"] = first.get("finish_reason")
+        got["stage1_stop_reason"] = first.get("stop_reason")
+        got["stage1_chunks"] = first.get("chunks")
         return p.id, got, judgement_record(p, text, got), text
 
     def flush(elapsed: float) -> None:
@@ -207,9 +265,11 @@ def main(argv=None) -> int:
 
     errs = sum(1 for d in decisions.values() if d.get("decision") == "error")
     cut = sum(1 for d in decisions.values() if d.get("stage1_finish") == "length")
+    looped = sum(1 for d in decisions.values() if d.get("stage1_stop_reason") == "loop")
     toks = [d["stage1_tokens"] for d in decisions.values() if d.get("stage1_tokens")]
     print(json.dumps({"out": a.out, "pairs": len(pairs), "seconds": round(elapsed, 1),
                       "errors": errs, "stage1_hit_ceiling": cut,
+                      "stage1_stopped_on_loop": looped,
                       "stage1_tokens_mean": round(sum(toks) / len(toks)) if toks else 0}))
     return 0
 

@@ -282,6 +282,32 @@ def stage2_prompt(pair: Pair, reasoning: str, *, variant: str = "v2") -> tuple[s
     return JUDGE_SYSTEM, _STAGE2_RULE + body + "\n\nAnswer JSON: " + schema
 
 
+def looping(text: str, *, window: int = 2400, probe: int = 140, repeats: int = 3) -> bool:
+    """PURE: is this generation cycling rather than progressing?
+
+    The runaway is not long thinking, it is REPEATED thinking. The transcript of a pair that
+    ran to the context ceiling reads, verbatim and over and over:
+
+        So the test passes. / So the test is vacuous. / Wait, I need to check ...
+
+    That distinction is what makes stopping it legitimate. A token budget cuts the model's
+    reasoning to make a run faster, which the operator rule forbids and which the context
+    ceiling was doing anyway, silently. This cuts a LOOP — a state the model does not leave —
+    and the caller records that it did, so the stop is in the data rather than hidden.
+
+    Deliberately conservative: it looks only at the recent tail, needs the same span three
+    times, and takes two probes so a boundary landing badly cannot mask a cycle.
+    """
+    tail = (text or "")[-window:]
+    if len(tail) < probe * repeats:
+        return False
+    for start in (len(tail) - probe, len(tail) - probe * 2):
+        chunk = tail[start:start + probe]
+        if chunk.strip() and tail.count(chunk) >= repeats:
+            return True
+    return False
+
+
 def judgement_record(pair: Pair, reasoning: str, verdict: dict) -> dict:
     """PURE: what is kept about one judgement — the verdict, and a handle on the reasoning.
 

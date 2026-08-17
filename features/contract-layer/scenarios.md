@@ -1508,3 +1508,12 @@
 - **Given** tests/test_judgement_graph.py
 - **When** the spec `test_a_judgement_whose_end_the_graph_lacks_is_still_recorded` is executed
 - **Then** the node is kept while the link the graph cannot resolve is simply not emitted.
+
+### S16.9 — a generation that cycles is told apart from one that is merely long
+- **verifies:** C-16.9
+- **pins:** 9703d5b3333f343d
+- **run_cmd:** `python -m pytest tests/test_judgement_graph.py::test_a_generation_that_cycles_is_told_apart_from_one_that_is_merely_long -q`
+- **Given** tests/test_judgement_graph.py
+- **When** the spec `test_a_generation_that_cycles_is_told_apart_from_one_that_is_merely_long` is executed
+- **Then** the verbatim shape of a ceiling-hitting transcript is caught while a long but progressing one is not.
+

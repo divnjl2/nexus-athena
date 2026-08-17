@@ -606,3 +606,10 @@
   emit nothing for it.
 - **C-16.8** *(supersedes C-16.6)* — WHEN a judgement names an end the graph does not hold THE
   SYSTEM SHALL record the judgement without that link.
+- **C-16.9** — WHEN a reasoning call starts repeating itself THE SYSTEM SHALL stop it and
+  record that this is why it stopped.
+  - note: the runaway is not long thinking, it is REPEATED thinking — the transcripts that
+    hit the ceiling read "So the test is vacuous. / Wait, I need to check ..." verbatim, over
+    and over. That difference is what makes stopping it legitimate where a token budget is
+    not: the loop is a state the model does not leave, and the stop is written into the
+    record rather than hidden the way the context ceiling hid its own truncation.
