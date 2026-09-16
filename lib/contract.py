@@ -45,7 +45,7 @@ from __future__ import annotations
 
 import re
 
-from lib.ast import (CLAUSE_ACTIVE, CLAUSE_DRAFT, CLAUSE_SUPERSEDED, CLAUSE_WITHDRAWN,
+from lib.ast import (CLAUSE_ACTIVE, CLAUSE_DRAFT, CLAUSE_SUPERSEDED, CLAUSE_WITHDRAWN, SOURCES,
                      Clause, Contract, ParseError)
 from lib.versioning import hash_text
 
@@ -65,7 +65,7 @@ _CLAUSE_RE = re.compile(
     rf"^-\s*\*\*({CLAUSE_ID})\*\*\s*(?:\*\(([^)]*)\)\*)?\s*(?:[—\-]\s+)?(.*)$"
 )
 _ATTR_RE = re.compile(
-    r"^\s+-\s*(status|supersedes|superseded[-_]by|tags|note|see|ref)\s*:\s*(.*)$",
+    r"^\s+-\s*(status|supersedes|superseded[-_]by|tags|note|see|ref|source)\s*:\s*(.*)$",
     re.IGNORECASE
 )
 _ID_LIST_SPLIT = re.compile(r"[,\s]+")
@@ -113,6 +113,8 @@ def _apply_marker(cur: dict, marker: str) -> None:
             cur["supersedes"] += _ids(rest)
         elif key == "tags":
             cur["tags"] += _ids(rest)
+        elif key == "source":
+            cur["source"] = rest.strip().lower()
         else:                       # unknown token -> a free-form note, never silent
             cur["notes"] += (part,)
 
@@ -139,6 +141,10 @@ def _apply_attr(cur: dict, key: str, value: str) -> None:
         # one target per bullet; the optional fingerprint is parsed by lib.docrefs, because
         # a malformed reference belongs in a report and not in a parse error
         cur["refs"] += (value,)
+    elif key == "source":
+        # v3.10: where the clause came from. Validated by `lint`, not here — an unknown
+        # origin is a report row, not a parse error, same rule as a malformed reference.
+        cur["source"] = value.lower()
     else:
         cur["notes"] += (value,)
 
@@ -166,6 +172,7 @@ def _finish(cur: dict) -> Clause:
         group=cur["group"],
         tags=tuple(sorted(set(cur["tags"]))),
         refs=tuple(cur["refs"]),
+        source=cur["source"],
         source_line=cur["line"],
     )
 
@@ -202,7 +209,7 @@ def parse(text: str) -> Contract:
             flush()
             cur = {"id": mc.group(1), "text": mc.group(3) or "", "status": CLAUSE_ACTIVE,
                    "superseded_by": (), "supersedes": (), "tags": (), "notes": (),
-                   "refs": (),
+                   "refs": (), "source": "",
                    "group": group, "line": lineno, "last": "text"}
             if mc.group(2):
                 _apply_marker(cur, mc.group(2))
@@ -305,6 +312,10 @@ def lint(contract: Contract) -> tuple[str, ...]:
         if c.status == CLAUSE_WITHDRAWN and c.superseded_by:
             issues.append(f"{c.id}: withdrawn AND superseded — a clause is replaced or "
                           f"dropped, never both")
+        if c.source and c.source not in SOURCES:
+            # a free-text origin cannot be scanned; the lessons report depends on the vocabulary
+            issues.append(f"{c.id}: unknown source {c.source!r} (one of "
+                          f"{', '.join(SOURCES)})")
 
     for cid in _supersede_cycles(contract):
         issues.append(f"{cid}: supersede cycle — the chain never reaches a current clause")
@@ -536,6 +547,8 @@ def render(contract: Contract) -> str:
         out.append(f"- **{c.id}**{marker} — {c.text}")
         if c.tags:
             out.append(f"  - tags: {', '.join(c.tags)}")
+        if c.source:
+            out.append(f"  - source: {c.source}")
         # references round-trip too: a render that silently dropped them would turn
         # `render(parse(x))` from a canonicaliser into a data-loss step
         for ref in c.refs:

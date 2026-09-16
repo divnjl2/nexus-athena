@@ -125,7 +125,7 @@ main() {
   register_plugin
   register_mcp
   check_openhands
-  log "done. Next: build phases 1-10 (see athena-final-opus-plan-v2.md §8). implement is DEFERRED."
+  log "done. Next: build phases 1-10 (see docs/history/athena-final-opus-plan-v2.md §8). implement is DEFERRED."
 }
 
 main "$@"

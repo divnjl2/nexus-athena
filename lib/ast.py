@@ -49,6 +49,11 @@ CLAUSE_DRAFT = "draft"            # authored, not yet required to be covered by 
 CLAUSE_SUPERSEDED = "superseded"  # replaced by >=1 successor; old refs still resolve
 CLAUSE_WITHDRAWN = "withdrawn"    # requirement dropped; refs resolve but coverage is dead
 
+#: v3.10: where a clause came from. `design` is authored intent; every other value is a
+#: failure signal, and a clause born from one is a LESSON (`lib.lessons`). Fixed vocabulary
+#: on purpose — a free-text origin cannot be scanned, and `lint` refuses anything else.
+SOURCES = ("design", "review", "audit", "incident", "ledger", "mutation")
+
 
 @dataclass(frozen=True)
 class Clause:
@@ -83,6 +88,9 @@ class Clause:
     #: of `version`: a reference is context, not the obligation, so citing a design note
     #: must not invalidate the spec that proves the rule.
     refs: tuple[str, ...] = ()
+    #: v3.10: `- source:` — one of SOURCES, "" when unstated. Kept OUT of `version` like refs:
+    #: the origin of a requirement is context, not the obligation.
+    source: str = ""
     source_line: int = 0
 
     @property

@@ -27,6 +27,18 @@ jobs:
             --ledger .athena/spec_ledger.json \
             --run --skip-tag slow --text
         # exit 1 = a requirement is unproved, drifted, unbound or red. The report names the leg.
+      - name: contract loop (fast lane) — core layer (v3.10)
+        run: |
+          python athena.py --speckit off check features/core-layer/contract.md \
+            --front features/core-layer/plan.md \
+            --ledger .athena/core_ledger.json \
+            --run --text
+      - name: every contract, the cheap lane (what the Stop hook runs)
+        run: python athena.py gate --text
+      - name: the lessons still hold
+        run: |
+          python athena.py lessons rerun features/contract-layer/contract.md --skip-tag slow --text
+          python athena.py lessons rerun features/core-layer/contract.md --text
 
   full:
     if: github.event_name != 'push'

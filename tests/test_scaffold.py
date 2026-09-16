@@ -15,9 +15,10 @@ def test_a_scaffolded_feature_is_already_wired_clause_to_spec_to_task():
     """C-11.8 — the three files reference each other on creation; a scaffold whose parts do
     not connect teaches the user the tool is broken, not that their contract is empty."""
     files = render_files(title="Payment Retry", run_cmd="pytest tests/test_retry.py::test_x -q")
-    # four files: the example TEST ships too, because the scaffold's promise is that the
-    # first check passes and a spec pointing at a file init never wrote cannot deliver that
-    assert set(files) == {"contract.md", "scenarios.md", "plan.md", "test_example.py"}
+    # five files: the example TEST ships too, because the scaffold's promise is that the
+    # first check passes and a spec pointing at a file init never wrote cannot deliver that;
+    # the CORE ships (v3.10) because a contract without a top has nothing to cite
+    assert set(files) == {"contract.md", "scenarios.md", "plan.md", "test_example.py", "CORE.md"}
 
     contract = parse(files["contract.md"])
     scenarios = parse_scenarios(files["scenarios.md"])

@@ -1,4 +1,8 @@
-# Athena — a spec-driven planning framework (v3 + v3.1 + v3.3)
+# Athena — a spec-driven planning framework (v3 + v3.1 + v3.3 + v3.10)
+
+> **Start here:** [`CORE.md`](./CORE.md) (goal, language, priorities, constraints; forty
+> lines), then [`CLAUDE.md`](./CLAUDE.md) (the way in, one screen), then the feature you
+> touch under `features/<name>/`. This README is the long form.
 
 Turn a one-line intent into a **complete, traceable, compilable plan** — and a durable
 **provenance graph** where every task's success check is a *proof that a requirement holds*,
@@ -9,6 +13,13 @@ not just "a test passed."
 clause is bound to an executable spec, which makes three questions a linear scan instead of a
 re-read of the codebase — *which requirements have no spec*, *what is left to implement*, and
 *where requirement, spec and code diverged*. See [Requirement contract](#requirement-contract-v33).
+
+**v3.10 adds the top of the pyramid and its edges**, written contract-first in
+[`features/core-layer/`](./features/core-layer/): a semantic core the clauses cite by
+fingerprint (a change to the principles makes them *suspect* until re-read), a `source:` on
+every clause so lessons are a linear scan, `athena lessons rerun` as the check that a lesson
+was learned, `athena gate` judging every contract in the repository on Stop, and a spec lane
+that runs many specs in one process. See [The core layer](#the-core-layer-v310).
 
 The pipeline chains existing, proven pieces and adds the deterministic glue between them:
 
@@ -250,9 +261,46 @@ because a suite may genuinely need a plugin.
   "build Snake" intent expanded by the frame into 44 FRs / 24 edge cases / 31 scenarios /
   8 phases / 27 tasks → a **68-node, 84-edge** bd provenance graph.
 
-Design docs: [v2](./athena-final-opus-plan-v2.md) ·
-[v3](./athena-final-opus-plan-v3.md) ·
-[v3.1 harness](./athena-opus-plan-v3.1-harness.md).
+Design docs: [v2](./docs/history/athena-final-opus-plan-v2.md) ·
+[v3](./docs/history/athena-final-opus-plan-v3.md) ·
+[v3.1 harness](./docs/history/athena-opus-plan-v3.1-harness.md).
+
+## The core layer (v3.10)
+
+The contract layer answered "is it done" for requirement, spec and code. Above it sat nothing
+a tool could check: why the requirements are what they are, where each one came from, whether
+a lesson stayed learned, and whether the criterion was actually enforced (the Stop hook that
+enforces it existed on disk for a month and was registered nowhere). Applying the frame to
+itself, each of those is now a clause group in
+[`features/core-layer/contract.md`](./features/core-layer/contract.md) — **33 clauses, 33
+executable specs, written before the code** — and the whole layer holds under
+`athena check` and `athena gate`.
+
+| piece | what it is | command |
+|---|---|---|
+| **core** | `CORE.md`: goal, language, priorities, constraints; under forty lines; cited as `see: CORE.md@<fingerprint>`; a change makes the citing clauses suspect and fails the contract leg | `athena init` writes it; `athena contract refs` |
+| **source** | `- source: audit \| incident \| ledger \| mutation \| review \| design` on a clause; unstated is reported, never guessed | `athena contract sources` |
+| **lessons** | every clause with a failure-signal source, superseded ones carried forward; rerun exactly their specs; forgotten = red | `athena lessons list` / `rerun` |
+| **entry** | `CLAUDE.md` under thirty lines naming the core, the contract and the check; history under `docs/history/` | proved by `tests/test_entry.py` |
+| **gate** | every `contract.md` under the cwd, recognised by its clauses; cheap lane; folded verdict; block names contract + first cause; two nudges per session | `athena gate --text`; Stop hook in `.claude/settings.json` |
+| **fast lane** | specs sharing a pytest invocation run in one process, attributed from the junit report; missing node = red; aborted batch reruns one per spec; `tags: isolated` opts out | default in `spec run` / `check`; `--no-batch` |
+
+**The fast lane, measured** (183 specs of the contract layer, `--skip-tag slow`,
+`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`, 36 logical cores). Contract-layer clause C-3.9 named
+batching and was refuted in v3.3, because plugin autoload was the ten seconds then; with
+autoload off the floor moved to interpreter start, and batching became the lever. Both
+measurements are on the record; the wall clock is bounded by parallelism either way, the
+per-spec cost is not:
+
+| lane | one process per spec | batched (v3.10) |
+|---|---|---|
+| wall clock, 36 workers | 8.5 s | 5.8 s |
+| wall clock, one worker | 146 s | 14.4 s |
+| per-spec median, one worker | 523 ms (interpreter + pytest start; none under 300 ms) | 1 ms (the test body) |
+
+On a 36-core box the gain is 1.5x, because the wall clock is set by the slowest single spec
+either way; on a 2-4 core CI runner it is the difference between a minute and ten seconds.
+The verdicts of the two lanes are identical, spec for spec (`tests/test_spec_batch.py`).
 
 ## What we write vs. vendor (§0)
 
@@ -282,13 +330,20 @@ nexus-athena/
 ├── speckit/{presets/athena, seed.md}  # success_check preset + phase-by-phase seed [done]
 ├── skills/{plan-format, speckit-tasks-format}/SKILL.md  # fallback + primary schemas [done]
 ├── agents/                        # documentarian subagents                       [done]
+├── CORE.md                        # the semantic core, cited by every contract (v3.10) [done]
+├── CLAUDE.md                      # the way in, one screen (v3.10)                 [done]
+├── docs/history/                  # design docs by version (moved out of the root)  [done]
 ├── features/contract-layer/       # v3.3 dogfood: Athena's own contract + specs    [done]
+├── features/core-layer/           # v3.10 dogfood: core, sources, lessons, gate, lane [done]
+├── hooks/contract-criterion-gate.sh   # Stop-hook shim -> `athena gate --hook`    [done]
 ├── skills/contract-format/        # the formal clause language (v3.3)             [done]
 ├── commands/contract.md           # /athena.contract — the three questions        [done]
 ├── lib/
 │   ├── contract.py                # contract.md -> clauses (parse/lint/pin/import) [done]
 │   ├── spec_runner.py             # run executable specs -> red/green ledger       [done]
-│   ├── contract_report.py         # coverage / todo / drift (pure, linear)         [done]
+│   ├── contract_report.py         # coverage / todo / drift / sources (pure, linear) [done]
+│   ├── lessons.py                 # lesson set derived from `source:`, rerun (v3.10) [done]
+│   ├── gate.py                    # every contract in reach, folded verdict (v3.10) [done]
 │   ├── ast.py                     # shared Plan AST (the contract)                [done]
 │   ├── plan_parser.py             # plan.md  -> Plan  (fallback)                  [done]
 │   ├── speckit_parser.py          # tasks.md -> Plan  (primary)                   [done]

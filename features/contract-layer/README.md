@@ -94,6 +94,9 @@ athena contract owners   lib/judge.py:271    # which clauses may I break by edit
 athena spec run          <scenarios> --jobs 12                   # run every spec
 athena mutate            <contract> --only exclusive+half-proved   # do the specs notice
 athena init              --dir features/my-feature               # start a new contract
+athena contract sources  <contract> --text   # where each clause came from (v3.10)
+athena lessons rerun     <contract> --text   # rerun the proofs of every lesson (v3.10)
+athena gate --text                           # every contract in the repo, the cheap lane (v3.10)
 ```
 
 `athena contract outline --text` is the fastest way in: it prints each clause group, how many

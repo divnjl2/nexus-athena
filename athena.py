@@ -392,7 +392,8 @@ def cmd_spec_run(a) -> int:
     # case is PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 — on a box with many pytest plugins installed
     # their autoload dominates a spec's runtime (10.3s of 10.8s here).
     env = dict(kv.split("=", 1) for kv in a.env if "=" in kv) or None
-    results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env)
+    results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env,
+                        batch=not a.no_batch, contract=contract)
     ledger = make_ledger(
         results, contract=contract,
         scenario_version=hash_text(_read(scen_path)),
@@ -760,12 +761,25 @@ def _parse_front_auto(front: str, speckit_arg: str):
 
 def cmd_init(a) -> int:
     """Scaffold a feature already wired clause -> spec -> task, so the first check PASSES."""
+    from lib.docrefs import fingerprint
     from lib.scaffold import next_steps, render_files
     dest = pathlib.Path(a.path)
     dest.mkdir(parents=True, exist_ok=True)
+    # v3.10: the core is per PROJECT, not per feature. A feature under a project that already
+    # has one cites that one by fingerprint (C-1.1); only a project without one gets a new
+    # CORE.md, next to the contract. Three levels up covers `features/<name>/` from the root.
+    core, core_pin = "CORE.md", ""
+    resolved = dest.resolve()
+    for anc in list(resolved.parents)[:3]:
+        cand = anc / "CORE.md"
+        if cand.exists():
+            core = os.path.relpath(cand, resolved).replace("\\", "/")
+            core_pin = fingerprint(cand.read_text(encoding="utf-8"))
+            break
     files = render_files(title=a.title or dest.name.replace("-", " ").title(),
                          run_cmd=a.run_cmd, files=a.files,
-                         dir_hint=str(dest).replace("\\", "/"))
+                         dir_hint=str(dest).replace("\\", "/"),
+                         core=core, core_pin=core_pin)
     written = []
     for name, text in sorted(files.items()):
         target = dest / name
@@ -773,19 +787,29 @@ def cmd_init(a) -> int:
             continue                      # never clobber a real contract by accident
         target.write_text(text, encoding="utf-8")
         written.append(str(target))
-    print(next_steps(str(dest), len(written)))
-    _emit({"created": written, "skipped": sorted(set(str(dest / n) for n in files) - set(written))})
+    print(next_steps(str(dest), len(written),
+                     core=str(dest / core) if core == "CORE.md" else str((resolved / core).resolve())))
+    _emit({"created": written, "skipped": sorted(set(str(dest / n) for n in files) - set(written)),
+           "core": core})
     return 0
 
 
 def cmd_check(a) -> int:
-    """The product surface: the whole loop, one verdict, one exit code.
+    """The product surface: the whole loop, one verdict, one exit code."""
+    from lib.check import render
+    report = _check_report(a)
+    print(render(report) if a.text else json.dumps(report, ensure_ascii=False, sort_keys=True))
+    return 0 if report["passed"] else 1
+
+
+def _check_report(a) -> dict:
+    """The whole loop for ONE contract, as a report dict (`gate` folds several of these).
 
     Order is upstream-first — a broken contract makes every downstream report meaningless,
     so it fails there and says so instead of drowning the user in consequences.
     """
     import datetime
-    from lib.check import build, render
+    from lib.check import build
     from lib.contract import critique, lint
     from lib.contract_report import coverage as cov_report, drift as drift_report, todo as todo_report
     from lib.spec_runner import load_ledger, make_ledger, run_specs, select, write_ledger
@@ -813,7 +837,8 @@ def cmd_check(a) -> int:
     if a.run:
         picked = select(scenarios, contract=contract, skip_tags=tuple(a.skip_tag))
         env = dict(kv.split("=", 1) for kv in a.env if "=" in kv) or None
-        results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env)
+        results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env,
+                            batch=not getattr(a, "no_batch", False), contract=contract)
         ledger = make_ledger(results, contract=contract,
                              scenario_version=hash_text(_read(scen_path)),
                              ts=datetime.datetime.now(datetime.timezone.utc)
@@ -874,6 +899,151 @@ def cmd_check(a) -> int:
                    drift=drift_report(contract, scenarios, ledger),
                    gates=gates, mutation=mutation, judge=judge, refs=refs,
                    strict_wording=a.strict)
+    return report
+
+
+# --- v3.10: the core layer — sources, lessons, the gate ---------------------------
+
+def cmd_contract_sources(a) -> int:
+    # Q4: where did each clause come from. Linear scan; failure signals are the lessons.
+    from lib.contract_report import sources
+    rep = sources(_load_contract(a))
+    _report_out(a, rep, title="clause sources")
+    return 0
+
+
+def cmd_lessons_list(a) -> int:
+    from lib.lessons import lessons, specs_for
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    items = lessons(contract)
+    picked = specs_for(contract, scenarios, items)
+    if a.text:
+        print("# lessons — clauses born from a failure signal")
+        for it in items:
+            carried = "" if it["live"] == (it["origin"],) else \
+                f" -> {', '.join(it['live']) or 'nothing live'}"
+            print(f"  {it['origin']}{carried}  [{it['source']}]  {it['text'][:70]}")
+        print(f"\nlessons={len(items)}  specs to rerun={len(picked)}: "
+              f"{', '.join(s.id for s in picked) or '-'}")
+    else:
+        _emit({"lessons": list(items), "specs": [s.id for s in picked]})
+    return 0
+
+
+def cmd_lessons_rerun(a) -> int:
+    # THE check that a lesson was learned: the old failure's proof, run again on the
+    # pyramid as it stands now. Exit 1 on a forgotten or unproved lesson.
+    from lib.lessons import render, report, specs_for
+    from lib.spec_runner import run_specs, select
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    wanted = specs_for(contract, scenarios)
+    picked = select(wanted, contract=contract, skip_tags=tuple(a.skip_tag))
+    env = dict(kv.split("=", 1) for kv in a.env if "=" in kv) or None
+    results = run_specs(picked, cwd=a.cwd, timeout=a.timeout, jobs=a.jobs, env=env,
+                        batch=not a.no_batch, contract=contract)
+    # a spec the caller's lane left out is SKIPPED, not silence (C-3.6)
+    rep = report(contract, scenarios, results,
+                 skipped={s.id for s in wanted} - {s.id for s in picked})
+    print(render(rep) if a.text else json.dumps(rep, ensure_ascii=False, sort_keys=True))
+    return 0 if rep["passed"] else 1
+
+
+def _walk(root: pathlib.Path, name: str, depth: int):
+    """EFFECTFUL: every `name` under root within `depth` levels, skipping vendored/scratch dirs."""
+    from lib.gate import SKIP_DIRS
+    root = root.resolve()
+    for dirpath, dirnames, filenames in os.walk(root):
+        level = len(pathlib.Path(dirpath).relative_to(root).parts)
+        dirnames[:] = ([d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
+                       if level < depth else [])
+        if name in filenames:
+            yield pathlib.Path(dirpath) / name
+
+
+def _gate_one(contract: pathlib.Path, root: pathlib.Path) -> dict:
+    """The cheap lane for one contract: committed ledger, no spec run, no clause map."""
+    d = contract.parent
+    argv = ["check", str(contract), "--allow-partial", "--cwd", str(root)]
+    if (d / "scenarios.md").exists():
+        argv += ["--scenarios", str(d / "scenarios.md")]
+    if (d / "plan.md").exists():
+        argv += ["--front", str(d / "plan.md")]
+    for cand in (d / "spec_ledger.json", d / ".athena" / "spec_ledger.json"):
+        if cand.exists():
+            argv += ["--ledger", str(cand)]
+            break
+    try:
+        shown = str(contract.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        shown = str(contract)
+    try:
+        return {"contract": shown, "report": _check_report(build_parser().parse_args(argv))}
+    except (ParseError, CompileError, OSError, ValueError, KeyError) as e:
+        # a contract whose check cannot run is a FAILING contract, never a skipped one
+        return {"contract": shown, "error": f"{type(e).__name__}: {str(e)[:200]}",
+                "report": {"passed": False, "first_cause": "check could not run",
+                           "failed": ["check"], "incomplete": []}}
+
+
+def _nudges(session: str, *, bump: bool = False) -> int:
+    """EFFECTFUL: the per-session count of blocks already issued (C-5.7)."""
+    import tempfile
+    key = re.sub(r"[^A-Za-z0-9_-]", "_", session)[:80]
+    p = pathlib.Path(tempfile.gettempdir()) / f"athena-gate-nudges-{key}"
+    try:
+        n = int((p.read_text(encoding="utf-8").strip() or "0"))
+    except (OSError, ValueError):
+        n = 0
+    if bump:
+        try:
+            p.write_text(str(n + 1), encoding="utf-8")
+        except OSError:
+            pass
+    return n
+
+
+def cmd_gate(a) -> int:
+    """Every contract under a directory, the cheap lane, one verdict — and the Stop-hook
+    decision when `--hook` reads the Claude Code payload from stdin."""
+    from lib.gate import BYPASS_VAR, find_contracts, fold, hook_decision, render
+
+    payload: dict = {}
+    if a.hook:
+        try:
+            payload = json.loads(sys.stdin.read() or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+    root = pathlib.Path(a.root or payload.get("cwd") or ".")
+    if not root.is_dir():
+        root = pathlib.Path(".")
+    root = root.resolve()
+    bypassed = bool(os.environ.get(BYPASS_VAR))
+
+    files: dict = {}
+    for path in _walk(root, "contract.md", a.depth):
+        try:
+            files[str(path)] = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+    verdicts = [] if bypassed else [_gate_one(pathlib.Path(c), root) for c in find_contracts(files)]
+
+    session = str(payload.get("session_id") or a.session or "")
+    used = _nudges(session) if session else 0
+    report = fold(verdicts, bypassed=bypassed, nudges_used=used, max_nudges=a.max_nudges)
+    report["root"] = str(root)
+
+    if a.hook:
+        decision = hook_decision(report)
+        if decision is not None:
+            if session:
+                _nudges(session, bump=True)
+            print(json.dumps(decision, ensure_ascii=False))
+        return 0            # for a hook the decision payload is the verdict, not the exit code
+
     print(render(report) if a.text else json.dumps(report, ensure_ascii=False, sort_keys=True))
     return 0 if report["passed"] else 1
 
@@ -980,6 +1150,7 @@ def build_parser() -> argparse.ArgumentParser:
     _rep("coverage", cmd_contract_coverage, gate=True)
     _rep("todo", cmd_contract_todo)
     _rep("drift", cmd_contract_drift, gate=True)
+    _rep("sources", cmd_contract_sources)
 
     cp = csub.add_parser("pin")
     cp.add_argument("scenarios", nargs="?", default="")
@@ -1100,7 +1271,42 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--text", action="store_true")
     ck.add_argument("--allow-partial", dest="allow_partial", action="store_true",
                     help="accept a run where a whole leg produced no evidence (fast lane)")
+    ck.add_argument("--no-batch", dest="no_batch", action="store_true",
+                    help="one process per spec even when specs share an invocation")
     ck.set_defaults(fn=cmd_check)
+
+    ga = sub.add_parser("gate", help="every contract under a directory, the cheap lane, "
+                                     "one verdict (the Stop hook execs this with --hook)")
+    ga.add_argument("--root", default="", help="directory to scan (default: the hook payload's "
+                                               "cwd, else the current directory)")
+    ga.add_argument("--depth", type=int, default=3, help="how deep to look for contract.md")
+    ga.add_argument("--hook", action="store_true",
+                    help="read the Claude Code Stop-hook payload on stdin; print a block "
+                         "decision only when a contract does not hold")
+    ga.add_argument("--session", default="", help="session id for the nudge budget "
+                                                  "(the hook payload carries it)")
+    ga.add_argument("--max-nudges", dest="max_nudges", type=int, default=2,
+                    help="blocks per session before the gate lets go and says so")
+    ga.add_argument("--text", action="store_true")
+    ga.set_defaults(fn=cmd_gate)
+
+    le = sub.add_parser("lessons", help="clauses born from a failure signal, and whether "
+                                        "their proofs still pass")
+    lsub = le.add_subparsers(dest="lessons_cmd", required=True)
+    for name, fn in (("list", cmd_lessons_list), ("rerun", cmd_lessons_rerun)):
+        lp = lsub.add_parser(name)
+        lp.add_argument("contract", nargs="?", default="contract.md")
+        lp.add_argument("--scenarios", default="")
+        lp.add_argument("--text", action="store_true")
+        if name == "rerun":
+            lp.add_argument("--cwd", default=".")
+            lp.add_argument("--skip-tag", dest="skip_tag", action="append", default=[],
+                            metavar="TAG", help="leave out lessons whose clause carries this tag")
+            lp.add_argument("--jobs", type=int, default=0)
+            lp.add_argument("--env", action="append", default=[], metavar="KEY=VALUE")
+            lp.add_argument("--timeout", type=int, default=120)
+            lp.add_argument("--no-batch", dest="no_batch", action="store_true")
+        lp.set_defaults(fn=fn)
 
     mu = sub.add_parser("mutate", help="break the lines a clause owns; do its specs notice?")
     mu.add_argument("contract", nargs="?", default="contract.md")
@@ -1169,6 +1375,9 @@ def build_parser() -> argparse.ArgumentParser:
                       help="pin an env var for the spec processes (repeatable), e.g. "
                            "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1")
     srun.add_argument("--timeout", type=int, default=120)
+    srun.add_argument("--no-batch", dest="no_batch", action="store_true",
+                      help="one process per spec even when specs share an invocation "
+                           "(the default batches them and reads pytest's junit report)")
     srun.add_argument("-o", "--out", default=".athena/spec_ledger.json")
     srun.set_defaults(fn=cmd_spec_run)
     return p

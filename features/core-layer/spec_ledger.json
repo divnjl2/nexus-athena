@@ -1,0 +1,354 @@
+{
+  "contract_version": "c0de1e31c7b1148a",
+  "results": [
+    {
+      "clause": "C-1.1",
+      "clause_version": "428732dfeda5522d",
+      "duration_ms": 28,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_core.py::test_a_scaffold_writes_a_core_when_none_exists_above -q",
+      "scenario": "S1.1"
+    },
+    {
+      "clause": "C-1.2",
+      "clause_version": "58c5455039e3d606",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_core.py::test_the_first_clause_cites_the_core_with_its_fingerprint -q",
+      "scenario": "S1.2"
+    },
+    {
+      "clause": "C-1.3",
+      "clause_version": "adf62a872eb08ab1",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_core.py::test_the_core_template_fits_in_forty_lines -q",
+      "scenario": "S1.3"
+    },
+    {
+      "clause": "C-1.4",
+      "clause_version": "d5f0703ffc065318",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_core.py::test_a_changed_core_makes_the_citing_clause_suspect -q",
+      "scenario": "S1.4"
+    },
+    {
+      "clause": "C-1.5",
+      "clause_version": "6236446d9a11aa8b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_core.py::test_a_suspect_core_reference_fails_the_contract_leg -q",
+      "scenario": "S1.5"
+    },
+    {
+      "clause": "C-2.1",
+      "clause_version": "b064607597aa7917",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_source_attr.py::test_a_source_attribute_is_read_and_kept_out_of_the_text -q",
+      "scenario": "S2.1"
+    },
+    {
+      "clause": "C-2.2",
+      "clause_version": "ebdf5dfd8604da3b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_source_attr.py::test_an_unknown_source_is_reported_in_lint -q",
+      "scenario": "S2.2"
+    },
+    {
+      "clause": "C-2.3",
+      "clause_version": "b0a0791c74a957e4",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_source_attr.py::test_the_source_attribute_round_trips_through_render -q",
+      "scenario": "S2.3"
+    },
+    {
+      "clause": "C-2.4",
+      "clause_version": "0d85ac8c93f337eb",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_source_attr.py::test_the_sources_report_lists_clauses_under_their_source -q",
+      "scenario": "S2.4"
+    },
+    {
+      "clause": "C-2.5",
+      "clause_version": "8423d00a8c16ea77",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_source_attr.py::test_a_clause_without_a_source_is_counted_as_unstated -q",
+      "scenario": "S2.5"
+    },
+    {
+      "clause": "C-3.1",
+      "clause_version": "c5bbfb79ba241cc2",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_lessons.py::test_lessons_are_the_clauses_born_from_a_failure_signal -q",
+      "scenario": "S3.1"
+    },
+    {
+      "clause": "C-3.2",
+      "clause_version": "2142c82a5b883e00",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_lessons.py::test_a_superseded_lesson_is_carried_to_its_live_successors -q",
+      "scenario": "S3.2"
+    },
+    {
+      "clause": "C-3.3",
+      "clause_version": "7fb13a68a5a696da",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_lessons.py::test_a_rerun_runs_only_the_specs_of_lesson_clauses -q",
+      "scenario": "S3.3"
+    },
+    {
+      "clause": "C-3.4",
+      "clause_version": "d5eef07710c684d8",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_lessons.py::test_a_red_lesson_spec_reports_the_lesson_as_forgotten -q",
+      "scenario": "S3.4"
+    },
+    {
+      "clause": "C-3.5",
+      "clause_version": "4b42af77a5b58b50",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_lessons.py::test_a_lesson_without_a_spec_is_unproved_not_passed -q",
+      "scenario": "S3.5"
+    },
+    {
+      "clause": "C-3.6",
+      "clause_version": "0b93b38f4ff4c96c",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_lessons.py::test_a_lesson_left_out_on_purpose_is_skipped_not_judged -q",
+      "scenario": "S3.6"
+    },
+    {
+      "clause": "C-4.1",
+      "clause_version": "7d5f31bb920e4dff",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_entry.py::test_the_root_has_an_entry_document_under_thirty_lines -q",
+      "scenario": "S4.1"
+    },
+    {
+      "clause": "C-4.2",
+      "clause_version": "ed699bb0728095c6",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_entry.py::test_design_history_lives_under_docs_history_not_the_root -q",
+      "scenario": "S4.2"
+    },
+    {
+      "clause": "C-4.3",
+      "clause_version": "951c203b3603a759",
+      "duration_ms": 10,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_entry.py::test_every_command_the_entry_names_is_one_the_cli_accepts -q",
+      "scenario": "S4.3"
+    },
+    {
+      "clause": "C-5.1",
+      "clause_version": "0c6b2cdf977f17bf",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_the_project_settings_register_the_gate_as_a_stop_hook -q",
+      "scenario": "S5.1"
+    },
+    {
+      "clause": "C-5.2",
+      "clause_version": "892b17ba88203b2c",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_a_contract_is_recognised_by_its_clauses_not_its_name -q",
+      "scenario": "S5.2"
+    },
+    {
+      "clause": "C-5.3",
+      "clause_version": "52ed98e27d5d0ed3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_one_failing_contract_fails_the_folded_gate -q",
+      "scenario": "S5.3"
+    },
+    {
+      "clause": "C-5.4",
+      "clause_version": "0c821a65d27b32dc",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_no_contract_means_no_opinion -q",
+      "scenario": "S5.4"
+    },
+    {
+      "clause": "C-5.5",
+      "clause_version": "d4fa9c6dc4d8aaee",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_the_reason_names_the_contract_and_its_first_cause -q",
+      "scenario": "S5.5"
+    },
+    {
+      "clause": "C-5.6",
+      "clause_version": "f661b742a7058888",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_the_bypass_variable_passes_and_says_so -q",
+      "scenario": "S5.6"
+    },
+    {
+      "clause": "C-5.7",
+      "clause_version": "b2a09e4c3f04a015",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_gate.py::test_the_nudge_budget_is_spent_after_two_blocks -q",
+      "scenario": "S5.7"
+    },
+    {
+      "clause": "C-6.1",
+      "clause_version": "acf57916eedce3da",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_specs_sharing_an_invocation_run_in_one_process -q",
+      "scenario": "S6.1"
+    },
+    {
+      "clause": "C-6.2",
+      "clause_version": "21da30b1a53746a8",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_each_batched_spec_gets_its_own_verdict_and_duration -q",
+      "scenario": "S6.2"
+    },
+    {
+      "clause": "C-6.3",
+      "clause_version": "0fa904128605708e",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_a_spec_missing_from_the_report_is_red -q",
+      "scenario": "S6.3"
+    },
+    {
+      "clause": "C-6.4",
+      "clause_version": "5303e82d7f692573",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_an_isolated_clause_runs_in_its_own_process -q",
+      "scenario": "S6.4"
+    },
+    {
+      "clause": "C-6.5",
+      "clause_version": "bed3aa4745bb335e",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_early_exit_and_report_options_are_never_batched -q",
+      "scenario": "S6.5"
+    },
+    {
+      "clause": "C-6.6",
+      "clause_version": "02402acd84a4251b",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_an_aborted_batch_is_rerun_one_process_per_spec -q",
+      "scenario": "S6.6"
+    },
+    {
+      "clause": "C-6.7",
+      "clause_version": "7e08e83ea60f6c38",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_a_batched_failure_keeps_its_message -q",
+      "scenario": "S6.7"
+    },
+    {
+      "clause": "C-6.8",
+      "clause_version": "7c149e86fb907152",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_batch.py::test_an_injected_executor_runs_each_spec_alone -q",
+      "scenario": "S6.8"
+    }
+  ],
+  "scenario_version": "ebcd38ac54060f9a",
+  "schema": "athena.spec_ledger/1",
+  "totals": {
+    "duration_ms": 85,
+    "failed": 0,
+    "passed": 34,
+    "total": 34
+  },
+  "ts": "2026-09-16T13:04:09+00:00"
+}

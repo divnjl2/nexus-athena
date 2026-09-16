@@ -83,6 +83,7 @@
     `planner_verify` (mcp/.../verbs.py); found by the python audit registry when the first
     cut of spec_runner used shell=True.
   - tags: security
+  - source: audit
 - **C-3.9** *(superseded-by C-3.11 C-3.12)* — WHEN the whole spec suite is run THE SYSTEM
   SHALL complete in under five seconds by batching the specs into a single test-runner process.
   - note: the draft named the WRONG mechanism, and measuring it said so. Batching was never
@@ -92,6 +93,7 @@
     (real `bd` + Dolt init, 100.5s vs a 1.21s median). Superseded, not edited: the wrong
     guess stays on the record and `resolve("C-3.9")` lands on what replaced it.
   - tags: performance
+  - source: ledger
 - **C-3.11** *(superseded-by C-3.15 C-3.16)* — WHEN specs are run THE SYSTEM SHALL default the
   worker count to the machine's logical cores and SHALL let the caller pin environment variables
   for the spec processes.
@@ -110,6 +112,7 @@
     while another bd process ran concurrently, and was green alone. A spec that needs an
     exclusive external resource needs a lane of one.
   - tags: performance
+  - source: ledger
 
 ## C-4 — The three questions
 
@@ -130,6 +133,7 @@
   - note: found by running this frame on itself — with only these four buckets, `todo`
     answered "nothing left" for a clause whose proof was stale, while `drift` said the
     contract was out of sync. Replaced rather than edited, so this reference still resolves.
+  - source: audit
 - **C-4.6** — WHEN a clause is unspecified THE SYSTEM SHALL include its normative text, and
   for a red clause the failing run commands, so the answer is actionable.
 - **C-4.7** — WHEN a spec pin differs from its clause's current version THE SYSTEM SHALL
@@ -181,6 +185,7 @@
   - note: command SHAPE is not acceptance — v3.1 shipped `bd related`, a command bd does not
     have, and every fake-based test passed. This clause exists so that class cannot repeat.
   - tags: slow, integration
+  - source: audit
 - **C-5.10** *(superseded-by C-5.3)* — WHEN scenarios are compiled THE SYSTEM SHALL point
   each spec's validates edge at the spec document.
   - note: this was the v3.1 requirement, retro-documented so the change is auditable. It is
@@ -433,6 +438,7 @@
   cause.
 - **C-11.3** — WHEN a step did not run THE SYSTEM SHALL report it as absent rather than as
   passed.
+  - source: audit
 - **C-11.4** — WHEN wording findings or surviving mutants exist THE SYSTEM SHALL keep them
   advisory unless the caller asks for a strict run.
 - **C-11.5** — WHEN a judge score is folded into the loop THE SYSTEM SHALL leave it unable
@@ -463,6 +469,7 @@
   SHALL refuse to delete it.
   - note: found by an audit that ran `mutate --mirror vendor` and watched the harness delete
     the repository's vendor directory while reporting success.
+  - source: audit
 - **C-11.18** — WHEN a path is not given THE SYSTEM SHALL resolve its default next to the
   contract rather than next to the current directory.
 - **C-11.19** — WHEN a spec names an executable node THE SYSTEM SHALL require that node to
@@ -470,12 +477,14 @@
   - note: an audit found C-8.1 bound to a test about something else, reported as proved for
     months. The generator's regex had skipped a function body and paired one name with a
     later docstring.
+  - source: audit
 - **C-11.20** — WHEN the binding guard is exercised THE SYSTEM SHALL show it able to reject
   a mis-binding.
 - **C-11.21** — WHEN a feature is scaffolded THE SYSTEM SHALL also write the test its
   example spec points at.
   - note: checking a scaffolded project from inside this repo judged it against THIS repo's
     clause map — a gate answering about the wrong codebase.
+  - source: audit
 - **C-11.22** — WHEN the outline names the modules of a clause group THE SYSTEM SHALL rank
   them by how exclusively that group owns them, and mark the rest as shared.
   - note: ranking by owned line count made the parser the home of every group, because every
@@ -569,6 +578,7 @@
   SYSTEM SHALL fail the freshness gate.
   - note: an audit checked a scaffolded project from inside this repo and the reverse leg
     silently judged it by THIS repo's map. The map now says whose code it describes.
+  - source: audit
 
 ## C-16 — The judge's steps: two calls, and a reasoning that has an id
 
@@ -602,6 +612,7 @@
   - note: written and refused the same minute, by this contract's own wording critique: two
     SHALL obligations in one id, which no single spec can prove. Superseded rather than
     edited, like every other wrong guess on this record.
+  - source: review
 - **C-16.7** *(supersedes C-16.6)* — WHEN a judgement is already in the graph THE SYSTEM SHALL
   emit nothing for it.
 - **C-16.8** *(supersedes C-16.6)* — WHEN a judgement names an end the graph does not hold THE

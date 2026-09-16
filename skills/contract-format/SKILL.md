@@ -39,6 +39,39 @@ Typo fixes and re-wrapping are NOT changes: the version hashes whitespace-normal
 - Sub-bullets: `- status:`, `- supersedes:`, `- superseded-by:`, `- tags:`, `- note:`.
 - An indented line that is none of those CONTINUES the clause text (wrapped prose is joined).
 
+## Origin: `source:` (v3.10)
+
+Where a clause came from, as an attribute the reports can scan rather than prose in a note:
+
+```markdown
+- **C-3.18** — WHEN a spec lane is given a single worker THE SYSTEM SHALL run its specs one at a time.
+  - source: ledger
+```
+
+Vocabulary: `design` (authored intent), `review`, `audit`, `incident`, `ledger`, `mutation`.
+Anything else is a lint issue. Every value except `design` is a failure signal, and a clause
+born from one is a **lesson**:
+
+```bash
+athena contract sources contract.md --text   # every clause under its source; unstated apart
+athena lessons list     contract.md --text   # the lessons, superseded ones carried forward
+athena lessons rerun    contract.md --text   # rerun exactly their specs; exit 1 if one is forgotten
+```
+
+A lesson is learned only while its proof still passes after the pyramid changed. A superseded
+lesson keeps its `source:` (the wrong guess stays on the record) and is rerun through the
+live clauses that replaced it. The origin never enters the clause version, so annotating an
+old clause invalidates no pin.
+
+## The core: `see: CORE.md@<fingerprint>` (v3.10)
+
+`athena init` writes a `CORE.md` (goal, language, priorities, constraints; under forty lines)
+next to a project's first contract and cites it from the first clause. A feature scaffolded
+under a project that already has one cites that one (`see: ../../CORE.md@...`). When the
+core changes, `athena contract refs` reports the citing clauses as **suspect** and `check`
+fails on the contract leg until somebody re-reads them and re-pins (`refs --write`). That is
+how a change to the principles becomes a conscious act instead of a drift.
+
 ## Binding: one clause, one or more executable specs
 
 `scenarios.md` binds a spec to a clause and pins the wording it was written against:

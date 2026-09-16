@@ -195,12 +195,36 @@ def drift(contract: Contract, scenarios: tuple[Scenario, ...],
     }
 
 
+def sources(contract: Contract) -> dict:
+    """Q4 (v3.10) — where did each clause come from. Linear, like the other three.
+
+    A clause with no `source:` is UNSTATED, never assigned one: guessing `design` for it
+    would make the lessons report (every non-design source) silently incomplete.
+    """
+    by_source: dict[str, list[str]] = {}
+    unstated: list[str] = []
+    for c in contract.clauses:
+        if c.source:
+            by_source.setdefault(c.source, []).append(c.id)
+        else:
+            unstated.append(c.id)
+    return {
+        "by_source": by_source,
+        "unstated": unstated,
+        "counts": {**{k: len(v) for k, v in by_source.items()}, "unstated": len(unstated)},
+        "stated": sum(len(v) for v in by_source.values()),
+    }
+
+
 def render(report: dict, *, title: str = "") -> str:
-    """Compact human view of any of the three reports (the CLI emits JSON by default)."""
+    """Compact human view of any of the reports (the CLI emits JSON by default)."""
     lines: list[str] = ([f"# {title}"] if title else [])
     counts = report.get("counts")
     if isinstance(counts, dict):
         lines.append("  ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    for src, ids in (report.get("by_source") or {}).items():
+        lines.append(f"\n{src} ({len(ids)}):")
+        lines += [f"  - {cid}" for cid in ids]
     if "coverage_rate" in report:            # coverage has no counts dict of its own
         lines.append(f"live={report.get('live_clauses')}  "
                      f"covered={len(report.get('covered', ()))}  "
@@ -208,7 +232,7 @@ def render(report: dict, *, title: str = "") -> str:
                      f"rate={report['coverage_rate']}")
     for key in ("uncovered", "unspecified", "red", "unrun", "stale", "draft", "spec_drift",
                 "stale_proof", "missing_spec", "extra_spec", "orphan_specs",
-                "redirected_specs", "draft_uncovered", "unpinned"):
+                "redirected_specs", "draft_uncovered", "unpinned", "unstated"):
         items = report.get(key)
         if not items:
             continue
