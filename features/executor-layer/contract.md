@@ -33,6 +33,13 @@
   red with that command's output tail.
 - **C-2.4** — WHEN the run changed a derived artifact or a hand-written contract THE SYSTEM
   SHALL flag the attempt for review.
+- **C-2.5** — WHEN the executor's claim carries a tool call as plain text THE SYSTEM SHALL
+  name a tool-parser mismatch in the reason.
+  - source: incident
+  - note: the 27b lane through OpenHands answered the tool schema with
+    `{"function": "glob", "parameter": {...}}`; vLLM's hermes parser raised KeyError 'name'
+    and handed the text back as content. The run ended after 160 tokens with a claim and no
+    edit. A silent failure with a known signature deserves its name.
 
 ## C-3 — Executors
 

@@ -146,6 +146,19 @@ def test_touching_a_derived_or_hand_written_file_flags_review():
     assert verdict(before, {**before, "lib/a.py": (2, 2)}, GREEN)["review_flags"] == []
 
 
+def test_a_tool_call_left_as_text_is_named_a_parser_mismatch():
+    """C-2.5 — a tool call that came back as prose is a known failure with a known cause;
+    the verdict names it instead of reporting a bare 'nothing changed'."""
+    same = ({"a.py": (1, 1)}, {"a.py": (1, 1)})
+    hermes_miss = verdict(*same, GREEN, claim='<tool_call>\n{"function": "glob", "parameter": {"pattern": "**/*"}}\n</tool_call>')
+    assert "tool-parser mismatch" in hermes_miss["reason"] and not hermes_miss["passed"]
+    xml_style = verdict(*same, GREEN, claim='<function=file_editor><parameter=path>x</parameter></function>')
+    assert "tool-parser mismatch" in xml_style["reason"]
+    prose = verdict(*same, GREEN, claim="DONE")
+    assert "tool-parser mismatch" not in prose["reason"]
+    assert "tool-parser mismatch" not in verdict(*same, GREEN, claim="")["reason"]
+
+
 def test_a_dispatch_appends_one_record():
     """C-4.1 — executor, task, landed, green, duration, tokens: one line per attempt."""
     v = verdict({"a.py": (1, 1)}, {"a.py": (2, 2)}, GREEN, claim="DONE")

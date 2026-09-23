@@ -29,7 +29,7 @@ that says, per executor, how often the work landed and went green.
 - [ ] T2.1 Compute the verdict from snapshots and check results; flag touched contracts and derived files
   - success_check: `python -m pytest tests/test_dispatch.py -q -k "verdict or landed or red or flags"`
   - files: `lib/dispatch.py, tests/test_dispatch.py`
-  - verifies: S2.1, S2.2, S2.3, S2.4
+  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5
 ### Manual Verification
 - A dispatch whose worker changed nothing ends with `landed: false` whatever the worker said.
 

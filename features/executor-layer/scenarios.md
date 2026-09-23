@@ -73,6 +73,14 @@
 - **When** the spec `test_touching_a_derived_or_hand_written_file_flags_review` is executed
 - **Then** a change to spec_ledger.json or contract.md sets review_flags naming the file.
 
+### S2.5 — a tool call left as text is named a parser mismatch
+- **verifies:** C-2.5
+- **pins:** 446c1f953d7fbb9b
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_tool_call_left_as_text_is_named_a_parser_mismatch -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_tool_call_left_as_text_is_named_a_parser_mismatch` is executed
+- **Then** a claim holding `<tool_call>` or a `{"function": ...}` object yields a reason that names the tool-parser mismatch.
+
 ## C-3 — proved by the executor registry (lib/executors.py)
 
 ### S3.1 — the registry resolves known executors and refuses unknown
