@@ -28,6 +28,12 @@ and a red spec, lane-based ids for parallel authors, a pre-edit hook that hands 
 the blast radius and refuses hand-edits of derived artifacts, an architecture lint, budgets
 with a record of runs, and property-based proofs. See [The team layer](#the-team-layer-v311).
 
+**v3.12 closes the deferred executor**, in [`features/executor-layer/`](./features/executor-layer/):
+`athena dispatch` derives a work packet from contract, scenarios and plan, pours it into a
+local lane, an OpenHands run or Claude Code, and judges the attempt by the workspace diff and
+the spec commands; the executor's report is recorded and ignored. See
+[The executor layer](#the-executor-layer-v312).
+
 The pipeline chains existing, proven pieces and adds the deterministic glue between them:
 
 `intent → Spec-Kit /specify → /clarify → CRISP design → EARS→GWT scenarios → /plan → /tasks → compile → Beads graph`
@@ -43,9 +49,9 @@ Shipped as **two plugins** over one core:
 - **Hermes plugin** — `hermes/` workflows + the **athena MCP** (23 `planner_*` verbs) so an
   autonomous Hermes swarm can drive the same pipeline. See `hermes/HERMES_PLUGIN.md`.
 
-**Execution (`implement`) is currently DEFERRED** (`ralph/INTERFACE.md`). Closing the
-bidirectional code↔spec loop — `task→commit`, `commit→scenario`, and a version-drift
-detector — is the **v4** roadmap.
+**Execution (`implement`)** was deferred until v3.12; `athena dispatch` now pours one plan
+task into an executor and judges it by diff and specs (`features/executor-layer/`). The
+bd-side loop (`ralph/INTERFACE.md`) and the `implements` edge (v4) sit on top of it.
 
 ## Architecture
 
@@ -330,6 +336,26 @@ Two case specs in `features/team-layer/cases/` prove clauses of this same contra
 time, as behaviour rather than as a pytest node; the binding guard checks a case's `clause`
 the way it checks a docstring.
 
+## The executor layer (v3.12)
+
+`implement` was deferred since v2. It is now one command with three parts, each a clause
+group in [`features/executor-layer/contract.md`](./features/executor-layer/contract.md)
+(15 clauses, 15 specs, written before the code; decision in
+[ADR-0006](./docs/adr/0006-executors-under-the-gate.md)):
+
+| part | rule | proved by |
+|---|---|---|
+| packet | derived from the artifacts for one plan task: the clauses its specs verify, the spec commands, the task's files (inlined for executors without Bash); the done criterion is the commands and the executor is told its report does not count; over budget is reported, never trimmed | C-1.* |
+| verdict | workspace snapshot before and after plus the spec commands run afterwards; no diff = not landed; a red command = red with its tail; a touched ledger, map or contract = flagged for review | C-2.* |
+| executors | a registry: `local-27b`, `local-9b` (Claude Code worker on a local model through the gateway, read and edit tools only, turns and output capped), `openhands` (SDK in-process, no Docker), `claude`; unavailable is an answer, not a traceback | C-3.* |
+| record | one line per attempt; `athena metrics` reports per executor the attempts, the landed rate and the green rate | C-4.* |
+
+What made the local lane land edits at all, measured on this repository: inline the files
+the task names (the 27b worker had spent all its turns on Read, two of them on wrong paths)
+and raise the output cap above 2048 tokens (it cut every multi-line Edit mid-call, and the
+run still reported `ok`). The bridge that drives the lanes (`D:\claude-local-lanes`) now
+reports `changed_files` and runs the spec as a check, so its `ok` means landed and green.
+
 ## What we write vs. vendor (§0)
 
 | Layer | Source | Ours? |
@@ -364,6 +390,7 @@ nexus-athena/
 ├── features/contract-layer/       # v3.3 dogfood: Athena's own contract + specs    [done]
 ├── features/core-layer/           # v3.10 dogfood: core, sources, lessons, gate, lane [done]
 ├── features/team-layer/           # v3.11 dogfood: cases, adr, intake, lanes, hooks, metrics [done]
+├── features/executor-layer/       # v3.12 dogfood: packet, verdict, executors, record   [done]
 ├── docs/adr/                      # decision records, cited by clauses (v3.11)      [done]
 ├── .github/CODEOWNERS             # a human owns CORE.md, contract.md, docs/adr     [done]
 ├── hooks/pre-edit.sh              # PreToolUse shim -> `athena hook pre-edit`       [done]
@@ -381,6 +408,7 @@ nexus-athena/
 │   ├── allocate.py                # lane-based clause ids for parallel authors      [done]
 │   ├── hooks.py, archlint.py      # pre-edit decision; effects behind the seams     [done]
 │   ├── metrics.py                 # the record of runs, iterations to green         [done]
+│   ├── dispatch.py, executors.py  # packet in, verdict out; the executor registry    [done]
 │   ├── ast.py                     # shared Plan AST (the contract)                [done]
 │   ├── plan_parser.py             # plan.md  -> Plan  (fallback)                  [done]
 │   ├── speckit_parser.py          # tasks.md -> Plan  (primary)                   [done]

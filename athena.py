@@ -1222,16 +1222,221 @@ def cmd_lint_arch(a) -> int:
 
 
 def cmd_metrics(a) -> int:
+    from lib.dispatch import dispatch_metrics, parse_dispatches, render_metrics
     from lib.metrics import iterations_to_green, parse_runs, render
-    runs_path = pathlib.Path(a.contract).resolve().parent / ".athena" / "runs.jsonl"
+    here = pathlib.Path(a.contract).resolve().parent / ".athena"
+    runs_path = here / "runs.jsonl"
     text = runs_path.read_text(encoding="utf-8") if runs_path.exists() else ""
     records, skipped = parse_runs(text)
     rep = iterations_to_green(records)
+    dpath = here / "dispatch.jsonl"
+    drecords, dskipped = parse_dispatches(dpath.read_text(encoding="utf-8") if dpath.exists() else "")
+    drep = dispatch_metrics(drecords)
     if a.text:
         print(render(rep, skipped=skipped))
+        print()
+        print(render_metrics(drep))
     else:
-        _emit({**rep, "skipped_lines": skipped, "runs_file": str(runs_path)})
+        _emit({**rep, "skipped_lines": skipped, "runs_file": str(runs_path),
+               "dispatch": {**drep, "skipped_lines": dskipped, "file": str(dpath)}})
     return 0
+
+
+# --- v3.12: the executor layer — packets in, verdicts out -------------------------
+
+def _gateway_key() -> str:
+    """The LiteLLM master key for the local lanes: env first, then the gateway's own config."""
+    key = os.environ.get("LITELLM_LOCAL_KEY") or os.environ.get("ATHENA_LOCAL_GATEWAY_KEY")
+    if key:
+        return key
+    cfg = pathlib.Path(os.environ.get("LITELLM_CONFIG", r"D:\litellm-win\litellm_config.yaml"))
+    if cfg.exists():
+        try:
+            import yaml
+            data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+            return str((data.get("general_settings") or {}).get("master_key") or "")
+        except Exception:                          # noqa: BLE001 — a missing key is reported downstream
+            return ""
+    return ""
+
+
+def _worker_json(stdout: str) -> dict:
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError:
+        for line in reversed(stdout.splitlines()):
+            try:
+                value = json.loads(line)
+                if isinstance(value, dict):
+                    return value
+            except json.JSONDecodeError:
+                continue
+    return {}
+
+
+def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tuple[str, dict, str]:
+    """EFFECTFUL: spawn a Claude Code worker (local lane or subscription); return
+    (claim text, tokens, worker error)."""
+    import subprocess
+    env = os.environ.copy()
+    for name in cmd.get("unset", []):
+        env.pop(name, None)
+    env.update(cmd.get("env", {}))
+    try:
+        p = subprocess.run(cmd["argv"], cwd=str(cwd), env=env, stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return "", {}, f"worker timed out after {timeout}s"
+    except OSError as e:
+        return "", {}, f"could not start the worker: {e}"
+    data = _worker_json(p.stdout or "")
+    claim = str(data.get("result", "")) if data else (p.stdout or "")[-2000:]
+    tokens = data.get("usage") or {}
+    err = ""
+    if p.returncode != 0 or data.get("is_error"):
+        err = f"exit {p.returncode}: {(p.stderr or claim)[-600:]}"
+    return claim, tokens, err
+
+
+def _run_openhands(cfg: dict) -> tuple[str, dict, str]:
+    """EFFECTFUL: one OpenHands SDK conversation in-process over the workspace. Best effort
+    against the SDK's public surface; any failure is a worker error, never a traceback."""
+    try:
+        from pydantic import SecretStr
+        from openhands.sdk import LLM, Agent, Conversation, Tool
+        import openhands.tools.file_editor  # noqa: F401 — registers the tool
+        import openhands.tools.terminal     # noqa: F401
+    except ImportError as e:
+        return "", {}, f"openhands-sdk import failed: {e}"
+    key = os.environ.get(cfg["api_key_env"], "") or _gateway_key() or "local"
+    try:
+        llm = LLM(model=cfg["model"], base_url=cfg["base_url"] or None, api_key=SecretStr(key),
+                  usage_id="athena-dispatch")
+        agent = Agent(llm=llm, tools=[Tool(name="terminal"), Tool(name="file_editor")])
+        conv = Conversation(agent=agent, workspace=cfg["workspace"],
+                            max_iteration_per_run=cfg["max_iterations"])
+        conv.send_message(cfg["task"])
+        conv.run()
+        claim = ""
+        for ev in reversed(list(getattr(conv.state, "events", []))):
+            text = getattr(ev, "content", None) or getattr(ev, "message", None)
+            if text:
+                claim = str(text)
+                break
+        tokens = {}
+        metrics = getattr(llm, "metrics", None)
+        usage = getattr(metrics, "accumulated_token_usage", None) if metrics else None
+        if usage is not None:
+            tokens = {"input_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
+                      "output_tokens": int(getattr(usage, "completion_tokens", 0) or 0)}
+        return claim, tokens, ""
+    except Exception as e:                        # noqa: BLE001 — the verdict does not depend on this
+        return "", {}, f"openhands run failed: {type(e).__name__}: {str(e)[:400]}"
+
+
+def cmd_dispatch(a) -> int:
+    """Pour one plan task into an executor and judge it by the diff and the spec commands."""
+    import datetime
+    import time
+    from lib.dispatch import DispatchError, packet, record, snapshot, verdict
+    from lib.executors import (LOCAL_GATEWAY, availability, claude_binary, claude_command,
+                               local_lane_command, openhands_config, resolve)
+    from lib.spec_runner import _spawn, _tokenize
+
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    plan = _parse_front_auto(a.front, a.speckit)
+    workspace = pathlib.Path(a.workspace).resolve()
+
+    spec = None
+    if a.executor != "none":
+        try:
+            spec = resolve(a.executor)
+        except ValueError as e:
+            _emit({"passed": False, "error": str(e)})
+            return 2
+
+    files: dict = {}
+    inline = (spec is not None and spec["kind"] == "local") or a.inline
+    if inline:
+        try:
+            task_files = next(t for ph in plan.phases for t in ph.tasks if t.id == a.task).files
+        except StopIteration:
+            task_files = ()
+        for rel in task_files:
+            p = workspace / rel
+            if p.is_file():
+                files[rel] = p.read_text(encoding="utf-8", errors="replace")
+    try:
+        pk = packet(contract, scenarios, plan, a.task, files=files, budget_chars=a.budget)
+    except DispatchError as e:
+        _emit({"passed": False, "error": str(e)})
+        return 2
+
+    if spec is None:
+        print(json.dumps({k: v for k, v in pk.items() if k != "files"}, ensure_ascii=False,
+                         sort_keys=True) if a.json else pk["text"])
+        return 0
+
+    av = availability(a.executor)
+    if not av["available"]:
+        _emit({"passed": False, "executor": a.executor, "available": False, "reason": av["reason"]})
+        return 2
+    if pk["over_budget"] and spec["kind"] == "local":
+        _emit({"passed": False, "executor": a.executor, "error":
+               f"packet is {pk['chars']} chars, over the {pk['budget_chars']} budget of a local "
+               f"lane: split the task or drop files from it"})
+        return 2
+
+    before = snapshot(workspace)
+    t0 = time.perf_counter()
+    if spec["kind"] == "local":
+        cmd = local_lane_command(a.executor, pk["text"], max_turns=a.max_turns,
+                                 claude_bin=claude_binary(), auth_token=_gateway_key())
+        claim, tokens, err = _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
+    elif spec["kind"] == "claude":
+        cmd = claude_command(pk["text"], max_turns=a.max_turns, claude_bin=claude_binary())
+        cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
+        claim, tokens, err = _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
+    else:
+        cfg = openhands_config(pk["text"], workspace=str(workspace),
+                               model=a.model or "openai/qwopus-27b",
+                               base_url=a.base_url if a.base_url is not None else LOCAL_GATEWAY + "/v1",
+                               max_iterations=a.max_turns)
+        claim, tokens, err = _run_openhands(cfg)
+    duration = int((time.perf_counter() - t0) * 1000)
+
+    checks = []
+    for cmdline in pk["checks"]:
+        argv, why = _tokenize(cmdline)
+        code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+        checks.append({"cmd": cmdline, "exit": code, "tail": tail})
+    v = verdict(before, snapshot(workspace), checks, claim=claim)
+    rec = record(a.task, a.executor, v, duration_ms=duration, tokens=tokens,
+                 ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
+    dpath = pathlib.Path(a.contract).resolve().parent / ".athena" / "dispatch.jsonl"
+    dpath.parent.mkdir(parents=True, exist_ok=True)
+    with dpath.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    out = {**v, "task": a.task, "executor": a.executor, "duration_ms": duration,
+           "tokens": tokens, "worker_error": err, "checks": checks, "record": str(dpath)}
+    if a.text:
+        print(f"# dispatch {a.task} -> {a.executor}: {'PASS' if v['passed'] else 'FAIL'}")
+        print(f"  landed={v['landed']}  green={v['green']}  changed={len(v['changed_files'])}  "
+              f"{duration} ms  tokens={tokens.get('input_tokens', '?')}/{tokens.get('output_tokens', '?')}")
+        for c in checks:
+            print(f"  {'ok  ' if c['exit'] == 0 else 'FAIL'} {c['cmd']}")
+        if v["review_flags"]:
+            print("  review: " + ", ".join(v["review_flags"]))
+        if err:
+            print(f"  worker: {err}")
+        if v["reason"]:
+            print(f"  reason: {v['reason'][:400]}")
+    else:
+        _emit(out)
+    return 0 if v["passed"] else 1
 
 
 def _deep_mutation(a, contract, scenarios) -> dict:
@@ -1396,6 +1601,28 @@ def build_parser() -> argparse.ArgumentParser:
     lna.add_argument("--source", action="append", default=["lib"])
     lna.add_argument("--text", action="store_true")
     lna.set_defaults(fn=cmd_lint_arch)
+
+    dp = sub.add_parser("dispatch", help="pour one plan task into an executor (local lane, "
+                                         "OpenHands, Claude) and judge it by diff + specs")
+    dp.add_argument("contract")
+    dp.add_argument("--scenarios", default="")
+    dp.add_argument("--front", required=True, help="plan.md (or tasks.md) holding the task")
+    dp.add_argument("--task", required=True, help="task id, e.g. T5.1")
+    dp.add_argument("--executor", default="none",
+                    help="none (print the packet) | local-27b | local-9b | openhands | claude")
+    dp.add_argument("--workspace", default=".", help="where the executor works (repo or worktree)")
+    dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
+    dp.add_argument("--base-url", dest="base_url", default=None,
+                    help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--max-turns", dest="max_turns", type=int, default=30)
+    dp.add_argument("--timeout", type=int, default=900, help="seconds for the executor")
+    dp.add_argument("--check-timeout", dest="check_timeout", type=int, default=300)
+    dp.add_argument("--budget", type=int, default=36000, help="packet budget in chars")
+    dp.add_argument("--inline", action="store_true",
+                    help="inline the task's files into the packet (default for local lanes)")
+    dp.add_argument("--json", action="store_true", help="with --executor none: the packet as JSON")
+    dp.add_argument("--text", action="store_true")
+    dp.set_defaults(fn=cmd_dispatch)
 
     me = sub.add_parser("metrics", help="iterations to green and durations, from the record of runs")
     me.add_argument("contract", nargs="?", default="contract.md")
