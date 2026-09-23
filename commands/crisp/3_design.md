@@ -69,7 +69,12 @@ Read `$ARGUMENTS/task.md`, `$ARGUMENTS/questions.md`, and `$ARGUMENTS/research.m
 
 ## Output
 
-- File written: `thoughts/qrspi/<id>/design.md`
+- File written: `thoughts/qrspi/<id>/design.md` (scratch: `thoughts/` is not committed)
+- **Decision records**: every entry of `## Design Decisions` that will outlive this task is
+  written to `docs/adr/NNNN-<slug>.md` in the short MADR shape (`# ADR-NNNN: title`,
+  `- Status:`, `- Date:`, `## Context`, `## Decision`, `## Consequences`), so a clause can
+  cite it with `see: ../../docs/adr/NNNN-<slug>.md@<fingerprint>`. `python athena.py adr lint
+  docs/adr` must pass. A decision that lives only in `thoughts/` is lost at session end.
 - Tell the user: "Next: run `/qrspi/4_structure thoughts/qrspi/<id>/`"
 
 ## Rules

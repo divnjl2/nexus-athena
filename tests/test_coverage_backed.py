@@ -81,3 +81,78 @@ def test_seam_passes_when_edges_are_real():
     plan = _plan(_task("T1", ("pkg/a.py",), ("S1",)))
     r = seam_coverage_backed(plan, cov)
     assert r.passed is True and r.issues == ()
+
+
+# --- v3.3: the reverse leg made honest -----------------------------------------
+
+COV_ROOTED = r"""<coverage>
+ <sources><source>C:\repo\lib</source></sources>
+ <packages><package><classes>
+  <class filename="contract.py" line-rate="0.9"><lines>
+    <line number="1" hits="1"/>
+    <line number="2" hits="1" branch="true" condition-coverage="50% (1/2)"/>
+  </lines></class>
+ </classes></package></packages>
+</coverage>"""
+
+
+def test_coverage_paths_resolve_across_source_roots():
+    """C-8.1 — cobertura strips the <source> root off every filename, so a plan that says
+    `lib/contract.py` must still find `contract.py` — otherwise every edge reads as fake."""
+    cov = parse_coverage(COV_ROOTED)
+    assert cov.covered("lib/contract.py"), "the plan's path must resolve to the coverage entry"
+    assert cov.covered("contract.py")
+    assert cov.resolve("lib/contract.py").path == "lib/contract.py"
+    assert cov.resolve("nowhere/other.py") is None
+
+    # a <source> naming a FILE is not a root and contributes no prefix; nor does an empty
+    # one. (Mutation: `base and not base.endswith(".py")` -> `or` turned both into prefixes,
+    # and every filename got re-rooted under them without a single spec noticing.)
+    filey = parse_coverage('''<coverage>
+ <sources><source>C:/repo/setup.py</source></sources>
+ <packages><package><classes>
+  <class filename="pkg/a.py" line-rate="1"><lines><line number="1" hits="1"/></lines></class>
+ </classes></package></packages>
+</coverage>''')
+    assert list(filey.files) == ["pkg/a.py"], "a file root must not re-root the filenames"
+    empty_root = parse_coverage('''<coverage>
+ <sources><source>   </source></sources>
+ <packages><package><classes>
+  <class filename="pkg/a.py" line-rate="1"><lines><line number="1" hits="1"/></lines></class>
+ </classes></package></packages>
+</coverage>''')
+    assert list(empty_root.files) == ["pkg/a.py"], "nor may an empty one"
+
+
+def test_an_ambiguous_basename_resolves_to_nothing():
+    """C-8.3 — two files named the same must not be silently conflated; an unproven edge a
+    human looks at beats a proven edge that is a guess."""
+    ambiguous = parse_coverage("""<coverage>
+ <packages><package><classes>
+  <class filename="a/x.py" line-rate="1"><lines><line number="1" hits="1"/></lines></class>
+  <class filename="b/x.py" line-rate="1"><lines><line number="1" hits="1"/></lines></class>
+ </classes></package></packages>
+</coverage>""")
+    assert ambiguous.resolve("x.py") is None
+    assert not ambiguous.covered("x.py")
+    assert ambiguous.resolve("a/x.py") is not None      # an unambiguous path still resolves
+
+
+def test_reverse_leg_separates_in_scope_gaps_from_unclaimed_code():
+    """C-8.2 — code this contract never claimed is not a spec_gap; burying the real signal
+    under another feature's branches is how a report becomes noise nobody reads."""
+    plan = _plan(_task("T1", ("pkg/a.py",), ("S1",)))
+    rep = trace_coverage(plan, parse_coverage(COV))
+    assert rep["spec_gaps"] == ["pkg/a.py:2"]          # inside a claimed file
+    assert rep["out_of_scope_gap_count"] == 0          # b.py has no uncovered BRANCH
+    assert rep["unclaimed_files"] == ["pkg/b.py"]      # ...but it is still unclaimed
+    assert rep["proven"] == 1 and rep["unproven"] == 0
+    # BOTH halves of "harness task" are skips, not one: a task that verifies something but
+    # touches only tests has no edge to prove, exactly like a task that names no scenario.
+    # (Mutation: `not t.verifies or not srcs` -> `and` filed the first kind as UNPROVEN.)
+    meta = _plan(_task("T1", ("tests/test_a.py",), ("S1",)),
+                 _task("T2", ("pkg/a.py",), ()))
+    only_meta = trace_coverage(meta, parse_coverage(COV))
+    assert only_meta["proven"] == 0 and only_meta["unproven"] == 0
+    assert only_meta["unproven_edges"] == []
+

@@ -1,0 +1,143 @@
+# Compiled bd provenance graph — CAS Bot-Shell (as shipped)
+# 1 spec + 13 scenarios + 4 epics + 12 issues; 66 bd commands
+# reproduce: ATHENA_SPECKIT=off python athena.py compile plans/cas-bot-shell/plan.md
+
+bd create --title spec:a25273c23da9a36d --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --label athena --label kind:spec --label athena:spec:a25273c23da9a36d
+bd create --title 'scenario:S1.1 R1.1, R1.2' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Resolve role+tenant from user_id, creator precedence Given a creator in `platform_admins` and owner/handler rows in `user_directory` When `resolveIdentity` runs before any tenant scope is set Then each resolves to the right `{role, tenant}`, and a user who is both admin and member resolves as creator.
+
+run_cmd: npx vitest run packages/manager-core/test/identity.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S1.2 R1.3' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.2 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'One-tenant-per-user enforced Given a user already a member of tenant A When they are added to tenant B Then the call throws and A'"'"'s roster + routing rows are unchanged.
+
+run_cmd: npx vitest run packages/manager-core/test/identity.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S1.3 R1.4' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.3 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'createTenant is atomic (no orphan) Given an owner who already belongs to another tenant When createTenant is called with them as owner Then it throws and no orphaned `tenants` row remains.
+
+run_cmd: npx vitest run packages/manager-core/test/identity.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.3 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S2.1 R2.1, R2.2' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S2.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Matrix differentiates roles; admin is creator-only Given the permission matrix (defaults and the DB `role_permissions`) When `can(role, action)` is evaluated Then owner has billing/mint-teamlead where teamlead does not, and `menu.admin`/`admin.*` are false for every non-creator even if a custom matrix sets them true.
+
+run_cmd: npx vitest run packages/manager-core/test/identity.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S2.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S3.1 R3.1' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S3.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Main menu is role-filtered Given each role When the main menu is built Then creator sees Profile/Support/Admin only; owner/teamlead see Accounts+Control; handler has no Accounts.
+
+run_cmd: npx vitest run apps/manager-bot/test/menu.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S3.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S3.2 R3.2' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S3.2 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Control center gates by role Given the Control Center submenu When built for a handler vs owner/teamlead Then the handler sees only dialogs; owner/teamlead additionally get pause/workflow/stats/team.
+
+run_cmd: npx vitest run apps/manager-bot/test/menu.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S3.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S4.1 R4.1, R4.2' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'support_tickets isolated; platform catalogs excluded Given the schema built fresh with two tenants When the RLS isolation + coverage guards run Then `support_tickets` reads are tenant-scoped and the four platform catalogs carry no `tenant_id`.
+
+run_cmd: python -m pytest -q tests/test_python_suites.py'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S4.2 R4.3' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.2 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Upgrade migration closes the RLS hole and guards duplicates Given a pre-change DB with old-vocab managers When `002_bot_shell.sql` is applied Then `support_tickets` gains functioning RLS, roles/columns/backfill land, applying twice is a no-op, and a user in two tenants fails the migration loudly.
+
+run_cmd: python packages/db/migration_test.py'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S5.1 R5.1, R5.3' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Paused/human inbound does not advance the funnel Given a lead whose tenant or account is paused When an inbound arrives Then it is persisted but the funnel cursor does not advance and no reply is sent.
+
+run_cmd: npx vitest run packages/channel/test/runtime_gate.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S5.2 R5.2' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.2 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Take-over is not clobbered Given a lead session with status `human` When the next inbound arrives Then the cursor and `human` status are preserved and the bot does not reply over the human.
+
+run_cmd: npx vitest run packages/channel/test/runtime_gate.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S5.3 R5.3' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.3 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Paused account is excluded from outreach Given a tenant with one healthy account and one `ai_paused` account (both past warm-up) When AccountPool selects sendable accounts Then the paused account is excluded (`healthyIds`/`canSend`), and un-pausing makes it sendable again.
+
+run_cmd: node packages/accounts/test/pause_test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.3 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S6.1 R6.1' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S6.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Profile/Support/Admin builders render correctly Given a seeded tenant and a filed ticket When the section builders run Then Profile shows tenant/plan/limits, member support offers ticket filing while creator gets the inbox, and Admin lists tenants + the role matrix.
+
+run_cmd: npx vitest run apps/manager-bot/test/sections.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S6.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --title 'scenario:S7.1 R7.1' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S7.1 --label athena --label kind:scenario --label athena:scenario:dec2fe857f282aad --description 'Each tenant gets a distinct funnel id Given two tenants seeded from the same funnel preset When `ensureTenantFunnel` runs for each Then they receive distinct funnel ids (not the preset id) and re-running is idempotent per tenant.
+
+run_cmd: npx vitest run apps/manager-bot/test/tenant_funnel.test.mjs'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S7.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --type validates
+bd create --type epic --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --no-inherit-labels --title 'DB platform catalogs, support_tickets RLS & migration' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase1 --label athena --description 'Add the platform tables + tenant-isolated support_tickets and a safe idempotent upgrade path.'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase1 --title 'T1.1 Platform catalogs (tenants, platform_admins, role_permissions, user_directory) + support_tickets in the FORCE-RLS loop + accounts.ai_paused/tenants.ai_paused + role vocab worker→handler' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.1 --label athena --no-inherit-labels --label autonomy:high --description 'Platform catalogs (tenants, platform_admins, role_permissions, user_directory) + support_tickets in the FORCE-RLS loop + accounts.ai_paused/tenants.ai_paused + role vocab worker→handler
+
+success_check: python packages/db/rls_isolation_test.py
+files: packages/db/schema.sql
+verifies: S4.1'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase1 --title 'T1.2 Idempotent migration 002 — re-issue ENABLE/FORCE RLS + policy for support_tickets, rename roles, backfill user_directory, fail loudly on a user in >1 tenant' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.2 --label athena --no-inherit-labels --description 'Idempotent migration 002 — re-issue ENABLE/FORCE RLS + policy for support_tickets, rename roles, backfill user_directory, fail loudly on a user in >1 tenant
+
+success_check: python packages/db/migration_test.py
+files: packages/db/migrations/001_init.sql, packages/db/migrations/002_bot_shell.sql
+verifies: S4.2'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase1 --title 'T1.3 RLS coverage allow-list (platform catalogs carry no tenant_id) + migration upgrade-path suite wired into pytest' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.3 --label athena --no-inherit-labels --description 'RLS coverage allow-list (platform catalogs carry no tenant_id) + migration upgrade-path suite wired into pytest
+
+success_check: python -m pytest -q tests/test_python_suites.py
+files: packages/db/rls_coverage_test.py, packages/db/migration_test.py, tests/test_python_suites.py
+verifies: S4.1'
+bd create --type epic --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --no-inherit-labels --title 'Identity & RBAC' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase2 --label athena --description 'Resolve role+tenant from user_id (before RLS scope), enforce the permission matrix and invariants.'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase2 --title 'T2.1 identity.mjs — resolveIdentity via unscoped user_directory/platform_admins; createTenant/addMember/setRole/removeMember atomic (one-tenant-per-user, no orphan, SET LOCAL scope)' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.1 --label athena --no-inherit-labels --description 'identity.mjs — resolveIdentity via unscoped user_directory/platform_admins; createTenant/addMember/setRole/removeMember atomic (one-tenant-per-user, no orphan, SET LOCAL scope)
+
+success_check: npx vitest run packages/manager-core/test/identity.test.mjs
+files: packages/manager-core/src/identity.mjs
+verifies: S1.1, S1.2, S1.3'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase2 --title 'T2.2 Permission matrix + can(): owner≠teamlead; admin actions hard-gated creator-only' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.2 --label athena --no-inherit-labels --description 'Permission matrix + can(): owner≠teamlead; admin actions hard-gated creator-only
+
+success_check: npx vitest run packages/manager-core/test/identity.test.mjs
+files: packages/manager-core/src/identity.mjs
+verifies: S2.1'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase2 --title 'T2.3 Role-literal rename worker→handler in manager-core (assign/stats/take-over) + fixtures' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.3 --label athena --no-inherit-labels --description 'Role-literal rename worker→handler in manager-core (assign/stats/take-over) + fixtures
+
+success_check: node packages/manager-core/test/manager_core_test.mjs
+files: packages/manager-core/src/index.mjs, packages/manager-core/test/manager_core_test.mjs
+verifies: S1.1'
+bd create --type epic --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --no-inherit-labels --title 'Shared bot — 5-section menu & sections' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3 --label athena --description 'Rewrite the bot into the shared, role-filtered 5-section product with new sections.'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3 --title 'T3.1 Role-filtered 5-section menu + control-center submenu (menu.mjs)' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.1 --label athena --no-inherit-labels --description 'Role-filtered 5-section menu + control-center submenu (menu.mjs)
+
+success_check: npx vitest run apps/manager-bot/test/menu.test.mjs
+files: apps/manager-bot/menu.mjs
+verifies: S3.1, S3.2'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3 --title 'T3.2 Profile/Support/Admin section builders (sections.mjs)' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.2 --label athena --no-inherit-labels --description 'Profile/Support/Admin section builders (sections.mjs)
+
+success_check: npx vitest run apps/manager-bot/test/sections.test.mjs
+files: apps/manager-bot/sections.mjs
+verifies: S6.1'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3 --title 'T3.3 Per-tenant funnel seeding with a fresh id (tenant_funnel.mjs)' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.3 --label athena --no-inherit-labels --description 'Per-tenant funnel seeding with a fresh id (tenant_funnel.mjs)
+
+success_check: npx vitest run apps/manager-bot/test/tenant_funnel.test.mjs
+files: apps/manager-bot/tenant_funnel.mjs
+verifies: S7.1'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3 --title 'T3.4 Bot entrypoint: identity middleware (scope-first) + all handlers + creator fail-fast bootstrap' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.4 --label athena --no-inherit-labels --description 'Bot entrypoint: identity middleware (scope-first) + all handlers + creator fail-fast bootstrap
+
+success_check: node --check apps/manager-bot/run.mjs
+files: apps/manager-bot/run.mjs'
+bd create --type epic --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:spec:a25273c23da9a36d --no-inherit-labels --title 'AI pause & take-over gate' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase4 --label athena --description 'Queue-not-advance on pause/take-over; stop paused accounts sending; fix the take-over clobber.'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase4 --title 'T4.1 handleInbound gate (tenant/account pause or human) + findOrCreateSession surfaces status' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.1 --label athena --no-inherit-labels --description 'handleInbound gate (tenant/account pause or human) + findOrCreateSession surfaces status
+
+success_check: npx vitest run packages/channel/test/runtime_gate.test.mjs
+files: packages/channel/src/runtime.mjs
+verifies: S5.1, S5.2'
+bd create --parent athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase4 --title 'T4.2 AccountPool SENDABLE_SQL excludes paused accounts from outreach' --label athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.2 --label athena --no-inherit-labels --description 'AccountPool SENDABLE_SQL excludes paused accounts from outreach
+
+success_check: node packages/accounts/test/pause_test.mjs
+files: packages/accounts/src/pool.mjs, packages/accounts/test/pause_test.mjs
+verifies: S5.3'
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.3 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.2
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.2 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.1
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.3 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.2
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.4 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.2
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.2 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.1
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase2 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase1
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase2
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase4 --blocked-by athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:phase3
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.2 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T1.3 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S4.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.2 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.3 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S2.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T2.3 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S1.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S3.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S3.2 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S6.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T3.3 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S7.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.1 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.1 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.2 --type tracks
+bd dep add athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:T4.2 athena:cas-bot-shell-shared-multi-tenant-platform-bot-as-shipped:scenario:S5.3 --type tracks

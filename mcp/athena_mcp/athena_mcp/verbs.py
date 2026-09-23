@@ -288,6 +288,111 @@ def planner_trace_coverage(front_path: str, coverage_path: str, *, speckit=None)
     return trace_coverage(plan, cov)
 
 
+def _contract_inputs(contract_path: str, scenarios_path: str = "", ledger_path: str = ""):
+    """v3.3: load (contract, scenarios, ledger). Scenarios default to the contract sibling."""
+    from lib.contract import parse as parse_contract
+    from lib.scenario_parser import parse as parse_scenarios
+    from lib.spec_runner import load_ledger
+    cp = pathlib.Path(contract_path)
+    sp = pathlib.Path(scenarios_path) if scenarios_path else cp.parent / "scenarios.md"
+    contract = parse_contract(cp.read_text(encoding="utf-8"))
+    scenarios = parse_scenarios(sp.read_text(encoding="utf-8"))
+    return contract, scenarios, load_ledger(ledger_path or ".athena/spec_ledger.json")
+
+
+def planner_contract_coverage(contract_path: str = "contract.md",
+                              scenarios_path: str = "") -> dict:
+    """Q1: which contract clauses have NO executable spec (plus orphan + redirected specs).
+    Pure + linear in the clause count — cheap enough to ask on every planning turn."""
+    from lib.contract_report import coverage
+    try:
+        contract, scenarios, _ = _contract_inputs(contract_path, scenarios_path)
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    return coverage(contract, scenarios)
+
+
+def planner_contract_todo(contract_path: str = "contract.md", scenarios_path: str = "",
+                          ledger_path: str = "") -> dict:
+    """Q2: what is left to implement — every live clause in exactly one of unspecified /
+    red / unrun / stale / done, with draft clauses as backlog. Reads the spec ledger."""
+    from lib.contract_report import todo
+    try:
+        contract, scenarios, ledger = _contract_inputs(contract_path, scenarios_path, ledger_path)
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    return todo(contract, scenarios, ledger)
+
+
+def planner_contract_drift(contract_path: str = "contract.md", scenarios_path: str = "",
+                           ledger_path: str = "") -> dict:
+    """Q3: where requirement, spec and proof diverged — spec_drift / stale_proof /
+    missing_spec / extra_spec. `in_sync` is the one-bit answer a gate can read."""
+    from lib.contract_report import drift
+    try:
+        contract, scenarios, ledger = _contract_inputs(contract_path, scenarios_path, ledger_path)
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    return drift(contract, scenarios, ledger)
+
+
+def planner_spec_run(scenarios_path: str = "scenarios.md", contract_path: str = "",
+                     out_path: str = ".athena/spec_ledger.json", clause: str = "",
+                     jobs: int = 8, timeout: int = 120, cwd: str = ".", ts: str = "") -> dict:
+    """EFFECTFUL: run the executable specs and write the red/green ledger the two reports
+    above read. `clause` narrows the run to one area (the fast inner loop)."""
+    import datetime
+    from lib.contract import parse as parse_contract
+    from lib.scenario_parser import parse as parse_scenarios
+    from lib.spec_runner import make_ledger, run_specs, select, write_ledger
+    from lib.versioning import hash_text
+    try:
+        text = pathlib.Path(scenarios_path).read_text(encoding="utf-8")
+        scenarios = parse_scenarios(text)
+        cp = (pathlib.Path(contract_path) if contract_path
+              else pathlib.Path(scenarios_path).parent / "contract.md")
+        contract = parse_contract(cp.read_text(encoding="utf-8")) if cp.exists() else None
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    results = run_specs(select(scenarios, clause_prefix=clause), cwd=cwd,
+                        timeout=timeout, jobs=jobs)
+    stamp = ts or datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    ledger = make_ledger(results, contract=contract, scenario_version=hash_text(text), ts=stamp)
+    write_ledger(ledger, out_path)
+    return {"ok": ledger["totals"]["failed"] == 0, "ledger": out_path, **ledger["totals"],
+            "red": [r["scenario"] for r in ledger["results"] if not r["passed"]]}
+
+
+def planner_contract_pin(scenarios_path: str = "scenarios.md",
+                         contract_path: str = "contract.md", write: bool = False) -> dict:
+    """Bind each spec to the clause VERSION it was written against (drift instrumentation).
+    Dry-run unless write=True."""
+    from lib.contract import parse as parse_contract
+    from lib.contract import pin_scenarios
+    try:
+        contract = parse_contract(pathlib.Path(contract_path).read_text(encoding="utf-8"))
+        text = pathlib.Path(scenarios_path).read_text(encoding="utf-8")
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    new_text, stats = pin_scenarios(text, contract)
+    if write:
+        pathlib.Path(scenarios_path).write_text(new_text, encoding="utf-8")
+    return {"ok": True, "written": bool(write), **stats}
+
+
+def planner_contract_gate(front_path: str, *, speckit=None) -> dict:
+    """seam.contract_bound: fail-closed before compiling — no live clause without a spec,
+    no spec naming a clause the contract does not define (drafts exempt)."""
+    from lib.seams import seam_contract_bound
+    try:
+        plan = parse_with_provenance(front_path, speckit=speckit)
+    except (ParseError, FileNotFoundError, OSError) as e:
+        return {"ok": False, "error": _err(e)}
+    if plan.contract is None:
+        return {"ok": False, "error": f"no contract.md next to {front_path}"}
+    return _seam_dict(seam_contract_bound(plan.contract, plan.scenarios))
+
+
 def planner_close_task(front_path: str, task_id: str, commit_sha: str, *,
                        checks_passed: bool = True, executor: str = "",
                        speckit=None, run=_run) -> dict:

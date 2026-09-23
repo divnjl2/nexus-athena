@@ -1,0 +1,1854 @@
+{
+  "contract_version": "5a6d27c8caf4aeb8",
+  "results": [
+    {
+      "clause": "C-1.1",
+      "clause_version": "5825240045f27c79",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_clause_ids_are_unique_and_immutable -q",
+      "scenario": "S1.1"
+    },
+    {
+      "clause": "C-1.2",
+      "clause_version": "c88c51aa2c8e2c3c",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_old_reference_still_resolves_after_supersede -q",
+      "scenario": "S1.2"
+    },
+    {
+      "clause": "C-1.3",
+      "clause_version": "be5a7595ebfcd6d1",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_supersede_relation_is_symmetric_from_either_end -q",
+      "scenario": "S1.3"
+    },
+    {
+      "clause": "C-1.4",
+      "clause_version": "6b2c311480993ca6",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_branched_clause_resolves_transitively_to_all_current_clauses -q",
+      "scenario": "S1.4"
+    },
+    {
+      "clause": "C-1.5",
+      "clause_version": "d9a72c266430d91c",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_supersede_cycle_is_linted_and_resolve_terminates -q",
+      "scenario": "S1.5"
+    },
+    {
+      "clause": "C-1.6",
+      "clause_version": "d675507a8c51e102",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_wrapped_clause_text_is_not_truncated -q",
+      "scenario": "S1.6"
+    },
+    {
+      "clause": "C-1.7",
+      "clause_version": "1637d6a48a8caf53",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_unknown_supersede_target_is_linted_not_crashed -q",
+      "scenario": "S1.7"
+    },
+    {
+      "clause": "C-1.8",
+      "clause_version": "0456b2f3efc812d0",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_attributes_may_be_sub_bullets_instead_of_inline_markers -q",
+      "scenario": "S1.8"
+    },
+    {
+      "clause": "C-1.9",
+      "clause_version": "c47350855ebf4210",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_lint_reports_an_empty_clause -q",
+      "scenario": "S1.9"
+    },
+    {
+      "clause": "C-1.10",
+      "clause_version": "921bac6fea3c62c3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_lint_reports_a_self_supersede -q",
+      "scenario": "S1.10"
+    },
+    {
+      "clause": "C-1.11",
+      "clause_version": "5fceb4a444353ffd",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_lint_reports_a_superseded_clause_with_no_successor -q",
+      "scenario": "S1.11"
+    },
+    {
+      "clause": "C-1.12",
+      "clause_version": "29b41c6de4833e93",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_lint_reports_a_clause_that_is_both_withdrawn_and_superseded -q",
+      "scenario": "S1.12"
+    },
+    {
+      "clause": "C-1.13",
+      "clause_version": "1658e48809eb4d32",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_lint_reports_an_unknown_status -q",
+      "scenario": "S1.13"
+    },
+    {
+      "clause": "C-1.14",
+      "clause_version": "777a69d97180cb35",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_tags_may_be_declared_in_the_inline_marker -q",
+      "scenario": "S1.14"
+    },
+    {
+      "clause": "C-2.1",
+      "clause_version": "546fd715c5f188c3",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_clause_version_is_per_clause_not_whole_file -q",
+      "scenario": "S2.1"
+    },
+    {
+      "clause": "C-2.2",
+      "clause_version": "26b95287234b65a1",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_reflowing_text_does_not_change_the_clause_version -q",
+      "scenario": "S2.2"
+    },
+    {
+      "clause": "C-2.3",
+      "clause_version": "f5328f950bf37f01",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_pin_inserts_and_refreshes_the_clause_version_in_scenarios -q",
+      "scenario": "S2.3"
+    },
+    {
+      "clause": "C-2.4",
+      "clause_version": "1606d5a8dbcd9289",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_scenario_parser_reads_the_pin -q",
+      "scenario": "S2.4"
+    },
+    {
+      "clause": "C-2.5",
+      "clause_version": "c7136eb569ad0405",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_render_round_trips_through_parse -q",
+      "scenario": "S2.5"
+    },
+    {
+      "clause": "C-3.1",
+      "clause_version": "88031b035435f6e6",
+      "duration_ms": 124,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_results_keep_document_order_regardless_of_completion_order -q",
+      "scenario": "S3.1"
+    },
+    {
+      "clause": "C-3.2",
+      "clause_version": "a2b05423613897f3",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_a_hung_spec_is_red_and_never_aborts_the_run -q",
+      "scenario": "S3.2"
+    },
+    {
+      "clause": "C-3.3",
+      "clause_version": "316ab8df31db9329",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_missing_command_is_red_with_the_os_error -q",
+      "scenario": "S3.3"
+    },
+    {
+      "clause": "C-3.4",
+      "clause_version": "78d0566af764a0cc",
+      "duration_ms": 14,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_ledger_carries_versions_and_totals -q",
+      "scenario": "S3.4"
+    },
+    {
+      "clause": "C-3.5",
+      "clause_version": "40f6c4d0e22eaea0",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_ledger_is_deterministic_for_the_same_results -q",
+      "scenario": "S3.5"
+    },
+    {
+      "clause": "C-3.6",
+      "clause_version": "8770d7d64c24fe89",
+      "duration_ms": 16,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_absent_or_corrupt_ledger_degrades_to_unrun -q",
+      "scenario": "S3.6"
+    },
+    {
+      "clause": "C-3.7",
+      "clause_version": "397833124a320007",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_select_filters_by_clause_or_spec_prefix -q",
+      "scenario": "S3.7"
+    },
+    {
+      "clause": "C-3.8",
+      "clause_version": "68f7fdb181c35ce5",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_empty_spec_set_is_an_empty_run_not_an_error -q",
+      "scenario": "S3.8"
+    },
+    {
+      "clause": "C-3.12",
+      "clause_version": "299151d9d3e018ac",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_specs_can_be_included_or_excluded_by_clause_tag -q",
+      "scenario": "S3.12"
+    },
+    {
+      "clause": "C-3.13",
+      "clause_version": "74b503401465c50a",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_a_dangerous_or_unparseable_run_cmd_is_refused_and_recorded_red -q",
+      "scenario": "S3.13"
+    },
+    {
+      "clause": "C-3.14",
+      "clause_version": "b7799b069c08d8e2",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_an_accepted_run_cmd_is_tokenized_and_never_shelled -q",
+      "scenario": "S3.14"
+    },
+    {
+      "clause": "C-3.15",
+      "clause_version": "7d0462523910a00b",
+      "duration_ms": 12,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_the_worker_pool_is_sized_from_the_machines_cores -q",
+      "scenario": "S3.15"
+    },
+    {
+      "clause": "C-3.16",
+      "clause_version": "d5445ed57dccc77f",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_pinned_env_is_merged_over_the_inherited_environment -q",
+      "scenario": "S3.16"
+    },
+    {
+      "clause": "C-3.18",
+      "clause_version": "196a20c19f969f48",
+      "duration_ms": 158,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_spec_runner.py::test_a_lane_of_one_worker_runs_its_specs_strictly_one_at_a_time -q",
+      "scenario": "S3.18"
+    },
+    {
+      "clause": "C-4.1",
+      "clause_version": "3dd8cbd711131db0",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_a_live_clause_with_no_spec_is_uncovered -q",
+      "scenario": "S4.1"
+    },
+    {
+      "clause": "C-4.2",
+      "clause_version": "d45e89032f4dc9b9",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_a_spec_naming_an_unknown_or_withdrawn_clause_is_an_orphan -q",
+      "scenario": "S4.2"
+    },
+    {
+      "clause": "C-4.4",
+      "clause_version": "294756121b4a2d2d",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_draft_clauses_are_exempt_from_coverage -q",
+      "scenario": "S4.4"
+    },
+    {
+      "clause": "C-4.6",
+      "clause_version": "2b20895ce8173d9e",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_unspecified_clause_carries_its_text_so_an_agent_can_act -q",
+      "scenario": "S4.6"
+    },
+    {
+      "clause": "C-4.7",
+      "clause_version": "6b549660553da0ae",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_drift_flags_a_spec_pinned_to_an_older_clause_version -q",
+      "scenario": "S4.7"
+    },
+    {
+      "clause": "C-4.8",
+      "clause_version": "c11de1096c1488cd",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_drift_flags_a_green_earned_under_a_stale_clause_version -q",
+      "scenario": "S4.8"
+    },
+    {
+      "clause": "C-4.9",
+      "clause_version": "013909ee03672b07",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_unpinned_specs_are_instrumentation_not_divergence -q",
+      "scenario": "S4.9"
+    },
+    {
+      "clause": "C-4.10",
+      "clause_version": "a224cb9d1f4b36da",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_drift_reports_missing_and_extra_specs -q",
+      "scenario": "S4.10"
+    },
+    {
+      "clause": "C-4.11",
+      "clause_version": "4c822576521815f3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_render_produces_a_readable_table_for_any_report -q",
+      "scenario": "S4.11"
+    },
+    {
+      "clause": "C-4.12",
+      "clause_version": "204d06b75b3ba1aa",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_todo_lists_draft_clauses_as_backlog -q",
+      "scenario": "S4.12"
+    },
+    {
+      "clause": "C-4.14",
+      "clause_version": "3db3976c55b68287",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_a_spec_on_a_superseded_clause_is_reported_as_redirected -q",
+      "scenario": "S4.14"
+    },
+    {
+      "clause": "C-4.15",
+      "clause_version": "b44a62340d471d7a",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_a_redirected_spec_does_not_credit_coverage_to_the_successor -q",
+      "scenario": "S4.15"
+    },
+    {
+      "clause": "C-4.16",
+      "clause_version": "4fccc2873a0bce32",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_todo_puts_every_live_clause_in_exactly_one_bucket -q",
+      "scenario": "S4.16"
+    },
+    {
+      "clause": "C-4.17",
+      "clause_version": "59fe1831bf69ebe0",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_report.py::test_a_clause_proved_only_against_an_older_wording_counts_as_remaining_work -q",
+      "scenario": "S4.17"
+    },
+    {
+      "clause": "C-5.1",
+      "clause_version": "03c8f3575f65b4bd",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_clause_nodes_are_emitted_for_every_clause_with_its_own_version_label -q",
+      "scenario": "S5.1"
+    },
+    {
+      "clause": "C-5.2",
+      "clause_version": "2aa5d6382c0ec269",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_supersede_edge_keeps_an_old_clause_id_reachable -q",
+      "scenario": "S5.2"
+    },
+    {
+      "clause": "C-5.3",
+      "clause_version": "553a4f332aea3621",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_validates_edge_points_at_the_clause_not_the_whole_spec -q",
+      "scenario": "S5.3"
+    },
+    {
+      "clause": "C-5.4",
+      "clause_version": "ca4fa2bfd05656b6",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_a_spec_naming_a_clause_outside_the_contract_refuses_to_compile -q",
+      "scenario": "S5.4"
+    },
+    {
+      "clause": "C-5.5",
+      "clause_version": "357aaad8385c4e08",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_without_a_contract_the_output_is_byte_identical_to_v31 -q",
+      "scenario": "S5.5"
+    },
+    {
+      "clause": "C-5.6",
+      "clause_version": "4b1852495f1d562f",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_an_attached_but_unpinned_contract_is_inert -q",
+      "scenario": "S5.6"
+    },
+    {
+      "clause": "C-5.7",
+      "clause_version": "9f4754b9b48eb757",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_clause_nodes_are_idempotent_on_recompile -q",
+      "scenario": "S5.7"
+    },
+    {
+      "clause": "C-5.8",
+      "clause_version": "b1ce5cdfb7546563",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_the_gate_fails_closed_on_uncovered_clauses_and_orphan_specs -q",
+      "scenario": "S5.8"
+    },
+    {
+      "clause": "C-5.9",
+      "clause_version": "4eb74f7656ed4a75",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_the_gate_hash_moves_when_a_clause_changes -q",
+      "scenario": "S5.9"
+    },
+    {
+      "clause": "C-5.11",
+      "clause_version": "5497f7656e1b8dd6",
+      "duration_ms": 190914,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_bd_integration_contract.py::test_clause_nodes_and_edges_materialize_in_a_real_bd_graph -q",
+      "scenario": "S5.11"
+    },
+    {
+      "clause": "C-5.13",
+      "clause_version": "4bec28b438f082b4",
+      "duration_ms": 81,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_a_sibling_contract_is_attached_and_pinned_by_the_frontend -q",
+      "scenario": "S5.13"
+    },
+    {
+      "clause": "C-5.14",
+      "clause_version": "bf26febf12152e1a",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_label_references_resolve_to_bd_issue_ids -q",
+      "scenario": "S5.14"
+    },
+    {
+      "clause": "C-5.15",
+      "clause_version": "df375683915cd369",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_graph.py::test_an_absent_or_flag_shaped_positional_is_left_alone -q",
+      "scenario": "S5.15"
+    },
+    {
+      "clause": "C-6.1",
+      "clause_version": "6abb6b0b28a70982",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_import_from_spec_preserves_ears_ids_verbatim -q",
+      "scenario": "S6.1"
+    },
+    {
+      "clause": "C-6.2",
+      "clause_version": "d62e352e4f681002",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_empty_contract_is_rejected -q",
+      "scenario": "S6.2"
+    },
+    {
+      "clause": "C-6.3",
+      "clause_version": "7b163a9ea7b8913d",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_contract_version_tracks_status_changes -q",
+      "scenario": "S6.3"
+    },
+    {
+      "clause": "C-6.4",
+      "clause_version": "568c3c274a26ef1c",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_import_takes_only_the_named_section_and_falls_back_to_the_whole_file -q",
+      "scenario": "S6.4"
+    },
+    {
+      "clause": "C-6.5",
+      "clause_version": "840be16d92eee670",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract.py::test_render_keeps_group_headings_and_tags -q",
+      "scenario": "S6.5"
+    },
+    {
+      "clause": "C-7.1",
+      "clause_version": "179d44a2bd289fb3",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_clause_with_two_obligations_is_reported_as_not_atomic -q",
+      "scenario": "S7.1"
+    },
+    {
+      "clause": "C-7.2",
+      "clause_version": "2b79fce1fa7cb964",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_obligations_joined_with_and_shall_are_reported_as_conjoined -q",
+      "scenario": "S7.2"
+    },
+    {
+      "clause": "C-7.3",
+      "clause_version": "c0f0d9277c21f329",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_unprovable_wording_is_reported_as_vague -q",
+      "scenario": "S7.3"
+    },
+    {
+      "clause": "C-7.4",
+      "clause_version": "e7fa7503d9b83f0f",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_identical_wording_is_reported_as_duplication_not_coverage -q",
+      "scenario": "S7.4"
+    },
+    {
+      "clause": "C-7.5",
+      "clause_version": "fc230c81f90b12be",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_superseded_and_withdrawn_wording_is_exempt_from_the_quality_pass -q",
+      "scenario": "S7.5"
+    },
+    {
+      "clause": "C-7.6",
+      "clause_version": "059cb9d8a49345d9",
+      "duration_ms": 223,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_wording_findings_are_advisory_unless_the_caller_asks_for_a_gate -q",
+      "scenario": "S7.6"
+    },
+    {
+      "clause": "C-7.7",
+      "clause_version": "f487c46b44dfe286",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_multi_line_note_stays_out_of_the_normative_text_and_version -q",
+      "scenario": "S7.7"
+    },
+    {
+      "clause": "C-7.8",
+      "clause_version": "edb4562298f63e0f",
+      "duration_ms": 45,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_the_frames_own_contract_passes_its_own_quality_bar -q",
+      "scenario": "S7.8"
+    },
+    {
+      "clause": "C-7.9",
+      "clause_version": "f21c5ebb495db86f",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_preference_is_not_an_obligation -q",
+      "scenario": "S7.9"
+    },
+    {
+      "clause": "C-7.10",
+      "clause_version": "6f19ab4b093ebef0",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_and_or_makes_the_obligation_undecidable -q",
+      "scenario": "S7.10"
+    },
+    {
+      "clause": "C-7.11",
+      "clause_version": "5281257dda7582c1",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_passive_obligation_without_an_actor_is_reported -q",
+      "scenario": "S7.11"
+    },
+    {
+      "clause": "C-7.12",
+      "clause_version": "12647edd551cf2d5",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_placeholder_marks_the_requirement_as_unwritten -q",
+      "scenario": "S7.12"
+    },
+    {
+      "clause": "C-7.13",
+      "clause_version": "ee0de43ecfa1827a",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_clause_that_dictates_the_mechanism_is_reported -q",
+      "scenario": "S7.13"
+    },
+    {
+      "clause": "C-7.14",
+      "clause_version": "800351498f76d04f",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_an_unquantified_quality_has_no_exit_code -q",
+      "scenario": "S7.14"
+    },
+    {
+      "clause": "C-7.15",
+      "clause_version": "66706df7ab6f5a06",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_every_rule_the_linter_defines_fires_on_the_known_bad_contract -q",
+      "scenario": "S7.15"
+    },
+    {
+      "clause": "C-7.16",
+      "clause_version": "926413bd21aca417",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_contract_critique.py::test_a_clause_without_an_ears_trigger_is_reported_as_non_conforming -q",
+      "scenario": "S7.16"
+    },
+    {
+      "clause": "C-8.1",
+      "clause_version": "b51964d1f823cbf0",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_coverage_backed.py::test_coverage_paths_resolve_across_source_roots -q",
+      "scenario": "S8.1"
+    },
+    {
+      "clause": "C-8.2",
+      "clause_version": "38bccf7739463c91",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_coverage_backed.py::test_reverse_leg_separates_in_scope_gaps_from_unclaimed_code -q",
+      "scenario": "S8.2"
+    },
+    {
+      "clause": "C-8.3",
+      "clause_version": "26af657eb5058403",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_coverage_backed.py::test_an_ambiguous_basename_resolves_to_nothing -q",
+      "scenario": "S8.3"
+    },
+    {
+      "clause": "C-9.1",
+      "clause_version": "89788c8488691dde",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_clause_owns_the_union_of_the_lines_its_specs_execute -q",
+      "scenario": "S9.1"
+    },
+    {
+      "clause": "C-9.2",
+      "clause_version": "2a933ab0df796bd4",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_owners_answers_which_requirements_a_line_serves -q",
+      "scenario": "S9.2"
+    },
+    {
+      "clause": "C-9.3",
+      "clause_version": "2abb6c2c599d9a85",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_the_map_runner_refuses_the_same_commands_the_spec_runner_refuses -q",
+      "scenario": "S9.3"
+    },
+    {
+      "clause": "C-9.4",
+      "clause_version": "8d8f462ea727d991",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_classification_separates_owned_code_from_another_features_code -q",
+      "scenario": "S9.4"
+    },
+    {
+      "clause": "C-9.5",
+      "clause_version": "c9739b92f2e1a8a8",
+      "duration_ms": 16,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal -q",
+      "scenario": "S9.5"
+    },
+    {
+      "clause": "C-9.6",
+      "clause_version": "5062eb268c4aa240",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_the_map_pins_the_versions_it_was_built_from -q",
+      "scenario": "S9.6"
+    },
+    {
+      "clause": "C-9.7",
+      "clause_version": "40a2e411cf0ac65d",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_lines_from_json_reads_coverage_output -q",
+      "scenario": "S9.7"
+    },
+    {
+      "clause": "C-9.8",
+      "clause_version": "5e01c4cd2a91792e",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_map_pinned_to_another_version_is_stale -q",
+      "scenario": "S9.8"
+    },
+    {
+      "clause": "C-9.9",
+      "clause_version": "45591269e8897e97",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_clause_added_since_the_map_was_built_is_unmapped -q",
+      "scenario": "S9.9"
+    },
+    {
+      "clause": "C-9.10",
+      "clause_version": "a1cc53814652a2c6",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_map_entry_for_a_deleted_clause_is_stale -q",
+      "scenario": "S9.10"
+    },
+    {
+      "clause": "C-9.11",
+      "clause_version": "ab19e41731ef4375",
+      "duration_ms": 10,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_the_gate_fails_closed_when_the_map_is_absent_or_foreign -q",
+      "scenario": "S9.11"
+    },
+    {
+      "clause": "C-9.12",
+      "clause_version": "e1018f374ef72235",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_the_gate_hash_moves_when_the_map_goes_stale -q",
+      "scenario": "S9.12"
+    },
+    {
+      "clause": "C-9.14",
+      "clause_version": "4cbc110b055a1226",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_map_in_the_previous_schema_is_refused -q",
+      "scenario": "S9.14"
+    },
+    {
+      "clause": "C-9.15",
+      "clause_version": "5df9f904c5afeb7d",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_only_the_clauses_whose_lines_moved_go_stale -q",
+      "scenario": "S9.15"
+    },
+    {
+      "clause": "C-9.16",
+      "clause_version": "d8096b3456fb4366",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_line_that_no_longer_exists_counts_as_moved -q",
+      "scenario": "S9.16"
+    },
+    {
+      "clause": "C-9.17",
+      "clause_version": "b0fc6f9fe07125ed",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_an_incremental_rebuild_keeps_the_clauses_that_still_hold -q",
+      "scenario": "S9.17"
+    },
+    {
+      "clause": "C-9.18",
+      "clause_version": "17b24da5f23c0301",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_every_source_root_reaches_the_coverage_command -q",
+      "scenario": "S9.18"
+    },
+    {
+      "clause": "C-9.20",
+      "clause_version": "308e05b9aef9a1d0",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_spec_that_ran_and_owns_nothing_is_not_a_failed_collection -q",
+      "scenario": "S9.20"
+    },
+    {
+      "clause": "C-9.21",
+      "clause_version": "59cc61fada482100",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_merging_nothing_re_pins_the_map -q",
+      "scenario": "S9.21"
+    },
+    {
+      "clause": "C-9.22",
+      "clause_version": "eb3052927088b188",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_the_map_reads_branch_evidence_not_only_executed_lines -q",
+      "scenario": "S9.22"
+    },
+    {
+      "clause": "C-9.23",
+      "clause_version": "258c225775c9dcb5",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_two_specs_of_one_clause_can_prove_both_arms_between_them -q",
+      "scenario": "S9.23"
+    },
+    {
+      "clause": "C-9.24",
+      "clause_version": "12e2ea2e128b812e",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_strengthened_spec_invalidates_the_clause_it_proves -q",
+      "scenario": "S9.24"
+    },
+    {
+      "clause": "C-10.1",
+      "clause_version": "2b289d163041f18e",
+      "duration_ms": 8,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_mutations_are_ast_level_and_skip_prose -q",
+      "scenario": "S10.1"
+    },
+    {
+      "clause": "C-10.2",
+      "clause_version": "484147558acc46fd",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_mutant_is_run_against_every_owner_of_its_line -q",
+      "scenario": "S10.2"
+    },
+    {
+      "clause": "C-10.3",
+      "clause_version": "d2a6361c6acddce6",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_hunt_restores_the_file_and_stops_at_the_first_killer -q",
+      "scenario": "S10.3"
+    },
+    {
+      "clause": "C-10.4",
+      "clause_version": "d3ab09f6a162543f",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_summary_names_the_survivors -q",
+      "scenario": "S10.4"
+    },
+    {
+      "clause": "C-10.5",
+      "clause_version": "334a3e4bcef23727",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model -q",
+      "scenario": "S10.5"
+    },
+    {
+      "clause": "C-10.6",
+      "clause_version": "8374b8af391986ef",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_misbound_spec_is_labelled_vacuous_for_the_clause_it_names -q",
+      "scenario": "S10.6"
+    },
+    {
+      "clause": "C-10.7",
+      "clause_version": "2b781b52ff1e9853",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_refutation_without_an_executable_counterexample_is_discarded -q",
+      "scenario": "S10.7"
+    },
+    {
+      "clause": "C-10.8",
+      "clause_version": "0fd36bd4b42989fb",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_thresholds_are_fixed_before_any_judge_runs_and_decide_eligibility -q",
+      "scenario": "S10.8"
+    },
+    {
+      "clause": "C-10.9",
+      "clause_version": "9f1572d662e63ff8",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_false_reject_costs_more_than_a_miss -q",
+      "scenario": "S10.9"
+    },
+    {
+      "clause": "C-10.10",
+      "clause_version": "5808de4541765070",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_judge_is_pinned_like_every_other_artifact -q",
+      "scenario": "S10.10"
+    },
+    {
+      "clause": "C-10.11",
+      "clause_version": "5582f1adc6720fdf",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_clause_text_is_neutralised_before_it_reaches_a_prompt -q",
+      "scenario": "S10.11"
+    },
+    {
+      "clause": "C-10.12",
+      "clause_version": "719577111bab1cfe",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_disagreement_with_the_mutation_runner_demotes_the_judge -q",
+      "scenario": "S10.12"
+    },
+    {
+      "clause": "C-10.13",
+      "clause_version": "0d6cb9d6aa5a18a4",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_spec_function_is_extracted_from_its_module_by_name -q",
+      "scenario": "S10.13"
+    },
+    {
+      "clause": "C-10.14",
+      "clause_version": "34dd359ef66f306b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_degrading_an_unknown_defect_is_refused -q",
+      "scenario": "S10.14"
+    },
+    {
+      "clause": "C-10.15",
+      "clause_version": "76cf503b7939b184",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_mutant_carries_where_the_break_is -q",
+      "scenario": "S10.15"
+    },
+    {
+      "clause": "C-10.16",
+      "clause_version": "87f1faf279309a09",
+      "duration_ms": 31,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_killed_run_is_recoverable_from_disk -q",
+      "scenario": "S10.16"
+    },
+    {
+      "clause": "C-10.17",
+      "clause_version": "6e316e87365b7d68",
+      "duration_ms": 6,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_hunt_stops_at_the_mutant_cap -q",
+      "scenario": "S10.17"
+    },
+    {
+      "clause": "C-10.18",
+      "clause_version": "c3afb2b9f5f7e4fd",
+      "duration_ms": 17,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_mutation_runs_in_a_mirror_and_never_touches_the_working_tree -q",
+      "scenario": "S10.18"
+    },
+    {
+      "clause": "C-10.19",
+      "clause_version": "4f3000f976a5c14a",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_prompt_template_is_pinned_so_changing_it_is_visible -q",
+      "scenario": "S10.19"
+    },
+    {
+      "clause": "C-10.20",
+      "clause_version": "620abefcf18c5f49",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_surviving_raises_block_is_neutralised_in_a_degraded_pair -q",
+      "scenario": "S10.20"
+    },
+    {
+      "clause": "C-10.21",
+      "clause_version": "17cee234644a80b9",
+      "duration_ms": 18,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_docstrings_are_stripped_from_both_halves_of_the_corpus -q",
+      "scenario": "S10.21"
+    },
+    {
+      "clause": "C-10.22",
+      "clause_version": "3c31e0fc478fb159",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_resume_reuses_only_verdicts_from_the_same_run -q",
+      "scenario": "S10.22"
+    },
+    {
+      "clause": "C-10.25",
+      "clause_version": "6ceff51c75e60a21",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_sweep_can_be_aimed_at_the_lines_worth_attacking -q",
+      "scenario": "S10.25"
+    },
+    {
+      "clause": "C-10.26",
+      "clause_version": "0bae9e39d0c6fe7f",
+      "duration_ms": 5,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_spec_the_ledger_calls_red_is_not_a_witness -q",
+      "scenario": "S10.26"
+    },
+    {
+      "clause": "C-11.1",
+      "clause_version": "71c4a265a4d3424a",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_the_loop_answers_with_one_verdict_and_names_the_failing_leg -q",
+      "scenario": "S11.1"
+    },
+    {
+      "clause": "C-11.2",
+      "clause_version": "07ffe4e92d7f7906",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_the_first_cause_is_the_most_upstream_failure_not_the_loudest -q",
+      "scenario": "S11.2"
+    },
+    {
+      "clause": "C-11.3",
+      "clause_version": "cfc5a713e63441bf",
+      "duration_ms": 17,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_a_leg_with_no_evidence_is_incomplete_never_green -q",
+      "scenario": "S11.3"
+    },
+    {
+      "clause": "C-11.4",
+      "clause_version": "b03d23554a5f47ba",
+      "duration_ms": 16,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_wording_and_mutation_are_advisory_until_asked_to_block -q",
+      "scenario": "S11.4"
+    },
+    {
+      "clause": "C-11.5",
+      "clause_version": "10d3688a77159fe5",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_the_judge_can_never_block_the_verdict -q",
+      "scenario": "S11.5"
+    },
+    {
+      "clause": "C-11.6",
+      "clause_version": "ed0b831b73d33c70",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_the_map_gate_belongs_to_the_reverse_leg -q",
+      "scenario": "S11.6"
+    },
+    {
+      "clause": "C-11.7",
+      "clause_version": "074a4c32b9a2a6a4",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_the_text_view_shows_every_leg_and_the_verdict -q",
+      "scenario": "S11.7"
+    },
+    {
+      "clause": "C-11.8",
+      "clause_version": "de3a22acb1c37ab8",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_scaffold.py::test_a_scaffolded_feature_is_already_wired_clause_to_spec_to_task -q",
+      "scenario": "S11.8"
+    },
+    {
+      "clause": "C-11.9",
+      "clause_version": "45305c30f415fe5a",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_scaffold.py::test_a_fresh_scaffold_passes_the_gates_it_will_be_judged_by -q",
+      "scenario": "S11.9"
+    },
+    {
+      "clause": "C-11.10",
+      "clause_version": "6c99657035721ea1",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_scaffold.py::test_the_scaffold_tells_the_user_what_to_do_next -q",
+      "scenario": "S11.10"
+    },
+    {
+      "clause": "C-11.11",
+      "clause_version": "867c513119746240",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_a_clean_map_means_the_deep_lane_has_nothing_to_do -q",
+      "scenario": "S11.11"
+    },
+    {
+      "clause": "C-11.12",
+      "clause_version": "46daafc36ad4f0de",
+      "duration_ms": 5,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor -q",
+      "scenario": "S11.12"
+    },
+    {
+      "clause": "C-11.13",
+      "clause_version": "505682789ef8d4b6",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_a_named_but_absent_input_fails_instead_of_vanishing -q",
+      "scenario": "S11.13"
+    },
+    {
+      "clause": "C-11.14",
+      "clause_version": "f962bbd9048182f3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_every_mutation_outcome_reaches_the_report -q",
+      "scenario": "S11.14"
+    },
+    {
+      "clause": "C-11.15",
+      "clause_version": "3b0c44f5875fb36d",
+      "duration_ms": 17,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_line_no_spec_owns_is_unowned_not_survived -q",
+      "scenario": "S11.15"
+    },
+    {
+      "clause": "C-11.16",
+      "clause_version": "88ab6eff4273f022",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_spec_that_is_already_red_cannot_be_a_witness -q",
+      "scenario": "S11.16"
+    },
+    {
+      "clause": "C-11.17",
+      "clause_version": "7d04d175efa243c2",
+      "duration_ms": 11720,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_mirror_refuses_to_delete_anything_that_is_not_its_own -q",
+      "scenario": "S11.17"
+    },
+    {
+      "clause": "C-11.18",
+      "clause_version": "6bb6d047be8eebbd",
+      "duration_ms": 25,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_check.py::test_default_paths_are_resolved_next_to_the_contract -q",
+      "scenario": "S11.18"
+    },
+    {
+      "clause": "C-11.19",
+      "clause_version": "a03587e191babc34",
+      "duration_ms": 1695,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_binding_guard.py::test_every_spec_resolves_to_a_test_that_names_the_same_clause -q",
+      "scenario": "S11.19"
+    },
+    {
+      "clause": "C-11.20",
+      "clause_version": "f93488578608a0a2",
+      "duration_ms": 38,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_binding_guard.py::test_the_guard_would_notice_a_mis_binding -q",
+      "scenario": "S11.20"
+    },
+    {
+      "clause": "C-11.21",
+      "clause_version": "13d7eef8e97f5eab",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_scaffold.py::test_the_scaffold_ships_the_test_its_spec_points_at -q",
+      "scenario": "S11.21"
+    },
+    {
+      "clause": "C-11.22",
+      "clause_version": "d5d297e32478f68b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_names_each_group_home_by_exclusivity_not_by_reach -q",
+      "scenario": "S11.22"
+    },
+    {
+      "clause": "C-11.23",
+      "clause_version": "31097ea97251ce82",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_separates_the_four_statuses_and_counts_proofs -q",
+      "scenario": "S11.23"
+    },
+    {
+      "clause": "C-11.24",
+      "clause_version": "cb34381162a7fba2",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_says_so_when_there_is_no_map -q",
+      "scenario": "S11.24"
+    },
+    {
+      "clause": "C-11.25",
+      "clause_version": "642fb591aece0905",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_outline.py::test_a_module_many_groups_reach_is_still_a_home_when_it_holds_lines_only_one_owns -q",
+      "scenario": "S11.25"
+    },
+    {
+      "clause": "C-10.24",
+      "clause_version": "1ae65c2c7c49230b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_partial_run_reports_what_it_never_judged_and_cannot_pass -q",
+      "scenario": "S10.24"
+    },
+    {
+      "clause": "C-11.26",
+      "clause_version": "b5d52c3428661753",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_names_the_half_proved_lines_of_a_group -q",
+      "scenario": "S11.26"
+    },
+    {
+      "clause": "C-11.27",
+      "clause_version": "d3fbb848c4664e15",
+      "duration_ms": 8720,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_default_mirror_is_somewhere_the_guard_will_accept -q",
+      "scenario": "S11.27"
+    },
+    {
+      "clause": "C-12.1",
+      "clause_version": "c6a143840b1875b3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_docrefs.py::test_a_reference_carries_the_fingerprint_of_what_was_reviewed -q",
+      "scenario": "S12.1"
+    },
+    {
+      "clause": "C-12.2",
+      "clause_version": "e6e395ef8fdd4f55",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_docrefs.py::test_a_target_that_moved_since_review_is_a_suspect_link -q",
+      "scenario": "S12.2"
+    },
+    {
+      "clause": "C-12.3",
+      "clause_version": "579826c0cf848823",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_docrefs.py::test_a_missing_target_is_broken_and_a_url_is_not_checked_at_all -q",
+      "scenario": "S12.3"
+    },
+    {
+      "clause": "C-12.4",
+      "clause_version": "a25fd9ebb57443ec",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_docrefs.py::test_repinning_names_only_the_references_that_moved -q",
+      "scenario": "S12.4"
+    },
+    {
+      "clause": "C-12.5",
+      "clause_version": "699e145aa31b0081",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_docrefs.py::test_references_survive_a_render_round_trip -q",
+      "scenario": "S12.5"
+    },
+    {
+      "clause": "C-13.1",
+      "clause_version": "37d9710c4df86d66",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_markers.py::test_the_marker_notation_is_strictdocs_and_is_read_whole -q",
+      "scenario": "S13.1"
+    },
+    {
+      "clause": "C-13.2",
+      "clause_version": "48270fcba55f298c",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_markers.py::test_each_scope_resolves_to_the_lines_it_claims -q",
+      "scenario": "S13.2"
+    },
+    {
+      "clause": "C-13.3",
+      "clause_version": "2506c7de64858b4e",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_markers.py::test_a_marker_the_map_does_not_back_is_decorative -q",
+      "scenario": "S13.3"
+    },
+    {
+      "clause": "C-13.4",
+      "clause_version": "da32e38df85ebc75",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_markers.py::test_unknown_retired_and_unresolvable_markers_are_reported_apart -q",
+      "scenario": "S13.4"
+    },
+    {
+      "clause": "C-13.5",
+      "clause_version": "9df45cc6c4abffc3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_markers.py::test_a_marker_shown_in_backticks_is_a_mention_not_a_marker -q",
+      "scenario": "S13.5"
+    },
+    {
+      "clause": "C-14.1",
+      "clause_version": "baa081e6c3dfda54",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_export.py::test_the_index_is_the_needs_json_shape_a_consumer_already_reads -q",
+      "scenario": "S14.1"
+    },
+    {
+      "clause": "C-14.2",
+      "clause_version": "9490e074a5f28159",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_export.py::test_the_index_carries_what_a_requirements_index_cannot_say -q",
+      "scenario": "S14.2"
+    },
+    {
+      "clause": "C-14.3",
+      "clause_version": "86493cfaf133544e",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_export.py::test_the_export_is_byte_stable -q",
+      "scenario": "S14.3"
+    },
+    {
+      "clause": "C-14.4",
+      "clause_version": "2e61a9e5574aed7c",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_export.py::test_the_oft_export_is_specobject_xml_their_tracer_can_ingest -q",
+      "scenario": "S14.4"
+    },
+    {
+      "clause": "C-15.1",
+      "clause_version": "d267296836d69987",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_purl.py::test_a_codebase_is_named_by_package_url_not_by_a_path -q",
+      "scenario": "S15.1"
+    },
+    {
+      "clause": "C-15.2",
+      "clause_version": "097f1432a9c774c5",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_purl.py::test_the_same_codebase_at_two_commits_is_the_same_subject -q",
+      "scenario": "S15.2"
+    },
+    {
+      "clause": "C-15.3",
+      "clause_version": "8a0aaf48a646dc8a",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_purl.py::test_an_unnamed_subject_is_not_agreement -q",
+      "scenario": "S15.3"
+    },
+    {
+      "clause": "C-15.4",
+      "clause_version": "a014331bcbd94815",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map.py::test_a_map_from_another_codebase_cannot_answer_about_this_one -q",
+      "scenario": "S15.4"
+    },
+    {
+      "clause": "C-16.1",
+      "clause_version": "ad6b75de3e68d4d1",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_the_thinking_is_given_a_place_to_end -q",
+      "scenario": "S16.1"
+    },
+    {
+      "clause": "C-16.2",
+      "clause_version": "f1dd8d23c50fa2b3",
+      "duration_ms": 8,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_the_verdict_call_gets_the_analysis_as_data_and_only_a_shape_to_fill -q",
+      "scenario": "S16.2"
+    },
+    {
+      "clause": "C-16.3",
+      "clause_version": "eb090aeb32b171f0",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_a_stop_sequence_eats_the_closing_tag_and_that_is_not_malformed -q",
+      "scenario": "S16.3"
+    },
+    {
+      "clause": "C-16.4",
+      "clause_version": "1410bfe45342ae3e",
+      "duration_ms": 11,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_the_record_keeps_the_verdict_and_a_handle_on_the_reasoning -q",
+      "scenario": "S16.4"
+    },
+    {
+      "clause": "C-16.5",
+      "clause_version": "4f558feea0447cae",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_a_judgement_node_is_an_index_and_never_claims_proof -q",
+      "scenario": "S16.5"
+    },
+    {
+      "clause": "C-16.7",
+      "clause_version": "24e1b121348cf546",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_a_judgement_already_in_the_graph_is_emitted_no_second_time -q",
+      "scenario": "S16.6"
+    },
+    {
+      "clause": "C-16.8",
+      "clause_version": "ce55270c07ebd773",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_a_judgement_whose_end_the_graph_lacks_is_still_recorded -q",
+      "scenario": "S16.8"
+    },
+    {
+      "clause": "C-16.9",
+      "clause_version": "9703d5b3333f343d",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judgement_graph.py::test_a_generation_that_cycles_is_told_apart_from_one_that_is_merely_long -q",
+      "scenario": "S16.9"
+    }
+  ],
+  "scenario_version": "c6ff55563847968d",
+  "schema": "athena.spec_ledger/1",
+  "totals": {
+    "duration_ms": 214230,
+    "failed": 0,
+    "passed": 184,
+    "total": 184
+  },
+  "ts": "2026-09-23T20:10:21+00:00"
+}

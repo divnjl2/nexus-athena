@@ -1,5 +1,5 @@
 """
-Athena scenario_parser — canonical scenarios.md -> tuple[Scenario] (v3.1).
+Athena scenario_parser — canonical scenarios.md -> tuple[Scenario] (v3.1; cases v3.11).
 
 Parses the `/athena.scenarios` output (one Given-When-Then block per EARS criterion)
 back into `lib.ast.Scenario` objects so the compiler can materialise the v3.1
@@ -17,12 +17,18 @@ Format (stdlib-only, line-oriented state machine):
 A scenario block ends at the next `###`/`##` heading or EOF. `verifies:` is the spec
 requirement key (R-n); `run_cmd:` is the executable success-check; the Given/When/Then
 bullets are concatenated into `gwt_text`.
+
+v3.11: a block may carry `- **case:** `path.json`` instead of a run_cmd — a spec as DATA
+(given/when/then in JSON, `lib.cases`) run in-process. Its run_cmd is then DERIVED
+(`python -m athena case run <path>`), so the clause map, the mutation sweep and the binding
+guard see a command like any other (features/team-layer C-1.5).
 """
 from __future__ import annotations
 
 import re
 
 from lib.ast import ParseError, Scenario
+from lib.cases import derived_run_cmd
 
 
 class ScenarioParseError(ParseError):
@@ -33,6 +39,10 @@ class ScenarioParseError(ParseError):
 _SCEN_RE = re.compile(r"^###\s+(S\d+\.\d+)\s*(?:[—\-]\s*(.*))?$")
 _VERIFIES_RE = re.compile(r"^-\s*\*\*verifies:\*\*\s*`?(.+?)`?\s*$", re.IGNORECASE)
 _RUNCMD_RE = re.compile(r"^-\s*\*\*run_cmd:\*\*\s*`?(.+?)`?\s*$", re.IGNORECASE)
+_CASE_RE = re.compile(r"^-\s*\*\*case:\*\*\s*`?(.+?)`?\s*$", re.IGNORECASE)
+# v3.3: the contract-clause version this spec was written against (see lib/contract.py
+# pin_scenarios). Optional — an unpinned spec parses fine, drift just cannot be detected.
+_PINS_RE = re.compile(r"^\s*-\s*\*\*pins:\*\*\s*`?([0-9a-f]{6,64})`?\s*$", re.IGNORECASE)
 # Given / When / Then bullet — bold marker optional, prose follows
 _GWT_RE = re.compile(r"^-\s*\*\*(Given|When|Then|And)\*\*\s*(.*)$", re.IGNORECASE)
 
@@ -50,13 +60,17 @@ def parse(text: str) -> tuple[Scenario, ...]:
         sid = cur["id"]
         if not cur.get("requirement_key"):
             raise ScenarioParseError(f"scenario {sid} missing **verifies:** requirement key")
+        if not cur.get("run_cmd") and cur.get("case"):
+            cur["run_cmd"] = derived_run_cmd(cur["case"])          # v3.11 (C-1.5)
         if not cur.get("run_cmd"):
-            raise ScenarioParseError(f"scenario {sid} missing **run_cmd:**")
+            raise ScenarioParseError(f"scenario {sid} missing **run_cmd:** (or **case:**)")
         scenarios.append(Scenario(
             id=sid,
             requirement_key=cur["requirement_key"],
             gwt_text=" ".join(g.strip() for g in gwt if g.strip()).strip(),
             run_cmd=cur["run_cmd"],
+            clause_version=cur.get("clause_version", ""),
+            case=cur.get("case", ""),
         ))
         cur, gwt = None, []
 
@@ -81,6 +95,14 @@ def parse(text: str) -> tuple[Scenario, ...]:
         mr = _RUNCMD_RE.match(raw)
         if mr:
             cur["run_cmd"] = mr.group(1).strip()
+            continue
+        mc = _CASE_RE.match(raw)
+        if mc:
+            cur["case"] = mc.group(1).strip().replace("\\", "/")
+            continue
+        mp = _PINS_RE.match(raw)
+        if mp:
+            cur["clause_version"] = mp.group(1).strip()
             continue
         mg = _GWT_RE.match(raw)
         if mg:

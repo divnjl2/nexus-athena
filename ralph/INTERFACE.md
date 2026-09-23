@@ -69,7 +69,7 @@ blocks|tracks|related|parent-child|discovered-from — `implements` isn't one), 
 exactly what `trace_up(commit)` and the drift detector query via `bd list --label`. Only a
 **passed external gate** triggers the close; a fail leaves the issue open (livelock guard).
 
-See `athena-opus-plan-v4-bidirectional.md` for the full two-sided trace this enables
+See `docs/history/athena-opus-plan-v4-bidirectional.md` for the full two-sided trace this enables
 (`trace_down(spec)→commit`, `trace_up(commit)→spec`, `detect_drift`).
 
 ## Why DEFERRED

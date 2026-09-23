@@ -1,0 +1,18 @@
+# qa_integration runtime + service deps. Core logic is stdlib-only; these power the handles
+# and the real external seams (wired incrementally, injected today).
+
+# HTTP API handles
+fastapi>=0.110
+uvicorn>=0.29
+
+# real external seams (injected today; these make them live)
+coverage>=7.5              # coverage_parse_integration source (coverage xml)
+testcontainers>=4.0        # dependency_health_probe / real dependency stacks
+tenacity>=8.2               # bounded retry+timeout around health probes
+allure-pytest>=2.13        # report Allure output
+pytest-timeout>=2.3         # slow-test time budget
+pytest-rerunfailures>=14.0  # same-commit rerun for flaky classification
+
+# dev/test
+pytest>=8.0
+httpx>=0.27                 # FastAPI TestClient

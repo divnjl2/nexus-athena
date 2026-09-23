@@ -1,0 +1,185 @@
+# Contract Format — numbered clauses as the requirement root (v3.3)
+
+## Rule: a clause id is allocated once and never reused
+
+`contract.md` is the requirement registry. Every clause gets `C-<n>(.<n>)*`. Once written,
+the id is frozen: never renumber, never reuse, never repurpose. Every reference in the repo
+(`verifies:`, a bd label, a commit message, a review comment) is only as good as that rule.
+
+## Rule: a requirement is never edited in place — it is superseded
+
+Wording changed? Add a NEW clause and mark the old one:
+
+```markdown
+- **C-1.3** *(superseded-by C-1.4 C-1.5)* — WHEN a game starts THE SYSTEM SHALL set the score to zero.
+- **C-1.4** *(supersedes C-1.3)* — WHEN a game starts THE SYSTEM SHALL set the score to zero.
+- **C-1.5** *(supersedes C-1.3)* — WHEN a game starts THE SYSTEM SHALL set the multiplier to one.
+```
+
+`Contract.resolve("C-1.3")` now returns `(C-1.4, C-1.5)` — an old reference still lands
+somewhere current, which is exactly what renumbering destroys. Declare the link on either
+end; the parser reconstructs the other direction.
+
+Typo fixes and re-wrapping are NOT changes: the version hashes whitespace-normalized text.
+
+## Statuses
+
+| status | meaning | owed a passing spec? |
+|---|---|---|
+| `active` (default) | live requirement | **yes** — gate fails without one |
+| `draft` | written down, not yet promised | no — shows up as `backlog` in `todo` |
+| `superseded` | replaced by >=1 successor (implied by the link) | no |
+| `withdrawn` | dropped; a spec still pointing here is an orphan | no |
+
+## Syntax
+
+- Group heading: `## C-1 — Initial state` (grouping only; identity is the clause id).
+- Clause: `- **C-1.1** *(markers)* — WHEN <event> THE SYSTEM SHALL <response>.`
+- Markers, `;`-separated: `draft`, `withdrawn`, `superseded-by <ids>`, `supersedes <ids>`.
+- Sub-bullets: `- status:`, `- supersedes:`, `- superseded-by:`, `- tags:`, `- note:`.
+- An indented line that is none of those CONTINUES the clause text (wrapped prose is joined).
+
+## Origin: `source:` (v3.10)
+
+Where a clause came from, as an attribute the reports can scan rather than prose in a note:
+
+```markdown
+- **C-3.18** — WHEN a spec lane is given a single worker THE SYSTEM SHALL run its specs one at a time.
+  - source: ledger
+```
+
+Vocabulary: `design` (authored intent), `review`, `audit`, `incident`, `ledger`, `mutation`.
+Anything else is a lint issue. Every value except `design` is a failure signal, and a clause
+born from one is a **lesson**:
+
+```bash
+athena contract sources contract.md --text   # every clause under its source; unstated apart
+athena lessons list     contract.md --text   # the lessons, superseded ones carried forward
+athena lessons rerun    contract.md --text   # rerun exactly their specs; exit 1 if one is forgotten
+```
+
+A lesson is learned only while its proof still passes after the pyramid changed. A superseded
+lesson keeps its `source:` (the wrong guess stays on the record) and is rerun through the
+live clauses that replaced it. The origin never enters the clause version, so annotating an
+old clause invalidates no pin.
+
+## The core: `see: CORE.md@<fingerprint>` (v3.10)
+
+`athena init` writes a `CORE.md` (goal, language, priorities, constraints; under forty lines)
+next to a project's first contract and cites it from the first clause. A feature scaffolded
+under a project that already has one cites that one (`see: ../../CORE.md@...`). When the
+core changes, `athena contract refs` reports the citing clauses as **suspect** and `check`
+fails on the contract leg until somebody re-reads them and re-pins (`refs --write`). That is
+how a change to the principles becomes a conscious act instead of a drift.
+
+## Specs as data: `case:` (v3.11)
+
+A scenario may name a JSON case instead of a run command. It runs in the current process:
+
+```markdown
+### S2.5 — a decision record parses, as a case
+- **verifies:** C-2.1
+- **case:** `features/team-layer/cases/S2.5-adr-parses.json`
+```
+
+```json
+{"clause": "C-2.1",
+ "given": {"text": "# ADR-0007: ...\n- Status: accepted\n..."},
+ "when":  {"call": "lib.adr:parse_adr", "args": ["$text"]},
+ "then":  [{"path": "status", "equals": "accepted"}, {"path": "sections.decision", "startswith": "Record"}]}
+```
+
+Checks: `equals`, `contains`, `truthy`, `startswith`, `length`, `raises`, `pending` (red until
+written). The case's `clause` must match `verifies:` (the binding guard checks it). The
+run_cmd is derived (`python -m athena case run <file>`), so map, mutation and guard need
+nothing new. Prefer a case for a pure module; a pytest node is the fallback.
+
+## Ids on a parallel branch, and intake (v3.11)
+
+```bash
+ATHENA_LANE=2 athena contract next-id contract.md C-3        # -> C-3.2001 (lane 2 owns 2000..2999)
+athena intake contract.md --group C-3 --source incident \
+    --text "WHEN ... THE SYSTEM SHALL ..." --trace traces/turn7.json   # draft clause + red case
+athena adr lint docs/adr && athena adr unlinked docs/adr      # decisions: shape, and cited by someone
+```
+
+## Binding: one clause, one or more executable specs
+
+`scenarios.md` binds a spec to a clause and pins the wording it was written against:
+
+```markdown
+### S1.1 — new game places the snake
+- **verifies:** C-1.1
+- **pins:** 4f1c2b9ad3e77a10          <- written by `athena contract pin --write`
+- **run_cmd:** `pytest tests/test_snake_body.py::test_initial_placement -q`
+- **Given** ... - **When** ... - **Then** ...
+```
+
+Re-pin whenever a clause is superseded or a spec is rewritten. An unpinned spec is legal —
+drift simply cannot be detected for it.
+
+## Rule: a clause must be worth proving
+
+`athena contract lint` runs two passes. The first judges the WIRING (ids, refs, cycles) and
+is a hard error. The second judges the WORDING — the mechanically decidable subset of the
+ISO/IEC/IEEE 29148 §5.2.4 quality characteristics — and is advisory until `--strict`:
+
+| characteristic | code | fires on |
+|---|---|---|
+| Singular | `not_atomic`, `conjoined` | two SHALLs, or "... and shall ..." |
+| Unambiguous | `vague` | "properly", "as needed", "reasonable" |
+| Unambiguous | `weak_modal` | "THE SYSTEM should/may/can" — preference, not obligation |
+| Unambiguous | `and_or` | "and/or" — which one must hold? |
+| Unambiguous | `ambiguous_passive` | "SHALL be logged" — by whom? |
+| Verifiable | `unquantified` | "as fast as possible", "minimal", "adequate" |
+| Implementation-free | `names_mechanism` | "... **by** batching ..." — HOW belongs in design |
+| Complete | `placeholder` | "TBD" / "TODO" inside a live clause |
+| Conforming | `no_ears_shape`, `no_obligation` | no trigger, or no SHALL at all |
+| Consistent | `duplicate_of` | two live clauses, identical wording |
+| Traceable | — | not here: `contract coverage` proves it |
+| Necessary, Feasible | — | **not decidable by a linter** — needs a human or a judge model |
+
+Mentions are exempt: text inside `"quotes"` or `` `backticks` `` is not scanned, so a clause
+*about* vague wording can name it. Superseded and withdrawn clauses are exempt entirely —
+policing dead text would punish the discipline this format asks for.
+
+## The three questions (each a linear scan, no LLM)
+
+```bash
+athena contract coverage contract.md          # which clauses have no executable spec
+athena spec run scenarios.md                  # -> .athena/spec_ledger.json (red/green)
+athena contract todo contract.md --ledger ... # unspecified / red / unrun / stale / done + draft
+athena contract drift contract.md --ledger ... # spec_drift / stale_proof / missing / extra
+```
+
+`stale` and `stale_proof` are the ones no test suite can tell you: every spec is green, but
+it is proving an older wording of the requirement.
+
+## One command
+
+`athena check <contract.md> --front <plan.md> --run --text` runs the whole loop and answers
+with one verdict plus the failing leg. Reach for the individual commands below when it fails
+and you need the detail; `athena init <dir>` scaffolds a new feature already wired.
+
+## Gates
+
+- `athena seam contract_bound <front>` — a live clause with no spec, or a spec naming an
+  unknown/withdrawn clause, blocks the compile.
+- `athena seam map_fresh <front>` — the clause -> file:line map must still describe THIS
+  contract: absent, wrong pins, an unmapped live clause or an entry for a deleted one all
+  fail closed. Rebuild with `athena contract map`.
+
+Wire both before `compile` in CI.
+
+## Migration (never renumber)
+
+```bash
+athena contract import spec.md -o contract.md   # keeps R1.1 as R1.1 — refs keep resolving
+```
+
+## In the graph
+
+A pinned contract compiles to `kind:clause` nodes under the spec node, `related` edges along
+the supersede chain, and re-roots each scenario's `validates` edge from the spec document
+onto the clause it actually proves. With no contract attached the compiler output is
+byte-identical to v3.1 — adoption is per project.

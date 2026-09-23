@@ -1,0 +1,2941 @@
+{
+  "decisions": {
+    "C-1.1/S1.1": {
+      "counterexample": "remove the duplicate id check from parser",
+      "decision": "proves",
+      "reason": "Test fails if duplicate ids are allowed"
+    },
+    "C-1.1/S1.1#assert_true": {
+      "counterexample": "return None instead of raising on duplicate",
+      "decision": "proves",
+      "reason": "Test fails only if duplicate id raises error"
+    },
+    "C-1.1/S1.1#misbound": {
+      "counterexample": "add clause with same id twice",
+      "decision": "proves",
+      "reason": "Test checks duplicate id raises error, matching requirement."
+    },
+    "C-1.1/S1.1#no_assert": {
+      "counterexample": "allow duplicate clause ids",
+      "decision": "proves",
+      "reason": "Test fails if duplicate ids are allowed"
+    },
+    "C-1.1/S1.1#weakened": {
+      "counterexample": "remove the duplicate id check from parser",
+      "decision": "proves",
+      "reason": "Test fails if duplicate ids are allowed"
+    },
+    "C-1.10/S1.10": {
+      "counterexample": "remove the assert line",
+      "decision": "proves",
+      "reason": "Test asserts lint contains self-supersede message"
+    },
+    "C-1.10/S1.10#assert_true": {
+      "counterexample": "remove assert True, add assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement violation"
+    },
+    "C-1.10/S1.10#misbound": {
+      "counterexample": "remove lint check, test still passes",
+      "decision": "proves",
+      "reason": "Test asserts lint reports, but requirement is about reporting. If lint doesn't report, test fails. Requirement is proven."
+    },
+    "C-1.10/S1.10#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test fails if self-superseding clause is not linted."
+    },
+    "C-1.10/S1.10#weakened": {
+      "counterexample": "remove assert line",
+      "decision": "vacuous",
+      "reason": "assert checks None, not lint report"
+    },
+    "C-1.11/S1.11": {
+      "counterexample": "Remove the 'status: superseded' line from the clause.",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, as it checks for lint on superseded clause."
+    },
+    "C-1.11/S1.11#assert_true": {
+      "counterexample": "remove assert True, add assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement behavior"
+    },
+    "C-1.11/S1.11#misbound": {
+      "counterexample": "remove the assert line",
+      "decision": "proves",
+      "reason": "Test checks lint output; if requirement fails, lint won't report it."
+    },
+    "C-1.11/S1.11#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test fails if system doesn't lint superseded clause with no successor."
+    },
+    "C-1.11/S1.11#weakened": {
+      "counterexample": "Remove the assert line; test passes regardless of lint behavior",
+      "decision": "proves",
+      "reason": "Test asserts nothing about lint output, so requirement violation doesn't affect it"
+    },
+    "C-1.12/S1.12": {
+      "counterexample": "remove withdrawn or superseded, test still passes",
+      "decision": "proves",
+      "reason": "Test checks both flags present, but requirement only forbids both. Removing one still triggers lint, so test passes even if requirement violated."
+    },
+    "C-1.12/S1.12#assert_true": {
+      "counterexample": "remove assert True, add assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement outcome"
+    },
+    "C-1.12/S1.12#misbound": {
+      "counterexample": "Remove the withdrawn status from clause C-1",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, as it checks both statuses present"
+    },
+    "C-1.12/S1.12#no_assert": {
+      "counterexample": "remove withdrawn or superseded to keep test green",
+      "decision": "proves",
+      "reason": "Test fails if both withdrawn and superseded are allowed"
+    },
+    "C-1.12/S1.12#weakened": {
+      "counterexample": "remove assert line",
+      "decision": "vacuous",
+      "reason": "assert checks None, not lint output"
+    },
+    "C-1.13/S1.13": {
+      "counterexample": "Change lint to ignore unknown statuses",
+      "decision": "proves",
+      "reason": "Test fails if unknown status not reported as lint"
+    },
+    "C-1.13/S1.13#assert_true": {
+      "counterexample": "assert True always passes regardless of requirement",
+      "decision": "vacuous",
+      "reason": "Test asserts True, so it passes even if requirement is violated"
+    },
+    "C-1.13/S1.13#misbound": {
+      "counterexample": "remove the 'unknown status' check from lint",
+      "decision": "proves",
+      "reason": "Test fails if unknown status is allowed silently"
+    },
+    "C-1.13/S1.13#no_assert": {
+      "counterexample": "Make status 'maybe' treated as active",
+      "decision": "proves",
+      "reason": "Test checks unknown status triggers lint, not active"
+    },
+    "C-1.13/S1.13#weakened": {
+      "counterexample": "Change assert to assert False, test passes only if requirement holds",
+      "decision": "proves",
+      "reason": "Test asserts status 'maybe' triggers lint, not active"
+    },
+    "C-1.14/S1.14": {
+      "counterexample": "remove the note assertion for C-2",
+      "decision": "proves",
+      "reason": "Test checks unrecognised token becomes a note"
+    },
+    "C-1.14/S1.14#assert_true": {
+      "counterexample": "remove all assert statements",
+      "decision": "vacuous",
+      "reason": "test asserts nothing about attribute handling"
+    },
+    "C-1.14/S1.14#misbound": {
+      "counterexample": "Change C-1 tags to derive from text, not marker",
+      "decision": "vacuous",
+      "reason": "Test checks marker parsing, not text-only derivation"
+    },
+    "C-1.14/S1.14#no_assert": {
+      "counterexample": "remove note handling for unrecognised tokens",
+      "decision": "proves",
+      "reason": "Test checks unrecognised token becomes a note"
+    },
+    "C-1.14/S1.14#weakened": {
+      "counterexample": "remove the assert about unrecognised token",
+      "decision": "vacuous",
+      "reason": "test asserts nothing about unrecognised token handling"
+    },
+    "C-1.2/S1.2": {
+      "counterexample": "remove assert old.status == CLAUSE_SUPERSEDED",
+      "decision": "proves",
+      "reason": "Test checks status is superseded, requirement mandates it."
+    },
+    "C-1.2/S1.2#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "test asserts nothing meaningful about requirement"
+    },
+    "C-1.2/S1.2#misbound": {
+      "counterexample": "Make supersede link only one-way, test still passes",
+      "decision": "proves",
+      "reason": "Test checks resolution, not bidirectional reconstruction"
+    },
+    "C-1.2/S1.2#no_assert": {
+      "counterexample": "mark clause as superseded but make old id unresolvable",
+      "decision": "proves",
+      "reason": "Test checks old id resolves after superseding, directly testing requirement"
+    },
+    "C-1.2/S1.2#weakened": {
+      "counterexample": "remove assert old is not None twice",
+      "decision": "proves",
+      "reason": "Test checks old id resolves via resolve method"
+    },
+    "C-1.3/S1.3": {
+      "counterexample": "Make supersede link one-way only.",
+      "decision": "proves",
+      "reason": "Test checks both directions, requirement only one."
+    },
+    "C-1.3/S1.3#assert_true": {
+      "counterexample": "remove all asserts, test always passes",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks requirement"
+    },
+    "C-1.3/S1.3#misbound": {
+      "counterexample": "Make resolve() return empty list for old clause",
+      "decision": "proves",
+      "reason": "Test checks resolve returns new clause, requirement demands it"
+    },
+    "C-1.3/S1.3#no_assert": {
+      "counterexample": "Make supersede link one-way only.",
+      "decision": "proves",
+      "reason": "Test checks symmetry; one-way link breaks requirement."
+    },
+    "C-1.3/S1.3#weakened": {
+      "counterexample": "Make supersede link one-way only.",
+      "decision": "proves",
+      "reason": "Test checks both directions via symmetric resolution."
+    },
+    "C-1.4/S1.4": {
+      "counterexample": "Make C-2 not superseded by C-3 or C-4",
+      "decision": "proves",
+      "reason": "Test checks resolution of C-1 through its superseded-by chain"
+    },
+    "C-1.4/S1.4#assert_true": {
+      "counterexample": "Remove C-3 and C-4, keep only C-2. C-2 still resolves to itself, not old references. Test passes but requirement fails.",
+      "decision": "proves",
+      "reason": "Test asserts nothing about resolution, so it passes even if requirement is violated."
+    },
+    "C-1.4/S1.4#misbound": {
+      "counterexample": "Add a cycle to the supersede chain, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks transitive resolution, not cycle detection"
+    },
+    "C-1.4/S1.4#no_assert": {
+      "counterexample": "Remove resolution of C-3, C-4 from C-2's old reference",
+      "decision": "proves",
+      "reason": "Test fails if old reference not resolved to all current clauses"
+    },
+    "C-1.4/S1.4#weakened": {
+      "counterexample": "Make C-2 not superseded by C-3 or C-4",
+      "decision": "proves",
+      "reason": "Test checks resolution of C-1 through its superseded-by chain"
+    },
+    "C-1.5/S1.5": {
+      "counterexample": "remove cycle detection from lint, return empty issues",
+      "decision": "proves",
+      "reason": "Test checks cycle detection; removing it breaks requirement but test still passes"
+    },
+    "C-1.5/S1.5#assert_true": {
+      "counterexample": "remove assert True lines",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing meaningful about cycle detection"
+    },
+    "C-1.5/S1.5#misbound": {
+      "counterexample": "wrap lines but truncate tail",
+      "decision": "proves",
+      "reason": "Test checks wrapping without truncation, so truncation breaks it."
+    },
+    "C-1.5/S1.5#no_assert": {
+      "counterexample": "modify lint to silently ignore cycles",
+      "decision": "proves",
+      "reason": "Test checks cycle detection; ignoring cycles breaks requirement"
+    },
+    "C-1.5/S1.5#weakened": {
+      "counterexample": "remove assert statements",
+      "decision": "vacuous",
+      "reason": "Test asserts c exists, not cycle detection"
+    },
+    "C-1.6/S1.6": {
+      "counterexample": "truncate continuation line, test still passes",
+      "decision": "proves",
+      "reason": "Test checks endswith, not full text preservation"
+    },
+    "C-1.6/S1.6#assert_true": {
+      "counterexample": "return None from parse",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of behavior"
+    },
+    "C-1.6/S1.6#misbound": {
+      "counterexample": "remove clause C-1.1 from contract",
+      "decision": "vacuous",
+      "reason": "Test checks C-1.1 text, not supersede reference behavior"
+    },
+    "C-1.6/S1.6#no_assert": {
+      "counterexample": "def test_wrapped_clause_text_is_not_truncated(): c = parse(BASIC); assert c == 'WRAPPED', ",
+      "decision": "proves",
+      "reason": ""
+    },
+    "C-1.6/S1.6#weakened": {
+      "counterexample": "return None from parse",
+      "decision": "vacuous",
+      "reason": "Test only checks parse returns non-None, not clause text joining"
+    },
+    "C-1.7/S1.7": {
+      "counterexample": "remove assert for unknown clause C-9",
+      "decision": "proves",
+      "reason": "Test asserts lint reports unknown clause, matching requirement"
+    },
+    "C-1.7/S1.7#assert_true": {
+      "counterexample": "remove assert True lines",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about lint vs crash behavior"
+    },
+    "C-1.7/S1.7#misbound": {
+      "counterexample": "remove the indented sub-bullet, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks lint, not parsing indented sub-bullets"
+    },
+    "C-1.7/S1.7#no_assert": {
+      "counterexample": "Make the supersede reference point to a clause that exists in the contract.",
+      "decision": "proves",
+      "reason": "Test checks dangling reference handling, matching requirement exactly."
+    },
+    "C-1.7/S1.7#weakened": {
+      "counterexample": "Make supersede reference point to non-existent clause",
+      "decision": "proves",
+      "reason": "Test checks lint on missing clause supersede"
+    },
+    "C-1.8/S1.8": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks note exclusion, which requirement mandates."
+    },
+    "C-1.8/S1.8#assert_true": {
+      "counterexample": "remove all assertions, test still passes",
+      "decision": "vacuous",
+      "reason": "test asserts nothing about requirement behavior"
+    },
+    "C-1.8/S1.8#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks sub-bullets, not missing normative sentences."
+    },
+    "C-1.8/S1.8#no_assert": {
+      "counterexample": "Remove the note line from sub-bullets; test still passes.",
+      "decision": "proves",
+      "reason": "Test checks notes are excluded; removing them keeps test green."
+    },
+    "C-1.8/S1.8#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts note excluded from text, matching requirement."
+    },
+    "C-1.9/S1.9": {
+      "counterexample": "remove the assert line",
+      "decision": "proves",
+      "reason": "Test checks lint reports empty clause; if requirement violated, lint won't report it, test fails"
+    },
+    "C-1.9/S1.9#assert_true": {
+      "counterexample": "remove assert True",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-1.9/S1.9#misbound": {
+      "counterexample": "Remove the check for 'empty clause text' from the lint function.",
+      "decision": "proves",
+      "reason": "Test checks for empty clause text, which requirement does not specify."
+    },
+    "C-1.9/S1.9#no_assert": {
+      "counterexample": "Remove the test entirely or make it always pass",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about empty clause linting"
+    },
+    "C-1.9/S1.9#weakened": {
+      "counterexample": "remove assert line",
+      "decision": "vacuous",
+      "reason": "assertion is always true regardless of requirement"
+    },
+    "C-10.1/S10.1": {
+      "counterexample": "src with docstring mutated to equivalent code",
+      "decision": "proves",
+      "reason": "Test checks docstrings are never mutated sites"
+    },
+    "C-10.1/S10.1#assert_true": {
+      "counterexample": "src with docstring mutated, test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about docstring mutation behavior"
+    },
+    "C-10.1/S10.1#misbound": {
+      "counterexample": "mutate line 2 (docstring) to break requirement",
+      "decision": "proves",
+      "reason": "Test asserts docstrings are not mutation sites"
+    },
+    "C-10.1/S10.1#no_assert": {
+      "counterexample": "src with docstring mutated to equivalent code",
+      "decision": "proves",
+      "reason": "Test checks docstring is skipped; mutating it would break requirement"
+    },
+    "C-10.1/S10.1#weakened": {
+      "counterexample": "add a mutation that flips the docstring's 'not' to 'and'",
+      "decision": "proves",
+      "reason": "Test checks docstring is untouched; mutating it would still pass."
+    },
+    "C-10.10/S10.10": {
+      "counterexample": "remove model/temperature checks",
+      "decision": "proves",
+      "reason": "Test checks model/temperature recorded"
+    },
+    "C-10.10/S10.10#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of requirement"
+    },
+    "C-10.10/S10.10#misbound": {
+      "counterexample": "remove neutralisation logic, test still passes",
+      "decision": "proves",
+      "reason": "Test checks prompt_sha differs, not marker removal"
+    },
+    "C-10.10/S10.10#no_assert": {
+      "counterexample": "remove model id from record",
+      "decision": "proves",
+      "reason": "Test checks model id is recorded; removing it breaks requirement but test still passes"
+    },
+    "C-10.10/S10.10#weakened": {
+      "counterexample": "remove all assertions, test passes regardless",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about model id or prompt hash"
+    },
+    "C-10.11/S10.11": {
+      "counterexample": "def sanitize(s): return s",
+      "decision": "proves",
+      "reason": "Test passes if all markers removed, but requirement demands markers neutralised, not removed."
+    },
+    "C-10.11/S10.11#assert_true": {
+      "counterexample": "def sanitize(x): return x",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of sanitize behavior"
+    },
+    "C-10.11/S10.11#misbound": {
+      "counterexample": "Remove the assert about WHEN clause surviving",
+      "decision": "vacuous",
+      "reason": "Test checks sanitization, not judge demotion"
+    },
+    "C-10.11/S10.11#no_assert": {
+      "counterexample": "def sanitize(x): return x",
+      "decision": "proves",
+      "reason": "Test passes if sanitize does nothing, violating requirement."
+    },
+    "C-10.11/S10.11#weakened": {
+      "counterexample": "return hostile",
+      "decision": "proves",
+      "reason": "Test fails if sanitization does nothing"
+    },
+    "C-10.12/S10.12": {
+      "counterexample": "Judge greenlights p2 but mutation runner calls vacuous; test asserts demote_to_advisory is True, which matches requirement. No change needed.",
+      "decision": "proves",
+      "reason": "Test asserts demote_to_advisory when judge greenlights and mutation runner calls vacuous, exactly matching requirement."
+    },
+    "C-10.12/S10.12#assert_true": {
+      "counterexample": "mutation p3 True but requirement says p2 vacuous",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks requirement condition"
+    },
+    "C-10.12/S10.12#misbound": {
+      "counterexample": "change source extraction to extract nothing",
+      "decision": "proves",
+      "reason": "Test checks source extraction behavior directly"
+    },
+    "C-10.12/S10.12#no_assert": {
+      "counterexample": "Change p2 decision to proves, keep mutation True",
+      "decision": "vacuous",
+      "reason": "Test checks p2 alone, not pair greenlight scenario"
+    },
+    "C-10.12/S10.12#weakened": {
+      "counterexample": "Change p2 decision to proves, keep mutation True",
+      "decision": "vacuous",
+      "reason": "Test checks agreement, not demotion logic"
+    },
+    "C-10.13/S10.13": {
+      "counterexample": "module = \"def test_b():\n    assert 2\n\"",
+      "decision": "proves",
+      "reason": "Test fails if spec_function returns wrong function"
+    },
+    "C-10.13/S10.13#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about module content."
+    },
+    "C-10.13/S10.13#misbound": {
+      "counterexample": "spec_function returns any string for unknown names",
+      "decision": "vacuous",
+      "reason": "Test checks known function, not unknown degradation"
+    },
+    "C-10.13/S10.13#no_assert": {
+      "counterexample": "module = \"import x\\n\\n\\ndef test_a():\\n    assert 1\\n\\n\\ndef test_b():\\n    assert 2\\n\"",
+      "decision": "proves",
+      "reason": "Test fails if wrong function extracted, proving requirement."
+    },
+    "C-10.13/S10.13#weakened": {
+      "counterexample": "spec_function = None",
+      "decision": "proves",
+      "reason": "Test asserts spec_function is not None, violating requirement."
+    },
+    "C-10.14/S10.14": {
+      "counterexample": "remove the ValueError raise",
+      "decision": "proves",
+      "reason": "Test fails if unknown defect is not refused"
+    },
+    "C-10.14/S10.14#assert_true": {
+      "counterexample": "remove the ValueError raise",
+      "decision": "proves",
+      "reason": "Test fails if unknown defect is not refused"
+    },
+    "C-10.14/S10.14#misbound": {
+      "counterexample": "remove ValueError raise, test still passes",
+      "decision": "proves",
+      "reason": "Test checks ValueError for unknown defect, requirement about file/line not tested"
+    },
+    "C-10.14/S10.14#no_assert": {
+      "counterexample": "remove the ValueError raise",
+      "decision": "proves",
+      "reason": "Test fails if unknown defect is not refused"
+    },
+    "C-10.14/S10.14#weakened": {
+      "counterexample": "remove the ValueError raise",
+      "decision": "proves",
+      "reason": "Test expects ValueError for unknown defect"
+    },
+    "C-10.15/S10.15": {
+      "counterexample": "m.path = \"wrong.py\"; m.line = 99",
+      "decision": "proves",
+      "reason": "Test checks path and line match requirement"
+    },
+    "C-10.15/S10.15#assert_true": {
+      "counterexample": "m.path = None",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks path or line."
+    },
+    "C-10.15/S10.15#misbound": {
+      "counterexample": "delete pristine sources before test runs",
+      "decision": "vacuous",
+      "reason": "Test checks mutant source, not disk persistence"
+    },
+    "C-10.15/S10.15#no_assert": {
+      "counterexample": "mutant file/line mismatch",
+      "decision": "proves",
+      "reason": "Test checks mutant carries break location"
+    },
+    "C-10.15/S10.15#weakened": {
+      "counterexample": "mutant with no source line",
+      "decision": "vacuous",
+      "reason": "Test asserts source contains !=, not line number"
+    },
+    "C-10.16/S10.16": {
+      "counterexample": "delete snapshot call, keep lock missing",
+      "decision": "proves",
+      "reason": "Test asserts pristine sources restored on kill"
+    },
+    "C-10.16/S10.16#assert_true": {
+      "counterexample": "delete all source files after kill",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks sources exist"
+    },
+    "C-10.16/S10.16#misbound": {
+      "counterexample": "Make recover ignore mutants and always return empty tuple",
+      "decision": "proves",
+      "reason": "Test expects recover to stop at mutant and report run"
+    },
+    "C-10.16/S10.16#no_assert": {
+      "counterexample": "delete lib/ files after kill, keep snapshot",
+      "decision": "proves",
+      "reason": "Test checks sources restored, not left on disk"
+    },
+    "C-10.16/S10.16#weakened": {
+      "counterexample": "delete source files after kill, test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts recover returns, not that sources are restored"
+    },
+    "C-10.17/S10.17": {
+      "counterexample": "Make runner return 0 mutants, capped still 1",
+      "decision": "proves",
+      "reason": "Test checks capped length, not runner behavior"
+    },
+    "C-10.17/S10.17#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of requirement"
+    },
+    "C-10.17/S10.17#misbound": {
+      "counterexample": "run mutants in repo, test still passes",
+      "decision": "vacuous",
+      "reason": "Test only checks mutant count, not working tree"
+    },
+    "C-10.17/S10.17#no_assert": {
+      "counterexample": "remove max_mutants=1, test still passes",
+      "decision": "proves",
+      "reason": "Test checks capped hunt stops, but uncapped also stops"
+    },
+    "C-10.17/S10.17#weakened": {
+      "counterexample": "assert len(capped) == 0",
+      "decision": "vacuous",
+      "reason": "Test asserts len is not None, always true regardless of cap behavior"
+    },
+    "C-10.18/S10.18": {
+      "counterexample": "If isolate copies .git history into mirror, test fails on second assert",
+      "decision": "proves",
+      "reason": "Test asserts history never copied, requirement says mirror of repo"
+    },
+    "C-10.18/S10.18#assert_true": {
+      "counterexample": "mirror.write_text() would still pass",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, ignoring actual isolation."
+    },
+    "C-10.18/S10.18#misbound": {
+      "counterexample": "Make isolate return same pin for different templates",
+      "decision": "proves",
+      "reason": "Test checks pin changes with template change"
+    },
+    "C-10.18/S10.18#no_assert": {
+      "counterexample": "Make isolate copy files to repo instead of mirror",
+      "decision": "proves",
+      "reason": "Test checks mirror isolation, not repo modification"
+    },
+    "C-10.18/S10.18#weakened": {
+      "counterexample": "Make isolate modify repo instead of mirror",
+      "decision": "proves",
+      "reason": "Test checks mirror unchanged when repo mutated"
+    },
+    "C-10.19/S10.19": {
+      "counterexample": "return same pin for different templates",
+      "decision": "proves",
+      "reason": "Test checks pin changes with template change"
+    },
+    "C-10.19/S10.19#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks pin change."
+    },
+    "C-10.19/S10.19#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks fingerprint, not clause id allocation."
+    },
+    "C-10.19/S10.19#no_assert": {
+      "counterexample": "return same pin for different templates",
+      "decision": "proves",
+      "reason": "Test checks pin changes with template change"
+    },
+    "C-10.19/S10.19#weakened": {
+      "counterexample": "return same pin for different templates",
+      "decision": "proves",
+      "reason": "Test checks pin changes with template change"
+    },
+    "C-10.2/S10.2": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks all clause specs for a line"
+    },
+    "C-10.2/S10.2#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-10.2/S10.2#misbound": {
+      "counterexample": "Make scoped_specs return wrong spec for line 5",
+      "decision": "proves",
+      "reason": "Test checks correct spec selection per line ownership"
+    },
+    "C-10.2/S10.2#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test enforces spec coverage per line owner"
+    },
+    "C-10.2/S10.2#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts scoped_specs exists, not that all clauses run."
+    },
+    "C-10.3/S10.3": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts halt at first red spec and restore original"
+    },
+    "C-10.3/S10.3#assert_true": {
+      "counterexample": "hunt returns wrong source but test asserts True",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of behavior"
+    },
+    "C-10.3/S10.3#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts surviving mutants named with file/line"
+    },
+    "C-10.3/S10.3#no_assert": {
+      "counterexample": "hunt returns wrong source or stops at wrong spec",
+      "decision": "proves",
+      "reason": "Test checks restore and stop at first red spec"
+    },
+    "C-10.3/S10.3#weakened": {
+      "counterexample": "restore original source to false, test still passes",
+      "decision": "proves",
+      "reason": "Test checks killed specs, not source restoration"
+    },
+    "C-10.4/S10.4": {
+      "counterexample": "remove line check from survivors",
+      "decision": "proves",
+      "reason": "Test checks survivors[0] line, requirement demands line"
+    },
+    "C-10.4/S10.4#assert_true": {
+      "counterexample": "remove all assert True statements",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement outcome"
+    },
+    "C-10.4/S10.4#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks survivors derived from mechanical degradations, matching requirement."
+    },
+    "C-10.4/S10.4#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks survivors are named; if violated, test fails."
+    },
+    "C-10.4/S10.4#weakened": {
+      "counterexample": "return None",
+      "decision": "vacuous",
+      "reason": "Test only checks rep is not None"
+    },
+    "C-10.5/S10.5": {
+      "counterexample": "replace 'proves' with 'vacuous' in label",
+      "decision": "proves",
+      "reason": "label must come from mechanical degradation, not model"
+    },
+    "C-10.5/S10.5#assert_true": {
+      "counterexample": "replace label derivation with model output",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks label source"
+    },
+    "C-10.5/S10.5#misbound": {
+      "counterexample": "label pair not vacuous but test still passes",
+      "decision": "proves",
+      "reason": "Test asserts label is 'proves', not 'vacuous'"
+    },
+    "C-10.5/S10.5#no_assert": {
+      "counterexample": "Use a mutable label field instead of frozen",
+      "decision": "proves",
+      "reason": "Mutable labels break requirement but test still passes"
+    },
+    "C-10.5/S10.5#weakened": {
+      "counterexample": "change corpus labels to 'vacuous' for all pairs",
+      "decision": "proves",
+      "reason": "Test asserts labels come from mechanical degradations, not model"
+    },
+    "C-10.6/S10.6": {
+      "counterexample": "Change label to 'proves' and keep misbound true",
+      "decision": "proves",
+      "reason": "Test fails if label is not vacuous for misbound pair"
+    },
+    "C-10.6/S10.6#assert_true": {
+      "counterexample": "remove assert True, change label to 'valid'",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about labeling, always passes"
+    },
+    "C-10.6/S10.6#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks label is vacuous for misbound pair"
+    },
+    "C-10.6/S10.6#no_assert": {
+      "counterexample": "remove the label='proves' assignment",
+      "decision": "proves",
+      "reason": "Test checks misbound specs are labeled vacuous"
+    },
+    "C-10.6/S10.6#weakened": {
+      "counterexample": "remove label='proves' to make pair_b not vacuous",
+      "decision": "proves",
+      "reason": "Test checks misbound detection, which requirement mandates."
+    },
+    "C-10.7/S10.7": {
+      "counterexample": "change 'discarded' to 'rejected' in first assert",
+      "decision": "proves",
+      "reason": "If refutation is not discarded, test fails on first assert"
+    },
+    "C-10.7/S10.7#assert_true": {
+      "counterexample": "assert False",
+      "decision": "proves",
+      "reason": "Test fails if refutation is kept instead of discarded"
+    },
+    "C-10.7/S10.7#misbound": {
+      "counterexample": "remove threshold check in adjudicate",
+      "decision": "proves",
+      "reason": "Test expects decision based on thresholds, not refutation logic"
+    },
+    "C-10.7/S10.7#no_assert": {
+      "counterexample": "change opinion to refuted=False",
+      "decision": "proves",
+      "reason": "test would pass if refutation not discarded"
+    },
+    "C-10.7/S10.7#weakened": {
+      "counterexample": "return None for all verdicts",
+      "decision": "proves",
+      "reason": "Test fails if refutation is never discarded"
+    },
+    "C-10.8/S10.8": {
+      "counterexample": "Make thresholds dynamic per run, not fixed.",
+      "decision": "proves",
+      "reason": "Test checks fixed thresholds decide eligibility."
+    },
+    "C-10.8/S10.8#assert_true": {
+      "counterexample": "make thresholds dynamic per run",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement"
+    },
+    "C-10.8/S10.8#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks thresholds, not false reject counting on reject."
+    },
+    "C-10.8/S10.8#no_assert": {
+      "counterexample": "Make thresholds dynamic per run, test still passes",
+      "decision": "proves",
+      "reason": "Test checks fixed thresholds, but dynamic thresholds would still pass"
+    },
+    "C-10.8/S10.8#weakened": {
+      "counterexample": "Make thresholds dynamic per run, test still passes",
+      "decision": "proves",
+      "reason": "Test checks thresholds exist, not that they are fixed before run"
+    },
+    "C-10.9/S10.9": {
+      "counterexample": "Change decision to 'pass' for one good spec",
+      "decision": "proves",
+      "reason": "Test fails if false reject not counted separately"
+    },
+    "C-10.9/S10.9#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement."
+    },
+    "C-10.9/S10.9#misbound": {
+      "counterexample": "remove model id recording, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks recall and false reject, not model id recording"
+    },
+    "C-10.9/S10.9#no_assert": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test passes regardless of requirement violation."
+    },
+    "C-10.9/S10.9#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts rep is not None, not false reject count."
+    },
+    "C-2.1/S2.1": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks per-clause independence, matching requirement."
+    },
+    "C-2.1/S2.1#assert_true": {
+      "counterexample": "Edit a different clause; test still passes.",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing meaningful about clause isolation."
+    },
+    "C-2.1/S2.1#misbound": {
+      "counterexample": "replace clause text with extra spaces only",
+      "decision": "proves",
+      "reason": "Test checks version unchanged on re-wrap/re-space"
+    },
+    "C-2.1/S2.1#no_assert": {
+      "counterexample": "editing a different clause keeps test green",
+      "decision": "proves",
+      "reason": "Test only checks one clause, not others"
+    },
+    "C-2.1/S2.1#weakened": {
+      "counterexample": "Edit a different clause, test still passes",
+      "decision": "vacuous",
+      "reason": "Test only checks c1, not c2's pin"
+    },
+    "C-2.2/S2.2": {
+      "counterexample": "Modify parse to change version on re-wrap",
+      "decision": "proves",
+      "reason": "Test fails if version changes on re-wrap"
+    },
+    "C-2.2/S2.2#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-2.2/S2.2#misbound": {
+      "counterexample": "Change version to differ between one_line and wrapped",
+      "decision": "proves",
+      "reason": "Test checks version unchanged by reflowing text"
+    },
+    "C-2.2/S2.2#no_assert": {
+      "counterexample": "replace 'unchanged' with 'changed' in test",
+      "decision": "proves",
+      "reason": "Test checks version unchanged; changing it breaks requirement"
+    },
+    "C-2.2/S2.2#weakened": {
+      "counterexample": "Change parse to return a different version number",
+      "decision": "proves",
+      "reason": "Test checks version unchanged, so different version breaks it"
+    },
+    "C-2.3/S2.3": {
+      "counterexample": "Make pin_scenarios ignore stale pins and never update version",
+      "decision": "proves",
+      "reason": "Test checks stale pin replacement, which requirement mandates"
+    },
+    "C-2.3/S2.3#assert_true": {
+      "counterexample": "return empty pinned dict, test asserts True always",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks requirement behavior"
+    },
+    "C-2.3/S2.3#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks pin insertion and version refresh, directly enforcing requirement."
+    },
+    "C-2.3/S2.3#no_assert": {
+      "counterexample": "Return stale pin unchanged, no version update",
+      "decision": "proves",
+      "reason": "Test checks version replacement on stale pin"
+    },
+    "C-2.3/S2.3#weakened": {
+      "counterexample": "Make pin_scenarios ignore stale pins and never update version",
+      "decision": "proves",
+      "reason": "Test checks stale pin replacement, which requirement mandates"
+    },
+    "C-2.4/S2.4": {
+      "counterexample": "return AST with empty clause_version for pinned spec",
+      "decision": "proves",
+      "reason": "Test asserts pinned spec has non-empty clause_version"
+    },
+    "C-2.4/S2.4#assert_true": {
+      "counterexample": "Remove pin line from text; test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about pin presence; always passes"
+    },
+    "C-2.4/S2.4#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks clause_version, not contract ids or registry version."
+    },
+    "C-2.4/S2.4#no_assert": {
+      "counterexample": "return empty dict for both specs",
+      "decision": "proves",
+      "reason": "Test checks pin presence in AST; removing it fails test"
+    },
+    "C-2.4/S2.4#weakened": {
+      "counterexample": "Remove pin line from text; test still passes",
+      "decision": "vacuous",
+      "reason": "Test only checks a and b are not None, not pin presence"
+    },
+    "C-2.5/S2.5": {
+      "counterexample": "render() could drop clauses, test still passes if clauses match",
+      "decision": "proves",
+      "reason": "Test checks clause equality and version, but not supersede links preservation"
+    },
+    "C-2.5/S2.5#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-2.5/S2.5#misbound": {
+      "counterexample": "return results in wrong order",
+      "decision": "vacuous",
+      "reason": "Test checks id/status equality, not order"
+    },
+    "C-2.5/S2.5#no_assert": {
+      "counterexample": "remove id/status checks from test",
+      "decision": "proves",
+      "reason": "Test checks ids/statuses preserved, requirement requires all four fields"
+    },
+    "C-2.5/S2.5#weakened": {
+      "counterexample": "render() ignores registry version",
+      "decision": "proves",
+      "reason": "Test checks ids/statuses/links but not registry version"
+    },
+    "C-3.1/S3.1": {
+      "counterexample": "remove slow_first or make it fast",
+      "decision": "proves",
+      "reason": "Test enforces document order; breaking it makes test fail"
+    },
+    "C-3.1/S3.1#assert_true": {
+      "counterexample": "remove slow_first or make it fast",
+      "decision": "proves",
+      "reason": "Test asserts True always, so it passes even if order is wrong"
+    },
+    "C-3.1/S3.1#misbound": {
+      "counterexample": "Make slow_first finish in document order, not reverse.",
+      "decision": "proves",
+      "reason": "Test checks order matches document order, not completion order."
+    },
+    "C-3.1/S3.1#no_assert": {
+      "counterexample": "remove slow_first or make it fast",
+      "decision": "proves",
+      "reason": "Test enforces document order; breaking it makes test fail"
+    },
+    "C-3.1/S3.1#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test enforces document order via assertion"
+    },
+    "C-3.12/S3.12": {
+      "counterexample": "remove contract argument from select calls",
+      "decision": "proves",
+      "reason": "Test fails if contract filtering is broken"
+    },
+    "C-3.12/S3.12#assert_true": {
+      "counterexample": "remove select calls, test always passes",
+      "decision": "proves",
+      "reason": "Test asserts True always, so requirement violation doesn't affect it"
+    },
+    "C-3.12/S3.12#misbound": {
+      "counterexample": "remove all shell metacharacters from run_cmd",
+      "decision": "vacuous",
+      "reason": "Test checks tag filtering, not run_cmd parsing"
+    },
+    "C-3.12/S3.12#no_assert": {
+      "counterexample": "remove contract arg from select calls",
+      "decision": "proves",
+      "reason": "Test fails if tags ignored, proving requirement holds"
+    },
+    "C-3.12/S3.12#weakened": {
+      "counterexample": "remove select function or make it ignore tags",
+      "decision": "proves",
+      "reason": "Test checks tag filtering; removing it breaks requirement"
+    },
+    "C-3.13/S3.13": {
+      "counterexample": "Allow execution of dangerous/empty cmds, test still passes",
+      "decision": "proves",
+      "reason": "Test asserts refusal, but allows execution would still pass if output matches"
+    },
+    "C-3.13/S3.13#assert_true": {
+      "counterexample": "modify run_specs to always return green specs",
+      "decision": "proves",
+      "reason": "Test asserts red for dangerous cmds, but code returns green always"
+    },
+    "C-3.13/S3.13#misbound": {
+      "counterexample": "Modify run_cmd to execute without tokenization, test still passes",
+      "decision": "proves",
+      "reason": "Test asserts command never reaches subprocess, matching shell-less requirement"
+    },
+    "C-3.13/S3.13#no_assert": {
+      "counterexample": "return _Ok() even on bad cmd",
+      "decision": "proves",
+      "reason": "Test asserts bad cmds are refused and recorded red"
+    },
+    "C-3.13/S3.13#weakened": {
+      "counterexample": "Modify run_specs to always return green specs",
+      "decision": "proves",
+      "reason": "Test checks red status for dangerous/empty cmds"
+    },
+    "C-3.14/S3.14": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts shell=False on accepted run_cmd"
+    },
+    "C-3.14/S3.14#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of behavior."
+    },
+    "C-3.14/S3.14#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks shell=False, not worker count logic."
+    },
+    "C-3.14/S3.14#no_assert": {
+      "counterexample": "run_cmd not tokenized but still shell-less",
+      "decision": "proves",
+      "reason": "Test checks shell=False, not tokenization"
+    },
+    "C-3.14/S3.14#weakened": {
+      "counterexample": "modify run_specs to not tokenize or shell=False",
+      "decision": "proves",
+      "reason": "Test checks tokenization and shell=False enforcement"
+    },
+    "C-3.15/S3.15": {
+      "counterexample": "return 8 regardless of cpu_count",
+      "decision": "proves",
+      "reason": "Test fails if default_jobs ignores cpu_count"
+    },
+    "C-3.15/S3.15#assert_true": {
+      "counterexample": "remove all monkeypatches, assert False",
+      "decision": "vacuous",
+      "reason": "test always passes regardless of cpu_count behavior"
+    },
+    "C-3.15/S3.15#misbound": {
+      "counterexample": "Remove env var merging; test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks CPU count, not env var merging"
+    },
+    "C-3.15/S3.15#no_assert": {
+      "counterexample": "set cpu_count to 0, test still passes",
+      "decision": "proves",
+      "reason": "Test asserts cpu_count is bounded, not equal to cores"
+    },
+    "C-3.15/S3.15#weakened": {
+      "counterexample": "set default_jobs to 0, test still passes",
+      "decision": "proves",
+      "reason": "Test asserts default_jobs exists, not its value"
+    },
+    "C-3.16/S3.16": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks merged env vars include inherited ones"
+    },
+    "C-3.16/S3.16#assert_true": {
+      "counterexample": "remove env dict, test still passes",
+      "decision": "vacuous",
+      "reason": "asserts True always, checks nothing"
+    },
+    "C-3.16/S3.16#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks env merging, not single-worker spec execution."
+    },
+    "C-3.16/S3.16#no_assert": {
+      "counterexample": "remove merge logic, test still passes",
+      "decision": "proves",
+      "reason": "Test checks pinned env is present, not merged"
+    },
+    "C-3.16/S3.16#weakened": {
+      "counterexample": "remove env dict, test still passes",
+      "decision": "vacuous",
+      "reason": "Test only checks seen is not None, not merged"
+    },
+    "C-3.18/S3.18": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test enforces single-worker serial execution"
+    },
+    "C-3.18/S3.18#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about single-worker behavior."
+    },
+    "C-3.18/S3.18#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks live['max']==1 when jobs=1, matching requirement."
+    },
+    "C-3.18/S3.18#no_assert": {
+      "counterexample": "remove lock to allow parallel execution",
+      "decision": "proves",
+      "reason": "Test checks max concurrent specs equals one"
+    },
+    "C-3.18/S3.18#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks max concurrency, not single-worker constraint."
+    },
+    "C-3.2/S3.2": {
+      "counterexample": "Make red specs not red (e.g., green) and test still passes",
+      "decision": "proves",
+      "reason": "Test checks red status and run continues, matching requirement exactly"
+    },
+    "C-3.2/S3.2#assert_true": {
+      "counterexample": "remove the assert True lines",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about spec colors or run continuation"
+    },
+    "C-3.2/S3.2#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts red status on timeout, matching requirement."
+    },
+    "C-3.2/S3.2#no_assert": {
+      "counterexample": "return None instead of raising TimeoutExpired",
+      "decision": "proves",
+      "reason": "Test expects red status on timeout, but None returns no status"
+    },
+    "C-3.2/S3.2#weakened": {
+      "counterexample": "Make red specs not red (e.g., green) and test still passes",
+      "decision": "proves",
+      "reason": "Test checks red status and run continues, matching requirement exactly"
+    },
+    "C-3.3/S3.3": {
+      "counterexample": "Make run_specs return a green spec when command fails",
+      "decision": "proves",
+      "reason": "Test checks red status on OS error, requirement violated"
+    },
+    "C-3.3/S3.3#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement."
+    },
+    "C-3.3/S3.3#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks error handling, not version pinning or rollup."
+    },
+    "C-3.3/S3.3#no_assert": {
+      "counterexample": "return None instead of raising",
+      "decision": "proves",
+      "reason": "Test expects OSError, but returning None breaks requirement"
+    },
+    "C-3.3/S3.3#weakened": {
+      "counterexample": "Make run_specs return None on error",
+      "decision": "proves",
+      "reason": "Test checks error is recorded, not raised"
+    },
+    "C-3.4/S3.4": {
+      "counterexample": "remove contract_version pinning, test still passes",
+      "decision": "proves",
+      "reason": "Test checks contract_version but requirement mandates pinning it"
+    },
+    "C-3.4/S3.4#assert_true": {
+      "counterexample": "remove version assertions, test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, ignores requirement"
+    },
+    "C-3.4/S3.4#misbound": {
+      "counterexample": "change make_ledger to ignore results, return constant ledger",
+      "decision": "proves",
+      "reason": "Different results produce identical ledger, violating requirement"
+    },
+    "C-3.4/S3.4#no_assert": {
+      "counterexample": "remove clause_version from results",
+      "decision": "proves",
+      "reason": "Test checks versions are pinned in ledger"
+    },
+    "C-3.4/S3.4#weakened": {
+      "counterexample": "remove version assertions, test passes anyway",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about versions or totals"
+    },
+    "C-3.5/S3.5": {
+      "counterexample": "make_ledger returns different bytes for same inputs",
+      "decision": "proves",
+      "reason": "Different internal state yields different JSON output"
+    },
+    "C-3.5/S3.5#assert_true": {
+      "counterexample": "return different bytes for same inputs",
+      "decision": "vacuous",
+      "reason": "Test always asserts True regardless of output"
+    },
+    "C-3.5/S3.5#misbound": {
+      "counterexample": "return None from make_ledger when ledger corrupt",
+      "decision": "vacuous",
+      "reason": "Test only checks determinism, not absence handling"
+    },
+    "C-3.5/S3.5#no_assert": {
+      "counterexample": "return different bytes for same inputs",
+      "decision": "proves",
+      "reason": "Different outputs for same inputs breaks requirement"
+    },
+    "C-3.5/S3.5#weakened": {
+      "counterexample": "make_ledger returns different bytes for same inputs",
+      "decision": "proves",
+      "reason": "Different outputs for same inputs violates requirement"
+    },
+    "C-3.6/S3.6": {
+      "counterexample": "Make load_ledger return None on error",
+      "decision": "proves",
+      "reason": "Test expects empty dict, requirement demands unrun behavior"
+    },
+    "C-3.6/S3.6#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks ledger behavior."
+    },
+    "C-3.6/S3.6#misbound": {
+      "counterexample": "remove matching spec check, keep others",
+      "decision": "proves",
+      "reason": "Test checks matching specs run, not all specs"
+    },
+    "C-3.6/S3.6#no_assert": {
+      "counterexample": "remove bad.json creation, keep list.json valid",
+      "decision": "proves",
+      "reason": "Test passes if ledger absent but corrupt file exists"
+    },
+    "C-3.6/S3.6#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts load_ledger exists, not ledger content."
+    },
+    "C-3.7/S3.7": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test enforces clause/spec prefix filtering behavior."
+    },
+    "C-3.7/S3.7#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-3.7/S3.7#misbound": {
+      "counterexample": "return empty list instead of scenarios",
+      "decision": "vacuous",
+      "reason": "Test only checks non-empty scenarios, not empty case"
+    },
+    "C-3.7/S3.7#no_assert": {
+      "counterexample": "add a spec that doesn't match any prefix",
+      "decision": "proves",
+      "reason": "Test runs only matching specs, so non-matching specs are ignored"
+    },
+    "C-3.7/S3.7#weakened": {
+      "counterexample": "return all scenarios regardless of prefix",
+      "decision": "proves",
+      "reason": "Test checks filtering by prefix, which requirement mandates"
+    },
+    "C-3.8/S3.8": {
+      "counterexample": "return error if spec set empty",
+      "decision": "proves",
+      "reason": "Test fails if empty set returns error instead of empty run"
+    },
+    "C-3.8/S3.8#assert_true": {
+      "counterexample": "raise Exception",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of behavior"
+    },
+    "C-3.8/S3.8#misbound": {
+      "counterexample": "remove tag filtering, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks empty set, not tag filtering behavior"
+    },
+    "C-3.8/S3.8#no_assert": {
+      "counterexample": "raise error when spec set is empty",
+      "decision": "proves",
+      "reason": "Test fails if system raises error on empty spec set"
+    },
+    "C-3.8/S3.8#weakened": {
+      "counterexample": "raise error when spec set empty",
+      "decision": "vacuous",
+      "reason": "Test only checks run_specs exists, not behavior on empty set"
+    },
+    "C-4.1/S4.1": {
+      "counterexample": "Make C-1.2 covered, test still passes",
+      "decision": "proves",
+      "reason": "Test checks uncovered list, requirement violated if C-1.2 covered"
+    },
+    "C-4.1/S4.1#assert_true": {
+      "counterexample": "remove all assert True lines",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-4.1/S4.1#misbound": {
+      "counterexample": "remove orphan clause listing, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks live clauses, not unknown/withdrawn clauses"
+    },
+    "C-4.1/S4.1#no_assert": {
+      "counterexample": "Make live clause have spec but still uncovered",
+      "decision": "proves",
+      "reason": "Test checks uncovered status of live clause with no spec"
+    },
+    "C-4.1/S4.1#weakened": {
+      "counterexample": "remove all assert lines",
+      "decision": "vacuous",
+      "reason": "Test passes regardless of requirement outcome"
+    },
+    "C-4.10/S4.10": {
+      "counterexample": "return rep with missing_spec=[] and extra_spec=[]",
+      "decision": "proves",
+      "reason": "Test checks both missing and extra specs are reported"
+    },
+    "C-4.10/S4.10#assert_true": {
+      "counterexample": "return None",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of output"
+    },
+    "C-4.10/S4.10#misbound": {
+      "counterexample": "remove missing_spec and extra_spec checks",
+      "decision": "proves",
+      "reason": "Test checks required fields, so removing them breaks requirement but test passes"
+    },
+    "C-4.10/S4.10#no_assert": {
+      "counterexample": "return only missing specs, not extra",
+      "decision": "proves",
+      "reason": "Test checks both missing and extra specs together"
+    },
+    "C-4.10/S4.10#weakened": {
+      "counterexample": "remove extra_spec check, keep only missing",
+      "decision": "proves",
+      "reason": "Test checks extra_spec, requirement demands both reported"
+    },
+    "C-4.11/S4.11": {
+      "counterexample": "remove all findings, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks for specific strings, not all findings"
+    },
+    "C-4.11/S4.11#assert_true": {
+      "counterexample": "remove all findings, test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks requirement"
+    },
+    "C-4.11/S4.11#misbound": {
+      "counterexample": "remove draft clauses from output",
+      "decision": "vacuous",
+      "reason": "test only checks passed status, not draft clauses"
+    },
+    "C-4.11/S4.11#no_assert": {
+      "counterexample": "return None",
+      "decision": "vacuous",
+      "reason": "Test checks JSON, not text rendering."
+    },
+    "C-4.11/S4.11#weakened": {
+      "counterexample": "remove all findings, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks for specific strings, not all findings"
+    },
+    "C-4.12/S4.12": {
+      "counterexample": "remove draft clause from rep, backlog stays 1",
+      "decision": "proves",
+      "reason": "Test checks draft clause exists; removing it breaks requirement and test fails"
+    },
+    "C-4.12/S4.12#assert_true": {
+      "counterexample": "remove all assert True lines",
+      "decision": "vacuous",
+      "reason": "test asserts nothing meaningful about requirement"
+    },
+    "C-4.12/S4.12#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks draft/backlog, not superseded clause redirection."
+    },
+    "C-4.12/S4.12#no_assert": {
+      "counterexample": "remove draft clauses from answer",
+      "decision": "proves",
+      "reason": "Test checks draft clauses appear in answer"
+    },
+    "C-4.12/S4.12#weakened": {
+      "counterexample": "remove the assertion about C-1.3 visibility",
+      "decision": "proves",
+      "reason": "Test checks draft clauses remain visible in answer"
+    },
+    "C-4.14/S4.14": {
+      "counterexample": "remove the assertion about 'now' list, test still passes",
+      "decision": "proves",
+      "reason": "Test checks redirected_specs content, requirement mandates reporting"
+    },
+    "C-4.14/S4.14#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "test always passes regardless of requirement"
+    },
+    "C-4.14/S4.14#misbound": {
+      "counterexample": "remove the assert about 'C-1.4' not in covered",
+      "decision": "proves",
+      "reason": "Test checks clause is uncovered, matching requirement"
+    },
+    "C-4.14/S4.14#no_assert": {
+      "counterexample": "Make superseded clause not redirect, test still passes",
+      "decision": "proves",
+      "reason": "Test checks report exists, not that it names redirected clauses"
+    },
+    "C-4.14/S4.14#weakened": {
+      "counterexample": "remove the assertion about C-1.4 not being covered",
+      "decision": "proves",
+      "reason": "Test checks that superseded clause is reported as redirected"
+    },
+    "C-4.15/S4.15": {
+      "counterexample": "Make C-1.5 superseded by C-1.4, keep S3 unchanged",
+      "decision": "proves",
+      "reason": "Test fails if successor clause is not covered by new spec"
+    },
+    "C-4.15/S4.15#assert_true": {
+      "counterexample": "remove all assertions, test always passes",
+      "decision": "vacuous",
+      "reason": "test asserts nothing about coverage behavior"
+    },
+    "C-4.15/S4.15#misbound": {
+      "counterexample": "remove all clauses, requirement violated, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks coverage, not clause state classification"
+    },
+    "C-4.15/S4.15#no_assert": {
+      "counterexample": "Remove the fixed coverage block; test still passes",
+      "decision": "proves",
+      "reason": "Test checks successor coverage only when successor spec exists"
+    },
+    "C-4.15/S4.15#weakened": {
+      "counterexample": "Add a spec for C-1.5 before C-1.4 is covered",
+      "decision": "proves",
+      "reason": "Test fails if successor is covered before its own spec"
+    },
+    "C-4.16/S4.16": {
+      "counterexample": "return empty dict for counts, no live clauses",
+      "decision": "proves",
+      "reason": "Test checks every live clause placed exactly once"
+    },
+    "C-4.16/S4.16#assert_true": {
+      "counterexample": "remove all assertions, test passes regardless",
+      "decision": "vacuous",
+      "reason": "assert True does nothing, test always passes"
+    },
+    "C-4.16/S4.16#misbound": {
+      "counterexample": "mark C-1.5 as live but not unrun, breaking requirement",
+      "decision": "proves",
+      "reason": "Test checks every live clause is counted as unrun"
+    },
+    "C-4.16/S4.16#no_assert": {
+      "counterexample": "duplicate a clause in two buckets",
+      "decision": "proves",
+      "reason": "Test checks each clause appears exactly once"
+    },
+    "C-4.16/S4.16#weakened": {
+      "counterexample": "return empty dict for every clause",
+      "decision": "proves",
+      "reason": "Test checks every clause is placed in one bucket"
+    },
+    "C-4.17/S4.17": {
+      "counterexample": "Make stale['remaining'] == 2 instead of 3",
+      "decision": "proves",
+      "reason": "Test expects 3, requirement says 1, so breaking it fails test"
+    },
+    "C-4.17/S4.17#assert_true": {
+      "counterexample": "remove assert True lines",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks requirement"
+    },
+    "C-4.17/S4.17#misbound": {
+      "counterexample": "emit zero clause nodes, test still passes",
+      "decision": "proves",
+      "reason": "Test checks remaining count, not clause node emission"
+    },
+    "C-4.17/S4.17#no_assert": {
+      "counterexample": "Make stale_specs empty, test still passes",
+      "decision": "proves",
+      "reason": "Test checks stale_specs contains S1, requirement violated if not"
+    },
+    "C-4.17/S4.17#weakened": {
+      "counterexample": "Make clause specs pass against newer wording too",
+      "decision": "proves",
+      "reason": "Test checks stale specs count as remaining work"
+    },
+    "C-4.2/S4.2": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks orphan_specs list and passed flag per requirement."
+    },
+    "C-4.2/S4.2#assert_true": {
+      "counterexample": "return []",
+      "decision": "proves",
+      "reason": "Test asserts orphans exist; removing them breaks requirement but test still passes"
+    },
+    "C-4.2/S4.2#misbound": {
+      "counterexample": "remove orphan_specs from rep",
+      "decision": "proves",
+      "reason": "Test checks orphan_specs, requirement mandates reporting"
+    },
+    "C-4.2/S4.2#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks unknown/withdrawn clauses are listed as orphans."
+    },
+    "C-4.2/S4.2#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts unknown/withdrawn clauses are listed as orphans."
+    },
+    "C-4.4/S4.4": {
+      "counterexample": "Set rep['draft_uncovered'] to [] while keeping coverage_rate 1.0",
+      "decision": "proves",
+      "reason": "Test fails if draft clauses aren't exempted and reported separately"
+    },
+    "C-4.4/S4.4#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement."
+    },
+    "C-4.4/S4.4#misbound": {
+      "counterexample": "Set rep['uncovered'] to ['C-1.3'] to break requirement",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves requirement"
+    },
+    "C-4.4/S4.4#no_assert": {
+      "counterexample": "return None",
+      "decision": "proves",
+      "reason": "Test fails if draft clauses aren't exempted"
+    },
+    "C-4.4/S4.4#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test only checks rep is not None, not coverage behavior."
+    },
+    "C-4.6/S4.6": {
+      "counterexample": "remove text field from unspecified entries",
+      "decision": "proves",
+      "reason": "Test checks text exists, requirement mandates it"
+    },
+    "C-4.6/S4.6#assert_true": {
+      "counterexample": "remove all unspecified clauses from rep",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of requirement"
+    },
+    "C-4.6/S4.6#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks unspecified clauses, not spec pin drift."
+    },
+    "C-4.6/S4.6#no_assert": {
+      "counterexample": "return empty list for unspecified clauses",
+      "decision": "proves",
+      "reason": "Test checks unspecified clauses exist in output"
+    },
+    "C-4.6/S4.6#weakened": {
+      "counterexample": "return empty rep dict",
+      "decision": "vacuous",
+      "reason": "Test only checks rep exists, not content"
+    },
+    "C-4.7/S4.7": {
+      "counterexample": "remove spec_drift check, test still passes",
+      "decision": "proves",
+      "reason": "Test checks in_sync and counts, not spec_drift"
+    },
+    "C-4.7/S4.7#assert_true": {
+      "counterexample": "remove drift call or return wrong value",
+      "decision": "proves",
+      "reason": "Test asserts True regardless of drift, so it proves nothing"
+    },
+    "C-4.7/S4.7#misbound": {
+      "counterexample": "remove stale proof check, test still passes",
+      "decision": "proves",
+      "reason": "Test checks spec drift, not stale proof on passing result"
+    },
+    "C-4.7/S4.7#no_assert": {
+      "counterexample": "remove drift call, test still passes",
+      "decision": "proves",
+      "reason": "Test checks drift detection, but no drift occurs here"
+    },
+    "C-4.7/S4.7#weakened": {
+      "counterexample": "remove drift call, return None",
+      "decision": "proves",
+      "reason": "Test asserts rep is not None, which requires drift to run"
+    },
+    "C-4.8/S4.8": {
+      "counterexample": "remove stale_proof check, keep in_sync False",
+      "decision": "proves",
+      "reason": "Test asserts stale_proof present when requirement violated"
+    },
+    "C-4.8/S4.8#assert_true": {
+      "counterexample": "remove stale proof check from drift",
+      "decision": "proves",
+      "reason": "Test asserts stale proof is reported when passing under old clause"
+    },
+    "C-4.8/S4.8#misbound": {
+      "counterexample": "remove stale_proof check, add divergence check",
+      "decision": "proves",
+      "reason": "Test checks stale_proof, not missing pins behavior"
+    },
+    "C-4.8/S4.8#no_assert": {
+      "counterexample": "return a non-stale proof instead",
+      "decision": "proves",
+      "reason": "Test expects stale proof when passing under old clause"
+    },
+    "C-4.8/S4.8#weakened": {
+      "counterexample": "remove assert rep is not None",
+      "decision": "proves",
+      "reason": "Test asserts rep exists, so missing proof fails"
+    },
+    "C-4.9/S4.9": {
+      "counterexample": "Make unpinned specs count as divergence, test still passes",
+      "decision": "proves",
+      "reason": "Test checks unpinned count and in_sync, not divergence"
+    },
+    "C-4.9/S4.9#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-4.9/S4.9#misbound": {
+      "counterexample": "return rep with empty unpinned count and in_sync False",
+      "decision": "proves",
+      "reason": "Test checks both missing and extra specs reported together"
+    },
+    "C-4.9/S4.9#no_assert": {
+      "counterexample": "return True even if specs have no pins",
+      "decision": "proves",
+      "reason": "Test checks unpinned specs treated as missing instrumentation"
+    },
+    "C-4.9/S4.9#weakened": {
+      "counterexample": "return None from drift when specs unpinned",
+      "decision": "proves",
+      "reason": "Test asserts rep not None, so returning None breaks requirement"
+    },
+    "C-5.1/S5.1": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks clause nodes have correct labels and parent"
+    },
+    "C-5.1/S5.1#assert_true": {
+      "counterexample": "remove clause nodes, test still passes",
+      "decision": "vacuous",
+      "reason": "test asserts True, does not check requirement"
+    },
+    "C-5.1/S5.1#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks superseded status and parent edge order."
+    },
+    "C-5.1/S5.1#no_assert": {
+      "counterexample": "omit version/status labels from clause nodes",
+      "decision": "proves",
+      "reason": "Test checks labels exist, requirement mandates them"
+    },
+    "C-5.1/S5.1#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks titles exist, not clause-node count per spec"
+    },
+    "C-5.11/S5.11": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks clause nodes, labels, and edges match requirement"
+    },
+    "C-5.11/S5.11#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always; no real checks."
+    },
+    "C-5.11/S5.11#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks clause nodes, not sibling contract attachment"
+    },
+    "C-5.11/S5.11#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks real bd accepts clause nodes and edges"
+    },
+    "C-5.11/S5.11#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts clause nodes and edges materialize correctly"
+    },
+    "C-5.13/S5.13": {
+      "counterexample": "return None for contract when sibling exists",
+      "decision": "proves",
+      "reason": "Test asserts contract exists when sibling present"
+    },
+    "C-5.13/S5.13#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always; no check of sibling attachment."
+    },
+    "C-5.13/S5.13#misbound": {
+      "counterexample": "modify parse_with_provenance to strip C-1.1 IDs from spec.md",
+      "decision": "proves",
+      "reason": "Test asserts C-1.1 is preserved in plan when spec.md exists"
+    },
+    "C-5.13/S5.13#no_assert": {
+      "counterexample": "return plan without attaching sibling contract",
+      "decision": "proves",
+      "reason": "Test checks sibling contract attachment and pinning behavior"
+    },
+    "C-5.13/S5.13#weakened": {
+      "counterexample": "return None from parse_with_provenance when contract.md exists",
+      "decision": "proves",
+      "reason": "Test asserts contract clause exists when contract file present"
+    },
+    "C-5.2/S5.2": {
+      "counterexample": "emit predecessor edge instead of successor",
+      "decision": "proves",
+      "reason": "Test checks successor edge order; breaking requirement changes order"
+    },
+    "C-5.2/S5.2#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True, so it always passes regardless of requirement."
+    },
+    "C-5.2/S5.2#misbound": {
+      "counterexample": "return empty list for related edges",
+      "decision": "proves",
+      "reason": "Test checks edges point to clauses, not whole spec"
+    },
+    "C-5.2/S5.2#no_assert": {
+      "counterexample": "emit predecessor edge instead of successor",
+      "decision": "proves",
+      "reason": "Test checks successor edge order, requirement mandates successor"
+    },
+    "C-5.2/S5.2#weakened": {
+      "counterexample": "emit predecessor edge instead of successor",
+      "decision": "proves",
+      "reason": "Test checks successor edge order, requirement violated if predecessor emitted"
+    },
+    "C-5.3/S5.3": {
+      "counterexample": "return empty list for validates edges",
+      "decision": "proves",
+      "reason": "Test fails if edges don't point to clauses"
+    },
+    "C-5.3/S5.3#assert_true": {
+      "counterexample": "return None for all edges",
+      "decision": "proves",
+      "reason": "Test asserts edge points to clause, not whole spec"
+    },
+    "C-5.3/S5.3#misbound": {
+      "counterexample": "compile() returns a spec with a clause outside the contract",
+      "decision": "proves",
+      "reason": "Test fails if clause outside contract is allowed to compile"
+    },
+    "C-5.3/S5.3#no_assert": {
+      "counterexample": "return None for edges, test still passes",
+      "decision": "proves",
+      "reason": "Test checks edge count, not target clause"
+    },
+    "C-5.3/S5.3#weakened": {
+      "counterexample": "Make _edges point to whole spec instead of clause",
+      "decision": "proves",
+      "reason": "Test fails if edges point to spec, not clause"
+    },
+    "C-5.4/S5.4": {
+      "counterexample": "remove the assert or change match to allow C-9.9",
+      "decision": "proves",
+      "reason": "Test fails if clause outside contract is allowed to compile"
+    },
+    "C-5.4/S5.4#assert_true": {
+      "counterexample": "remove the assert or change match to allow C-9.9",
+      "decision": "proves",
+      "reason": "Test fails if clause outside contract is allowed to compile"
+    },
+    "C-5.4/S5.4#misbound": {
+      "counterexample": "attach a valid contract; test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks clause naming, not contract absence"
+    },
+    "C-5.4/S5.4#no_assert": {
+      "counterexample": "remove the assert or change match to allow C-9.9",
+      "decision": "proves",
+      "reason": "Test fails if clause outside contract is allowed to compile"
+    },
+    "C-5.4/S5.4#weakened": {
+      "counterexample": "remove the assert or change match to allow C-9.9",
+      "decision": "proves",
+      "reason": "Test fails if clause outside contract is allowed to compile"
+    },
+    "C-5.5/S5.5": {
+      "counterexample": "return a non-empty clause list",
+      "decision": "proves",
+      "reason": "Test checks clause list is empty when no contract"
+    },
+    "C-5.5/S5.5#assert_true": {
+      "counterexample": "change assert True to assert False",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing meaningful about output"
+    },
+    "C-5.5/S5.5#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks contract=None, not attached contract case."
+    },
+    "C-5.5/S5.5#no_assert": {
+      "counterexample": "return a different byte list",
+      "decision": "proves",
+      "reason": "Test checks output matches v3.1 list exactly"
+    },
+    "C-5.5/S5.5#weakened": {
+      "counterexample": "change _edges to return different data",
+      "decision": "proves",
+      "reason": "Test checks _edges content matches v3.1"
+    },
+    "C-5.6/S5.6": {
+      "counterexample": "emit clause nodes but no labels",
+      "decision": "proves",
+      "reason": "Test checks no clause nodes or labels"
+    },
+    "C-5.6/S5.6#assert_true": {
+      "counterexample": "emit clause nodes but test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement"
+    },
+    "C-5.6/S5.6#misbound": {
+      "counterexample": "Create a plan with a pinned contract, compile it, and verify clause nodes are created only once.",
+      "decision": "proves",
+      "reason": "Test checks clause nodes aren't duplicated when plan is compiled against existing graph."
+    },
+    "C-5.6/S5.6#no_assert": {
+      "counterexample": "emit clause nodes but no labels",
+      "decision": "proves",
+      "reason": "Test checks no labels, requirement forbids nodes and labels"
+    },
+    "C-5.6/S5.6#weakened": {
+      "counterexample": "emit clause nodes but no labels",
+      "decision": "vacuous",
+      "reason": "Test checks _creates and all, not clause nodes"
+    },
+    "C-5.7/S5.7": {
+      "counterexample": "Create a new clause node on recompile; test still passes",
+      "decision": "proves",
+      "reason": "Test checks no new clauses created, matching requirement exactly"
+    },
+    "C-5.7/S5.7#assert_true": {
+      "counterexample": "return a new clause node each time",
+      "decision": "vacuous",
+      "reason": "Test always asserts True regardless of behavior"
+    },
+    "C-5.7/S5.7#misbound": {
+      "counterexample": "Add a new orphan spec; test still passes",
+      "decision": "vacuous",
+      "reason": "Test only checks idempotent clause creation, not fail-closed behavior"
+    },
+    "C-5.7/S5.7#no_assert": {
+      "counterexample": "compile() ignores existing_keys, always creates new nodes",
+      "decision": "proves",
+      "reason": "Test checks nothing new created, but requirement forbids duplicates"
+    },
+    "C-5.7/S5.7#weakened": {
+      "counterexample": "return None for _creates when duplicate nodes exist",
+      "decision": "proves",
+      "reason": "Test fails if duplicate nodes are created on recompile"
+    },
+    "C-5.8/S5.8": {
+      "counterexample": "remove the orphan spec check from the test",
+      "decision": "proves",
+      "reason": "Test asserts both uncovered clauses and orphan specs fail closed"
+    },
+    "C-5.8/S5.8#assert_true": {
+      "counterexample": "return True always",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks failure condition"
+    },
+    "C-5.8/S5.8#misbound": {
+      "counterexample": "Do nothing, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks issues, not hash change"
+    },
+    "C-5.8/S5.8#no_assert": {
+      "counterexample": "return True always, gate never fails closed",
+      "decision": "proves",
+      "reason": "Test checks gate fails closed on uncovered clauses"
+    },
+    "C-5.8/S5.8#weakened": {
+      "counterexample": "return None always, test still passes",
+      "decision": "vacuous",
+      "reason": "Test asserts ok is not None, not None, etc."
+    },
+    "C-5.9/S5.9": {
+      "counterexample": "change clause text but keep hash same",
+      "decision": "proves",
+      "reason": "hash changes when clause text changes"
+    },
+    "C-5.9/S5.9#assert_true": {
+      "counterexample": "change hash without changing clause",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of hash change"
+    },
+    "C-5.9/S5.9#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks hash, not materialization or edge acceptance."
+    },
+    "C-5.9/S5.9#no_assert": {
+      "counterexample": "change hash without changing clause text",
+      "decision": "proves",
+      "reason": "hash changes only when clause text/status changes"
+    },
+    "C-5.9/S5.9#weakened": {
+      "counterexample": "change hash computation to ignore clause status",
+      "decision": "proves",
+      "reason": "Test checks hash changes when clause status changes"
+    },
+    "C-6.1/S6.1": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks clause IDs match spec EARS IDs exactly."
+    },
+    "C-6.1/S6.1#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement."
+    },
+    "C-6.1/S6.1#misbound": {
+      "counterexample": "remove all clauses from spec",
+      "decision": "vacuous",
+      "reason": "Test only checks existing clauses, not empty case"
+    },
+    "C-6.1/S6.1#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks EARS IDs are preserved verbatim."
+    },
+    "C-6.1/S6.1#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks clause IDs match spec; breaking requirement changes IDs, causing failure."
+    },
+    "C-6.2/S6.2": {
+      "counterexample": "return empty contract instead of raising",
+      "decision": "proves",
+      "reason": "Test expects error on empty clauses"
+    },
+    "C-6.2/S6.2#assert_true": {
+      "counterexample": "return empty contract instead of raising",
+      "decision": "proves",
+      "reason": "Test expects error on empty clauses"
+    },
+    "C-6.2/S6.2#misbound": {
+      "counterexample": "move registry version on status change without text change",
+      "decision": "vacuous",
+      "reason": "Test checks clause count, not status change behavior"
+    },
+    "C-6.2/S6.2#no_assert": {
+      "counterexample": "return empty contract instead of raising",
+      "decision": "proves",
+      "reason": "Test expects error on empty clauses"
+    },
+    "C-6.2/S6.2#weakened": {
+      "counterexample": "return empty contract instead of raising",
+      "decision": "proves",
+      "reason": "Test expects error on empty clauses"
+    },
+    "C-6.3/S6.3": {
+      "counterexample": "If version unchanged on status change, test fails",
+      "decision": "proves",
+      "reason": "Test asserts version changes when status changes without text change"
+    },
+    "C-6.3/S6.3#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-6.3/S6.3#misbound": {
+      "counterexample": "remove named criteria section, test still passes",
+      "decision": "proves",
+      "reason": "Test checks version change, not section selection"
+    },
+    "C-6.3/S6.3#no_assert": {
+      "counterexample": "Keep version same when status changes",
+      "decision": "proves",
+      "reason": "Test checks version changes on status change"
+    },
+    "C-6.3/S6.3#weakened": {
+      "counterexample": "keep same version, test still passes",
+      "decision": "proves",
+      "reason": "Test asserts version changes, but version unchanged still passes"
+    },
+    "C-6.4/S6.4": {
+      "counterexample": "import_from_spec returns all clauses, not just named section",
+      "decision": "proves",
+      "reason": "Test fails if system imports all clauses instead of named section"
+    },
+    "C-6.4/S6.4#assert_true": {
+      "counterexample": "import entire file ignoring named section",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about section selection logic"
+    },
+    "C-6.4/S6.4#misbound": {
+      "counterexample": "remove group headings/tags from rendered file",
+      "decision": "proves",
+      "reason": "Test checks headings/tags are kept; removing them breaks requirement but test still passes"
+    },
+    "C-6.4/S6.4#no_assert": {
+      "counterexample": "import all text ignoring headings",
+      "decision": "proves",
+      "reason": "Test checks criteria section selection and fallback"
+    },
+    "C-6.4/S6.4#weakened": {
+      "counterexample": "import_from_spec returns all clauses, not just named section",
+      "decision": "proves",
+      "reason": "Test fails if system imports all clauses instead of named section"
+    },
+    "C-6.5/S6.5": {
+      "counterexample": "remove group headings and tags from render output",
+      "decision": "proves",
+      "reason": "Test checks headings and tags are preserved in rendered output"
+    },
+    "C-6.5/S6.5#assert_true": {
+      "counterexample": "remove all group headings and tags from rendered output",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement"
+    },
+    "C-6.5/S6.5#misbound": {
+      "counterexample": "remove the multi-shall clause, test passes",
+      "decision": "vacuous",
+      "reason": "Test checks headings/tags, not atomicity of multi-shall clauses"
+    },
+    "C-6.5/S6.5#no_assert": {
+      "counterexample": "remove group headings and tags from rendered output",
+      "decision": "proves",
+      "reason": "Test checks headings and tags are preserved in rendered output"
+    },
+    "C-6.5/S6.5#weakened": {
+      "counterexample": "remove group headings and tags from render output",
+      "decision": "proves",
+      "reason": "Test checks headings and tags are preserved in rendered output"
+    },
+    "C-7.1/S7.1": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, as it checks multiple SHALLs."
+    },
+    "C-7.1/S7.1#assert_true": {
+      "counterexample": "remove all assert statements",
+      "decision": "vacuous",
+      "reason": "test asserts True always, so it passes regardless of requirement"
+    },
+    "C-7.1/S7.1#misbound": {
+      "counterexample": "remove 'and' from 'and shall' to break requirement",
+      "decision": "proves",
+      "reason": "Test checks conjoined obligations detection correctly"
+    },
+    "C-7.1/S7.1#no_assert": {
+      "counterexample": "remove one SHALL from C-1.1",
+      "decision": "proves",
+      "reason": "Test fails if two SHALLs not reported as non-atomic"
+    },
+    "C-7.1/S7.1#weakened": {
+      "counterexample": "remove assert for meta, keep only first assert",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves it."
+    },
+    "C-7.10/S7.10": {
+      "counterexample": "remove the assert, add a clause with and/or but no obligation",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves it."
+    },
+    "C-7.10/S7.10#assert_true": {
+      "counterexample": "remove assert True, add assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement behavior"
+    },
+    "C-7.10/S7.10#misbound": {
+      "counterexample": "remove and_or check, keep test green",
+      "decision": "vacuous",
+      "reason": "Test checks and_or, not passive obligation"
+    },
+    "C-7.10/S7.10#no_assert": {
+      "counterexample": "remove the 'and/or' clause, test still passes",
+      "decision": "proves",
+      "reason": "Test fails if requirement is violated, so it proves it"
+    },
+    "C-7.10/S7.10#weakened": {
+      "counterexample": "remove the assert, add a clause with and/or but no obligation",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves the requirement."
+    },
+    "C-7.11/S7.11": {
+      "counterexample": "remove ambiguous_passive from BAD C-1.3",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves it."
+    },
+    "C-7.11/S7.11#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement compliance."
+    },
+    "C-7.11/S7.11#misbound": {
+      "counterexample": "remove TBD/TODO check, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks ambiguous_passive, not TBD/TODO placeholder"
+    },
+    "C-7.11/S7.11#no_assert": {
+      "counterexample": "Remove the test or change its assertion to not check for ambiguity",
+      "decision": "proves",
+      "reason": "Test checks passive obligation without actor, requirement mandates reporting it"
+    },
+    "C-7.11/S7.11#weakened": {
+      "counterexample": "remove ambiguous_passive from BAD C-1.3",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves it."
+    },
+    "C-7.12/S7.12": {
+      "counterexample": "Remove placeholder check, test still passes",
+      "decision": "proves",
+      "reason": "Test checks placeholder presence, requirement mandates reporting"
+    },
+    "C-7.12/S7.12#assert_true": {
+      "counterexample": "remove assert True, add assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-7.12/S7.12#misbound": {
+      "counterexample": "Remove 'placeholder' check; test passes regardless",
+      "decision": "vacuous",
+      "reason": "Test checks placeholder, not by-ing mechanism"
+    },
+    "C-7.12/S7.12#no_assert": {
+      "counterexample": "Remove the placeholder check; test still passes",
+      "decision": "proves",
+      "reason": "Test checks placeholder presence, not system behavior"
+    },
+    "C-7.12/S7.12#weakened": {
+      "counterexample": "Remove placeholder check, test still passes",
+      "decision": "proves",
+      "reason": "Test checks placeholder presence, not TBD/TODO"
+    },
+    "C-7.13/S7.13": {
+      "counterexample": "remove 'names_mechanism' check, add 'names_behavior'",
+      "decision": "proves",
+      "reason": "Test checks mechanism naming, requirement forbids it"
+    },
+    "C-7.13/S7.13#assert_true": {
+      "counterexample": "remove both asserts",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-7.13/S7.13#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks mechanism naming, not unquantified quality."
+    },
+    "C-7.13/S7.13#no_assert": {
+      "counterexample": "Remove the 'by ...ing' phrase from clause C-3.9",
+      "decision": "proves",
+      "reason": "Test fails if mechanism not reported as implementation"
+    },
+    "C-7.13/S7.13#weakened": {
+      "counterexample": "remove 'names_mechanism' check, add 'names_behavior'",
+      "decision": "proves",
+      "reason": "Test checks mechanism naming, requirement forbids it"
+    },
+    "C-7.14/S7.14": {
+      "counterexample": "remove assert, add pass",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves it."
+    },
+    "C-7.14/S7.14#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement outcome."
+    },
+    "C-7.14/S7.14#misbound": {
+      "counterexample": "remove the assert line",
+      "decision": "vacuous",
+      "reason": "Test checks different rule code than requirement"
+    },
+    "C-7.14/S7.14#no_assert": {
+      "counterexample": "return 0 for unquantified quality",
+      "decision": "proves",
+      "reason": "Test fails if system returns exit code 0"
+    },
+    "C-7.14/S7.14#weakened": {
+      "counterexample": "remove assert, add pass",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, so it proves it."
+    },
+    "C-7.15/S7.15": {
+      "counterexample": "Add a rule code to defined but never emit it",
+      "decision": "proves",
+      "reason": "Test fails if any defined rule never fires on bad contract"
+    },
+    "C-7.15/S7.15#assert_true": {
+      "counterexample": "remove assert True, add assert len(missing)==0",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of missing rules"
+    },
+    "C-7.15/S7.15#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks all defined rules fire, not that bad clauses are flagged."
+    },
+    "C-7.15/S7.15#no_assert": {
+      "counterexample": "Remove all rule codes from source, fired set stays empty, test passes",
+      "decision": "proves",
+      "reason": "Test checks defined minus fired; if no rules defined, missing is empty, test passes"
+    },
+    "C-7.15/S7.15#weakened": {
+      "counterexample": "Remove all rule codes from source, fired set stays empty, test passes",
+      "decision": "proves",
+      "reason": "Test checks defined minus fired; if no rules defined, both sets empty, missing empty, assertion passes"
+    },
+    "C-7.16/S7.16": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, as it checks non-conforming detection."
+    },
+    "C-7.16/S7.16#assert_true": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts ubiquitous clause passes; requirement says non-ubiquitous must fail."
+    },
+    "C-7.16/S7.16#misbound": {
+      "counterexample": "Strip source root from filenames in ubiquitous, keep test green",
+      "decision": "proves",
+      "reason": "Test checks path resolution, not source root stripping"
+    },
+    "C-7.16/S7.16#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, as it checks ubiquitous opening."
+    },
+    "C-7.16/S7.16#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test fails if requirement violated, as it checks non-conforming detection."
+    },
+    "C-7.2/S7.2": {
+      "counterexample": "remove 'and shall' from conjoined clause",
+      "decision": "proves",
+      "reason": "Test fails if requirement not met, so it proves it."
+    },
+    "C-7.2/S7.2#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement"
+    },
+    "C-7.2/S7.2#misbound": {
+      "counterexample": "remove 'and' from conjoined clause",
+      "decision": "proves",
+      "reason": "Test checks for 'and' conjunction, not vague wording"
+    },
+    "C-7.2/S7.2#no_assert": {
+      "counterexample": "Remove 'and shall' from listing; test still passes.",
+      "decision": "proves",
+      "reason": "Test checks 'and shall' presence; removing it breaks requirement but test passes."
+    },
+    "C-7.2/S7.2#weakened": {
+      "counterexample": "Remove 'and shall' from clause; test fails.",
+      "decision": "proves",
+      "reason": "Test checks 'and shall' triggers 'conjoined'."
+    },
+    "C-7.3/S7.3": {
+      "counterexample": "return empty dict for all clauses",
+      "decision": "proves",
+      "reason": "Test fails if vague clauses not detected"
+    },
+    "C-7.3/S7.3#assert_true": {
+      "counterexample": "remove all assert statements",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement"
+    },
+    "C-7.3/S7.3#misbound": {
+      "counterexample": "return empty list for all clauses",
+      "decision": "vacuous",
+      "reason": "Test checks proper handling of 'properly', not identical wording"
+    },
+    "C-7.3/S7.3#no_assert": {
+      "counterexample": "remove the 'properly' check from the system",
+      "decision": "proves",
+      "reason": "Test fails if system ignores unprovable wording"
+    },
+    "C-7.3/S7.3#weakened": {
+      "counterexample": "return empty dict for all clauses",
+      "decision": "proves",
+      "reason": "Test fails if vague clauses not detected"
+    },
+    "C-7.4/S7.4": {
+      "counterexample": "Make C-1.1 and C-2.7 have different wording.",
+      "decision": "proves",
+      "reason": "Different wording means no duplicate, test fails."
+    },
+    "C-7.4/S7.4#assert_true": {
+      "counterexample": "remove all assertions, test always passes",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of requirement"
+    },
+    "C-7.4/S7.4#misbound": {
+      "counterexample": "Make C-1.1 and C-2.7 different wording but same code.",
+      "decision": "proves",
+      "reason": "Test checks duplicate detection, not superseded exemption."
+    },
+    "C-7.4/S7.4#no_assert": {
+      "counterexample": "Make C-2.7 wording differ from C-1.1",
+      "decision": "proves",
+      "reason": "Different wording means no duplicate, test still passes"
+    },
+    "C-7.4/S7.4#weakened": {
+      "counterexample": "Make C-1.1 and C-2.7 have different wording.",
+      "decision": "proves",
+      "reason": "Different wording means no duplicate, test fails."
+    },
+    "C-7.5/S7.5": {
+      "counterexample": "return ['C-1.1', 'C-1.3'] instead of []",
+      "decision": "proves",
+      "reason": "Test fails if superseded clauses are not exempted"
+    },
+    "C-7.5/S7.5#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement compliance."
+    },
+    "C-7.5/S7.5#misbound": {
+      "counterexample": "return ['C-1.1'] instead of []",
+      "decision": "proves",
+      "reason": "Test expects empty list; requirement demands filtering superseded/withdrawn"
+    },
+    "C-7.5/S7.5#no_assert": {
+      "counterexample": "Remove the exemption logic for superseded/withdrawn clauses",
+      "decision": "proves",
+      "reason": "Test fails if superseded clause is not exempted from quality pass"
+    },
+    "C-7.5/S7.5#weakened": {
+      "counterexample": "Make C-1.3 fail quality pass",
+      "decision": "proves",
+      "reason": "Test checks withdrawn clause is exempt"
+    },
+    "C-7.6/S7.6": {
+      "counterexample": "Make lint() return an error even when wording is advisory",
+      "decision": "proves",
+      "reason": "Test checks lint() returns empty, requirement says keep findings advisory"
+    },
+    "C-7.6/S7.6#assert_true": {
+      "counterexample": "remove all assert True lines",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing meaningful about requirement"
+    },
+    "C-7.6/S7.6#misbound": {
+      "counterexample": "Remove multi-line notes; test checks single-line notes",
+      "decision": "vacuous",
+      "reason": "Test checks single-line notes, not multi-line notes"
+    },
+    "C-7.6/S7.6#no_assert": {
+      "counterexample": "Make the system always fail the build, ignoring the caller's gate request.",
+      "decision": "proves",
+      "reason": "Test checks that findings are advisory unless caller asks for strict gate."
+    },
+    "C-7.6/S7.6#weakened": {
+      "counterexample": "Make lint always fail, test still passes",
+      "decision": "proves",
+      "reason": "Test checks lint output, not requirement behavior"
+    },
+    "C-7.7/S7.7": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks note exclusion from text and version."
+    },
+    "C-7.7/S7.7#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes even if requirement fails."
+    },
+    "C-7.7/S7.7#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks text and version; note changes neither, so requirement holds."
+    },
+    "C-7.7/S7.7#no_assert": {
+      "counterexample": "Add note to clause; test still passes if note is ignored",
+      "decision": "proves",
+      "reason": "Test checks note is excluded; if requirement broken, test fails"
+    },
+    "C-7.7/S7.7#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts note text absent from clause version."
+    },
+    "C-7.8/S7.8": {
+      "counterexample": "contract with structural issues or wording findings",
+      "decision": "proves",
+      "reason": "Test fails if contract has issues or wording findings"
+    },
+    "C-7.8/S7.8#assert_true": {
+      "counterexample": "Add a structural issue to the contract file",
+      "decision": "vacuous",
+      "reason": "Asserts True always, so test passes regardless of contract quality"
+    },
+    "C-7.8/S7.8#misbound": {
+      "counterexample": "add a clause with 'should' to contract.md",
+      "decision": "proves",
+      "reason": "Test fails if weak modals are not reported"
+    },
+    "C-7.8/S7.8#no_assert": {
+      "counterexample": "Add a structural issue to contract.md",
+      "decision": "proves",
+      "reason": "Test checks contract.md for issues; adding one breaks requirement"
+    },
+    "C-7.8/S7.8#weakened": {
+      "counterexample": "contract with structural issues, test still passes",
+      "decision": "proves",
+      "reason": "Test checks lint/critique not None, not contract quality"
+    },
+    "C-7.9/S7.9": {
+      "counterexample": "remove weak_modal from C-1.1",
+      "decision": "proves",
+      "reason": "Test fails if weak_modal not reported for should/may/can"
+    },
+    "C-7.9/S7.9#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement."
+    },
+    "C-7.9/S7.9#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks weak_modal, not and/or clause behavior."
+    },
+    "C-7.9/S7.9#no_assert": {
+      "counterexample": "remove should/may/can from clause",
+      "decision": "proves",
+      "reason": "Test checks weak modals are reported correctly"
+    },
+    "C-7.9/S7.9#weakened": {
+      "counterexample": "remove weak_modal from C-1.1",
+      "decision": "proves",
+      "reason": "Test fails if weak_modal not reported for should/may/can"
+    },
+    "C-8.1/S8.1": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks test file detection, not path resolution."
+    },
+    "C-8.1/S8.1#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-8.1/S8.1#misbound": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks test file detection, not branch separation."
+    },
+    "C-8.1/S8.1#no_assert": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test name unrelated to requirement content."
+    },
+    "C-8.1/S8.1#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks variable existence, not path resolution."
+    },
+    "C-8.2/S8.2": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts unclaimed_files list, matching requirement's separation claim."
+    },
+    "C-8.2/S8.2#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of requirement."
+    },
+    "C-8.2/S8.2#misbound": {
+      "counterexample": "add unclaimed file with same basename, test still passes",
+      "decision": "proves",
+      "reason": "Test checks unclaimed_files list, not basename collision resolution"
+    },
+    "C-8.2/S8.2#no_assert": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test checks internal plan, not reverse leg behavior."
+    },
+    "C-8.2/S8.2#weakened": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts rep is not None, not branch separation."
+    },
+    "C-8.3/S8.3": {
+      "counterexample": "remove assert ambiguous.resolve(\"x.py\") is None",
+      "decision": "proves",
+      "reason": "Test fails if ambiguous resolve returns x.py"
+    },
+    "C-8.3/S8.3#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "Test asserts nothing about coverage resolution"
+    },
+    "C-8.3/S8.3#misbound": {
+      "counterexample": "add a proven edge for x.py",
+      "decision": "proves",
+      "reason": "Test checks proven edges are derived correctly"
+    },
+    "C-8.3/S8.3#no_assert": {
+      "counterexample": "add a third file c/x.py with same coverage",
+      "decision": "proves",
+      "reason": "test passes if both resolve to nothing"
+    },
+    "C-8.3/S8.3#weakened": {
+      "counterexample": "remove all assertions, test always passes",
+      "decision": "vacuous",
+      "reason": "assertions are contradictory and always true"
+    },
+    "C-9.1/S9.1": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test enforces derived clause map, not hand-annotated."
+    },
+    "C-9.1/S9.1#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test asserts True, so it always passes regardless of requirement."
+    },
+    "C-9.1/S9.1#misbound": {
+      "counterexample": "add a line owned by no clause",
+      "decision": "proves",
+      "reason": "test checks clause->line mapping, not line->clause"
+    },
+    "C-9.1/S9.1#no_assert": {
+      "counterexample": "add a clause that executes no lines",
+      "decision": "proves",
+      "reason": "test checks derived map, not manual annotation"
+    },
+    "C-9.1/S9.1#weakened": {
+      "counterexample": "remove the build call, assert nothing",
+      "decision": "proves",
+      "reason": "Test asserts cmap exists, not that it's derived"
+    },
+    "C-9.10/S9.10": {
+      "counterexample": "remove C-1.2 from stale_entries, keep test green",
+      "decision": "vacuous",
+      "reason": "Test checks C-1.2, not C-1.1, so requirement irrelevant"
+    },
+    "C-9.10/S9.10#assert_true": {
+      "counterexample": "remove the assert True line",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement behavior"
+    },
+    "C-9.10/S9.10#misbound": {
+      "counterexample": "remove C-1.2 from stale_entries, keep is_fresh false",
+      "decision": "vacuous",
+      "reason": "Test checks stale entries, not map presence or foreign schema"
+    },
+    "C-9.10/S9.10#no_assert": {
+      "counterexample": "remove stale check from map",
+      "decision": "proves",
+      "reason": "Test fails if stale logic is removed"
+    },
+    "C-9.10/S9.10#weakened": {
+      "counterexample": "remove stale check from map",
+      "decision": "proves",
+      "reason": "Test asserts stale entry exists when clause deleted"
+    },
+    "C-9.11/S9.11": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts failure on absent/foreign map"
+    },
+    "C-9.11/S9.11#assert_true": {
+      "counterexample": "return False on foreign schema",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks failure"
+    },
+    "C-9.11/S9.11#misbound": {
+      "counterexample": "remove fingerprinting from artifact hash",
+      "decision": "proves",
+      "reason": "Test checks map presence via issues, not hash fingerprinting"
+    },
+    "C-9.11/S9.11#no_assert": {
+      "counterexample": "return True when map is absent",
+      "decision": "proves",
+      "reason": "Test checks map presence; absent map should fail gate"
+    },
+    "C-9.11/S9.11#weakened": {
+      "counterexample": "return None for empty/foreign maps",
+      "decision": "proves",
+      "reason": "Test fails if map absent/foreign, proving requirement"
+    },
+    "C-9.12/S9.12": {
+      "counterexample": "hash function ignores pins/id deltas",
+      "decision": "proves",
+      "reason": "Test checks hash changes when map changes"
+    },
+    "C-9.12/S9.12#assert_true": {
+      "counterexample": "remove fingerprinting logic",
+      "decision": "vacuous",
+      "reason": "assertion always true regardless of hash content"
+    },
+    "C-9.12/S9.12#misbound": {
+      "counterexample": "make a and b have same hash despite different schemas",
+      "decision": "proves",
+      "reason": "Test checks hash differs when schema differs, proving requirement"
+    },
+    "C-9.12/S9.12#no_assert": {
+      "counterexample": "hash function ignores pins/id deltas",
+      "decision": "proves",
+      "reason": "Test checks hash changes when map changes"
+    },
+    "C-9.12/S9.12#weakened": {
+      "counterexample": "hash function that ignores pins and id deltas",
+      "decision": "vacuous",
+      "reason": "Test only checks non-None, not hash content"
+    },
+    "C-9.14/S9.14": {
+      "counterexample": "return True, []",
+      "decision": "proves",
+      "reason": "Test fails if map accepted without pins"
+    },
+    "C-9.14/S9.14#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-9.14/S9.14#misbound": {
+      "counterexample": "return True for old map, no absent issues",
+      "decision": "proves",
+      "reason": "Test checks drift detection; if system never reports drift, test fails"
+    },
+    "C-9.14/S9.14#no_assert": {
+      "counterexample": "return True if schema is old",
+      "decision": "proves",
+      "reason": "Test fails if old schema is accepted"
+    },
+    "C-9.14/S9.14#weakened": {
+      "counterexample": "return None from seam_map_fresh",
+      "decision": "proves",
+      "reason": "Test fails if map accepted without pins"
+    },
+    "C-9.15/S9.15": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks stale clauses match requirement exactly"
+    },
+    "C-9.15/S9.15#assert_true": {
+      "counterexample": "",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, never checks drift behavior."
+    },
+    "C-9.15/S9.15#misbound": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks that only owned clauses are marked stale when lines move."
+    },
+    "C-9.15/S9.15#no_assert": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks only moved clauses are marked stale"
+    },
+    "C-9.15/S9.15#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test checks only clauses whose lines moved go stale"
+    },
+    "C-9.16/S9.16": {
+      "counterexample": "clause file grows, test still passes",
+      "decision": "proves",
+      "reason": "Test checks shrinking, not growth"
+    },
+    "C-9.16/S9.16#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-9.16/S9.16#misbound": {
+      "counterexample": "add a line to src so digest matches, test still passes",
+      "decision": "proves",
+      "reason": "Test checks clause is stale when file shrinks, not when it grows"
+    },
+    "C-9.16/S9.16#no_assert": {
+      "counterexample": "src unchanged, clause still exists",
+      "decision": "proves",
+      "reason": "Test checks clause still exists, not file shrinkage"
+    },
+    "C-9.16/S9.16#weakened": {
+      "counterexample": "src unchanged, stale_clauses empty",
+      "decision": "vacuous",
+      "reason": "Test asserts stale_clauses exists, not its content"
+    },
+    "C-9.17/S9.17": {
+      "counterexample": "replace assert for C-1.1 with assert True",
+      "decision": "proves",
+      "reason": "Test checks carried over clause, requirement violated if not carried over"
+    },
+    "C-9.17/S9.17#assert_true": {
+      "counterexample": "return None for all clauses",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so it passes regardless of behavior"
+    },
+    "C-9.17/S9.17#misbound": {
+      "counterexample": "Mutate docstrings only, leaving syntax tree unchanged",
+      "decision": "vacuous",
+      "reason": "Test checks clause merging, not docstring mutation"
+    },
+    "C-9.17/S9.17#no_assert": {
+      "counterexample": "return merged without re-deriving C-1.2",
+      "decision": "proves",
+      "reason": "Test checks only C-1.2, not drifted clauses."
+    },
+    "C-9.17/S9.17#weakened": {
+      "counterexample": "merged could be a new dict with wrong clauses",
+      "decision": "vacuous",
+      "reason": "Test only checks merged is not None, not clause contents"
+    },
+    "C-9.2/S9.2": {
+      "counterexample": "remove C-2.1 from line 5, test still passes",
+      "decision": "proves",
+      "reason": "Test checks owners at line 5, requirement says list all owners"
+    },
+    "C-9.2/S9.2#assert_true": {
+      "counterexample": "remove all assertions, test passes regardless",
+      "decision": "vacuous",
+      "reason": "Test asserts True always, so requirement violation doesn't affect it"
+    },
+    "C-9.2/S9.2#misbound": {
+      "counterexample": "requirement about shell metacharacters, test only checks owners",
+      "decision": "vacuous",
+      "reason": "Test checks ownership, not shell metacharacter handling"
+    },
+    "C-9.2/S9.2#no_assert": {
+      "counterexample": "remove C-2.1 from lib/a.py line 5",
+      "decision": "proves",
+      "reason": "Test checks all owners; removing one breaks requirement"
+    },
+    "C-9.2/S9.2#weakened": {
+      "counterexample": "Make owners None; test still passes",
+      "decision": "vacuous",
+      "reason": "Test only checks owners is not None, not actual ownership"
+    },
+    "C-9.3/S9.3": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts shell metacharacter rejection"
+    },
+    "C-9.3/S9.3#assert_true": {
+      "counterexample": "remove the assert True lines and the coverage run test",
+      "decision": "proves",
+      "reason": "Test checks bad commands are refused, matching requirement"
+    },
+    "C-9.3/S9.3#misbound": {
+      "counterexample": "remove the assert about separating contract lines",
+      "decision": "proves",
+      "reason": "Test checks line separation behavior directly"
+    },
+    "C-9.3/S9.3#no_assert": {
+      "counterexample": "remove the empty string from bad list",
+      "decision": "proves",
+      "reason": "Empty string is not a shell metacharacter, so test passes even if requirement violated"
+    },
+    "C-9.3/S9.3#weakened": {
+      "counterexample": "",
+      "decision": "proves",
+      "reason": "Test asserts bad commands are refused, matching requirement."
+    },
+    "C-9.4/S9.4": {
+      "counterexample": "remove owned lines from other_coverage",
+      "decision": "proves",
+      "reason": "Test checks separation of owned and other lines"
+    },
+    "C-9.4/S9.4#assert_true": {
+      "counterexample": "remove all assertions",
+      "decision": "vacuous",
+      "reason": "test asserts nothing meaningful about separation"
+    },
+    "C-9.4/S9.4#misbound": {
+      "counterexample": "remove the assert for other_coverage_count",
+      "decision": "proves",
+      "reason": "Test checks other_coverage_count exists, so requirement must hold"
+    },
+    "C-9.4/S9.4#no_assert": {
+      "counterexample": "return classify(cmap, suite) with overlapping lines",
+      "decision": "proves",
+      "reason": "Test checks separation of owned vs suite lines"
+    },
+    "C-9.4/S9.4#weakened": {
+      "counterexample": "return None from classify",
+      "decision": "proves",
+      "reason": "Test checks classify returns non-None, requirement demands separation"
+    },
+    "C-9.5/S9.5": {
+      "counterexample": "Make runner always write json, test still passes",
+      "decision": "proves",
+      "reason": "Test checks partial map kept, not all specs failing"
+    },
+    "C-9.5/S9.5#assert_true": {
+      "counterexample": "Make runner always write json, but have one spec fail silently",
+      "decision": "proves",
+      "reason": "Test checks partial map survives one bad spec"
+    },
+    "C-9.5/S9.5#misbound": {
+      "counterexample": "remove pinning logic, test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks coverage data, not version pinning"
+    },
+    "C-9.5/S9.5#no_assert": {
+      "counterexample": "Make runner always write json, but still skip one spec",
+      "decision": "proves",
+      "reason": "Test checks map survives one bad spec, requirement demands it"
+    },
+    "C-9.5/S9.5#weakened": {
+      "counterexample": "Make runner always write json, but have one spec fail silently without coverage",
+      "decision": "proves",
+      "reason": "Test checks both specs succeed; if one fails silently, got lacks that spec"
+    },
+    "C-9.6/S9.6": {
+      "counterexample": "build map without passing versions",
+      "decision": "proves",
+      "reason": "Test checks versions are pinned in map"
+    },
+    "C-9.6/S9.6#assert_true": {
+      "counterexample": "remove pinning logic, test still passes",
+      "decision": "vacuous",
+      "reason": "assert True always passes regardless of pinning"
+    },
+    "C-9.6/S9.6#misbound": {
+      "counterexample": "import coverage; cmap = build(...)",
+      "decision": "vacuous",
+      "reason": "Test checks map contents, not import behavior"
+    },
+    "C-9.6/S9.6#no_assert": {
+      "counterexample": "remove contract_version and scenario_version args",
+      "decision": "proves",
+      "reason": "Test fails if versions not pinned, proving requirement"
+    },
+    "C-9.6/S9.6#weakened": {
+      "counterexample": "remove pinning logic from build",
+      "decision": "vacuous",
+      "reason": "Test only checks cmap is not None"
+    },
+    "C-9.7/S9.7": {
+      "counterexample": "import coverage; lines_from_json(text) == ...",
+      "decision": "proves",
+      "reason": "Test enforces no coverage import in pure layer"
+    },
+    "C-9.7/S9.7#assert_true": {
+      "counterexample": "import coverage; text = json.dumps({\"files\": {\"lib\\\\a.py\": {\"executed_lines\": [3, 1, 2], \"missing_lines\": [9]}}})",
+      "decision": "vacuous",
+      "reason": "Test asserts True regardless of import behavior."
+    },
+    "C-9.7/S9.7#misbound": {
+      "counterexample": "map pins differ but test still passes",
+      "decision": "vacuous",
+      "reason": "Test checks JSON structure, not map pins"
+    },
+    "C-9.7/S9.7#no_assert": {
+      "counterexample": "import coverage; coverage.Coverage().load()",
+      "decision": "proves",
+      "reason": "Test passes if coverage imported, violating requirement."
+    },
+    "C-9.7/S9.7#weakened": {
+      "counterexample": "import coverage; lines_from_json = None",
+      "decision": "proves",
+      "reason": "Test asserts lines_from_json exists, proving no import leak"
+    },
+    "C-9.8/S9.8": {
+      "counterexample": "return stale map but not report as stale",
+      "decision": "proves",
+      "reason": "Test checks contract_drift flag set when pins differ"
+    },
+    "C-9.8/S9.8#assert_true": {
+      "counterexample": "assert False",
+      "decision": "vacuous",
+      "reason": "Test always asserts True, so it never fails even if requirement is violated."
+    },
+    "C-9.8/S9.8#misbound": {
+      "counterexample": "map has no entry but test doesn't check unmapped",
+      "decision": "proves",
+      "reason": "Test checks stale, not unmapped live clause"
+    },
+    "C-9.8/S9.8#no_assert": {
+      "counterexample": "Make cmap pins match contract but stale due to version",
+      "decision": "proves",
+      "reason": "Test checks stale when pins differ, but version mismatch alone should suffice"
+    },
+    "C-9.8/S9.8#weakened": {
+      "counterexample": "return None from staleness when pins differ",
+      "decision": "proves",
+      "reason": "Test fails if staleness returns None when pins differ"
+    },
+    "C-9.9/S9.9": {
+      "counterexample": "remove C-1.3 from contract, test still passes",
+      "decision": "proves",
+      "reason": "Test checks unmapped list contains C-1.3, requirement violated if not"
+    },
+    "C-9.9/S9.9#assert_true": {
+      "counterexample": "remove assert True, add assert False",
+      "decision": "vacuous",
+      "reason": "Test always passes regardless of requirement"
+    },
+    "C-9.9/S9.9#misbound": {
+      "counterexample": "remove C-1.3 from contract, test still passes",
+      "decision": "proves",
+      "reason": "Test checks unmapped list contains C-1.3, requirement violated if not"
+    },
+    "C-9.9/S9.9#no_assert": {
+      "counterexample": "return 'mapped' for any clause",
+      "decision": "proves",
+      "reason": "Test checks unmapped status for new clause"
+    },
+    "C-9.9/S9.9#weakened": {
+      "counterexample": "return None for unmapped clauses",
+      "decision": "proves",
+      "reason": "Test fails if unmapped clause returns None"
+    }
+  },
+  "endpoint": "http://127.0.0.1:8001",
+  "pairs": 585,
+  "pin": {
+    "model": "qwen9b-opus",
+    "prompt_sha": "5b3c18035b8f5d4e",
+    "temperature": 0.0,
+    "thresholds_sha": "408dc9a421482a79",
+    "variant": "v2"
+  },
+  "schema": "athena.judge_decisions/1",
+  "seconds": 302.8,
+  "variant": "v2"
+}

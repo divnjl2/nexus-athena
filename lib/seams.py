@@ -216,6 +216,69 @@ def seam_coverage_backed(plan: Plan, cov) -> SeamResult:
     return SeamResult("seam.coverage_backed", not issues, tuple(issues), _hash(shape))
 
 
+def seam_contract_bound(contract, scenarios) -> SeamResult:
+    """Seam 12 (v3.3): the contract must be BOUND to executable specs before it compiles.
+
+    Fail-closed on the three ways a clause id stops meaning anything:
+      * a live clause nothing verifies  — a requirement with no proof is a wish;
+      * a spec naming a clause that does not exist — a typo'd or deleted reference;
+      * a spec naming a WITHDRAWN clause — dead coverage kept alive by inertia.
+    Draft clauses are exempt by design: `draft` is how you write a requirement down
+    before it is owed a proof. A spec still pointing at a SUPERSEDED clause is an
+    advisory (it resolves forward), not a gate failure — it rides in the coverage report.
+    """
+    from lib.contract_report import coverage
+    rep = coverage(contract, scenarios)
+    issues = [f"clause {cid} has no executable spec" for cid in rep["uncovered"]]
+    issues += [f"spec {o['scenario']} verifies {o['clause']} ({o['reason']})"
+               for o in rep["orphan_specs"]]
+    shape = repr(sorted((c.id, c.version, c.status) for c in contract.clauses))
+    return SeamResult("seam.contract_bound", not issues, tuple(issues), _hash(shape))
+
+
+def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "",
+                   clause_digests: dict | None = None, subject: str = "") -> SeamResult:
+    """Seam 13 (v3.3): the clause->file:line map must describe the contract in front of us.
+
+    The map is DERIVED, which is its strength and its trap: nothing about a stale one looks
+    wrong. `owners()` keeps answering with the confidence of a build artifact while pointing
+    at lines two refactors old. So the gate refuses a map that is absent, pinned to another
+    contract or spec version, missing a live clause, or still holding a clause that is gone.
+    An absent map fails CLOSED — "no map" must never read as "nothing to check". The
+    The line pins are the subtle one: a refactor that shifts a file changes neither the
+    contract nor the specs, so without them the gate stays green while every line number in
+    the map points somewhere else. They are per CLAUSE and cover only the lines it owns, so
+    editing elsewhere in the same file costs nothing — and the drift list doubles as the
+    exact work list for an incremental rebuild.
+    """
+    from lib.clause_map import SCHEMA, staleness
+    rep = staleness(clause_map, contract, scenarios, scenario_version=scenario_version,
+                    clause_digests=clause_digests, subject=subject)
+    issues: list[str] = []
+    if rep["absent"]:
+        issues.append(f"clause map is absent or not {SCHEMA} — run `contract map`")
+    if rep["foreign_subject"]:
+        issues.append(f"map describes {rep['map_subject']}, this check is about "
+                      f"{rep['subject']} — a gate answering about another codebase")
+    if rep["contract_drift"]:
+        issues.append(f"map pinned to contract {rep['map_contract_version']}, "
+                      f"contract is now {rep['contract_version']}")
+    if rep["spec_drift"]:
+        issues.append(f"map pinned to scenarios {rep['map_scenario_version']}, "
+                      f"scenarios are now {rep['scenario_version']}")
+    issues += [f"clause {cid} has no lines in the map" for cid in rep["unmapped"]]
+    issues += [f"map holds {cid}, which the contract no longer defines"
+               for cid in rep["stale_entries"]]
+    issues += [f"clause {cid}: the lines it owns changed since the map was built"
+               for cid in rep["clause_drift"]]
+    # already deterministic: the pins are scalars and both id lists come back sorted
+    shape = _hash(repr((rep["map_subject"], rep["map_contract_version"],
+                        rep["map_scenario_version"],
+                        tuple(rep["unmapped"]), tuple(rep["stale_entries"]),
+                        tuple(rep["clause_drift"]))))
+    return SeamResult("seam.map_fresh", not issues, tuple(issues), shape)
+
+
 def seam_implements_backed(plan: Plan, results) -> SeamResult:
     """Seam 11 (v4): the `implements` edge must pin a REAL commit to a REAL task. Any
     ExecutorResult with an empty/fake sha, or one that implements a task not in the plan, would

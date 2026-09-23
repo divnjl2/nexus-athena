@@ -1,0 +1,5 @@
+# The hand-written layers of the pyramid are owned by a human. An agent proposes a change
+# to any of them as a pull request; the owner's merge is the record of the decision.
+CORE.md                      @divnjl2
+features/*/contract.md       @divnjl2
+docs/adr/                    @divnjl2

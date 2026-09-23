@@ -42,6 +42,10 @@ def parse_with_provenance(path: str, *, speckit: bool | None = None,
     and pins both versions to deterministic content hashes — turning a flat front into a
     full provenance source WITHOUT requiring an `.athena/seams.jsonl` pinning run.
 
+    v3.3: a sibling `contract.md` is attached the same way — its clause registry becomes
+    the graph ROOT (`kind:clause` nodes) and `contract_version` joins the pin set. Absent
+    contract.md, everything below behaves exactly as in v3.1.
+
     If no sibling `scenarios.md` exists, the plan is returned unchanged (v2/flat behaviour).
     """
     from lib.versioning import hash_text
@@ -51,6 +55,7 @@ def parse_with_provenance(path: str, *, speckit: bool | None = None,
     scen_path = front.parent / "scenarios.md"
     spec_path = front.parent / "spec.md"
     design_path = front.parent / "design.md"
+    contract_path = front.parent / "contract.md"
 
     if not scen_path.exists():
         return plan
@@ -60,6 +65,14 @@ def parse_with_provenance(path: str, *, speckit: bool | None = None,
     scen_text = scen_path.read_text(encoding="utf-8")
     from lib.scenario_parser import parse as parse_scenarios
     scenarios = parse_scenarios(scen_text)
+
+    # v3.3: the contract is the requirement ROOT when present. Its version pins the clause
+    # REGISTRY (ids + per-clause hashes), which is coarser-grained than any single clause
+    # pin on purpose: it answers "did the contract move at all" in one comparison.
+    contract = None
+    if contract_path.exists():
+        from lib.contract import parse as parse_contract
+        contract = parse_contract(contract_path.read_text(encoding="utf-8"))
 
     # spec_version is REQUIRED for any provenance emission; fall back to the scenarios
     # hash only if spec.md is absent so the edges still resolve.
@@ -71,5 +84,7 @@ def parse_with_provenance(path: str, *, speckit: bool | None = None,
         design_version=(hash_text(design_path.read_text(encoding="utf-8"))
                         if design_path.exists() else ""),
         run_id=run_id,
+        contract_version=contract.version if contract else "",
     )
-    return dataclasses.replace(plan, scenarios=scenarios, provenance=provenance)
+    return dataclasses.replace(plan, scenarios=scenarios, provenance=provenance,
+                               contract=contract)
