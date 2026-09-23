@@ -26,3 +26,23 @@ python athena.py check features/executor-layer/contract.md --front features/exec
 
 The orchestrator's job is the top of the pyramid: write the clauses and the red specs,
 dispatch, read the verdicts. Whoever typed the code is judged the same way.
+
+## Measured on 2026-09-23/24 (task: one clause, C-5.7, one file, local qwopus-27b)
+
+| executor | attempts | landed | what the verdict said |
+|---|---|---|---|
+| local-27b through the lanes bridge | 3 | 0 | ten turns spent on Read; `response exceeded the 2048 output token maximum`; a 15-minute timeout that hung for 30 (pipes inherited by a grandchild) |
+| local-27b through `athena dispatch` | 3 | **1 landed, green** | the whole T5.1 packet was over budget (112k chars: refused, as C-1.4 says); on T5.2 the worker read a memorised path 28 times; with the root named absolutely and the task sliced to one clause and one file it did one Read, one Edit, and the spec went green (9.5 min, 86k in / 13k out tokens) |
+| openhands, 27b, terminal tool | 1 | 0 | bash spoken to PowerShell, stuck detector |
+| openhands, 27b, guessed tool calling | 1 | 0 | `{"function": ...}` text, hermes parser KeyError (C-2.5) |
+| openhands, 27b, native tools | 3 | 0 | context window exceeded once; then the condenser summary lost the task ("the user sent a greeting") |
+| claude (subscription) from inside a Claude Code session | 1 | 0 | `403 Request not allowed` (nested auth), not a pipeline fault |
+
+Every failure was reported with its cause by the verdict, none by the executor. What each
+attempt changed in the frame is a clause or a default: C-2.5, no terminal for OpenHands,
+native tools on, the input cap and condenser, the absolute root in the packet, tree-kill on
+timeout, task slicing to one clause per dispatch. The recipe that made a 27B model on a 30k
+window land a green edit through Claude Code: **one clause, one spec, one file per task;
+the file inlined; the root named absolutely; output cap above 2048; the verdict, not the
+worker, runs the spec.** OpenHands with the same model has not landed one yet. The numbers
+to decide with are in `athena metrics`.

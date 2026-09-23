@@ -48,9 +48,11 @@ def _task(plan, task_id: str):
 
 
 def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None,
-           budget_chars: int = DEFAULT_BUDGET_CHARS) -> dict:
+           budget_chars: int = DEFAULT_BUDGET_CHARS, root: str = "") -> dict:
     """PURE: the packet for one plan task (C-1.1, C-1.3, C-1.4). `files` is {path: text} the
-    caller chose to inline (the task's files, read by the CLI)."""
+    caller chose to inline (the task's files, read by the CLI). `root` is the absolute
+    workspace path, named in the text: a local worker spent 31 Read calls on paths that did
+    not exist because it guessed the root."""
     task = _task(plan, task_id)
     by_id = {s.id: s for s in scenarios}
     missing = [v for v in task.verifies if v not in by_id]
@@ -76,7 +78,7 @@ def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None
                   "case": getattr(s, "case", "")} for s in specs]
     task_row = {"id": task.id, "title": task.title, "files": list(task.files),
                 "success_check": task.success_check}
-    text = render_packet(task_row, clauses, spec_rows, checks, files or {})
+    text = render_packet(task_row, clauses, spec_rows, checks, files or {}, root=root)
     return {
         "schema": SCHEMA, "task": task_row, "clauses": clauses, "specs": spec_rows,
         "checks": checks, "files": dict(files or {}), "text": text,
@@ -84,11 +86,17 @@ def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None
     }
 
 
-def render_packet(task: dict, clauses: list, specs: list, checks: list, files: dict) -> str:
+def render_packet(task: dict, clauses: list, specs: list, checks: list, files: dict,
+                  *, root: str = "") -> str:
     """PURE: the text an executor receives (C-1.2). The clauses are quoted whole; the done
     criterion is the commands; the executor is told its report does not count."""
-    out = [f"# Task {task['id']} — {task['title']}", "",
-           "## The requirement (numbered clauses; never edit contract.md or scenarios.md)"]
+    out = [f"# Task {task['id']} — {task['title']}", ""]
+    if root:
+        r = root.replace("\\", "/").rstrip("/")
+        out += [f"Repository root, already your working directory: {r}",
+                "Every path below is relative to it; use the absolute form with your tools "
+                "and do not explore the tree — this task names its files.", ""]
+    out.append("## The requirement (numbered clauses; never edit contract.md or scenarios.md)")
     for c in clauses:
         out.append(f"- **{c['id']}** — {c['text']}")
     out += ["", "## The specs that must go green (each is an executable command)"]
@@ -96,7 +104,9 @@ def render_packet(task: dict, clauses: list, specs: list, checks: list, files: d
         how = f"case `{s['case']}`" if s.get("case") else f"`{s['run_cmd']}`"
         out.append(f"- {s['id']} verifies {s['clause']}: {how}")
     if task.get("files"):
-        out += ["", "## Files this task may touch", *[f"- {f}" for f in task["files"]]]
+        r = root.replace("\\", "/").rstrip("/") if root else ""
+        out += ["", "## Files this task may touch",
+                *[f"- {f}" + (f"  (absolute: {r}/{f})" if r else "") for f in task["files"]]]
     out += ["", "## Done means",
             "Done is decided by the orchestrator from the workspace diff and by running these "
             "commands after you finish; your own report of success does not count:"]
