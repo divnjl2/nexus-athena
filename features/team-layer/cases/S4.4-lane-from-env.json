@@ -1,0 +1,11 @@
+{
+  "clause": "C-4.3",
+  "given": {
+    "lane_two": {"ATHENA_LANE": "2"},
+    "nothing": {}
+  },
+  "when": {"call": "lib.allocate:lane_from_env", "args": ["$lane_two"]},
+  "then": [
+    {"path": "", "equals": 2}
+  ]
+}

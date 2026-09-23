@@ -400,9 +400,22 @@ def cmd_spec_run(a) -> int:
         ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
     )
     out = write_ledger(ledger, a.out)
+    _append_run(ledger, pathlib.Path(cpath if contract is not None else scen_path).parent)
     _emit({"ledger": str(out), **ledger["totals"],
            "red": [r["scenario"] for r in ledger["results"] if not r["passed"]]})
     return 0 if ledger["totals"]["failed"] == 0 else 1
+
+
+def _append_run(ledger: dict, feature_dir: pathlib.Path) -> pathlib.Path:
+    """EFFECTFUL: one line per spec run in `<feature>/.athena/runs.jsonl` (team-layer C-6.2).
+    The record metrics are read from, never remembered."""
+    from lib.metrics import record
+    path = feature_dir / ".athena" / "runs.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record(ledger.get("totals", {}), ts=ledger.get("ts", "")),
+                            ensure_ascii=False) + "\n")
+    return path
 
 
 def cmd_contract_map(a) -> int:
@@ -844,6 +857,7 @@ def _check_report(a) -> dict:
                              ts=datetime.datetime.now(datetime.timezone.utc)
                              .isoformat(timespec="seconds"))
         write_ledger(ledger, ledger_path)
+        _append_run(ledger, here)
 
     gates = {}
     if a.front and pathlib.Path(a.front).exists():
@@ -1048,6 +1062,178 @@ def cmd_gate(a) -> int:
     return 0 if report["passed"] else 1
 
 
+# --- v3.11: the team layer — cases, decisions, intake, lanes, the harness, metrics -------
+
+def cmd_case_run(a) -> int:
+    """Replay one case in this process (the derived run_cmd of a case scenario)."""
+    from lib.cases import CaseError, load_case, run_case
+    try:
+        res = run_case(load_case(a.path, a.cwd))
+    except (CaseError, OSError, ValueError) as e:
+        _emit({"case": a.path, "passed": False, "message": f"{type(e).__name__}: {e}"})
+        return 2
+    _emit({"case": a.path, "passed": res.passed, "message": res.message,
+           "duration_ms": res.duration_ms})
+    return 0 if res.passed else 1
+
+
+def _adr_files(directory: str) -> list[pathlib.Path]:
+    return sorted(p for p in pathlib.Path(directory).glob("*.md") if p.name[0].isdigit())
+
+
+def cmd_adr_lint(a) -> int:
+    from lib.adr import lint_adr
+    issues: list[str] = []
+    files = _adr_files(a.dir)
+    for p in files:
+        issues += list(lint_adr(_read(str(p)), name=p.name))
+    if a.text:
+        print(f"# decision records in {a.dir}: {len(files)}")
+        print("\n".join(f"  - {i}" for i in issues) if issues else "  all six parts present")
+    else:
+        _emit({"dir": a.dir, "records": len(files), "issues": issues, "passed": not issues})
+    return 0 if not issues else 1
+
+
+def _all_contracts(root: pathlib.Path, depth: int = 3) -> list[pathlib.Path]:
+    from lib.gate import is_contract
+    out = []
+    for p in _walk(root, "contract.md", depth):
+        try:
+            if is_contract(p.read_text(encoding="utf-8")):
+                out.append(p)
+        except OSError:
+            continue
+    return sorted(out)
+
+
+def cmd_adr_unlinked(a) -> int:
+    from lib.adr import cited_targets, unlinked
+    from lib.contract import parse as parse_contract
+    root = pathlib.Path(a.cwd).resolve()
+    contracts = [pathlib.Path(c) for c in a.contract] or _all_contracts(root)
+    cited: set[str] = set()
+    for c in contracts:
+        rel = str(c.resolve().relative_to(root)).replace("\\", "/") if c.resolve().is_relative_to(root) else str(c)
+        cited |= cited_targets(rel, parse_contract(_read(str(c))))
+    adrs = [str(p.resolve().relative_to(root)).replace("\\", "/") for p in _adr_files(a.dir)]
+    rows = unlinked(adrs, cited)
+    if a.text:
+        print(f"# decision records nobody cites ({len(rows)} of {len(adrs)})")
+        print("\n".join(f"  - {r}" for r in rows) if rows else "  every record is cited by a clause")
+    else:
+        _emit({"records": adrs, "unlinked": list(rows), "contracts": [str(c) for c in contracts],
+               "passed": not rows})
+    return 0 if not rows else 1
+
+
+def cmd_contract_next_id(a) -> int:
+    from lib.allocate import lane_from_env, next_id
+    lane = a.lane if a.lane is not None else lane_from_env(os.environ)
+    cid = next_id(_load_contract(a), a.group, lane)
+    _emit({"id": cid, "group": a.group, "lane": lane})
+    return 0
+
+
+def cmd_intake(a) -> int:
+    """A failure -> a draft clause + a red spec, in one step (team-layer C-3.*)."""
+    from lib.allocate import lane_from_env
+    from lib.contract import parse as parse_contract, pin_scenarios
+    from lib.docrefs import fingerprint
+    from lib.intake import intake
+    cpath = pathlib.Path(a.contract)
+    spath = pathlib.Path(a.scenarios or _sibling(a.contract, "scenarios.md"))
+    trace = None
+    if a.trace:
+        tpath = pathlib.Path(a.trace)
+        trace = (os.path.relpath(tpath.resolve(), cpath.resolve().parent).replace("\\", "/"),
+                 fingerprint(tpath.read_text(encoding="utf-8")))
+    case_path = a.case
+    if not a.run_cmd and not case_path:
+        stem = str(cpath.parent).replace("\\", "/").rstrip("/")
+        case_path = f"{stem}/cases/PENDING.json"      # renamed to the allocated id below
+    lane = a.lane if a.lane is not None else lane_from_env(os.environ)
+    out = intake(_read(str(cpath)), _read(str(spath)) if spath.exists() else f"# Scenarios: {cpath.parent.name}\n",
+                 group=a.group, source=a.source, text=a.text, lane=lane, trace=trace,
+                 run_cmd=a.run_cmd, case_path=case_path)
+    if out["case_text"] is not None:
+        real = out["case_path"].replace("PENDING", out["clause_id"])
+        out["scenarios_text"] = out["scenarios_text"].replace(out["case_path"], real)
+        out["case_path"] = real
+        p = pathlib.Path(real)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(out["case_text"], encoding="utf-8")
+    cpath.write_text(out["contract_text"], encoding="utf-8")
+    pinned, _stats = pin_scenarios(out["scenarios_text"], parse_contract(out["contract_text"]))
+    spath.write_text(pinned, encoding="utf-8")
+    _emit({"clause": out["clause_id"], "spec": out["spec_id"], "status": "draft",
+           "source": a.source, "case": out["case_path"] or "", "run_cmd": a.run_cmd,
+           "contract": str(cpath), "scenarios": str(spath),
+           "next": "write the check from the trace, run `athena spec run`, then promote the "
+                   "clause to active by removing *(draft)* once the spec is green"})
+    return 0
+
+
+def cmd_hook_pre_edit(a) -> int:
+    """PreToolUse: the blast radius as context; a derived artifact refused (team-layer C-5.*)."""
+    from lib.gate import BYPASS_VAR
+    from lib.hooks import pre_edit_decision
+    try:
+        payload = json.loads(sys.stdin.read() or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    target = str((payload.get("tool_input") or {}).get("file_path")
+                 or (payload.get("tool_input") or {}).get("path") or a.path or "")
+    if not target:
+        return 0
+    root = pathlib.Path(a.root or payload.get("cwd") or ".")
+    root = root.resolve() if root.is_dir() else pathlib.Path(".").resolve()
+    maps: dict = {}
+    for mp in _walk(root, "clause_map.json", a.depth):
+        try:
+            label = str(mp.parent.relative_to(root)).replace("\\", "/") + "/contract.md"
+            maps[label] = json.loads(mp.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+    try:
+        shown = str(pathlib.Path(target).resolve().relative_to(root)).replace("\\", "/")
+    except ValueError:
+        shown = target
+    decision = pre_edit_decision(shown, maps, bypassed=bool(os.environ.get(BYPASS_VAR)))
+    if decision is not None:
+        print(json.dumps(decision, ensure_ascii=False))
+    return 0
+
+
+def cmd_lint_arch(a) -> int:
+    from lib.archlint import lint_sources, render
+    files: dict = {}
+    for src in a.source:
+        for p in sorted(pathlib.Path(src).glob("*.py")):
+            files[str(p).replace("\\", "/")] = _read(str(p))
+    findings = lint_sources(files)
+    if a.text:
+        print(render(findings))
+    else:
+        _emit({"files": len(files), "findings": list(findings), "passed": not findings})
+    return 0 if not findings else 1
+
+
+def cmd_metrics(a) -> int:
+    from lib.metrics import iterations_to_green, parse_runs, render
+    runs_path = pathlib.Path(a.contract).resolve().parent / ".athena" / "runs.jsonl"
+    text = runs_path.read_text(encoding="utf-8") if runs_path.exists() else ""
+    records, skipped = parse_runs(text)
+    rep = iterations_to_green(records)
+    if a.text:
+        print(render(rep, skipped=skipped))
+    else:
+        _emit({**rep, "skipped_lines": skipped, "runs_file": str(runs_path)})
+    return 0
+
+
 def _deep_mutation(a, contract, scenarios) -> dict:
     """Mutation over the clauses that DRIFTED — the sweep nobody can afford whole-repo."""
     import subprocess
@@ -1151,6 +1337,70 @@ def build_parser() -> argparse.ArgumentParser:
     _rep("todo", cmd_contract_todo)
     _rep("drift", cmd_contract_drift, gate=True)
     _rep("sources", cmd_contract_sources)
+
+    cn = csub.add_parser("next-id", help="the next unused clause id of a group, in a lane "
+                                         "(lane N allocates N*1000..N*1000+999)")
+    cn.add_argument("contract")
+    cn.add_argument("group", help="e.g. C-3")
+    cn.add_argument("--lane", type=int, default=None,
+                    help="author/branch lane (default: ATHENA_LANE, else 0)")
+    cn.set_defaults(fn=cmd_contract_next_id)
+
+    ca = sub.add_parser("case", help="specs as data: given/when/then in JSON, run in-process")
+    casub = ca.add_subparsers(dest="case_cmd", required=True)
+    car = casub.add_parser("run")
+    car.add_argument("path")
+    car.add_argument("--cwd", default=".")
+    car.set_defaults(fn=cmd_case_run)
+
+    ad = sub.add_parser("adr", help="decision records: lint their shape, find uncited ones")
+    adsub = ad.add_subparsers(dest="adr_cmd", required=True)
+    adl = adsub.add_parser("lint")
+    adl.add_argument("dir", nargs="?", default="docs/adr")
+    adl.add_argument("--text", action="store_true")
+    adl.set_defaults(fn=cmd_adr_lint)
+    adu = adsub.add_parser("unlinked")
+    adu.add_argument("dir", nargs="?", default="docs/adr")
+    adu.add_argument("--contract", action="append", default=[],
+                     help="contract(s) whose citations count (default: every contract under cwd)")
+    adu.add_argument("--cwd", default=".")
+    adu.add_argument("--text", action="store_true")
+    adu.set_defaults(fn=cmd_adr_unlinked)
+
+    it = sub.add_parser("intake", help="a failure -> a draft clause + a red spec")
+    it.add_argument("contract")
+    it.add_argument("--scenarios", default="")
+    it.add_argument("--group", required=True, help="clause group, e.g. C-3")
+    it.add_argument("--source", required=True,
+                    help="incident | audit | ledger | mutation | review")
+    it.add_argument("--text", required=True, help="the clause: WHEN ... THE SYSTEM SHALL ...")
+    it.add_argument("--trace", default="", help="the failure record file to cite by fingerprint")
+    it.add_argument("--run-cmd", dest="run_cmd", default="",
+                    help="bind this command instead of writing a case skeleton")
+    it.add_argument("--case", default="", help="path of the case skeleton to write")
+    it.add_argument("--lane", type=int, default=None)
+    it.set_defaults(fn=cmd_intake)
+
+    hk = sub.add_parser("hook", help="Claude Code hook decisions")
+    hksub = hk.add_subparsers(dest="hook_cmd", required=True)
+    hpe = hksub.add_parser("pre-edit", help="PreToolUse for Edit/Write: owning clauses as context, "
+                                            "derived artifacts refused")
+    hpe.add_argument("--path", default="", help="target file (default: the payload's tool_input.file_path)")
+    hpe.add_argument("--root", default="", help="repository root (default: the payload's cwd)")
+    hpe.add_argument("--depth", type=int, default=3)
+    hpe.set_defaults(fn=cmd_hook_pre_edit)
+
+    ln = sub.add_parser("lint", help="structural lints")
+    lnsub = ln.add_subparsers(dest="lint_cmd", required=True)
+    lna = lnsub.add_parser("arch", help="effects only behind the allowlisted seams")
+    lna.add_argument("--source", action="append", default=["lib"])
+    lna.add_argument("--text", action="store_true")
+    lna.set_defaults(fn=cmd_lint_arch)
+
+    me = sub.add_parser("metrics", help="iterations to green and durations, from the record of runs")
+    me.add_argument("contract", nargs="?", default="contract.md")
+    me.add_argument("--text", action="store_true")
+    me.set_defaults(fn=cmd_metrics)
 
     cp = csub.add_parser("pin")
     cp.add_argument("scenarios", nargs="?", default="")

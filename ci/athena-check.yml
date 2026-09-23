@@ -33,6 +33,18 @@ jobs:
             --front features/core-layer/plan.md \
             --ledger .athena/core_ledger.json \
             --run --text
+      - name: contract loop (fast lane) — team layer (v3.11)
+        run: |
+          pip install hypothesis
+          python athena.py --speckit off check features/team-layer/contract.md \
+            --front features/team-layer/plan.md \
+            --ledger .athena/team_ledger.json \
+            --run --text
+      - name: decisions and architecture (v3.11)
+        run: |
+          python athena.py adr lint docs/adr --text
+          python athena.py adr unlinked docs/adr --text
+          python athena.py lint arch --text
       - name: every contract, the cheap lane (what the Stop hook runs)
         run: python athena.py gate --text
       - name: the lessons still hold

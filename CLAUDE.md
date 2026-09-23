@@ -19,4 +19,7 @@
 4. New behaviour is a clause plus an executable spec, pinned with `python athena.py contract pin`.
    A requirement that changes is superseded, never edited. A clause born from a failure
    carries `source:`; `python athena.py lessons rerun` checks that the lesson still holds.
-5. Design history lives in `docs/history/`. Tasks are tracked in bd (`AGENTS.md`).
+5. A decision that outlives the task is a record in `docs/adr/`, cited with `see:`. A failure
+   from the world enters with `python athena.py intake` (draft clause + red spec). On a parallel
+   branch take a lane: `ATHENA_LANE=N`, ids via `python athena.py contract next-id`.
+6. Design history lives in `docs/history/`. Tasks are tracked in bd (`AGENTS.md`).

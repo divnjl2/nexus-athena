@@ -11,6 +11,18 @@
         "matcher": ""
       }
     ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "bash \"$CLAUDE_PROJECT_DIR/hooks/pre-edit.sh\"",
+            "timeout": 20,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit"
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

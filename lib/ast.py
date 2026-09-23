@@ -163,6 +163,9 @@ class Scenario:
     gwt_text: str
     run_cmd: str
     clause_version: str = ""
+    #: v3.11 — a case file (given/when/then as JSON) run in-process; when set and no
+    #: run_cmd was written, run_cmd is the derived replay command (lib.cases).
+    case: str = ""
 
 
 @dataclass(frozen=True)

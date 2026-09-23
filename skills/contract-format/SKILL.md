@@ -72,6 +72,37 @@ core changes, `athena contract refs` reports the citing clauses as **suspect** a
 fails on the contract leg until somebody re-reads them and re-pins (`refs --write`). That is
 how a change to the principles becomes a conscious act instead of a drift.
 
+## Specs as data: `case:` (v3.11)
+
+A scenario may name a JSON case instead of a run command. It runs in the current process:
+
+```markdown
+### S2.5 — a decision record parses, as a case
+- **verifies:** C-2.1
+- **case:** `features/team-layer/cases/S2.5-adr-parses.json`
+```
+
+```json
+{"clause": "C-2.1",
+ "given": {"text": "# ADR-0007: ...\n- Status: accepted\n..."},
+ "when":  {"call": "lib.adr:parse_adr", "args": ["$text"]},
+ "then":  [{"path": "status", "equals": "accepted"}, {"path": "sections.decision", "startswith": "Record"}]}
+```
+
+Checks: `equals`, `contains`, `truthy`, `startswith`, `length`, `raises`, `pending` (red until
+written). The case's `clause` must match `verifies:` (the binding guard checks it). The
+run_cmd is derived (`python -m athena case run <file>`), so map, mutation and guard need
+nothing new. Prefer a case for a pure module; a pytest node is the fallback.
+
+## Ids on a parallel branch, and intake (v3.11)
+
+```bash
+ATHENA_LANE=2 athena contract next-id contract.md C-3        # -> C-3.2001 (lane 2 owns 2000..2999)
+athena intake contract.md --group C-3 --source incident \
+    --text "WHEN ... THE SYSTEM SHALL ..." --trace traces/turn7.json   # draft clause + red case
+athena adr lint docs/adr && athena adr unlinked docs/adr      # decisions: shape, and cited by someone
+```
+
 ## Binding: one clause, one or more executable specs
 
 `scenarios.md` binds a spec to a clause and pins the wording it was written against:

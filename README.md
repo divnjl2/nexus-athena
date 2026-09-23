@@ -1,4 +1,4 @@
-# Athena — a spec-driven planning framework (v3 + v3.1 + v3.3 + v3.10)
+# Athena — a spec-driven planning framework (v3 + v3.1 + v3.3 + v3.10 + v3.11)
 
 > **Start here:** [`CORE.md`](./CORE.md) (goal, language, priorities, constraints; forty
 > lines), then [`CLAUDE.md`](./CLAUDE.md) (the way in, one screen), then the feature you
@@ -20,6 +20,13 @@ fingerprint (a change to the principles makes them *suspect* until re-read), a `
 every clause so lessons are a linear scan, `athena lessons rerun` as the check that a lesson
 was learned, `athena gate` judging every contract in the repository on Stop, and a spec lane
 that runs many specs in one process. See [The core layer](#the-core-layer-v310).
+
+**v3.11 closes seven gaps against modern AI-native practice**, again contract-first in
+[`features/team-layer/`](./features/team-layer/): specs as data run in-process, decisions
+kept in `docs/adr/` with a human owner, `athena intake` from a failure to a draft clause
+and a red spec, lane-based ids for parallel authors, a pre-edit hook that hands the agent
+the blast radius and refuses hand-edits of derived artifacts, an architecture lint, budgets
+with a record of runs, and property-based proofs. See [The team layer](#the-team-layer-v311).
 
 The pipeline chains existing, proven pieces and adds the deterministic glue between them:
 
@@ -302,6 +309,27 @@ On a 36-core box the gain is 1.5x, because the wall clock is set by the slowest 
 either way; on a 2-4 core CI runner it is the difference between a minute and ten seconds.
 The verdicts of the two lanes are identical, spec for spec (`tests/test_spec_batch.py`).
 
+## The team layer (v3.11)
+
+Seven weaknesses named against modern AI-native and spec-driven practice, each a clause
+group in [`features/team-layer/contract.md`](./features/team-layer/contract.md) (37 clauses,
+37 specs, written before the code) and each resting on a decision record in
+[`docs/adr/`](./docs/adr/):
+
+| gap | what closes it | command |
+|---|---|---|
+| specs were pytest internals; GWT was prose | a scenario names a `case:` (JSON given/when/then over `module:callable`) run in-process; its run_cmd is derived so map, mutation and guard see a command like any other | `athena case run`; default in `spec run` |
+| decisions lived in an ignored folder | `docs/adr/NNNN-slug.md` (MADR), cited by clauses, owned by a human in `CODEOWNERS`; the CRISP design step writes there | `athena adr lint` / `adr unlinked` |
+| `source: incident` had no path behind it | a failure -> a DRAFT clause with a fresh id, the trace cited by fingerprint, a bound spec or a `pending` case skeleton that stays red | `athena intake` |
+| two branches allocate the same id | lane N allocates `N*1000..N*1000+999`; `ATHENA_LANE` names the lane | `athena contract next-id` |
+| nobody told the agent the blast radius | PreToolUse on Edit/Write: owning clauses as context; derived artifacts refused with the rebuild command; effects only behind an allowlist of seams | `athena hook pre-edit`; `athena lint arch` |
+| no NFRs, no record of iterations | a latency clause with a stopwatch; every spec run appends to `.athena/runs.jsonl`; iterations-to-green read from it | `athena metrics` |
+| proofs were examples | hypothesis over generated contracts: render/parse round trip, pin invariance, resolve termination, parser never raises anything else, batch key completeness | `tests/test_properties.py` |
+
+Two case specs in `features/team-layer/cases/` prove clauses of this same contract a second
+time, as behaviour rather than as a pytest node; the binding guard checks a case's `clause`
+the way it checks a docstring.
+
 ## What we write vs. vendor (§0)
 
 | Layer | Source | Ours? |
@@ -335,6 +363,10 @@ nexus-athena/
 ├── docs/history/                  # design docs by version (moved out of the root)  [done]
 ├── features/contract-layer/       # v3.3 dogfood: Athena's own contract + specs    [done]
 ├── features/core-layer/           # v3.10 dogfood: core, sources, lessons, gate, lane [done]
+├── features/team-layer/           # v3.11 dogfood: cases, adr, intake, lanes, hooks, metrics [done]
+├── docs/adr/                      # decision records, cited by clauses (v3.11)      [done]
+├── .github/CODEOWNERS             # a human owns CORE.md, contract.md, docs/adr     [done]
+├── hooks/pre-edit.sh              # PreToolUse shim -> `athena hook pre-edit`       [done]
 ├── hooks/contract-criterion-gate.sh   # Stop-hook shim -> `athena gate --hook`    [done]
 ├── skills/contract-format/        # the formal clause language (v3.3)             [done]
 ├── commands/contract.md           # /athena.contract — the three questions        [done]
@@ -344,6 +376,11 @@ nexus-athena/
 │   ├── contract_report.py         # coverage / todo / drift / sources (pure, linear) [done]
 │   ├── lessons.py                 # lesson set derived from `source:`, rerun (v3.10) [done]
 │   ├── gate.py                    # every contract in reach, folded verdict (v3.10) [done]
+│   ├── cases.py                   # specs as data, run in-process (v3.11)          [done]
+│   ├── adr.py, intake.py          # decision records; failure -> draft + red spec   [done]
+│   ├── allocate.py                # lane-based clause ids for parallel authors      [done]
+│   ├── hooks.py, archlint.py      # pre-edit decision; effects behind the seams     [done]
+│   ├── metrics.py                 # the record of runs, iterations to green         [done]
 │   ├── ast.py                     # shared Plan AST (the contract)                [done]
 │   ├── plan_parser.py             # plan.md  -> Plan  (fallback)                  [done]
 │   ├── speckit_parser.py          # tasks.md -> Plan  (primary)                   [done]

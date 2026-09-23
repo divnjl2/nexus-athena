@@ -46,6 +46,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from lib.ast import Contract, Scenario
+from lib.cases import CaseError, load_case, run_case
 
 _TAIL_CHARS = 400          # keep failures diagnosable without bloating the ledger
 
@@ -384,11 +385,28 @@ def run_specs(scenarios: tuple[Scenario, ...], *, cwd: str = ".", timeout: int =
                 isolated.add(s.id)
 
     units: list[tuple[str, tuple[Scenario, ...]]] = []
-    for kind, members in plan_batches(scenarios, isolated=frozenset(isolated), batch=batch):
+    commands = tuple(s for s in scenarios if not s.case)
+    for kind, members in plan_batches(commands, isolated=frozenset(isolated), batch=batch):
         if kind == "batch":
             units += [("batch", chunk) for chunk in _chunks(members, jobs)]
         else:
             units.append((kind, members))
+    # v3.11 (C-1.6): a case scenario is run in THIS process, never spawned — the ledger
+    # still records it like any other spec, under its derived run_cmd.
+    units += [("case", (s,)) for s in scenarios if s.case]
+
+    def in_process(sc: Scenario) -> SpecResult:
+        t0 = clock()
+        try:
+            res = run_case(load_case(sc.case, cwd))
+            code, tail, ms = (0 if res.passed else 1), res.message, res.duration_ms
+        except (CaseError, OSError, ValueError) as e:
+            code, tail, ms = 2, f"case: {type(e).__name__}: {e}", int((clock() - t0) * 1000)
+        return SpecResult(
+            scenario_id=sc.id, clause_id=sc.requirement_key, passed=(code == 0),
+            exit_code=code, duration_ms=ms, clause_version=sc.clause_version,
+            run_cmd=sc.run_cmd, output_tail="" if code == 0 else tail[-_TAIL_CHARS:],
+        )
 
     def single(sc: Scenario) -> SpecResult:
         t0 = clock()
@@ -403,6 +421,8 @@ def run_specs(scenarios: tuple[Scenario, ...], *, cwd: str = ".", timeout: int =
 
     def run_unit(unit) -> tuple[SpecResult, ...]:
         kind, members = unit
+        if kind == "case":
+            return (in_process(members[0]),)
         if kind == "batch":
             got = _run_batch(members, cwd=cwd, timeout=timeout, spawn=spawn)
             if got is not None:
