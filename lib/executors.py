@@ -73,15 +73,24 @@ def claude_command(packet_text: str, *, max_turns: int = 40, claude_bin: str = "
     return {"argv": argv, "env": {}, "unset": []}
 
 
+#: OpenHands tools for a packet-driven task: edit and look, no terminal. The specs are run by
+#: the verdict, not by the executor — and on Windows the terminal tool speaks PowerShell while
+#: the model speaks bash (`ls -la` -> "parameter not found" -> stuck-detector), measured.
+OPENHANDS_TOOLS = ("file_editor", "glob", "grep")
+
+
 def openhands_config(packet_text: str, *, workspace: str, model: str, base_url: str = "",
-                     api_key_env: str = "LITELLM_LOCAL_KEY", max_iterations: int = 30) -> dict:
+                     api_key_env: str = "LITELLM_LOCAL_KEY", max_iterations: int = 30,
+                     terminal: bool = False) -> dict:
     """PURE: the OpenHands SDK run (C-3.3): rooted at the repository, the model as named,
-    the local gateway as base url when the caller asks for it."""
+    the local gateway as base url when the caller asks for it, edit-and-look tools only
+    unless a terminal is asked for."""
     if not model:
         raise ValueError("openhands needs a model name (e.g. openai/qwopus-27b)")
+    tools = list(OPENHANDS_TOOLS) + (["terminal"] if terminal else [])
     return {"workspace": str(pathlib.Path(workspace)), "model": model, "base_url": base_url,
             "api_key_env": api_key_env, "max_iterations": int(max_iterations),
-            "task": packet_text}
+            "tools": tools, "task": packet_text}
 
 
 def availability(name: str, *, which=None, find_spec=None, exists=None) -> dict:

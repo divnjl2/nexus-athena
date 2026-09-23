@@ -44,6 +44,9 @@ def test_the_openhands_run_is_rooted_at_the_repository_with_the_named_model():
     assert cfg["workspace"].replace("\\", "/") == "C:/repo"
     assert cfg["model"] == "openai/qwopus-27b" and cfg["base_url"] == LOCAL_GATEWAY
     assert cfg["max_iterations"] == 12 and cfg["task"] == "# Task"
+    assert "terminal" not in cfg["tools"] and "file_editor" in cfg["tools"], \
+        "edit-and-look only: the specs are run by the verdict, not by the executor"
+    assert "terminal" in openhands_config("# Task", workspace="C:/repo", model="m", terminal=True)["tools"]
     with pytest.raises(ValueError):
         openhands_config("# Task", workspace="C:/repo", model="")
 

@@ -29,8 +29,10 @@ SCHEMA = "athena.dispatch/1"
 #: ~9k tokens: what a 30k-context worker can take with its own system prompt and output.
 DEFAULT_BUDGET_CHARS = 36000
 HAND_WRITTEN = ("contract.md", "scenarios.md", "CORE.md", "plan.md")
+#: Never evidence of work: caches the checks themselves write, and the executors' own state.
 SKIP_DIRS = frozenset({".git", "node_modules", "__pycache__", ".venv", "venv", ".athena",
-                       ".beads", ".dolt", "thoughts", "_shakedown"})
+                       ".beads", ".dolt", "thoughts", "_shakedown", ".pytest_cache",
+                       ".hypothesis", ".openhands", ".mypy_cache", ".ruff_cache"})
 
 
 class DispatchError(ValueError):
@@ -145,12 +147,28 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "") -> dict
         reasons.append(f"{c.get('cmd')} exit {c.get('exit')}: {str(c.get('tail', ''))[-300:]}")
     if flags:
         reasons.append("touched a derived or hand-written file: " + ", ".join(flags))
+    if unparsed_tool_call(claim):
+        # C-2.5: the model answered the tool schema in a shape the server's parser did not
+        # accept, so the call came back as prose and nothing ran. A known signature gets its name.
+        reasons.append("tool-parser mismatch: the executor emitted a tool call as plain text "
+                       "(the model's call format does not match the server's --tool-call-parser)")
     return {
         "landed": landed, "green": green, "passed": landed and green,
         "changed_files": changed, "deleted_files": deleted, "review_flags": flags,
         "red": [{"cmd": c.get("cmd"), "exit": c.get("exit")} for c in red],
         "claim": (claim or "")[:400], "reason": "; ".join(reasons),
     }
+
+
+_TOOL_AS_TEXT = ("<tool_call>", "<function=", '"function":', '"tool_calls":', "<|tool_call|>")
+
+
+def unparsed_tool_call(claim: str) -> bool:
+    """PURE: does the executor's final text look like a tool call nobody parsed (C-2.5)?"""
+    text = (claim or "").strip()
+    if not text:
+        return False
+    return any(marker in text for marker in _TOOL_AS_TEXT)
 
 
 def record(task_id: str, executor: str, result: dict, *, duration_ms: int, tokens: dict | None,

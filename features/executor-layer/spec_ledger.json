@@ -1,5 +1,5 @@
 {
-  "contract_version": "ce32f195b614f022",
+  "contract_version": "1e0d2dcc8ff02aad",
   "results": [
     {
       "clause": "C-1.1",
@@ -82,6 +82,16 @@
       "scenario": "S2.4"
     },
     {
+      "clause": "C-2.5",
+      "clause_version": "446c1f953d7fbb9b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_tool_call_left_as_text_is_named_a_parser_mismatch -q",
+      "scenario": "S2.5"
+    },
+    {
       "clause": "C-3.1",
       "clause_version": "7d549a8ab872c710",
       "duration_ms": 1,
@@ -144,7 +154,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 549,
+      "duration_ms": 87,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -152,13 +162,13 @@
       "scenario": "S4.3"
     }
   ],
-  "scenario_version": "bde9603edfe026c2",
+  "scenario_version": "af030c5748e88421",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 563,
+    "duration_ms": 102,
     "failed": 0,
-    "passed": 15,
-    "total": 15
+    "passed": 16,
+    "total": 16
   },
-  "ts": "2026-09-23T20:55:54+00:00"
+  "ts": "2026-09-23T21:06:01+00:00"
 }

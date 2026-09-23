@@ -1283,13 +1283,28 @@ def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tupl
         env.pop(name, None)
     env.update(cmd.get("env", {}))
     try:
-        p = subprocess.run(cmd["argv"], cwd=str(cwd), env=env, stdin=subprocess.DEVNULL,
-                           capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return "", {}, f"worker timed out after {timeout}s"
+        proc = subprocess.Popen(cmd["argv"], cwd=str(cwd), env=env, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                encoding="utf-8", errors="replace")
     except OSError as e:
         return "", {}, f"could not start the worker: {e}"
+    try:
+        out, err_text = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # the claude launcher spawns a child that inherits the pipes: kill() alone leaves
+        # communicate() hanging forever (measured: a 15-minute timeout became a 30-minute
+        # hang). End the whole tree.
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                           capture_output=True, timeout=30)
+        else:
+            proc.kill()
+        try:
+            proc.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            pass
+        return "", {}, f"worker timed out after {timeout}s (process tree killed)"
+    p = subprocess.CompletedProcess(cmd["argv"], proc.returncode, out, err_text)
     data = _worker_json(p.stdout or "")
     claim = str(data.get("result", "")) if data else (p.stdout or "")[-2000:]
     tokens = data.get("usage") or {}
@@ -1303,17 +1318,38 @@ def _run_openhands(cfg: dict) -> tuple[str, dict, str]:
     """EFFECTFUL: one OpenHands SDK conversation in-process over the workspace. Best effort
     against the SDK's public surface; any failure is a worker error, never a traceback."""
     try:
+        import importlib
         from pydantic import SecretStr
         from openhands.sdk import LLM, Agent, Conversation, Tool
-        import openhands.tools.file_editor  # noqa: F401 — registers the tool
-        import openhands.tools.terminal     # noqa: F401
+        for name in cfg.get("tools", ("file_editor",)):
+            importlib.import_module(f"openhands.tools.{name}")     # registers the tool
     except ImportError as e:
         return "", {}, f"openhands-sdk import failed: {e}"
     key = os.environ.get(cfg["api_key_env"], "") or _gateway_key() or "local"
     try:
-        llm = LLM(model=cfg["model"], base_url=cfg["base_url"] or None, api_key=SecretStr(key),
-                  usage_id="athena-dispatch")
-        agent = Agent(llm=llm, tools=[Tool(name="terminal"), Tool(name="file_editor")])
+        llm_kwargs = dict(model=cfg["model"], base_url=cfg["base_url"] or None,
+                          api_key=SecretStr(key), usage_id="athena-dispatch")
+        if cfg.get("native_tools") is not None:
+            # a local Qwen through the gateway DOES emit native tool calls (the Claude Code
+            # lanes prove it); left to guess, the SDK fell back to prompt-style calls and the
+            # model answered with raw <tool_call> text nobody parsed (measured, 160 tokens)
+            llm_kwargs["native_tool_calling"] = bool(cfg["native_tools"])
+        # the local lanes have a 30720-token window; tell the SDK so its condenser summarises
+        # BEFORE the server refuses (measured: a run that had landed edits died on
+        # ContextWindowExceededError with the spec still red)
+        llm_kwargs["max_input_tokens"] = int(cfg.get("max_input_tokens") or 22000)
+        try:
+            llm = LLM(**llm_kwargs)
+        except (TypeError, ValueError):
+            llm_kwargs.pop("native_tool_calling", None)
+            llm = LLM(**llm_kwargs)
+        agent_kwargs = dict(llm=llm, tools=[Tool(name=n) for n in cfg.get("tools", ("file_editor",))])
+        try:
+            from openhands.sdk import LLMSummarizingCondenser
+            agent_kwargs["condenser"] = LLMSummarizingCondenser(llm=llm, max_size=12, keep_first=2)
+        except Exception:                      # noqa: BLE001 — a condenser is a comfort, not the verdict
+            pass
+        agent = Agent(**agent_kwargs)
         conv = Conversation(agent=agent, workspace=cfg["workspace"],
                             max_iteration_per_run=cfg["max_iterations"])
         conv.send_message(cfg["task"])
@@ -1403,13 +1439,19 @@ def cmd_dispatch(a) -> int:
         cfg = openhands_config(pk["text"], workspace=str(workspace),
                                model=a.model or "openai/qwopus-27b",
                                base_url=a.base_url if a.base_url is not None else LOCAL_GATEWAY + "/v1",
-                               max_iterations=a.max_turns)
+                               max_iterations=a.max_turns, terminal=a.terminal)
+        cfg["native_tools"] = None if a.native_tools == "auto" else (a.native_tools == "on")
         claim, tokens, err = _run_openhands(cfg)
     duration = int((time.perf_counter() - t0) * 1000)
 
     checks = []
     for cmdline in pk["checks"]:
         argv, why = _tokenize(cmdline)
+        if argv and argv[0] in ("python", "python3") and a.check_python:
+            # `python` on PATH is not necessarily the interpreter that has the test deps: when
+            # dispatch itself runs from a venv, Windows resolves `python` from the parent's
+            # image directory. The check runs with the interpreter the caller named.
+            argv[0] = a.check_python
         code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
         checks.append({"cmd": cmdline, "exit": code, "tail": tail})
     v = verdict(before, snapshot(workspace), checks, claim=claim)
@@ -1428,6 +1470,10 @@ def cmd_dispatch(a) -> int:
               f"{duration} ms  tokens={tokens.get('input_tokens', '?')}/{tokens.get('output_tokens', '?')}")
         for c in checks:
             print(f"  {'ok  ' if c['exit'] == 0 else 'FAIL'} {c['cmd']}")
+        if v["changed_files"] or v["deleted_files"]:
+            shown = (v["changed_files"] + [f"{p} (deleted)" for p in v["deleted_files"]])[:8]
+            more = len(v["changed_files"]) + len(v["deleted_files"]) - len(shown)
+            print("  changed: " + ", ".join(shown) + (f", +{more} more" if more > 0 else ""))
         if v["review_flags"]:
             print("  review: " + ", ".join(v["review_flags"]))
         if err:
@@ -1617,9 +1663,17 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--max-turns", dest="max_turns", type=int, default=30)
     dp.add_argument("--timeout", type=int, default=900, help="seconds for the executor")
     dp.add_argument("--check-timeout", dest="check_timeout", type=int, default=300)
+    dp.add_argument("--check-python", dest="check_python", default=sys.executable,
+                    help="interpreter for `python ...` check commands (default: this one)")
     dp.add_argument("--budget", type=int, default=36000, help="packet budget in chars")
     dp.add_argument("--inline", action="store_true",
                     help="inline the task's files into the packet (default for local lanes)")
+    dp.add_argument("--native-tools", dest="native_tools", choices=("auto", "on", "off"), default="on",
+                    help="openhands: native function calling for the model (default on: the local "
+                         "Qwen lanes emit real tool calls through the gateway)")
+    dp.add_argument("--terminal", action="store_true",
+                    help="openhands: also grant the terminal tool (off by default: the specs are "
+                         "run by the verdict, and on Windows the tool speaks PowerShell)")
     dp.add_argument("--json", action="store_true", help="with --executor none: the packet as JSON")
     dp.add_argument("--text", action="store_true")
     dp.set_defaults(fn=cmd_dispatch)
