@@ -74,6 +74,22 @@ def test_this_repository_passes_its_own_architecture_lint():
     assert EFFECT_ALLOWED <= set(files), "an allowlisted seam that does not exist is rot"
 
 
+def test_a_long_owner_list_is_capped_to_the_heaviest_twelve():
+    """C-5.7 — a blast radius the agent cannot read is noise: the twelve heaviest owners are
+    named, the rest are counted, and `owners_for` still returns everything."""
+    many = {"features/z/contract.md": {"clauses": {
+        f"C-9.{i}": {"lib/big.py": list(range(1, i + 1))} for i in range(1, 21)}}}
+    assert len(owners_for("lib/big.py", many)["features/z/contract.md"]) == 20
+    ctx = pre_edit_decision("lib/big.py", many)["hookSpecificOutput"]["additionalContext"]
+    named = [f"C-9.{i}" for i in range(1, 21) if f"C-9.{i} (" in ctx]
+    assert sorted(named, key=lambda c: int(c.split(".")[1])) == [f"C-9.{i}" for i in range(9, 21)]
+    assert "8 more" in ctx
+    few = {"features/z/contract.md": {"clauses": {
+        f"C-9.{i}": {"lib/small.py": [1, 2]} for i in range(1, 4)}}}
+    small = pre_edit_decision("lib/small.py", few)["hookSpecificOutput"]["additionalContext"]
+    assert "more" not in small and all(f"C-9.{i} (" in small for i in range(1, 4))
+
+
 def test_the_project_settings_register_the_pre_edit_hook():
     """C-5.6 — a hook nobody registered hands nobody anything."""
     settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))

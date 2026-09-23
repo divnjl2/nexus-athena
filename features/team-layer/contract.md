@@ -82,6 +82,11 @@
   nothing.
 - **C-5.6** — WHEN the project's agent settings are read THE SYSTEM SHALL register the
   pre-edit hook for edits and writes.
+- **C-5.7** — WHEN more than twelve clauses own lines in the edited file THE SYSTEM SHALL
+  name the twelve with the most owned lines and count the rest.
+  - source: review
+  - note: the first hook run on lib/contract.py listed forty-one clauses; a blast radius the
+    agent cannot read is noise, not context.
 
 ## C-6 — Budgets, and the record of runs
 

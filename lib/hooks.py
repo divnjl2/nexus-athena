@@ -26,6 +26,10 @@ DERIVED = {
 }
 
 
+#: How many owning clauses the pre-edit context names per contract; the rest are counted.
+MAX_OWNERS_SHOWN = 12
+
+
 def _norm(path) -> str:
     return str(path).replace("\\", "/")
 
@@ -73,7 +77,13 @@ def pre_edit_decision(path, maps: dict, *, bypassed: bool = False) -> dict | Non
     if owners:
         context.append("clauses whose owned lines this edit touches (athena contract owners):")
         for label, rows in owners.items():
-            context.append(f"  {label}: " + ", ".join(f"{cid} ({n} lines)" for cid, n in rows))
+            # C-5.7: the heaviest owners are named, the rest counted — forty-one ids in a
+            # row is noise, not context
+            shown = sorted(rows, key=lambda r: (-r[1], r[0]))[:MAX_OWNERS_SHOWN]
+            line = ", ".join(f"{cid} ({n} lines)" for cid, n in shown)
+            if len(rows) > MAX_OWNERS_SHOWN:
+                line += f", +{len(rows) - MAX_OWNERS_SHOWN} more"
+            context.append(f"  {label}: {line}")
         context.append("their specs must stay green; new behaviour needs a clause and a spec, "
                        "and a requirement that changes is superseded, never edited.")
     if not context:
