@@ -1352,6 +1352,9 @@ def _run_openhands(cfg: dict) -> tuple[str, dict, str]:
         agent = Agent(**agent_kwargs)
         conv = Conversation(agent=agent, workspace=cfg["workspace"],
                             max_iteration_per_run=cfg["max_iterations"])
+        # the SDK's prompt talks about /workspace; on this machine the repository is a
+        # Windows path, and the first two turns of a run went to `glob **/* /workspace`
+        # ("D:\\workspace is not a valid directory"). Name the root, absolutely.
         conv.send_message(cfg["task"])
         conv.run()
         claim = ""
@@ -1405,7 +1408,8 @@ def cmd_dispatch(a) -> int:
             if p.is_file():
                 files[rel] = p.read_text(encoding="utf-8", errors="replace")
     try:
-        pk = packet(contract, scenarios, plan, a.task, files=files, budget_chars=a.budget)
+        pk = packet(contract, scenarios, plan, a.task, files=files, budget_chars=a.budget,
+                    root=str(workspace))
     except DispatchError as e:
         _emit({"passed": False, "error": str(e)})
         return 2
