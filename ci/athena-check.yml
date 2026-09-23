@@ -40,6 +40,12 @@ jobs:
             --front features/team-layer/plan.md \
             --ledger .athena/team_ledger.json \
             --run --text
+      - name: contract loop (fast lane) — executor layer (v3.12)
+        run: |
+          python athena.py --speckit off check features/executor-layer/contract.md \
+            --front features/executor-layer/plan.md \
+            --ledger .athena/executor_ledger.json \
+            --run --text
       - name: decisions and architecture (v3.11)
         run: |
           python athena.py adr lint docs/adr --text

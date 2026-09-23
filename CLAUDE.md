@@ -22,4 +22,7 @@
 5. A decision that outlives the task is a record in `docs/adr/`, cited with `see:`. A failure
    from the world enters with `python athena.py intake` (draft clause + red spec). On a parallel
    branch take a lane: `ATHENA_LANE=N`, ids via `python athena.py contract next-id`.
-6. Design history lives in `docs/history/`. Tasks are tracked in bd (`AGENTS.md`).
+6. Work is delegated as a packet, never typed from memory: `python athena.py dispatch <contract>
+   --front <plan> --task T1.1 --executor local-27b|openhands|claude|none`. The verdict is the
+   diff plus the spec commands; an executor's own "done" never counts.
+7. Design history lives in `docs/history/`. Tasks are tracked in bd (`AGENTS.md`).
