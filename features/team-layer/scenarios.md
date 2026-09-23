@@ -231,6 +231,14 @@
 - **When** the spec `test_the_project_settings_register_the_pre_edit_hook` is executed
 - **Then** .claude/settings.json has a PreToolUse hook on Edit|Write|MultiEdit running hooks/pre-edit.sh.
 
+### S5.7 — a long owner list is capped to the twelve heaviest, with a count of the rest
+- **verifies:** C-5.7
+- **pins:** 4187fdb2635f2889
+- **run_cmd:** `python -m pytest tests/test_harness.py::test_a_long_owner_list_is_capped_to_the_heaviest_twelve -q`
+- **Given** tests/test_harness.py
+- **When** the spec `test_a_long_owner_list_is_capped_to_the_heaviest_twelve` is executed
+- **Then** the context names exactly the twelve clauses with most owned lines and says how many more there are.
+
 ## C-6 — proved by the metrics module and a timed gate (lib/metrics.py)
 
 ### S6.1 — the gate over this repository answers within two seconds

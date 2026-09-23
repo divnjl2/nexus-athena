@@ -65,7 +65,7 @@ with a record of runs, and property-based proofs of the parser, the pins and the
 - [ ] T5.1 Implement the pre-edit hook decision and the architecture lint; register the hook
   - success_check: `python -m pytest tests/test_harness.py -q`
   - files: `lib/hooks.py, lib/archlint.py, athena.py, hooks/pre-edit.sh, .claude/settings.json, tests/test_harness.py`
-  - verifies: S5.1, S5.2, S5.3, S5.4, S5.5, S5.6
+  - verifies: S5.1, S5.2, S5.3, S5.4, S5.5, S5.6, S5.7
 ### Manual Verification
 - `echo '{"tool_input":{"file_path":"lib/contract.py"}}' | python athena.py hook pre-edit` lists owning clauses.
 
