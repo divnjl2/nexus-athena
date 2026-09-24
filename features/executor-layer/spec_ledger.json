@@ -1,5 +1,5 @@
 {
-  "contract_version": "fd2f2a0417505c45",
+  "contract_version": "b357cfebb0196b73",
   "results": [
     {
       "clause": "C-1.1",
@@ -112,6 +112,26 @@
       "scenario": "S2.5"
     },
     {
+      "clause": "C-2.6",
+      "clause_version": "e265cd1cfc8abb60",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_changed_file_brings_the_specs_of_its_owning_clauses_into_the_verdict -q",
+      "scenario": "S2.6"
+    },
+    {
+      "clause": "C-2.7",
+      "clause_version": "af16c665e70340b8",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_editing_the_specs_own_test_file_is_flagged_and_never_green -q",
+      "scenario": "S2.7"
+    },
+    {
       "clause": "C-3.1",
       "clause_version": "7d549a8ab872c710",
       "duration_ms": 1,
@@ -184,12 +204,22 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 137,
+      "duration_ms": 95,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_packet_without_an_executor_is_printed_and_not_recorded -q",
       "scenario": "S4.3"
+    },
+    {
+      "clause": "C-4.4",
+      "clause_version": "135bc2d9121db217",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_dispatch_metrics_report_iterations_to_green_per_task -q",
+      "scenario": "S4.4"
     },
     {
       "clause": "C-5.1",
@@ -282,13 +312,13 @@
       "scenario": "S6.4"
     }
   ],
-  "scenario_version": "fa747513cbaa8cf5",
+  "scenario_version": "8ae5c7804727aed2",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 164,
+    "duration_ms": 125,
     "failed": 0,
-    "passed": 28,
-    "total": 28
+    "passed": 31,
+    "total": 31
   },
-  "ts": "2026-09-24T07:56:22+00:00"
+  "ts": "2026-09-24T08:30:01+00:00"
 }

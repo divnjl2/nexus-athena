@@ -97,6 +97,22 @@
 - **When** the spec `test_a_tool_call_left_as_text_is_named_a_parser_mismatch` is executed
 - **Then** a claim holding `<tool_call>` or a `{"function": ...}` object yields a reason that names the tool-parser mismatch.
 
+### S2.6 — a changed file brings the specs of the clauses that own it into the verdict
+- **verifies:** C-2.6
+- **pins:** e265cd1cfc8abb60
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_changed_file_brings_the_specs_of_its_owning_clauses_into_the_verdict -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_changed_file_brings_the_specs_of_its_owning_clauses_into_the_verdict` is executed
+- **Then** the run commands of every clause owning lines in the changed file are added, across contracts, without repeating the task's own checks.
+
+### S2.7 — editing the spec's own test file is flagged and never green
+- **verifies:** C-2.7
+- **pins:** af16c665e70340b8
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_editing_the_specs_own_test_file_is_flagged_and_never_green -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_editing_the_specs_own_test_file_is_flagged_and_never_green` is executed
+- **Then** a change to the test module of the task's spec sets review_flags, green=False and a reason, even when every check exited 0.
+
 ## C-3 — proved by the executor registry (lib/executors.py)
 
 ### S3.1 — the registry resolves known executors and refuses unknown
@@ -164,6 +180,14 @@
 - **Given** tests/test_dispatch.py
 - **When** the spec `test_a_packet_without_an_executor_is_printed_and_not_recorded` is executed
 - **Then** `athena dispatch --executor none` prints the packet and leaves the dispatch record untouched.
+
+### S4.4 — dispatch metrics report iterations to green per task
+- **verifies:** C-4.4
+- **pins:** 135bc2d9121db217
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_dispatch_metrics_report_iterations_to_green_per_task -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_dispatch_metrics_report_iterations_to_green_per_task` is executed
+- **Then** the report carries, per task, the attempts and the iteration at which it went green, or none when it never did.
 
 ## C-5 — proved by the iteration loop in the dispatch module (lib/dispatch.py)
 
