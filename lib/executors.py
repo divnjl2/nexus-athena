@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pathlib
 
-EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b")
+EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-4b", "pi-2b")
 LANE_MODELS = {"local-27b": "qwopus-27b", "local-9b": "qwable-9b"}
 LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"
@@ -38,12 +38,15 @@ LOCAL_OUTPUT_TOKENS = {"local-27b": 8192, "local-9b": 8192}
 #: (provider, model id; compat.supportsDeveloperRole=false, the 9B's template refused the
 #: developer role). Measured before adding it: the vanilla 27B edited a file in three turns
 #: through pi on the first try, the vanilla 9B in two.
-PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5-9b")}
+PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5-9b"),
+                # the floor experiment: small GGUFs on disk (Qwen3.5-4B Q4_K_M, Qwen3.5-2B) behind a
+                # llama.cpp server the operator starts; the providers are registered in models.json
+                "pi-4b": ("lane4", "qwen3.5-4b"), "pi-2b": ("lane2", "qwen3.5-2b")}
 PI_TOOLS = "read,bash,edit,write"
 #: reasoning effort per lane. Measured on the vanilla 27B, one coding prompt: its default
 #: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,
 #: medium in 46 s; "high" the lane rejects with a 400.
-PI_THINKING = {"pi-27b": "low", "pi-9b": "medium"}
+PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-4b": "low", "pi-2b": "low"}
 #: hashline (C-3.7): the pi-hashline-edit-pro extension registers read / replace / insert /
 #: anchor_grep / undo_last_change and disables the string-replace edit. Lines come back as
 #: `Dafo│content`; an edit names anchors; a stale anchor is refused ([E_RANGE_STALE]) instead
