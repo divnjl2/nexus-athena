@@ -976,10 +976,14 @@ def _walk(root: pathlib.Path, name: str, depth: int):
             yield pathlib.Path(dirpath) / name
 
 
-def _gate_one(contract: pathlib.Path, root: pathlib.Path) -> dict:
-    """The cheap lane for one contract: committed ledger, no spec run, no clause map."""
+def _gate_one(contract: pathlib.Path, root: pathlib.Path, *, run_specs: bool = False) -> dict:
+    """The cheap lane for one contract: committed ledger, no spec run, no clause map.
+    With `run_specs` (the refinery, C-2.3) the specs are run now: a merge is judged on what
+    the workspace does, not on the ledger someone committed."""
     d = contract.parent
     argv = ["check", str(contract), "--allow-partial", "--cwd", str(root)]
+    if run_specs:
+        argv.append("--run")
     if (d / "scenarios.md").exists():
         argv += ["--scenarios", str(d / "scenarios.md")]
     if (d / "plan.md").exists():
@@ -1232,14 +1236,117 @@ def cmd_metrics(a) -> int:
     dpath = here / "dispatch.jsonl"
     drecords, dskipped = parse_dispatches(dpath.read_text(encoding="utf-8") if dpath.exists() else "")
     drep = dispatch_metrics(drecords)
+    # v3.13 C-2.6: what the refinery did with the green ones
+    mpath = here / "merge.jsonl"
+    mrep: dict = {}
+    mtext = ""
+    try:
+        from lib.refinery import merge_metrics, parse_merges, render_merge_metrics
+        merges = parse_merges(mpath.read_text(encoding="utf-8") if mpath.exists() else "")
+        mrep = merge_metrics(drecords, merges)
+        mtext = render_merge_metrics(mrep)
+    except ImportError:            # the refinery module is a task of the refinery-layer plan
+        mtext = "# merge — (lib/refinery.py not present)"
     if a.text:
         print(render(rep, skipped=skipped))
         print()
         print(render_metrics(drep))
+        print(mtext)
     else:
         _emit({**rep, "skipped_lines": skipped, "runs_file": str(runs_path),
-               "dispatch": {**drep, "skipped_lines": dskipped, "file": str(dpath)}})
+               "dispatch": {**drep, "skipped_lines": dskipped, "file": str(dpath)},
+               "merge": {"by_executor": mrep, "file": str(mpath)}})
     return 0
+
+
+# --- v3.13: the refinery — a green workspace reaches the target through four stages -------
+
+def cmd_merge(a) -> int:
+    """Offer a workspace to the merge queue (C-2.1..C-2.5). Admit on the task's last dispatch
+    record, rebase onto the target, run every contract in the workspace, fast-forward the
+    target; refuse at the first stage that fails, append the merge record, and hand back the
+    bd command that returns the task with the reason. Nothing here trusts a report: git's
+    exit codes and the check decide."""
+    import datetime
+    import subprocess
+    from lib.dispatch import parse_dispatches
+    from lib.gate import find_contracts
+    from lib.refinery import admit, bd_return_command, fast_forward, first_failure, merge_record, rebase
+
+    contract = pathlib.Path(a.contract).resolve()
+    here = contract.parent / ".athena"
+    here.mkdir(parents=True, exist_ok=True)
+    workspace = pathlib.Path(a.workspace).resolve()
+    if not workspace.is_dir():
+        print(f"merge: workspace is not a directory: {workspace}", file=sys.stderr)
+        return 2
+    plan = parse_plan(pathlib.Path(a.front).read_text(encoding="utf-8")) if a.front else None
+    slug = a.slug or _slugify(getattr(plan, "title", "") or contract.parent.name)
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+    dpath = here / "dispatch.jsonl"
+    records, _ = parse_dispatches(dpath.read_text(encoding="utf-8") if dpath.exists() else "")
+    mine = [r for r in records if r.get("task") == a.task]
+    executor = a.executor or (mine[-1].get("executor", "?") if mine else "?")
+
+    def run(argv, cwd):
+        try:
+            p = subprocess.run(argv, cwd=str(cwd), capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=a.timeout)
+        except subprocess.TimeoutExpired:
+            return 124, f"timed out after {a.timeout}s: {' '.join(argv)}"
+        except OSError as e:
+            return 127, str(e)
+        return p.returncode, (p.stdout or "") + (p.stderr or "")
+
+    def end(stage: str, ok: bool, reason: str) -> int:
+        rec = merge_record(a.task, executor, stage, ok, reason, ts=ts)
+        rec["workspace"] = str(workspace)
+        rec["target"] = a.target
+        with (here / "merge.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        out = dict(rec)
+        if not ok:
+            argv = bd_return_command(slug, a.task, stage, reason)
+            out["bd_command"] = argv
+            if a.bd:
+                code, tail = run(argv, workspace)
+                out["bd_exit"] = code
+                out["bd_tail"] = tail[-300:]
+        if a.text:
+            mark = "merged" if ok else f"refused at {stage}"
+            print(f"merge: {mark} — {a.task} by {executor} -> {a.target}\n  {reason}")
+            if not ok:
+                print("  bd: " + " ".join(out["bd_command"][:3]) + " ...")
+        else:
+            _emit(out)
+        return 0 if ok else 1
+
+    d = admit(records, a.task)
+    if not d.get("ok"):
+        return end("admit", False, d.get("reason", "not admitted"))
+
+    r = rebase(run, str(workspace), a.target)
+    if not r.get("ok"):
+        return end("rebase", False, r.get("reason", "rebase failed"))
+
+    files: dict = {}
+    for path in _walk(workspace, "contract.md", a.depth):
+        try:
+            files[str(path)] = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+    verdicts = [_gate_one(pathlib.Path(c), workspace, run_specs=True) for c in find_contracts(files)]
+    fail = first_failure(verdicts)
+    if fail:
+        return end("check", False, fail)
+
+    f = fast_forward(run, str(workspace), a.target)
+    if not f.get("ok"):
+        return end("fast-forward", False, f.get("reason", "not a fast-forward"))
+    return end("fast-forward", True,
+               f"{a.target} {str(f.get('old', ''))[:12]} -> {str(f.get('head', ''))[:12]} "
+               f"({len(verdicts)} contracts held)")
 
 
 # --- v3.12: the executor layer — packets in, verdicts out -------------------------
@@ -1894,6 +2001,21 @@ def build_parser() -> argparse.ArgumentParser:
     me.add_argument("contract", nargs="?", default="contract.md")
     me.add_argument("--text", action="store_true")
     me.set_defaults(fn=cmd_metrics)
+
+    mg = sub.add_parser("merge", help="offer a workspace to the refinery: admit on the record, "
+                                      "rebase, run every contract, fast-forward the target")
+    mg.add_argument("contract")
+    mg.add_argument("--front", default="", help="plan.md, for the bd slug")
+    mg.add_argument("--task", required=True, help="task id whose last dispatch record admits the offer")
+    mg.add_argument("--workspace", required=True, help="the worktree the executor worked in")
+    mg.add_argument("--target", default="master", help="branch to fast-forward")
+    mg.add_argument("--executor", default="", help="recorded executor (default: from the dispatch record)")
+    mg.add_argument("--slug", default="", help="bd project slug (default: from the plan title)")
+    mg.add_argument("--bd", action="store_true", help="on refusal, run the bd command that returns the task")
+    mg.add_argument("--depth", type=int, default=3, help="how deep to look for contract.md in the workspace")
+    mg.add_argument("--timeout", type=int, default=600, help="seconds per git command")
+    mg.add_argument("--text", action="store_true")
+    mg.set_defaults(fn=cmd_merge)
 
     cp = csub.add_parser("pin")
     cp.add_argument("scenarios", nargs="?", default="")
