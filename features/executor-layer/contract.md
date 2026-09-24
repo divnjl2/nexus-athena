@@ -60,6 +60,12 @@
   workspace is the repository and whose model is the one named.
 - **C-3.4** — WHEN an executor is not installed THE SYSTEM SHALL report it unavailable instead
   of failing the dispatch with a traceback.
+- **C-3.5** — WHEN the OpenHands executor is prepared THE SYSTEM SHALL give it an
+  implementer's prompt shaped like the packet, unless the stock prompt is asked for.
+  - source: ledger
+  - note: with the SDK's explorer prompt the 27B spent every turn on glob and view across
+    eight dispatches and never attempted an edit; the packet already holds what an explorer
+    would go looking for.
 
 ## C-4 — The record
 

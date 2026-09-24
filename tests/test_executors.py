@@ -51,6 +51,18 @@ def test_the_openhands_run_is_rooted_at_the_repository_with_the_named_model():
         openhands_config("# Task", workspace="C:/repo", model="")
 
 
+def test_openhands_gets_an_implementers_prompt_not_an_explorers():
+    """C-3.5 — the packet already holds what an explorer would go looking for; the executor
+    is told it is an implementer, and the stock prompt is an explicit choice."""
+    cfg = openhands_config("# Task", workspace="C:/repo", model="openai/qwopus-27b")
+    prompt = cfg["system_prompt"]
+    assert "implementer" in prompt.lower() and "Do not explore" in prompt
+    assert "str_replace" in prompt and "DONE" in prompt and "contract.md" in prompt
+    assert "orchestrator runs the specs" in prompt
+    stock = openhands_config("# Task", workspace="C:/repo", model="m", prompt="default")
+    assert stock["system_prompt"] == ""
+
+
 def test_a_missing_executor_is_unavailable_not_a_traceback():
     """C-3.4 — the probes are injected; a missing SDK or binary is an answer, not a crash."""
     no = availability("openhands", find_spec=lambda name: None)

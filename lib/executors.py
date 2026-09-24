@@ -78,19 +78,38 @@ def claude_command(packet_text: str, *, max_turns: int = 40, claude_bin: str = "
 #: the model speaks bash (`ls -la` -> "parameter not found" -> stuck-detector), measured.
 OPENHANDS_TOOLS = ("file_editor", "glob", "grep")
 
+#: The implementer's prompt (C-3.5). OpenHands' stock system prompt is written for an
+#: explorer of an unknown repository; on a 30k window with a 27B model that prompt won:
+#: twelve turns of glob and view per iteration, never an edit (measured, 0 of 8). A packet
+#: already carries the requirement, the spec, the file and the test source, so the
+#: executor is told what it is: an implementer, not an explorer.
+OPENHANDS_IMPLEMENTER_PROMPT = (
+    "You are an implementer working inside one repository. You receive a task packet that "
+    "already holds the requirement (numbered clauses), the spec commands that decide done, "
+    "the files you may change with their full contents, and the source of the test that must "
+    "pass. Do not explore the repository and do not read other files: everything you need is "
+    "in the packet. Make the change with file_editor str_replace on the named file, using an "
+    "exact old_str copied from the packet, in as few calls as possible. Never edit "
+    "contract.md, scenarios.md, spec_ledger.json or clause_map.json. You cannot run commands; "
+    "the orchestrator runs the specs after you finish and judges by the diff. When the edit "
+    "is applied, answer with the single line: DONE."
+)
+
 
 def openhands_config(packet_text: str, *, workspace: str, model: str, base_url: str = "",
                      api_key_env: str = "LITELLM_LOCAL_KEY", max_iterations: int = 30,
-                     terminal: bool = False) -> dict:
-    """PURE: the OpenHands SDK run (C-3.3): rooted at the repository, the model as named,
-    the local gateway as base url when the caller asks for it, edit-and-look tools only
-    unless a terminal is asked for."""
+                     terminal: bool = False, prompt: str = "implementer") -> dict:
+    """PURE: the OpenHands SDK run (C-3.3, C-3.5): rooted at the repository, the model as
+    named, the local gateway as base url when the caller asks for it, edit-and-look tools
+    only unless a terminal is asked for, and the implementer's prompt unless the stock one
+    is asked for (`prompt="default"`)."""
     if not model:
         raise ValueError("openhands needs a model name (e.g. openai/qwopus-27b)")
     tools = list(OPENHANDS_TOOLS) + (["terminal"] if terminal else [])
     return {"workspace": str(pathlib.Path(workspace)), "model": model, "base_url": base_url,
             "api_key_env": api_key_env, "max_iterations": int(max_iterations),
-            "tools": tools, "task": packet_text}
+            "tools": tools, "task": packet_text,
+            "system_prompt": OPENHANDS_IMPLEMENTER_PROMPT if prompt == "implementer" else ""}
 
 
 def availability(name: str, *, which=None, find_spec=None, exists=None) -> dict:
