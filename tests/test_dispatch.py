@@ -392,6 +392,15 @@ def test_fanned_attempts_keep_the_first_green_verdict():
     assert fan_names("D:/w/ref-a", 3) == ["D:/w/ref-a-fan1", "D:/w/ref-a-fan2", "D:/w/ref-a-fan3"]
     assert fan_names("D:/w/ref-a/", 1) == ["D:/w/ref-a-fan1"]
     assert fan_names(str(pathlib.PureWindowsPath("D:/w/ref-a")), 1) == ["D:/w/ref-a-fan1"]
+    # each copy is told its own root: the packet's absolute paths move with it
+    from lib.dispatch import retarget
+    text = ("Repository root, already your working directory: D:/w/ref-a\n"
+            "- lib/x.py  (absolute: D:/w/ref-a/lib/x.py)\n- see lib/x.py\n")
+    moved = retarget(text, "D:/w/ref-a", "D:/w/ref-a-fan2")
+    assert "D:/w/ref-a-fan2/lib/x.py" in moved and "directory: D:/w/ref-a-fan2" in moved
+    assert "D:/w/ref-a/" not in moved and "- see lib/x.py" in moved
+    win = str(pathlib.PureWindowsPath("D:/w/ref-a/lib"))
+    assert retarget(win, "D:/w/ref-a", "D:/w/ref-a-fan1") == str(pathlib.PureWindowsPath("D:/w/ref-a-fan1/lib"))
 
 
 def test_without_a_green_attempt_the_least_red_landing_is_carried_forward():

@@ -369,6 +369,21 @@ def pick_winner(results: list) -> int | None:
     return min(landed)[2]
 
 
+def retarget(text: str, base_root: str, copy_root: str) -> str:
+    """PURE (C-5.6): the packet names the workspace root absolutely, so a fanned attempt must
+    be told ITS copy — measured: three copies, three workers, every edit written into the
+    base workspace the packet named, and three verdicts of "nothing landed"."""
+    base = str(base_root).replace("\\", "/").rstrip("/")
+    copy = str(copy_root).replace("\\", "/").rstrip("/")
+    if not base or base == copy:
+        return text
+    out = text.replace(base, copy)
+    win_base = base.replace("/", "\\")
+    if win_base != base:
+        out = out.replace(win_base, copy.replace("/", "\\"))
+    return out
+
+
 def fan_names(workspace: str, n: int) -> list:
     """PURE: the sibling paths the fanned attempts work in, one copy of the workspace each."""
     base = str(workspace).replace("\\", "/").rstrip("/")

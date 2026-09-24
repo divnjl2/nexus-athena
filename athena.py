@@ -1724,13 +1724,17 @@ def cmd_dispatch(a) -> int:
             # C-5.6: the same packet into N copies of the workspace at once; the first green
             # verdict is the iteration's, else the least red landing is carried forward
             from concurrent.futures import ThreadPoolExecutor, as_completed
-            from lib.dispatch import fan_names, pick_winner
+            from lib.dispatch import fan_names, pick_winner, retarget
             copies = _fan_out(workspace, fan_names(str(workspace), a.fanout))
             results: list = []
             try:
                 befores = {ws: snapshot(ws) for ws in copies}
+                # the packet names the root absolutely: each copy gets a packet naming ITSELF,
+                # or every worker edits the base and every copy reports "nothing landed" (measured)
+                packets = {ws: {**current, "text": retarget(current["text"], str(workspace), str(ws))}
+                           for ws in copies}
                 with ThreadPoolExecutor(max_workers=len(copies)) as pool:
-                    futs = {pool.submit(one_attempt, ws, befores[ws], current): ws for ws in copies}
+                    futs = {pool.submit(one_attempt, ws, befores[ws], packets[ws]): ws for ws in copies}
                     for fut in as_completed(futs):
                         results.append(fut.result())
                 win = pick_winner([r["v"] for r in results])
