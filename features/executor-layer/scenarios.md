@@ -395,6 +395,14 @@
 - **When** the spec `test_the_bench_command_prints_its_plan_without_running_when_dry` is executed
 - **Then** the parser takes the bench flags, the plan lists the runs with their workspaces and the dispatch flags, and a dry run dispatches nothing.
 
+### S7.5 — repair tasks are forged from exclusively owned lines and verified by the clause's spec
+- **verifies:** C-7.5
+- **pins:** b5499f7c48c4c5fe
+- **run_cmd:** `python -m pytest tests/test_forge.py::test_repair_tasks_are_forged_from_exclusively_owned_lines_and_verified_by_the_clauses_spec -q`
+- **Given** tests/test_forge.py
+- **When** the spec `test_repair_tasks_are_forged_from_exclusively_owned_lines_and_verified_by_the_clauses_spec` is executed
+- **Then** targets are exclusively owned lines of non-test Python files; a forged task names the clause, its specs and its mutants, across files on the hard rung; mutants apply in sequence; the plan parses with the mutated files and the clause's specs; the table reads the record.
+
 ## C-8 — proved by the test-writer module (lib/testwriter.py) and the locator module (lib/locate.py)
 
 ### S8.1 — candidate tests are kept only when they fail on the current code and agree

@@ -251,6 +251,15 @@
   prints the plan and dispatches nothing.
   - source: review
   - note: the rung a change across two files sits on: the module of C-7.1 and the CLI.
+- **C-7.5** — WHEN a bench is forged THE SYSTEM SHALL break lines a clause exclusively owns in
+  a copy of the repository, confirm the clause's spec went red, dispatch the repair as a task
+  whose files are the broken ones and whose verdict is that spec, and skip a break the spec
+  did not notice.
+  - source: review
+  - note: the SWE-smith move, with the clause map as the generator: the ground truth is the
+    unbroken code and nobody writes a task. One mutant is the atomic rung; several across
+    files is the rung past the envelope. A break the spec did not notice is a finding about
+    the spec (the mutation layer's business), not a task.
 
 ## C-8 — The swarm's second source: tests and locations the orchestrator did not write
 

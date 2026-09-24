@@ -109,6 +109,10 @@ that says, per executor, how often the work landed and went green.
   - success_check: `python -m pytest tests/test_bench.py::test_the_bench_command_prints_its_plan_without_running_when_dry -q`
   - files: `athena.py, lib/bench.py`
   - verifies: S7.4
+- [ ] T7.5 The forge: repair tasks from the clause map, run through dispatch
+  - success_check: `python -m pytest tests/test_forge.py -q`
+  - files: `lib/forge.py, athena.py`
+  - verifies: S7.5
 ### Manual Verification
 - `python athena.py bench features/refinery-layer/contract.md --front features/refinery-layer/plan.md --tasks T2.1,T2.3 --executors pi-9b,pi-27b --base-workspace <dir> --dry-run` prints the plan.
 

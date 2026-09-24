@@ -1497,6 +1497,90 @@ def cmd_next(a) -> int:
     return subprocess.run(argv).returncode
 
 
+def cmd_forge(a) -> int:
+    """C-7.5: benchmark tasks the frame makes for itself — break lines a clause exclusively
+    owns in a copy, confirm the clause's spec went red, dispatch the repair as a task, and
+    read the table from the record. `--mutants 1` is the atomic rung; `--mutants 2` or more,
+    across files when the clause owns several, is the rung past the envelope."""
+    import subprocess
+    from lib.dispatch import parse_dispatches
+    from lib.forge import apply_mutants, forge_table, forged_plan, pick_targets, render_forge
+    from lib.spec_runner import _spawn, _tokenize
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    map_path = pathlib.Path(a.map) if a.map else pathlib.Path(a.contract).resolve().parent / "clause_map.json"
+    clause_map = json.loads(map_path.read_text(encoding="utf-8"))
+    ws = pathlib.Path(a.workspace).resolve()
+    sources = {}
+    for files in (clause_map.get("clauses") or {}).values():
+        for path in files:
+            p = ws / path
+            if path not in sources and p.is_file() and path.endswith(".py"):
+                sources[path] = p.read_text(encoding="utf-8", errors="replace")
+    tasks = pick_targets(clause_map, scenarios, sources, n=a.n, mutants_per_task=a.mutants, seed=a.seed,
+                         clause_prefix=a.clause_prefix)
+    if not tasks:
+        _emit({"error": "no forgeable clause: needs exclusively owned lines in a .py file and a pytest spec"})
+        return 2
+    forge_dir = ws / ".athena" / "forge"
+    forge_dir.mkdir(parents=True, exist_ok=True)
+    here = pathlib.Path(a.contract).resolve().parent / ".athena"
+    outcomes = []
+
+    def reset():
+        subprocess.run(["git", "checkout", "-q", "--", "."], cwd=str(ws), capture_output=True)
+        subprocess.run(["git", "clean", "-fdq", "-e", ".athena"], cwd=str(ws), capture_output=True)
+
+    def run_spec(cmd):
+        argv, why = _tokenize(cmd)
+        if argv and argv[0] in ("python", "python3"):
+            argv[0] = sys.executable
+        return (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+
+    for task in tasks:
+        reset()
+        mutated = apply_mutants(sources, task["_mutants"])
+        for path, text in mutated.items():
+            if text != sources.get(path):
+                (ws / path).write_text(text, encoding="utf-8")
+        red = [run_spec(cmd)[0] != 0 for _, cmd in task["specs"]]
+        if not any(red):
+            outcomes.append({"task": task["id"], "clause": task["clause"], "skipped": "equivalent mutant: the spec stayed green"})
+            print(f"# forge {task['id']} {task['clause']}: mutant left the spec green, skipped", flush=True)
+            continue
+        plan_path = forge_dir / f"{task['id']}.plan.md"
+        plan_path.write_text(forged_plan(task, getattr(contract, "title", "") or "Athena"), encoding="utf-8")
+        argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", str(plan_path),
+                "--task", task["id"], "--executor", a.executor, "--workspace", str(ws),
+                "--iterations", str(a.iterations), "--timeout", str(a.timeout), "--stall", str(a.stall), "--text"]
+        if a.scenarios:
+            argv += ["--scenarios", a.scenarios]
+        if a.pi_thinking:
+            argv += ["--pi-thinking", a.pi_thinking]
+        if a.pi_strict:
+            argv += ["--pi-strict"]
+        if a.tag:
+            argv += ["--tag", a.tag]
+        print(f"# forge {task['id']} {task['clause']} mutants={[(m['path'], m['line'], m['kind']) for m in task['mutants']]}", flush=True)
+        proc = subprocess.run(argv, cwd=str(ROOT_DIR), capture_output=True, text=True, encoding="utf-8", errors="replace")
+        first = (proc.stdout or "").strip().splitlines()
+        print("  " + (first[0] if first else f"exit {proc.returncode}"), flush=True)
+        outcomes.append({"task": task["id"], "clause": task["clause"], "mutants": task["mutants"]})
+    reset()
+    dpath = here / "dispatch.jsonl"
+    records, _ = parse_dispatches(dpath.read_text(encoding="utf-8") if dpath.exists() else "")
+    executor_key = a.executor + (f"#{a.tag}" if a.tag else "")
+    table = forge_table(records, tasks, executor_key)
+    if a.text:
+        print(render_forge(table))
+    else:
+        _emit({"executor": executor_key, "mutants_per_task": a.mutants, "tasks": outcomes, "table": table})
+    return 0
+
+
+ROOT_DIR = pathlib.Path(__file__).resolve().parent
+
+
 def cmd_bench(a) -> int:
     """Run the matrix: each run is `athena dispatch` in its executor's workspace, a worktree
     created from the current HEAD when it does not exist; then the table from the record."""
@@ -2720,6 +2804,28 @@ def build_parser() -> argparse.ArgumentParser:
     nx.add_argument("--dry-run", dest="dry_run", action="store_true")
     nx.add_argument("--text", action="store_true")
     nx.set_defaults(fn=cmd_next)
+
+    fg = sub.add_parser("forge", help="repair tasks made from the clause map: break owned lines in a copy, "
+                                      "confirm the spec went red, dispatch the repair (C-7.5)")
+    fg.add_argument("contract")
+    fg.add_argument("--scenarios", default="")
+    fg.add_argument("--map", default="", help="clause_map.json (default: beside the contract)")
+    fg.add_argument("--workspace", required=True, help="a worktree of the repo; reset to HEAD before each task")
+    fg.add_argument("--executor", default="pi-9b")
+    fg.add_argument("--n", type=int, default=6)
+    fg.add_argument("--mutants", type=int, default=1, help="mutants per task; 2+ is the hard rung")
+    fg.add_argument("--seed", type=int, default=7)
+    fg.add_argument("--clause-prefix", dest="clause_prefix", default="")
+    fg.add_argument("--iterations", type=int, default=2)
+    fg.add_argument("--timeout", type=int, default=900)
+    fg.add_argument("--stall", type=int, default=300)
+    fg.add_argument("--check-timeout", dest="check_timeout", type=int, default=300)
+    fg.add_argument("--pi-thinking", dest="pi_thinking", default="")
+    fg.add_argument("--pi-strict", dest="pi_strict", action="store_true")
+    fg.add_argument("--tag", default="")
+    fg.add_argument("--speckit", default="auto")
+    fg.add_argument("--text", action="store_true")
+    fg.set_defaults(fn=cmd_forge)
 
     bn = sub.add_parser("bench", help="run a matrix of tasks x executors through dispatch, one "
                                       "worktree per executor, and print the table (C-7.4)")
