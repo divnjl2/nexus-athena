@@ -47,8 +47,34 @@ def _task(plan, task_id: str):
     raise DispatchError(f"plan has no task {task_id}")
 
 
+def test_node(run_cmd: str) -> tuple[str, str]:
+    """PURE: (module path, function name) of the pytest node a run_cmd names, or ("", "")."""
+    node = next((tok for tok in (run_cmd or "").split() if "::" in tok), "")
+    if not node:
+        return "", ""
+    path, _, rest = node.partition("::")
+    return path.replace("\\", "/"), rest.split("::")[-1].split("[")[0]
+
+
+def test_source(module_text: str, func_name: str) -> str:
+    """PURE: the source of one top-level test function out of its module, "" if absent.
+    AST-based, so a decorator or a docstring never fools it (C-1.5)."""
+    import ast
+    try:
+        tree = ast.parse(module_text)
+    except SyntaxError:
+        return ""
+    lines = module_text.splitlines()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == func_name:
+            start = (node.decorator_list[0].lineno if node.decorator_list else node.lineno) - 1
+            return "\n".join(lines[start:node.end_lineno])
+    return ""
+
+
 def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None,
-           budget_chars: int = DEFAULT_BUDGET_CHARS, root: str = "") -> dict:
+           budget_chars: int = DEFAULT_BUDGET_CHARS, root: str = "",
+           spec_sources: dict | None = None) -> dict:
     """PURE: the packet for one plan task (C-1.1, C-1.3, C-1.4). `files` is {path: text} the
     caller chose to inline (the task's files, read by the CLI). `root` is the absolute
     workspace path, named in the text: a local worker spent 31 Read calls on paths that did
@@ -75,7 +101,8 @@ def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None
         if cmd and cmd not in checks:
             checks.append(cmd)
     spec_rows = [{"id": s.id, "clause": s.requirement_key, "run_cmd": s.run_cmd,
-                  "case": getattr(s, "case", "")} for s in specs]
+                  "case": getattr(s, "case", ""),
+                  "source": (spec_sources or {}).get(s.id, "")} for s in specs]
     task_row = {"id": task.id, "title": task.title, "files": list(task.files),
                 "success_check": task.success_check}
     text = render_packet(task_row, clauses, spec_rows, checks, files or {}, root=root)
@@ -103,6 +130,11 @@ def render_packet(task: dict, clauses: list, specs: list, checks: list, files: d
     for s in specs:
         how = f"case `{s['case']}`" if s.get("case") else f"`{s['run_cmd']}`"
         out.append(f"- {s['id']} verifies {s['clause']}: {how}")
+    sources = [s for s in specs if s.get("source")]
+    if sources:
+        out += ["", "## The specs' own source (already read for you; do not Read the test files)"]
+        for s in sources:
+            out += [f"### {s['id']}", "```python", s["source"].rstrip("\n"), "```"]
     if task.get("files"):
         r = root.replace("\\", "/").rstrip("/") if root else ""
         out += ["", "## Files this task may touch",

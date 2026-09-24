@@ -19,6 +19,12 @@
   build the packet.
 - **C-1.4** — WHEN a packet exceeds the executor's context budget THE SYSTEM SHALL say so
   rather than shorten the clauses silently.
+- **C-1.5** — WHEN a spec is a test node whose source can be read THE SYSTEM SHALL carry that
+  test's source in the packet.
+  - source: ledger
+  - note: the three iterations that landed nothing spent 3, 4 and 9 turns on Read, one of
+    them into the context ceiling; the one that landed did a single Read. With the spec's
+    own source in the packet there is nothing left to go and read.
 
 ## C-2 — The verdict
 
