@@ -185,3 +185,31 @@
   - source: review
   - note: the operator's decision: the lanes think; the frame adapts the budget and the
     packet, not the model.
+
+## C-7 — The ceiling: graded tasks a local model in a harness is measured against
+
+- **C-7.1** — WHEN a bench matrix is planned THE SYSTEM SHALL list the runs of the tasks
+  across the executors, each executor in its own workspace, and fold the dispatch record
+  back into one table per task and executor: the iteration it went green at, attempts,
+  landings, seconds and tokens.
+  - source: review
+  - note: the rung a new module sits on — three pure functions, one file, about a hundred
+    lines. The bench loops were shell one-liners until this clause.
+- **C-7.2** — WHEN a worker emits nothing for the stall window THE SYSTEM SHALL end its
+  process tree well before the timeout and report the iteration as stalled, distinct from
+  a timeout.
+  - source: ledger
+  - note: the rung an edit inside a 2,400-line module sits on. Measured: workers that had
+    finished thinking and hung were held to the 900-second timeout, and their orphaned
+    requests kept the lane's slots; pi's JSON events make silence measurable.
+- **C-7.3** — WHEN `athena next` is asked for a slug THE SYSTEM SHALL take that slug's first
+  ready task from bd — lowest priority number first, the earlier created on a tie — claim
+  it, and dispatch it with the flags given; with nothing ready it says so.
+  - source: review
+  - note: the rung a new module plus a CLI command sits on; it is the Gas Town rule "if
+    there is work on your hook, run it", with bd as the hook.
+- **C-7.4** — WHEN `athena bench` is run THE SYSTEM SHALL execute the planned matrix, each run
+  through dispatch in its executor's workspace, and print the table; with `--dry-run` it
+  prints the plan and dispatches nothing.
+  - source: review
+  - note: the rung a change across two files sits on: the module of C-7.1 and the CLI.

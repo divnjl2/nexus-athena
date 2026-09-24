@@ -84,3 +84,26 @@ that says, per executor, how often the work landed and went green.
   - verifies: S6.1, S6.2, S6.3, S6.4, S6.5, S6.6
 ### Manual Verification
 - `python athena.py relay --port 8414` then `athena dispatch ... --executor openhands --base-url http://127.0.0.1:8414/v1` makes tool calls the lane's parser refused.
+
+## Phase 7: The ceiling
+**Goal:** four graded tasks, one clause each, that say how far a local model in a harness reaches.
+**Depends on:** Phase 3
+### Tasks
+- [ ] T7.1 The bench module: plan the matrix, fold the record, render the table
+  - success_check: `python -m pytest tests/test_bench.py::test_a_bench_matrix_is_planned_and_read_back_from_the_record -q`
+  - files: `lib/bench.py`
+  - verifies: S7.1
+- [ ] T7.2 The witness: end a silent worker at the stall window, report stalled
+  - success_check: `python -m pytest tests/test_witness.py -q`
+  - files: `athena.py`
+  - verifies: S7.2
+- [ ] T7.3 The queue module: pick and claim the next ready task of a slug
+  - success_check: `python -m pytest tests/test_next.py -q`
+  - files: `lib/queue.py`
+  - verifies: S7.3
+- [ ] T7.4 The bench command: run the matrix through dispatch, or print the plan when dry
+  - success_check: `python -m pytest tests/test_bench.py::test_the_bench_command_prints_its_plan_without_running_when_dry -q`
+  - files: `athena.py, lib/bench.py`
+  - verifies: S7.4
+### Manual Verification
+- `python athena.py bench features/refinery-layer/contract.md --front features/refinery-layer/plan.md --tasks T2.1,T2.3 --executors pi-9b,pi-27b --base-workspace <dir> --dry-run` prints the plan.

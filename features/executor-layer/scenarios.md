@@ -320,3 +320,37 @@
 - **Given** tests/test_toolcalls.py
 - **When** the spec `test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked` is executed
 - **Then** the relay's default is thinking on; only an explicit off changes a tool-carrying request.
+
+## C-7 — proved by the bench module (lib/bench.py), the queue module (lib/queue.py) and the CLI
+
+### S7.1 — a bench matrix is planned and read back from the record
+- **verifies:** C-7.1
+- **pins:** 205a937c21c3725d
+- **run_cmd:** `python -m pytest tests/test_bench.py::test_a_bench_matrix_is_planned_and_read_back_from_the_record -q`
+- **Given** tests/test_bench.py
+- **When** the spec `test_a_bench_matrix_is_planned_and_read_back_from_the_record` is executed
+- **Then** the runs are tasks × executors in order, one workspace per executor; the record folds into green_at, attempts, landed, seconds and tokens per cell; the render names the columns and cells.
+
+### S7.2 — a silent worker is ended by the stall window and reported as stalled
+- **verifies:** C-7.2
+- **pins:** 10b350af8ac6284e
+- **run_cmd:** `python -m pytest tests/test_witness.py::test_a_silent_worker_is_ended_by_the_stall_window_and_reported_as_stalled -q`
+- **Given** tests/test_witness.py
+- **When** the spec `test_a_silent_worker_is_ended_by_the_stall_window_and_reported_as_stalled` is executed
+- **Then** a command silent past the window ends within seconds with an error that says stalled; one that keeps emitting events runs to its end and its result is parsed.
+
+### S7.3 — the next ready task of a slug is picked and claimed
+- **verifies:** C-7.3
+- **pins:** 5ec3fe8485bb9758
+- **run_cmd:** `python -m pytest tests/test_next.py::test_the_next_ready_task_of_a_slug_is_picked_and_claimed -q`
+- **Given** tests/test_next.py
+- **When** the spec `test_the_next_ready_task_of_a_slug_is_picked_and_claimed` is executed
+- **Then** only the slug's tasks count, the lowest priority number wins and the earlier created on a tie, the claim command names the key, and an empty or foreign list yields nothing.
+
+### S7.4 — the bench command prints its plan without running when dry
+- **verifies:** C-7.4
+- **pins:** 63102592bae9204d
+- **run_cmd:** `python -m pytest tests/test_bench.py::test_the_bench_command_prints_its_plan_without_running_when_dry -q`
+- **Given** tests/test_bench.py
+- **When** the spec `test_the_bench_command_prints_its_plan_without_running_when_dry` is executed
+- **Then** the parser takes the bench flags, the plan lists the runs with their workspaces and the dispatch flags, and a dry run dispatches nothing.

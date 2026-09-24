@@ -1,10 +1,10 @@
 {
-  "contract_version": "7df9efc2c0b2b45f",
+  "contract_version": "47e69a158ad6f599",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "2371c7363375554f",
-      "duration_ms": 134,
+      "duration_ms": 151,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-1.2",
       "clause_version": "983aca12dc4dcc7d",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -74,7 +74,7 @@
     {
       "clause": "C-1.8",
       "clause_version": "5231d7701e035e81",
-      "duration_ms": 7,
+      "duration_ms": 9,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -84,7 +84,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "c855249d81fc3ccb",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -94,7 +94,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "cb9eddee2ee0afa8",
-      "duration_ms": 1,
+      "duration_ms": 146,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "0810505d0b526139",
-      "duration_ms": 156,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -184,7 +184,7 @@
     {
       "clause": "C-3.4",
       "clause_version": "045e91fa37cf913a",
-      "duration_ms": 1,
+      "duration_ms": 151,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,7 +204,7 @@
     {
       "clause": "C-3.6",
       "clause_version": "5c01151cd397fa0a",
-      "duration_ms": 145,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -234,7 +234,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 43,
+      "duration_ms": 57,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -274,7 +274,7 @@
     {
       "clause": "C-5.3",
       "clause_version": "27efd5ac5055f0f1",
-      "duration_ms": 1,
+      "duration_ms": 159,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -304,7 +304,7 @@
     {
       "clause": "C-5.6",
       "clause_version": "cfe15fba21bf653d",
-      "duration_ms": 138,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -364,7 +364,7 @@
     {
       "clause": "C-6.5",
       "clause_version": "2ff53728c00396c9",
-      "duration_ms": 1,
+      "duration_ms": 167,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -374,21 +374,61 @@
     {
       "clause": "C-6.6",
       "clause_version": "fa01125cbd4a59ee",
-      "duration_ms": 15,
+      "duration_ms": 33,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_toolcalls.py::test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked -q",
       "scenario": "S6.6"
+    },
+    {
+      "clause": "C-7.1",
+      "clause_version": "205a937c21c3725d",
+      "duration_ms": 2,
+      "exit_code": 1,
+      "output_tail": "        \"\"\"C-7.1 — the matrix is the ordered runs of tasks × executors, each in its own workspace;\n        the record folds back into one table per (task, executor): green at which iteration,\n        landed, seconds, tokens.\"\"\"\n>       from lib.bench import matrix_table, plan_matrix, render_matrix\nE       ModuleNotFoundError: No module named 'lib.bench'\n\ntests\\test_bench.py:14: ModuleNotFoundError",
+      "passed": false,
+      "run_cmd": "python -m pytest tests/test_bench.py::test_a_bench_matrix_is_planned_and_read_back_from_the_record -q",
+      "scenario": "S7.1"
+    },
+    {
+      "clause": "C-7.2",
+      "clause_version": "10b350af8ac6284e",
+      "duration_ms": 5,
+      "exit_code": 1,
+      "output_tail": "    \"env\": {}, \"unset\": [], \"parse\": \"pi\"}\n        t0 = time.perf_counter()\n>       claim, tokens, err = athena._run_command_executor(silent, cwd=tmp_path, timeout=60, stall=2)\n                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: _run_command_executor() got an unexpected keyword argument 'stall'\n\ntests\\test_witness.py:20: TypeError",
+      "passed": false,
+      "run_cmd": "python -m pytest tests/test_witness.py::test_a_silent_worker_is_ended_by_the_stall_window_and_reported_as_stalled -q",
+      "scenario": "S7.2"
+    },
+    {
+      "clause": "C-7.3",
+      "clause_version": "5ec3fe8485bb9758",
+      "duration_ms": 1,
+      "exit_code": 1,
+      "output_tail": "     \"\"\"C-7.3 — out of bd's ready list only this slug's tasks count; the lowest priority number\n        wins, the earlier created one on a tie; the claim command names the key; an empty or\n        foreign list yields nothing.\"\"\"\n>       from lib.queue import claim_command, pick_ready, ready_command\nE       ModuleNotFoundError: No module named 'lib.queue'\n\ntests\\test_next.py:25: ModuleNotFoundError",
+      "passed": false,
+      "run_cmd": "python -m pytest tests/test_next.py::test_the_next_ready_task_of_a_slug_is_picked_and_claimed -q",
+      "scenario": "S7.3"
+    },
+    {
+      "clause": "C-7.4",
+      "clause_version": "63102592bae9204d",
+      "duration_ms": 11,
+      "exit_code": 1,
+      "output_tail": "', 'stats', 'hermes-plan', 'sea...ok', 'lint', 'dispatch', 'relay', 'metrics', 'merge', 'init', 'check', 'gate', 'lessons', 'mutate', 'judge', 'spec')\\n\"\n\n    def exit(self, status=0, message=None):\n        if message:\n            self._print_message(message, _sys.stderr)\n>       _sys.exit(status)\nE       SystemExit: 2\n\n..\\..\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\argparse.py:2627: SystemExit",
+      "passed": false,
+      "run_cmd": "python -m pytest tests/test_bench.py::test_the_bench_command_prints_its_plan_without_running_when_dry -q",
+      "scenario": "S7.4"
     }
   ],
-  "scenario_version": "ef2a1420b896c666",
+  "scenario_version": "69e707c4a5b31d5f",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 669,
-    "failed": 0,
+    "duration_ms": 924,
+    "failed": 4,
     "passed": 38,
-    "total": 38
+    "total": 42
   },
-  "ts": "2026-09-24T13:35:11+00:00"
+  "ts": "2026-09-24T13:43:47+00:00"
 }
