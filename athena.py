@@ -1533,6 +1533,96 @@ def cmd_dispatch(a) -> int:
     return 0 if v["passed"] else 1
 
 
+def cmd_relay(a) -> int:
+    """An OpenAI-compatible relay in front of the gateway: non-streaming chat completions are
+    normalised (a tool call left as text becomes tool_calls, C-6.1); everything else, and
+    every streaming response, is forwarded byte for byte (C-6.2). The lanes are not touched."""
+    import http.server
+    import urllib.error
+    import urllib.request
+    from lib.toolcalls import normalize_completion
+
+    upstream = a.upstream.rstrip("/")
+    log = open(a.log, "a", encoding="utf-8") if a.log else None
+
+    def note(line: str) -> None:
+        if log:
+            log.write(line + "\n")
+            log.flush()
+
+    class Relay(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, fmt, *args):     # quiet; the relay's own log is opt-in
+            return
+
+        def _forward(self, body: bytes | None):
+            url = upstream + self.path
+            headers = {k: v for k, v in self.headers.items()
+                       if k.lower() not in ("host", "content-length", "transfer-encoding", "connection")}
+            req = urllib.request.Request(url, data=body, method=self.command, headers=headers)
+            try:
+                return urllib.request.urlopen(req, timeout=a.timeout)
+            except urllib.error.HTTPError as e:
+                return e
+
+        def _send(self, status: int, headers, payload: bytes) -> None:
+            self.send_response(status)
+            for k, v in headers:
+                if k.lower() in ("content-length", "transfer-encoding", "connection", "content-encoding"):
+                    continue
+                self.send_header(k, v)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def do_GET(self):
+            resp = self._forward(None)
+            self._send(resp.status, resp.getheaders(), resp.read())
+
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length") or 0)
+            body = self.rfile.read(length) if length else b""
+            streaming = False
+            try:
+                streaming = bool(json.loads(body or b"{}").get("stream"))
+            except (ValueError, AttributeError):
+                streaming = False
+            resp = self._forward(body)
+            if streaming or not self.path.endswith("/chat/completions") or resp.status != 200:
+                # pass through, chunk by chunk when the upstream streams
+                self.send_response(resp.status)
+                for k, v in resp.getheaders():
+                    if k.lower() not in ("content-length", "transfer-encoding", "connection"):
+                        self.send_header(k, v)
+                data = resp.read()
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            raw = resp.read()
+            try:
+                payload = json.loads(raw)
+            except ValueError:
+                self._send(resp.status, resp.getheaders(), raw)
+                return
+            payload, changed = normalize_completion(payload)
+            if changed:
+                note(f"normalised: {[c['message']['tool_calls'][0]['function']['name'] for c in payload['choices'] if c.get('message', {}).get('tool_calls')]}")
+            self._send(200, [("Content-Type", "application/json")],
+                       json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    server = http.server.ThreadingHTTPServer((a.host, a.port), Relay)
+    print(json.dumps({"relay": f"http://{a.host}:{a.port}/v1", "upstream": upstream,
+                      "note": "non-streaming chat completions are normalised; the lanes are untouched"}))
+    sys.stdout.flush()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
 def _deep_mutation(a, contract, scenarios) -> dict:
     """Mutation over the clauses that DRIFTED — the sweep nobody can afford whole-repo."""
     import subprocess
@@ -1731,6 +1821,15 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--json", action="store_true", help="with --executor none: the packet as JSON")
     dp.add_argument("--text", action="store_true")
     dp.set_defaults(fn=cmd_dispatch)
+
+    rl = sub.add_parser("relay", help="OpenAI-compatible relay in front of the gateway that turns "
+                                      "tool calls left as text into tool_calls (the lanes stay untouched)")
+    rl.add_argument("--upstream", default="http://127.0.0.1:8413", help="the gateway")
+    rl.add_argument("--host", default="127.0.0.1")
+    rl.add_argument("--port", type=int, default=8414)
+    rl.add_argument("--timeout", type=int, default=900)
+    rl.add_argument("--log", default="", help="append a line per normalised completion here")
+    rl.set_defaults(fn=cmd_relay)
 
     me = sub.add_parser("metrics", help="iterations to green and durations, from the record of runs")
     me.add_argument("contract", nargs="?", default="contract.md")

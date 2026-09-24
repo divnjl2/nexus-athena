@@ -65,3 +65,14 @@ that says, per executor, how often the work landed and went green.
   - verifies: S5.1, S5.2, S5.3, S5.4, S5.5
 ### Manual Verification
 - `python athena.py dispatch ... --executor local-27b --iterations 3 --text` reports the iteration count and leaves `.athena/checkpoints/<task>.md` when short of green.
+
+## Phase 6: The gateway relay
+**Goal:** a model's tool-call shape is absorbed on the client side; the lanes are never touched.
+**Depends on:** Phase 3
+### Tasks
+- [ ] T6.1 Normalise tool calls left as text; serve the relay; let OpenHands point at it
+  - success_check: `python -m pytest tests/test_toolcalls.py -q`
+  - files: `lib/toolcalls.py, athena.py, lib/executors.py, tests/test_toolcalls.py`
+  - verifies: S6.1, S6.2, S6.3
+### Manual Verification
+- `python athena.py relay --port 8414` then `athena dispatch ... --executor openhands --base-url http://127.0.0.1:8414/v1` makes tool calls the lane's parser refused.

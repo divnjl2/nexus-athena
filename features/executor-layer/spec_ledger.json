@@ -1,5 +1,5 @@
 {
-  "contract_version": "4fdab67ebc47710b",
+  "contract_version": "d95df8cdbccfd61b",
   "results": [
     {
       "clause": "C-1.1",
@@ -164,7 +164,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 82,
+      "duration_ms": 106,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -220,15 +220,45 @@
       "passed": true,
       "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_spent_budget_keeps_the_checkpoint_and_reports_red -q",
       "scenario": "S5.5"
+    },
+    {
+      "clause": "C-6.1",
+      "clause_version": "c69fa60a67b45df9",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_toolcalls.py::test_a_tool_call_left_as_text_becomes_a_structured_call -q",
+      "scenario": "S6.1"
+    },
+    {
+      "clause": "C-6.2",
+      "clause_version": "f8780ec1956e48c3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_toolcalls.py::test_a_well_formed_completion_passes_through_unchanged -q",
+      "scenario": "S6.2"
+    },
+    {
+      "clause": "C-6.3",
+      "clause_version": "ef8751c80b154c19",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_toolcalls.py::test_the_openhands_executor_can_be_pointed_at_the_relay -q",
+      "scenario": "S6.3"
     }
   ],
-  "scenario_version": "46c393b0921c5734",
+  "scenario_version": "56858478734b768b",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 103,
+    "duration_ms": 130,
     "failed": 0,
-    "passed": 22,
-    "total": 22
+    "passed": 25,
+    "total": 25
   },
-  "ts": "2026-09-24T06:51:18+00:00"
+  "ts": "2026-09-24T07:39:03+00:00"
 }

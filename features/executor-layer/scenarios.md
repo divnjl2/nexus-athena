@@ -190,3 +190,29 @@
 - **Given** tests/test_dispatch.py
 - **When** the spec `test_a_spent_budget_keeps_the_checkpoint_and_reports_red` is executed
 - **Then** three failing iterations end red with three checkpoints, the last one kept.
+
+## C-6 — proved by the tool-call normaliser (lib/toolcalls.py)
+
+### S6.1 — a tool call left as text becomes a structured call
+- **verifies:** C-6.1
+- **pins:** c69fa60a67b45df9
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_tool_call_left_as_text_becomes_a_structured_call -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_tool_call_left_as_text_becomes_a_structured_call` is executed
+- **Then** the distillate's, the XML and the OpenAI shapes come back as tool_calls with the leading text kept as content.
+
+### S6.2 — a well-formed completion passes through unchanged
+- **verifies:** C-6.2
+- **pins:** f8780ec1956e48c3
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_well_formed_completion_passes_through_unchanged -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_well_formed_completion_passes_through_unchanged` is executed
+- **Then** native tool_calls, plain prose and unparsable tags are returned exactly as received.
+
+### S6.3 — the OpenHands executor can be pointed at the relay
+- **verifies:** C-6.3
+- **pins:** ef8751c80b154c19
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_the_openhands_executor_can_be_pointed_at_the_relay -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_the_openhands_executor_can_be_pointed_at_the_relay` is executed
+- **Then** the executor config carries the relay url and the gateway constant is untouched.
