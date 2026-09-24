@@ -153,6 +153,27 @@ def render_packet(task: dict, clauses: list, specs: list, checks: list, files: d
     return "\n".join(out) + "\n"
 
 
+def packet_with_status(pk: dict, checks: list) -> dict:
+    """PURE: the packet plus the CURRENT verdict of each spec command, taken before the
+    executor starts (C-1.6). A red spec with its tail is what tells an executor the task is
+    not done yet; without it a model looked at a complete-looking file and called finish."""
+    rows = []
+    for c in checks:
+        ok = c.get("exit", 1) == 0
+        tail = (c.get("tail") or "").strip()
+        line = f"- {'green' if ok else 'RED'}: `{c.get('cmd')}`"
+        if not ok and tail:
+            line += "\n  " + tail[-400:].replace("\n", "\n  ")
+        rows.append(line)
+    red = sum(1 for c in checks if c.get("exit", 1) != 0)
+    head = (f"## Current state of the specs, before you start ({red} red of {len(checks)})\n"
+            "A RED spec below is the work: the task is not done until it is green. Do not answer "
+            "that the code is already complete while any of these is RED.\n")
+    text = pk["text"].rstrip("\n") + "\n\n" + head + "\n".join(rows) + "\n"
+    return {**pk, "text": text, "chars": len(text), "over_budget": len(text) > pk["budget_chars"],
+            "status": {"red": red, "total": len(checks)}}
+
+
 def snapshot(root) -> dict:
     """EFFECTFUL (directory walk): {relative path: (mtime_ns, size)} outside the skipped dirs."""
     root = pathlib.Path(root)

@@ -1511,6 +1511,10 @@ def cmd_dispatch(a) -> int:
                 _spawn(argv, cwd=str(workspace), timeout=60)             # C-5.4, on request
         return v, claim
 
+    # C-1.6: the executor starts knowing which specs are RED right now — a model that saw a
+    # complete-looking file and no failing check called finish without editing (measured)
+    from lib.dispatch import packet_with_status
+    pk = packet_with_status(pk, run_checks())
     loop = run_iterations(pk, attempt, budget=a.iterations)
     v, checks, tokens, err, duration = loop["verdict"], state["checks"], state["tokens"], state["err"], state["duration"]
 

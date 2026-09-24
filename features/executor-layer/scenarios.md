@@ -47,6 +47,14 @@
 - **When** the spec `test_a_specs_own_test_source_travels_in_the_packet` is executed
 - **Then** the test function named by a spec's run_cmd is extracted from its module and rendered in the packet under the spec's id.
 
+### S1.6 — the packet states each spec's current verdict before the executor starts
+- **verifies:** C-1.6
+- **pins:** 705e21cd500329ac
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_the_packet_states_each_specs_current_verdict_before_the_executor_starts -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_the_packet_states_each_specs_current_verdict_before_the_executor_starts` is executed
+- **Then** a red check appears as RED with its tail, a green one as green, and the text says the task is not done while a spec is RED.
+
 ## C-2 — proved by the dispatch module (lib/dispatch.py)
 
 ### S2.1 — the verdict ignores the executor's report
