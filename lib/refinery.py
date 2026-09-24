@@ -70,3 +70,35 @@ def bd_return_command(slug: str, task: str, stage: str, reason: str) -> list:
     key = f"{TASK_KEY_PREFIX}:{slug}:{task}"
     note = f"refinery refused at {stage}: {reason}"
     return ["bd", "update", key, "--status", "open", "--append-notes", note]
+
+
+# --- what the refinery did with the green ones (C-2.6) ------------------------------------
+
+def merge_metrics(dispatches: list, merges: list) -> dict:
+    """PURE (C-2.6): per executor — the distinct tasks that went green in the dispatch
+    record, how many of them the refinery merged, and the refusals by stage."""
+    green_tasks: dict = {}
+    for d in dispatches:
+        if d.get("green"):
+            green_tasks.setdefault(d.get("executor", "?"), set()).add(d.get("task"))
+    rep: dict = {ex: {"green": len(tasks), "merged": 0, "refused": {}}
+                 for ex, tasks in sorted(green_tasks.items())}
+    for m in merges:
+        ex = m.get("executor", "?")
+        row = rep.setdefault(ex, {"green": 0, "merged": 0, "refused": {}})
+        if m.get("ok"):
+            row["merged"] += 1
+        else:
+            stage = str(m.get("stage") or "?")
+            row["refused"][stage] = row["refused"].get(stage, 0) + 1
+    return rep
+
+
+def render_merge_metrics(rep: dict) -> str:
+    lines = ["# merge — per executor, from the merge record"]
+    if not rep:
+        lines.append("  (no merge recorded yet)")
+    for ex, row in rep.items():
+        refused = ", ".join(f"{k}={v}" for k, v in sorted(row["refused"].items())) or "none"
+        lines.append(f"  {ex:12} green={row['green']}  merged={row['merged']}  refused: {refused}")
+    return chr(10).join(lines)
