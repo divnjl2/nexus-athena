@@ -1338,7 +1338,17 @@ def cmd_brief(a) -> int:
     here = pathlib.Path(a.contract).resolve().parent / ".athena"
     cp_path = here / "checkpoints" / f"{a.task}.md"
     checkpoint = cp_path.read_text(encoding="utf-8") if cp_path.exists() and not a.no_checkpoint else ""
-    prompt = brief_prompt(pk["text"], checkpoint)
+    # the senior reads on the same 30k window: past the cap the inlined files are cut to their
+    # heads (measured: a 33k-token brief prompt for the witness task was refused outright)
+    text = pk["text"]
+    marker = "## Files, already read for you"
+    if len(text) > a.max_chars and marker in text:
+        head, files_part = text.split(marker, 1)
+        keep = max(2000, (a.max_chars - len(head)) // max(1, len(pk.get("files") or {}) or 1))
+        parts = files_part.split("=== ")
+        cut = [parts[0]] + [p[:keep] + (chr(10) + "... (cut for the brief)" + chr(10) if len(p) > keep else "") for p in parts[1:]]
+        text = head + marker + "=== ".join(cut)
+    prompt = brief_prompt(text[: a.max_chars], checkpoint[-6000:])
     text, tokens, err = _pi_text(a.executor, prompt, cwd=workspace, timeout=a.timeout, thinking=a.pi_thinking)
     brief = clean_brief(text)
     out_path = here / "briefs" / f"{a.task}.md"
@@ -2649,6 +2659,8 @@ def build_parser() -> argparse.ArgumentParser:
     br.add_argument("--executor", default="pi-27b")
     br.add_argument("--workspace", default=".")
     br.add_argument("--budget", type=int, default=36000)
+    br.add_argument("--max-chars", dest="max_chars", type=int, default=48000,
+                    help="the brief prompt's cap in characters (~12k tokens) so it fits the window with room to answer")
     br.add_argument("--timeout", type=int, default=600)
     br.add_argument("--pi-thinking", dest="pi_thinking", default="")
     br.add_argument("--no-checkpoint", dest="no_checkpoint", action="store_true")
