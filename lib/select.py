@@ -1,117 +1,81 @@
+"""Selection among fanned attempts — by behaviour, not by order or text (C-5.8).
+
+Drafted by the vanilla 9B through pi (three iterations, one assertion short); finished by
+Claude (ADR-0007). What the lane got right stands: the cluster key is (normalised patch,
+which checks passed), the quicker member represents its cluster, green clusters win by size.
+What it missed: an attempt that did not land is still an attempt — its own cluster, kept
+for the record, never selected.
+
+PURE throughout.
+"""
+from __future__ import annotations
+
 import ast
 
 
-def normalize_source(source):
-    """Normalize source by removing all whitespace and comments; unparsable stays as-is."""
-    # First, check if the source is valid Python
+def normalize_source(source: str) -> str:
+    """The program without its spacing and comments: parse and unparse. Unparsable text
+    stays as it is, so a broken attempt clusters only with an identical broken attempt."""
     try:
-        ast.parse(source)
-    except:
-        # Unparsable source stays as-is
-        return source
-    
-    # Remove comments first, then normalize whitespace
-    lines = source.split('\n')
-    normalized = []
-    for line in lines:
-        # Find and remove # comments (simple approach for this test case)
-        hash_pos = line.find('#')
-        if hash_pos >= 0:
-            line = line[:hash_pos]
-        normalized.append(line)
-    
-    # Now normalize whitespace
-    cleaned = '\n'.join(normalized)
-    return ''.join(cleaned.split())
+        return ast.unparse(ast.parse(source or ""))
+    except (SyntaxError, ValueError):
+        return source or ""
 
 
-def cluster_attempts(attempts):
-    """Cluster attempts by (normalized source, which checks passed)."""
-    clusters = {}
-    
-    for idx, attempt in enumerate(attempts):
-        if not attempt.get('landed', False):
-            continue
-        
-        source_map = attempt.get('sources', {})
-        checks = attempt.get('checks', [])
-        source = ''
-        
-        for src in source_map.values():
-            source = normalize_source(src)
-            break
-        
-        # Get tuple of passed check commands
-        checks_passed = tuple(c['cmd'] for c in checks if c['exit'] == 0)
-        key = (source, checks_passed)
-        
+def _key(attempt: dict) -> tuple:
+    if not attempt.get("landed"):
+        return ("<not landed>", ())
+    sources = attempt.get("sources") or {}
+    patch = tuple((path, normalize_source(text)) for path, text in sorted(sources.items()))
+    passed = tuple(sorted(c.get("cmd", "") for c in (attempt.get("checks") or []) if c.get("exit", 1) == 0))
+    return (patch, passed)
+
+
+def cluster_attempts(attempts: list) -> list:
+    """Attempts grouped by behaviour: the normalised patch and the set of checks that passed.
+    Each cluster: members (indices, in order), green, landed, passed (count), representative
+    (the quicker member)."""
+    clusters: dict = {}
+    order: list = []
+    for i, attempt in enumerate(attempts):
+        idx = attempt.get("index", i)
+        key = _key(attempt)
         if key not in clusters:
-            clusters[key] = {'members': [], 'green': False, 'representative': None}
-        
-        cluster = clusters[key]
-        cluster['members'].append(idx)
-        
-        if attempt.get('green', False):
-            cluster['green'] = True
-        
-        # Representative is the member with lowest duration_ms
-        if cluster['representative'] is None:
-            cluster['representative'] = idx
-        elif attempt['duration_ms'] < attempts[cluster['representative']]['duration_ms']:
-            cluster['representative'] = idx
-    
-    # Convert to list of dicts with size
-    result = []
-    for key, cluster in clusters.items():
-        result.append({
-            'key': key,
-            'members': list(cluster['members']),  # convert to list, order preserved
-            'green': cluster['green'],
-            'representative': cluster['representative']
-        })
-    
-    return result
+            clusters[key] = {"members": [], "green": False, "landed": bool(attempt.get("landed")),
+                             "passed": len(key[1]) if attempt.get("landed") else 0,
+                             "representative": idx, "_rep_ms": int(attempt.get("duration_ms") or 0)}
+            order.append(key)
+        cl = clusters[key]
+        cl["members"].append(idx)
+        cl["green"] = cl["green"] or bool(attempt.get("green"))
+        ms = int(attempt.get("duration_ms") or 0)
+        if ms < cl["_rep_ms"]:
+            cl["_rep_ms"], cl["representative"] = ms, idx
+    out = []
+    for key in order:
+        cl = dict(clusters[key])
+        cl.pop("_rep_ms", None)
+        out.append(cl)
+    return out
 
 
-def select_attempt(attempts):
-    """Select the best attempt based on cluster rules."""
-    if not attempts:
-        return {'index': None}
-    
-    clusters = cluster_attempts(attempts)
-    
-    if not clusters:
-        return {'index': None}
-    
-    # Count number of passed checks per cluster
-    check_counts = {}
-    for cluster in clusters:
-        key = cluster['key']
-        check_counts[key] = len(cluster['key'][1])
-    
-    # Count green clusters
-    green_count = sum(1 for c in clusters if c['green'])
-    
-    # Determine the winning cluster
-    if green_count > 0:
-        # Among green clusters, the largest wins
-        green_clusters = [c for c in clusters if c['green']]
-        best = max(green_clusters, key=lambda c: len(c['members']))
+def select_attempt(attempts: list) -> dict:
+    """The attempt to carry forward: the largest green cluster (the quicker representative on
+    a tie), else the largest landed cluster with the most passed checks; None when nothing
+    landed. One representative per cluster comes back for review."""
+    clusters = cluster_attempts(attempts or [])
+    reps = [{"index": cl["representative"], "size": len(cl["members"]), "green": cl["green"],
+             "landed": cl["landed"], "passed": cl["passed"]} for cl in clusters]
+    green_clusters = [cl for cl in clusters if cl["green"] and cl["landed"]]
+    landed = [cl for cl in clusters if cl["landed"]]
+    by_ms = {}
+    for i, attempt in enumerate(attempts or []):
+        by_ms[attempt.get("index", i)] = int(attempt.get("duration_ms") or 0)
+    if green_clusters:
+        best = max(green_clusters, key=lambda cl: (len(cl["members"]), -by_ms.get(cl["representative"], 0)))
+    elif landed:
+        best = max(landed, key=lambda cl: (len(cl["members"]), cl["passed"], -by_ms.get(cl["representative"], 0)))
     else:
-        # No green clusters: largest wins, then most passed checks as tiebreaker
-        best = max(clusters, key=lambda c: (check_counts[c['key']], len(c['members'])))
-    
-    best_size = len(best['members'])
-    
-    # Get one representative per cluster (the cluster member with lowest duration_ms)
-    all_representatives = []
-    for cluster in clusters:
-        rep_idx = cluster['representative']
-        all_representatives.append({'index': rep_idx})
-    
-    return {
-        'index': best['representative'],
-        'cluster_size': best_size,
-        'representatives': all_representatives,
-        'green_clusters': green_count
-    }
+        return {"index": None, "cluster_size": 0, "green_clusters": 0, "representatives": reps}
+    return {"index": best["representative"], "cluster_size": len(best["members"]),
+            "green_clusters": len(green_clusters), "representatives": reps}
