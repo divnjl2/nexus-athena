@@ -149,3 +149,23 @@ def test_a_strict_relay_marks_every_function_tool_strict_and_a_pi_executor_can_u
     cmd = pi_command("pi-9b", "# Task", strict=True)
     assert cmd["argv"][cmd["argv"].index("--provider") + 1] == "lane9" + PI_STRICT_SUFFIX
     assert pi_command("pi-9b", "# Task")["argv"][cmd["argv"].index("--provider") + 1] == "lane9"
+
+
+def test_the_relay_clamps_the_output_budget_to_what_the_window_leaves():
+    """C-6.8 — over the remainder: brought down; under it: untouched; absent: set; the floor
+    holds; the relay parser takes --clamp and a margin."""
+    import athena
+    from lib.toolcalls import OUTPUT_FLOOR, clamp_output
+    body = {"model": "m", "messages": [], "max_tokens": 12288}
+    out, changed = clamp_output(body, prompt_tokens=20000, window=30720, margin=1024)
+    assert changed and out["max_tokens"] == 30720 - 20000 - 1024 and body["max_tokens"] == 12288
+    same, changed = clamp_output(body, prompt_tokens=5000, window=30720)
+    assert not changed and same is body
+    both = {"model": "m", "messages": [], "max_completion_tokens": 8192}
+    out, changed = clamp_output(both, prompt_tokens=29000, window=30720)
+    assert changed and out["max_completion_tokens"] == OUTPUT_FLOOR
+    given, changed = clamp_output({"model": "m", "messages": []}, prompt_tokens=1000, window=30720)
+    assert changed and given["max_tokens"] == 30720 - 1000 - 1024
+    assert clamp_output(body, prompt_tokens=None, window=30720) == (body, False)
+    args = athena.build_parser().parse_args(["relay", "--clamp", "--margin", "512"])
+    assert args.clamp is True and args.margin == 512 and athena.build_parser().parse_args(["relay"]).clamp is False

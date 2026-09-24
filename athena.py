@@ -2276,6 +2276,22 @@ def cmd_relay(a) -> int:
             except urllib.error.HTTPError as e:
                 return e
 
+        def _count(self, parsed: dict):
+            """The lane's own count of the prompt (POST /tokenize), and its window; (None, 0)
+            when the lane does not answer — then nothing is clamped."""
+            try:
+                req_body = {"model": parsed.get("model"), "messages": parsed.get("messages", []),
+                            "add_generation_prompt": True}
+                if parsed.get("tools"):
+                    req_body["tools"] = parsed["tools"]
+                req = urllib.request.Request(upstream + "/tokenize", data=json.dumps(req_body).encode("utf-8"),
+                                             method="POST", headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    data = json.loads(r.read())
+                return int(data.get("count")), int(data.get("max_model_len") or a.window)
+            except Exception:                       # noqa: BLE001 — a count we cannot get is not a reason to fail the call
+                return None, 0
+
         def _send(self, status: int, headers, payload: bytes) -> None:
             self.send_response(status)
             for k, v in headers:
@@ -2300,6 +2316,16 @@ def cmd_relay(a) -> int:
                 if self.path.endswith("/chat/completions") and isinstance(parsed, dict):
                     # C-6.4: tool-carrying requests go out with thinking off (vLLM #42021)
                     parsed, changed = prepare_request(parsed, thinking=(a.thinking == "on"), strict=a.strict)
+                    # C-6.8: the output budget clamped to the window, counted by the lane itself
+                    if a.clamp:
+                        count, window = self._count(parsed)
+                        if count is not None:
+                            from lib.toolcalls import clamp_output
+                            parsed, c2 = clamp_output(parsed, count, window, margin=a.margin)
+                            if c2:
+                                note(f"clamped: prompt {count} of {window}, budget -> "
+                                     f"{parsed.get('max_tokens', parsed.get('max_completion_tokens'))}")
+                                changed = True
                     if changed:
                         body = json.dumps(parsed, ensure_ascii=False).encode("utf-8")
             except (ValueError, AttributeError):
@@ -2595,6 +2621,11 @@ def build_parser() -> argparse.ArgumentParser:
     rl.add_argument("--port", type=int, default=8414)
     rl.add_argument("--timeout", type=int, default=900)
     rl.add_argument("--log", default="", help="append a line per normalised completion here")
+    rl.add_argument("--clamp", action="store_true",
+                    help="count the prompt with the lane's /tokenize and clamp the output budget to what "
+                         "the window leaves (C-6.8)")
+    rl.add_argument("--margin", type=int, default=1024, help="tokens kept free under the window when clamping")
+    rl.add_argument("--window", type=int, default=30720, help="the window when the lane does not report one")
     rl.add_argument("--strict", action="store_true",
                     help="set strict: true on every function tool so the lane applies its grammar "
                          "to the call (C-6.7); the lane itself is not touched")

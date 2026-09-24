@@ -209,6 +209,14 @@
     applied only to tools that set strict; most clients never set it, and a broken call
     shape leaks into the text (the morning's C-2.5). The lane keeps its flags; the relay
     sets the field.
+- **C-6.8** — WHEN a request through a clamping relay would ask for more output than the
+  lane's window leaves after the prompt THE SYSTEM SHALL count the prompt with the lane's own
+  tokenizer and bring the output budget down to what fits, never up and never below a floor.
+  - source: ledger
+  - note: three refusals in one evening, "requested 12288 output tokens and your prompt
+    contains ...", each a lost attempt: a brief on a large packet, a test-writer candidate, a
+    two-file task. The arithmetic is done once, here, with the lane's count; pi's own
+    compaction is tuned for the window (reserve 6144, keep 12288) for the multi-turn side.
 
 ## C-7 — The ceiling: graded tasks a local model in a harness is measured against
 

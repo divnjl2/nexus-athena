@@ -345,6 +345,14 @@
 - **When** the spec `test_a_strict_relay_marks_every_function_tool_strict_and_a_pi_executor_can_use_it` is executed
 - **Then** with strict every function tool gains strict: true and already-strict or tool-less requests are untouched; the relay parser takes --strict; the pi command names the <provider>-strict provider.
 
+### S6.8 — the relay clamps the output budget to what the window leaves
+- **verifies:** C-6.8
+- **pins:** 9f4daeeb67be4e8c
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_the_relay_clamps_the_output_budget_to_what_the_window_leaves -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_the_relay_clamps_the_output_budget_to_what_the_window_leaves` is executed
+- **Then** a budget over the remainder is brought down, one under it is untouched, a missing budget is set, the floor holds, and the relay parser takes --clamp with a margin.
+
 ## C-7 — proved by the bench module (lib/bench.py), the queue module (lib/queue.py) and the CLI
 
 ### S7.1 — a bench matrix is planned and read back from the record

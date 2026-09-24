@@ -262,3 +262,32 @@ def prepare_request(body: dict, *, thinking: bool = False, strict: bool = False)
         body, c2 = strict_tools(body)
         changed = changed or c2
     return body, changed
+
+
+# --- the window arithmetic, done once, at the relay (C-6.8) ------------------------------------
+
+OUTPUT_FLOOR = 256
+
+
+def clamp_output(body: dict, prompt_tokens: int, window: int, *, margin: int = 1024,
+                 floor: int = OUTPUT_FLOOR) -> tuple[dict, bool]:
+    """PURE: max_tokens / max_completion_tokens brought down to what the window leaves after
+    the prompt and a margin (tools and the generation prompt are not always in the count).
+    Never raised, never below the floor; a request with no budget field gets one."""
+    if not isinstance(body, dict) or not window or prompt_tokens is None:
+        return body, False
+    allowed = max(floor, int(window) - int(prompt_tokens) - int(margin))
+    keys = [k for k in ("max_tokens", "max_completion_tokens") if k in body]
+    if not keys:
+        return {**body, "max_tokens": allowed}, True
+    out = dict(body)
+    changed = False
+    for k in keys:
+        try:
+            asked = int(body[k])
+        except (TypeError, ValueError):
+            continue
+        if asked > allowed:
+            out[k] = allowed
+            changed = True
+    return (out, True) if changed else (body, False)
