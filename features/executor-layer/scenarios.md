@@ -123,6 +123,14 @@
 - **When** the spec `test_a_missing_executor_is_unavailable_not_a_traceback` is executed
 - **Then** availability is answered from an injected probe; a missing SDK or binary reads as unavailable with a reason.
 
+### S3.5 — OpenHands gets an implementer's prompt, not an explorer's
+- **verifies:** C-3.5
+- **pins:** b4f9bbf4e2741ed3
+- **run_cmd:** `python -m pytest tests/test_executors.py::test_openhands_gets_an_implementers_prompt_not_an_explorers -q`
+- **Given** tests/test_executors.py
+- **When** the spec `test_openhands_gets_an_implementers_prompt_not_an_explorers` is executed
+- **Then** the config carries the implementer prompt by default, forbids exploring and names the done criterion; `prompt="default"` leaves it empty.
+
 ## C-4 — proved by the dispatch record and the CLI (lib/dispatch.py, athena.py)
 
 ### S4.1 — a dispatch appends one record

@@ -1344,12 +1344,19 @@ def _run_openhands(cfg: dict) -> tuple[str, dict, str]:
             llm_kwargs.pop("native_tool_calling", None)
             llm = LLM(**llm_kwargs)
         agent_kwargs = dict(llm=llm, tools=[Tool(name=n) for n in cfg.get("tools", ("file_editor",))])
+        if cfg.get("system_prompt"):
+            # C-3.5: the implementer's prompt instead of the stock explorer's
+            agent_kwargs["system_prompt"] = cfg["system_prompt"]
         try:
             from openhands.sdk import LLMSummarizingCondenser
             agent_kwargs["condenser"] = LLMSummarizingCondenser(llm=llm, max_size=12, keep_first=2)
         except Exception:                      # noqa: BLE001 — a condenser is a comfort, not the verdict
             pass
-        agent = Agent(**agent_kwargs)
+        try:
+            agent = Agent(**agent_kwargs)
+        except (TypeError, ValueError):
+            agent_kwargs.pop("system_prompt", None)
+            agent = Agent(**agent_kwargs)
         conv = Conversation(agent=agent, workspace=cfg["workspace"],
                             max_iteration_per_run=cfg["max_iterations"])
         # the SDK's prompt talks about /workspace; on this machine the repository is a
@@ -1397,7 +1404,9 @@ def cmd_dispatch(a) -> int:
             return 2
 
     files: dict = {}
-    inline = (spec is not None and spec["kind"] == "local") or a.inline
+    # executors without Bash get the files inlined: the local lanes, and OpenHands, whose
+    # explorer instincts on a 30k window are the measured failure mode
+    inline = (spec is not None and spec["kind"] in ("local", "openhands")) or a.inline
     if inline:
         try:
             task_files = next(t for ph in plan.phases for t in ph.tasks if t.id == a.task).files
@@ -1459,7 +1468,8 @@ def cmd_dispatch(a) -> int:
         cfg = openhands_config(text, workspace=str(workspace),
                                model=a.model or "openai/qwopus-27b",
                                base_url=a.base_url if a.base_url is not None else LOCAL_GATEWAY + "/v1",
-                               max_iterations=a.max_turns, terminal=a.terminal)
+                               max_iterations=a.max_turns, terminal=a.terminal,
+                               prompt=a.openhands_prompt)
         cfg["native_tools"] = None if a.native_tools == "auto" else (a.native_tools == "on")
         return _run_openhands(cfg)
 
@@ -1815,6 +1825,10 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--native-tools", dest="native_tools", choices=("auto", "on", "off"), default="on",
                     help="openhands: native function calling for the model (default on: the local "
                          "Qwen lanes emit real tool calls through the gateway)")
+    dp.add_argument("--openhands-prompt", dest="openhands_prompt", choices=("implementer", "default"),
+                    default="implementer",
+                    help="openhands: the implementer's system prompt (default) or the SDK's stock "
+                         "explorer prompt")
     dp.add_argument("--terminal", action="store_true",
                     help="openhands: also grant the terminal tool (off by default: the specs are "
                          "run by the verdict, and on Windows the tool speaks PowerShell)")
