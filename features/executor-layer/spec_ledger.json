@@ -1,10 +1,10 @@
 {
-  "contract_version": "47e69a158ad6f599",
+  "contract_version": "e62a94800c450134",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "2371c7363375554f",
-      "duration_ms": 126,
+      "duration_ms": 172,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -54,7 +54,7 @@
     {
       "clause": "C-1.6",
       "clause_version": "705e21cd500329ac",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -74,7 +74,7 @@
     {
       "clause": "C-1.8",
       "clause_version": "5231d7701e035e81",
-      "duration_ms": 7,
+      "duration_ms": 10,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -94,7 +94,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "cb9eddee2ee0afa8",
-      "duration_ms": 137,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "0810505d0b526139",
-      "duration_ms": 1,
+      "duration_ms": 168,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -114,7 +114,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "91d2c21a232178cb",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -184,7 +184,7 @@
     {
       "clause": "C-3.4",
       "clause_version": "045e91fa37cf913a",
-      "duration_ms": 121,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,7 +204,7 @@
     {
       "clause": "C-3.6",
       "clause_version": "5c01151cd397fa0a",
-      "duration_ms": 1,
+      "duration_ms": 156,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -212,9 +212,19 @@
       "scenario": "S3.6"
     },
     {
+      "clause": "C-3.7",
+      "clause_version": "cfee18b010544ce9",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_executors.py::test_a_pi_executor_with_hashline_loads_the_extension_and_leaves_files_to_the_read_tool -q",
+      "scenario": "S3.7"
+    },
+    {
       "clause": "C-4.1",
       "clause_version": "d380cd8bf00a64a5",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -234,7 +244,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 122,
+      "duration_ms": 55,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -274,7 +284,7 @@
     {
       "clause": "C-5.3",
       "clause_version": "27efd5ac5055f0f1",
-      "duration_ms": 134,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -294,7 +304,7 @@
     {
       "clause": "C-5.5",
       "clause_version": "acaf8fb97c70da7f",
-      "duration_ms": 1,
+      "duration_ms": 164,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -320,6 +330,16 @@
       "passed": true,
       "run_cmd": "python -m pytest tests/test_dispatch.py::test_without_a_green_attempt_the_least_red_landing_is_carried_forward -q",
       "scenario": "S5.7"
+    },
+    {
+      "clause": "C-5.8",
+      "clause_version": "74453e57e8b0d83f",
+      "duration_ms": 3,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_select.py::test_attempts_are_clustered_by_behaviour_and_the_largest_green_cluster_wins -q",
+      "scenario": "S5.8"
     },
     {
       "clause": "C-6.1",
@@ -364,7 +384,7 @@
     {
       "clause": "C-6.5",
       "clause_version": "2ff53728c00396c9",
-      "duration_ms": 127,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -374,7 +394,7 @@
     {
       "clause": "C-6.6",
       "clause_version": "fa01125cbd4a59ee",
-      "duration_ms": 28,
+      "duration_ms": 15,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -382,9 +402,19 @@
       "scenario": "S6.6"
     },
     {
+      "clause": "C-6.7",
+      "clause_version": "429f86bc0d44ea1d",
+      "duration_ms": 222,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_toolcalls.py::test_a_strict_relay_marks_every_function_tool_strict_and_a_pi_executor_can_use_it -q",
+      "scenario": "S6.7"
+    },
+    {
       "clause": "C-7.1",
       "clause_version": "205a937c21c3725d",
-      "duration_ms": 3,
+      "duration_ms": 4,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -394,7 +424,7 @@
     {
       "clause": "C-7.2",
       "clause_version": "10b350af8ac6284e",
-      "duration_ms": 14737,
+      "duration_ms": 14669,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -414,21 +444,41 @@
     {
       "clause": "C-7.4",
       "clause_version": "63102592bae9204d",
-      "duration_ms": 15,
+      "duration_ms": 21,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_bench.py::test_the_bench_command_prints_its_plan_without_running_when_dry -q",
       "scenario": "S7.4"
+    },
+    {
+      "clause": "C-8.1",
+      "clause_version": "58a48946c652784f",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_testwriter.py::test_candidate_tests_are_kept_only_when_they_fail_on_the_current_code_and_agree -q",
+      "scenario": "S8.1"
+    },
+    {
+      "clause": "C-8.2",
+      "clause_version": "ff1ea612af689740",
+      "duration_ms": 8,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_locate.py::test_a_repo_map_is_built_from_definitions_and_file_votes_are_merged -q",
+      "scenario": "S8.2"
     }
   ],
-  "scenario_version": "69e707c4a5b31d5f",
+  "scenario_version": "bd7a50aec6797ab3",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 15592,
+    "duration_ms": 15710,
     "failed": 0,
-    "passed": 42,
-    "total": 42
+    "passed": 47,
+    "total": 47
   },
-  "ts": "2026-09-24T14:29:51+00:00"
+  "ts": "2026-09-24T16:37:11+00:00"
 }

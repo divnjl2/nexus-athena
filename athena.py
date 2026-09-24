@@ -2076,17 +2076,45 @@ def cmd_dispatch(a) -> int:
                     futs = {pool.submit(one_attempt, ws, befores[ws], packets[ws]): ws for ws in copies}
                     for fut in as_completed(futs):
                         results.append(fut.result())
-                win = pick_winner([r["v"] for r in results])
+                # C-5.8: choose by behaviour — which checks passed and the normalised patch —
+                # not by completion order; fall back to first-green when the module is absent
+                win = None
+                selection = None
+                try:
+                    from lib.select import select_attempt
+                    attempts_view = []
+                    for k, r in enumerate(results):
+                        sources = {}
+                        for rel in (r["v"].get("changed_files") or [])[:12]:
+                            p = pathlib.Path(r["ws"]) / rel
+                            if p.is_file() and p.suffix == ".py":
+                                try:
+                                    sources[rel] = p.read_text(encoding="utf-8", errors="replace")
+                                except OSError:
+                                    pass
+                        attempts_view.append({"index": k, "landed": bool(r["v"].get("landed")),
+                                              "green": bool(r["v"].get("green")), "checks": r["checks"],
+                                              "duration_ms": int(r["duration"]), "sources": sources})
+                    selection = select_attempt(attempts_view)
+                    win = selection.get("index")
+                except ImportError:
+                    win = pick_winner([r["v"] for r in results])
                 for k, r in enumerate(results, 1):
                     write_record(r, iteration, attempt_no=k, winner=(win is not None and results[win] is r))
+                if selection is not None:
+                    state["selection"] = {"cluster_size": selection.get("cluster_size"),
+                                          "green_clusters": selection.get("green_clusters"),
+                                          "representatives": [x.get("index") for x in selection.get("representatives", [])]}
                 if win is None:
                     r = results[0]
                     r["v"]["reason"] = (f"{len(results)} fanned attempts, none landed; " + r["v"]["reason"])
                 else:
                     r = results[win]
                     _adopt(workspace, r["ws"], r["v"]["changed_files"], r["v"]["deleted_files"])
-                    r["v"]["reason"] = (f"attempt {win + 1} of {len(results)} kept" + ("; " if r["v"]["reason"] else "")
-                                        + r["v"]["reason"])
+                    how = (f"attempt {win + 1} of {len(results)} kept"
+                           + (f" (cluster of {selection['cluster_size']}, {selection['green_clusters']} green clusters)"
+                              if selection else ""))
+                    r["v"]["reason"] = how + ("; " if r["v"]["reason"] else "") + r["v"]["reason"]
             finally:
                 _fan_in(workspace, copies)
         v, claim, tokens, err, checks, duration = r["v"], r["claim"], r["tokens"], r["err"], r["checks"], r["duration"]

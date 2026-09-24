@@ -1,10 +1,10 @@
 {
-  "contract_version": "30c488453ff7c340",
+  "contract_version": "9f40fce1853fcf7b",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "b9b446e9e77bef1e",
-      "duration_ms": 112,
+      "duration_ms": 153,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-1.2",
       "clause_version": "018588d159400ae1",
-      "duration_ms": 3,
+      "duration_ms": 5,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "b0218466ec3cc2a7",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "a459562b604d05be",
-      "duration_ms": 4814,
+      "duration_ms": 2630,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -64,7 +64,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "0bfc035c2906199e",
-      "duration_ms": 5350,
+      "duration_ms": 2368,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -94,21 +94,31 @@
     {
       "clause": "C-2.7",
       "clause_version": "b35327df17374460",
-      "duration_ms": 21,
+      "duration_ms": 29,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_refinery.py::test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs -q",
       "scenario": "S2.7"
+    },
+    {
+      "clause": "C-2.8",
+      "clause_version": "7a355e40e7f3a417",
+      "duration_ms": 5,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_refinery.py::test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green -q",
+      "scenario": "S2.8"
     }
   ],
-  "scenario_version": "3acabaa4a9705c64",
+  "scenario_version": "d4d3292268db7340",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 10307,
+    "duration_ms": 5198,
     "failed": 0,
-    "passed": 10,
-    "total": 10
+    "passed": 11,
+    "total": 11
   },
-  "ts": "2026-09-24T14:31:35+00:00"
+  "ts": "2026-09-24T16:39:04+00:00"
 }
