@@ -28,7 +28,7 @@ LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"
 CLAUDE_TOOLS = "Read,Glob,Grep,Edit,Write,Bash"
 LOCAL_CONTEXT_TOKENS = 30720
-LOCAL_OUTPUT_TOKENS = {"local-27b": 6144, "local-9b": 1024}
+LOCAL_OUTPUT_TOKENS = {"local-27b": 6144, "local-9b": 6144}
 
 
 def resolve(name: str) -> dict:
