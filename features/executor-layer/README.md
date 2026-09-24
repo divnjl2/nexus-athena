@@ -60,3 +60,47 @@ window land a green edit through Claude Code: **one clause, one spec, one file p
 the file inlined; the root named absolutely; output cap above 2048; the verdict, not the
 worker, runs the spec.** OpenHands with the same model has not landed one yet. The numbers
 to decide with are in `athena metrics`.
+
+## Measured on 2026-09-24, evening: vanilla weights through pi (C-3.6), the same packets
+
+The operator put vanilla Qwen on the lanes (qwen3.8-27b on :8000, qwen3.5-9b on :8001); pi in
+print mode became an executor; the 13 tasks of the refinery layer and the ceiling were rerun
+from the commits where their specs were red. Per (task, executor), iterations to green:
+
+| task | class | pi-9b | pi-27b medium | pi-27b low | morning: distillates via Claude Code |
+|---|---|---|---|---|---|
+| C-2.1 admit | new pure fn | green@1, 40 s | green@2 | - | 9b green@1; 27b green then hung 900 s |
+| C-2.3 first_failure | new pure fn | green@1, 106 s | green@1, 580 s | - | 9b green@3 |
+| C-2.5 record, bd return | new pure fns | green@1, 241 s | red x1 | - | Claude after 3 red |
+| C-2.6 merge metrics | new pure fn | green@1, 279 s | red x2 | - | Claude after 3 red |
+| C-1.2 junit skip | 4-line edit | green@1, 172 s | - | - | 9b green@1 |
+| C-1.3 per-command skip | ~15-line edit | green@1, 123 s | - | - | Claude after 7 red |
+| T7.1 bench module | new module, 154 lines | green@1, 223 s | red x3 | - | - |
+| T7.3 queue module | new module, 56 lines | green@1, 236 s | (no record) | - | - |
+| C-1.1 skip in the verdict | edit in a 20k module | red x3 | - | - | Claude after 12 red |
+| C-2.2 rebase, real git | integration | red x3 | red x3 | red x3 | Claude after 3 red |
+| C-2.4 fast-forward | integration | red x3 | running | red x3 | Claude |
+| T7.2 witness | threads inside a 2,400-line module | red x3 | red x6 | red x3 | Claude |
+| T7.4 bench command | two files | red x3 | red x3 | red x3 | Claude |
+
+`reasoning_effort` on the 27B, one coding prompt on the lane itself: default (xhigh) 214 s,
+6,000 tokens of reasoning, no answer; low 13 s; medium 46 s; "high" rejected with a 400.
+pi sends the effort only when `--thinking` is given, so the executors name it (27b low,
+9b medium).
+
+Reading: the envelope of a local worker today is one goal, one file, one spec, up to
+~150 lines of new code or ~15 lines of edit in a known place, checked by a pure test. The
+9B fills that envelope first time; the 27B fills it slower and does not reach past it at
+either effort. Past the envelope — concurrency inside a large module, two-file wiring,
+integration with real git — both are red after three iterations and Claude finishes
+(ADR-0007). The 27B's place is `athena locate` (reading, not editing) and low-effort text.
+
+Two harness levers measured after that, on the 9B:
+- **hashline** (C-3.7, anchored read/replace instead of str_replace, files left out of the
+  packet): C-1.1 landed a sane parser where str_replace had left syntax errors, but not the
+  second half (the verdict wiring) and broke sibling specs; C-1.3, green first time with the
+  inlined packet, went red twice without it; T7.2 nothing. At this model size the failures
+  are semantic, not format: hashline stays an option, default off.
+- **strict tool calling** (C-6.7, the relay marks tools strict; the lane's grammar applies):
+  the smoke went read -> edit -> DONE in two clean calls where the plain run had fumbled a
+  `replacement_lines` argument three times. Default for the next batch.
