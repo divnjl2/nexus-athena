@@ -63,6 +63,14 @@
 - **When** the spec `test_the_packet_ends_with_the_order_to_act` is executed
 - **Then** after the inlined files and the status block, the last lines of the packet name the first file to edit and say there is no user to ask.
 
+### S1.8 — a long module is inlined as what the task needs of it
+- **verifies:** C-1.8
+- **pins:** 5231d7701e035e81
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_long_module_is_inlined_as_what_the_task_needs_of_it -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_long_module_is_inlined_as_what_the_task_needs_of_it` is executed
+- **Then** past the threshold the packet carries the header, the imported definitions whole, the other signatures with bodies omitted, and names the imported definitions the module lacks; under it the module goes whole.
+
 ## C-2 — proved by the dispatch module (lib/dispatch.py)
 
 ### S2.1 — the verdict ignores the executor's report

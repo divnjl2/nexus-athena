@@ -39,6 +39,14 @@
     27B read the file and answered "Would you like me to: 1. Continue reading the file…":
     two iterations, no edit. The last thing in the window decides what the model thinks it
     is doing; the last thing is now the order.
+- **C-1.8** — WHEN an inlined file is longer than the excerpt threshold THE SYSTEM SHALL carry
+  its header, in full the definitions the task's specs import from it, only the signatures
+  of the rest, and the imported names it does not define yet, said plainly.
+  - source: ledger
+  - note: the whole of a 20k-char module in the packet was eleven attempts by two lanes
+    without a green: the models read it, summarised it, asked what to do, or rewrote what
+    was there. The question is not how much the window holds but what of the module is the
+    task's; the spec's imports say exactly that.
 
 ## C-2 — The verdict
 

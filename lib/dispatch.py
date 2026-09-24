@@ -72,6 +72,74 @@ def test_source(module_text: str, func_name: str) -> str:
     return ""
 
 
+EXCERPT_FULL_UNDER = 6000
+
+
+def spec_imports(spec_sources: dict, rel_path: str) -> list:
+    """PURE (C-1.8): the names the task's specs import from the module at `rel_path`."""
+    import re
+    p = rel_path.replace("\\", "/")
+    if not p.endswith(".py"):
+        return []
+    mod = p[:-3].replace("/", ".")
+    if mod.endswith(".__init__"):
+        mod = mod[: -len(".__init__")]
+    names: list = []
+    pat = re.compile(r"^\s*from\s+" + re.escape(mod) + r"\s+import\s+\(?([^)\n]+)", re.M)
+    for src in (spec_sources or {}).values():
+        for m in pat.finditer(src or ""):
+            for n in m.group(1).split(","):
+                n = n.strip().split(" as ")[0].strip()
+                if n and n not in names:
+                    names.append(n)
+    return names
+
+
+def excerpt(module_text: str, names: list, *, full_under: int = EXCERPT_FULL_UNDER) -> str:
+    """PURE (C-1.8): what of a module a small-window executor needs to see. A short module
+    goes whole. A long one goes as its header (everything above the first definition), the
+    definitions the specs import in full, the signatures of the rest with their bodies
+    omitted, and the imported names the module does not define yet, said plainly. Measured:
+    the whole of a 20k-char module in the packet was eleven attempts by two lanes without a
+    green; the model read, summarised, asked what to do, or rewrote what was already there."""
+    import ast
+    text = module_text or ""
+    if len(text) <= full_under or not names:
+        return text
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return text
+    lines = text.splitlines()
+    top = [n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))]
+    if not top:
+        return text
+    first = min((n.decorator_list[0].lineno if n.decorator_list else n.lineno) for n in top) - 1
+    out = lines[:first]
+    defined: set = set()
+    want = set(names)
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            start = (node.decorator_list[0].lineno if node.decorator_list else node.lineno) - 1
+            end = node.end_lineno
+            defined.add(node.name)
+            if node.name in want:
+                out += [""] + lines[start:end]
+            else:
+                sig_end = node.lineno - 1
+                while sig_end < end - 1 and not lines[sig_end].rstrip().endswith(":"):
+                    sig_end += 1
+                out += [""] + lines[node.lineno - 1: sig_end + 1] + [
+                    f"    ...  # body omitted ({end - sig_end - 1} lines), not this task's"]
+        elif node.lineno - 1 >= first:
+            out += [""] + lines[node.lineno - 1: node.end_lineno]
+    missing = [n for n in names if n not in defined]
+    if missing:
+        out += ["", f"# NOT DEFINED YET — the specs import {', '.join(missing)} from this module: "
+                    "define them here."]
+    return "\n".join(out) + "\n"
+
+
 def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None,
            budget_chars: int = DEFAULT_BUDGET_CHARS, root: str = "",
            spec_sources: dict | None = None) -> dict:
@@ -105,10 +173,13 @@ def packet(contract, scenarios, plan, task_id: str, *, files: dict | None = None
                   "source": (spec_sources or {}).get(s.id, "")} for s in specs]
     task_row = {"id": task.id, "title": task.title, "files": list(task.files),
                 "success_check": task.success_check}
-    text = render_packet(task_row, clauses, spec_rows, checks, files or {}, root=root)
+    # C-1.8: a long module goes in as what the task needs of it, not whole
+    shown = {p: excerpt(t, spec_imports(spec_sources or {}, p)) for p, t in (files or {}).items()}
+    excerpted = sorted(p for p, t in shown.items() if t != (files or {})[p])
+    text = render_packet(task_row, clauses, spec_rows, checks, shown, root=root)
     return {
         "schema": SCHEMA, "task": task_row, "clauses": clauses, "specs": spec_rows,
-        "checks": checks, "files": dict(files or {}), "text": text,
+        "checks": checks, "files": dict(files or {}), "excerpted": excerpted, "text": text,
         "chars": len(text), "budget_chars": budget_chars, "over_budget": len(text) > budget_chars,
     }
 

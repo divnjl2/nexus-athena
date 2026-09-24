@@ -18,7 +18,7 @@ that says, per executor, how often the work landed and went green.
 - [ ] T1.1 Build and render the packet; refuse unknown specs; report oversize
   - success_check: `python -m pytest tests/test_dispatch.py -q -k packet`
   - files: `lib/dispatch.py, tests/test_dispatch.py`
-  - verifies: S1.1, S1.2, S1.3, S1.4, S1.5, S1.6, S1.7
+  - verifies: S1.1, S1.2, S1.3, S1.4, S1.5, S1.6, S1.7, S1.8
 ### Manual Verification
 - `python athena.py dispatch features/team-layer/contract.md --front features/team-layer/plan.md --task T5.1 --executor none` prints the packet.
 

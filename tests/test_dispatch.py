@@ -430,3 +430,37 @@ def test_without_a_green_attempt_the_least_red_landing_is_carried_forward():
     assert pick_winner([nothing, two_red]) == 1
     assert pick_winner([nothing, nothing]) is None
     assert pick_winner([]) is None
+
+
+def test_a_long_module_is_inlined_as_what_the_task_needs_of_it():
+    """C-1.8: past the threshold a module goes in as header + the imported definitions whole
+    + the other signatures + the names not defined yet; under it, whole."""
+    from lib.dispatch import excerpt, spec_imports
+    module = nl_join([
+        "import os", "", "LIMIT = 3", "", "",
+        "def alpha(x):", "    return x + 1", "", "",
+        "def beta(y, *, z=2):", "    total = y", "    total += z", "    return total", "", "",
+        "class Gamma:", "    def run(self):", "        return 1", "",
+    ])
+    specs = {"S1.1": "def test_b():" + chr(10) + "    from lib.demo import beta, zeta" + chr(10) + "    assert beta(1) == 3"}
+    names = spec_imports(specs, "lib/demo.py")
+    assert names == ["beta", "zeta"]
+    out = excerpt(module, names, full_under=10)
+    assert "import os" in out and "LIMIT = 3" in out
+    assert "def beta(y, *, z=2):" in out and "total += z" in out
+    assert "def alpha(x):" in out and "return x + 1" not in out and "body omitted" in out
+    assert "class Gamma:" in out and "return 1" not in out
+    assert "NOT DEFINED YET" in out and "zeta" in out
+    assert excerpt(module, names, full_under=100000) == module
+    assert excerpt(module, [], full_under=10) == module
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1", files={"lib/demo.py": module},
+                spec_sources=specs)
+    assert pk["excerpted"] == [] and "return x + 1" in pk["text"]     # short module: whole
+    long_module = module + nl_join(["", ""] + ["def pad_%d():" % i + chr(10) + "    return %d" % i for i in range(300)])
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1", files={"lib/demo.py": long_module},
+                spec_sources=specs)
+    assert pk["excerpted"] == ["lib/demo.py"] and "total += z" in pk["text"] and "return 42" not in pk["text"]
+
+
+def nl_join(parts):
+    return chr(10).join(parts)
