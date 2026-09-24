@@ -55,6 +55,25 @@ def test_a_well_formed_completion_passes_through_unchanged():
     assert normalize_completion({"error": "x"}) == ({"error": "x"}, False)
 
 
+def test_a_tool_carrying_request_goes_out_with_thinking_off():
+    """C-6.4 — vLLM #42021: with thinking on, Qwen3.5 hides its tool calls in the reasoning;
+    the request-level workaround is applied at the relay, and only where tools are present."""
+    from lib.toolcalls import prepare_request
+    tools = [{"type": "function", "function": {"name": "glob", "parameters": {"type": "object"}}}]
+    body, changed = prepare_request({"model": "m", "messages": [], "tools": tools})
+    assert changed and body["chat_template_kwargs"] == {"enable_thinking": False}
+    kept, changed = prepare_request({"model": "m", "messages": [], "tools": tools,
+                                     "chat_template_kwargs": {"enable_thinking": True}})
+    assert not changed and kept["chat_template_kwargs"]["enable_thinking"] is True, "the caller decided"
+    merged, _ = prepare_request({"model": "m", "messages": [], "tools": tools,
+                                 "chat_template_kwargs": {"x": 1}})
+    assert merged["chat_template_kwargs"] == {"x": 1, "enable_thinking": False}
+    plain = {"model": "m", "messages": [{"role": "user", "content": "hi"}]}
+    assert prepare_request(dict(plain)) == (plain, False)
+    on, changed = prepare_request({"model": "m", "messages": [], "tools": tools}, thinking=True)
+    assert changed and on["chat_template_kwargs"]["enable_thinking"] is True
+
+
 def test_the_openhands_executor_can_be_pointed_at_the_relay():
     """C-6.3 — the relay is a base url like any other: the executor config carries it, and
     the lane behind it is not touched."""

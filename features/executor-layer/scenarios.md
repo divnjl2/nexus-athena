@@ -232,3 +232,11 @@
 - **Given** tests/test_toolcalls.py
 - **When** the spec `test_the_openhands_executor_can_be_pointed_at_the_relay` is executed
 - **Then** the executor config carries the relay url and the gateway constant is untouched.
+
+### S6.4 — a tool-carrying request goes out with thinking off
+- **verifies:** C-6.4
+- **pins:** 4af3033ba57c2b08
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_tool_carrying_request_goes_out_with_thinking_off -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_tool_carrying_request_goes_out_with_thinking_off` is executed
+- **Then** a request with tools gains chat_template_kwargs.enable_thinking=false; one that set it already, or has no tools, is left alone.
