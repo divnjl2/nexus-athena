@@ -109,6 +109,27 @@ def content_before_calls(text: str) -> str | None:
     return kept or None
 
 
+def prepare_request(body: dict, *, thinking: bool = False) -> tuple[dict, bool]:
+    """PURE: the request side of the relay (C-6.4). A request that carries tools gets
+    `chat_template_kwargs.enable_thinking` set to `thinking` (default off) unless the caller
+    already set it; a request without tools is left as it is.
+
+    Why: vLLM issue #42021 — Qwen3.5 under `--reasoning-parser qwen3` with thinking ON
+    writes its tool calls inside the reasoning in a non-standard shape, and the tool parser
+    never sees them; with `enable_thinking=false` the same model returns proper tool_calls.
+    That is the request-level workaround the issue names, applied here so the lane's flags
+    stay the operator's."""
+    if not isinstance(body, dict) or not body.get("tools"):
+        return body, False
+    kwargs = body.get("chat_template_kwargs")
+    if not isinstance(kwargs, dict):
+        kwargs = {}
+    if "enable_thinking" in kwargs:
+        return body, False
+    body["chat_template_kwargs"] = {**kwargs, "enable_thinking": bool(thinking)}
+    return body, True
+
+
 def normalize_completion(payload: dict, *, id_factory=None) -> tuple[dict, bool]:
     """PURE: an OpenAI chat-completion response -> (response, changed). A choice whose message
     already carries `tool_calls` passes through (C-6.2); a choice whose text holds a call

@@ -73,6 +73,6 @@ that says, per executor, how often the work landed and went green.
 - [ ] T6.1 Normalise tool calls left as text; serve the relay; let OpenHands point at it
   - success_check: `python -m pytest tests/test_toolcalls.py -q`
   - files: `lib/toolcalls.py, athena.py, lib/executors.py, tests/test_toolcalls.py`
-  - verifies: S6.1, S6.2, S6.3
+  - verifies: S6.1, S6.2, S6.3, S6.4
 ### Manual Verification
 - `python athena.py relay --port 8414` then `athena dispatch ... --executor openhands --base-url http://127.0.0.1:8414/v1` makes tool calls the lane's parser refused.

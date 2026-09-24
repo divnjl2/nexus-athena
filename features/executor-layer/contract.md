@@ -110,3 +110,11 @@
   can parse THE SYSTEM SHALL pass it through unchanged.
 - **C-6.3** — WHEN the OpenHands executor is given the relay as its base url THE SYSTEM SHALL
   use it and leave the gateway address as the operator set it.
+- **C-6.4** — WHEN a request through the relay carries tools THE SYSTEM SHALL turn the model's
+  thinking off for it unless the caller decided otherwise.
+  - source: review
+  - see: https://github.com/vllm-project/vllm/issues/42021
+  - note: found by searching before inventing: Qwen3.5 under vLLM's qwen3 reasoning parser
+    with thinking on writes its tool calls inside the reasoning in a non-standard shape and
+    the tool parser never sees them; `enable_thinking=false` per request is the workaround
+    the issue names. Our lane answers with reasoning_content present, so this was our bug.

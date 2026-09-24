@@ -1349,7 +1349,9 @@ def _run_openhands(cfg: dict) -> tuple[str, dict, str]:
             agent_kwargs["system_prompt"] = cfg["system_prompt"]
         try:
             from openhands.sdk import LLMSummarizingCondenser
-            agent_kwargs["condenser"] = LLMSummarizingCondenser(llm=llm, max_size=12, keep_first=2)
+            # keep_first=4 is the SDK's own default: system prompt + the task must survive a
+            # condensation (measured: with 2 the summary "forgot" the task)
+            agent_kwargs["condenser"] = LLMSummarizingCondenser(llm=llm, max_size=12, keep_first=4)
         except Exception:                      # noqa: BLE001 — a condenser is a comfort, not the verdict
             pass
         try:
@@ -1554,7 +1556,7 @@ def cmd_relay(a) -> int:
     import http.server
     import urllib.error
     import urllib.request
-    from lib.toolcalls import normalize_completion
+    from lib.toolcalls import normalize_completion, prepare_request
 
     upstream = a.upstream.rstrip("/")
     log = open(a.log, "a", encoding="utf-8") if a.log else None
@@ -1599,7 +1601,13 @@ def cmd_relay(a) -> int:
             body = self.rfile.read(length) if length else b""
             streaming = False
             try:
-                streaming = bool(json.loads(body or b"{}").get("stream"))
+                parsed = json.loads(body or b"{}")
+                streaming = bool(parsed.get("stream"))
+                if self.path.endswith("/chat/completions") and isinstance(parsed, dict):
+                    # C-6.4: tool-carrying requests go out with thinking off (vLLM #42021)
+                    parsed, changed = prepare_request(parsed, thinking=(a.thinking == "on"))
+                    if changed:
+                        body = json.dumps(parsed, ensure_ascii=False).encode("utf-8")
             except (ValueError, AttributeError):
                 streaming = False
             resp = self._forward(body)
@@ -1847,6 +1855,10 @@ def build_parser() -> argparse.ArgumentParser:
     rl.add_argument("--port", type=int, default=8414)
     rl.add_argument("--timeout", type=int, default=900)
     rl.add_argument("--log", default="", help="append a line per normalised completion here")
+    rl.add_argument("--thinking", choices=("off", "on"), default="off",
+                    help="for requests that carry tools: set chat_template_kwargs.enable_thinking "
+                         "(off by default; vLLM #42021: with thinking on, Qwen3.5 hides its tool "
+                         "calls inside the reasoning)")
     rl.set_defaults(fn=cmd_relay)
 
     me = sub.add_parser("metrics", help="iterations to green and durations, from the record of runs")
