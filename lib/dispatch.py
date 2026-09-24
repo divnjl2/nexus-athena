@@ -153,7 +153,7 @@ def render_packet(task: dict, clauses: list, specs: list, checks: list, files: d
     return "\n".join(out) + "\n"
 
 
-def packet_with_status(pk: dict, checks: list) -> dict:
+def packet_with_status(pk: dict, checks: list, *, output_tokens: int = 0) -> dict:
     """PURE: the packet plus the CURRENT verdict of each spec command, taken before the
     executor starts (C-1.6). A red spec with its tail is what tells an executor the task is
     not done yet; without it a model looked at a complete-looking file and called finish."""
@@ -170,12 +170,12 @@ def packet_with_status(pk: dict, checks: list) -> dict:
             "A RED spec below is the work: the task is not done until it is green. Do not answer "
             "that the code is already complete while any of these is RED.\n")
     text = pk["text"].rstrip("\n") + "\n\n" + head + "\n".join(rows) + "\n"
-    text += "\n" + closing_order(pk.get("task") or {}, red=red)
+    text += "\n" + closing_order(pk.get("task") or {}, red=red, output_tokens=output_tokens)
     return {**pk, "text": text, "chars": len(text), "over_budget": len(text) > pk["budget_chars"],
             "status": {"red": red, "total": len(checks)}}
 
 
-def closing_order(task: dict, *, red: int = 1) -> str:
+def closing_order(task: dict, *, red: int = 1, output_tokens: int = 0) -> str:
     """PURE: the last lines of a packet (C-1.7). After 270 inlined lines a 27B answered
     "Would you like me to continue reading the file?" — the end of the window is what the
     model takes to be its situation, so the end is the order: edit this file now, nobody is
@@ -187,6 +187,13 @@ def closing_order(task: dict, *, red: int = 1) -> str:
              f"Your first action is an Edit or Write call on `{first}`"
              + (f" (the task's files: {', '.join(files)})" if len(files) > 1 else "") + ".",
              "Do not summarise the files above, do not offer options, do not ask how to proceed."]
+    if output_tokens:
+        # the model thinks before it acts and the thinking is billed to the same cap; a
+        # budget it is not told about is a cliff it walks off (measured: three iterations
+        # cut mid-Edit at 1024). Tell it, and ask for a short think per turn.
+        lines.append(f"Your output per turn is capped at {int(output_tokens)} tokens and your "
+                     "thinking counts against it; a turn that thinks past the cap lands nothing. "
+                     "Think briefly, then call the tool.")
     if red:
         lines.append(f"{red} spec{'s are' if red != 1 else ' is'} RED above: make the edit that "
                      "turns them green, then answer with one line: DONE.")

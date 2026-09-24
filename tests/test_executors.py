@@ -32,6 +32,8 @@ def test_the_local_lane_command_grants_only_read_and_edit_tools():
     assert cmd["env"]["ANTHROPIC_BASE_URL"] == LOCAL_GATEWAY
     assert int(cmd["env"]["CLAUDE_CODE_MAX_OUTPUT_TOKENS"]) > 2048
     assert cmd["env"]["ANTHROPIC_AUTH_TOKEN"] == "k" and "ANTHROPIC_API_KEY" in cmd["unset"]
+    # the packet travels on stdin: on the command line it hit Windows' 32k limit (WinError 206)
+    assert cmd["stdin"] == "# Task T1.1 ..." and "# Task T1.1 ..." not in argv
     with pytest.raises(ValueError):
         local_lane_command("openhands", "x")
     assert "Bash" in claude_command("x")["argv"][claude_command("x")["argv"].index("--tools") + 1]

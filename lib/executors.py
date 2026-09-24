@@ -8,7 +8,10 @@ the diff and the spec commands. What this module knows is HOW to start each one:
                          read and edit tools only, turns capped, no Bash (C-3.2). Two
                          measured facts shaped the defaults: the files must be inlined
                          (ten turns went to Read) and the output cap must exceed 2048
-                         tokens (it cut every multi-line Edit mid-call).
+                         tokens (it cut every multi-line Edit mid-call). The lanes' models
+                         think before they act and the thinking is billed to the same cap
+                         (measured through the gateway: 89-200 output tokens for "OK"),
+                         so the cap is 8192 and the packet tells the model the number.
   openhands              the OpenHands SDK in-process, workspace = the repository, model
                          named by the caller (C-3.3). No Docker.
   claude                 Claude Code on the subscription, Bash allowed.
@@ -28,7 +31,7 @@ LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"
 CLAUDE_TOOLS = "Read,Glob,Grep,Edit,Write,Bash"
 LOCAL_CONTEXT_TOKENS = 30720
-LOCAL_OUTPUT_TOKENS = {"local-27b": 6144, "local-9b": 6144}
+LOCAL_OUTPUT_TOKENS = {"local-27b": 8192, "local-9b": 8192}
 
 
 def resolve(name: str) -> dict:
@@ -48,7 +51,10 @@ def local_lane_command(name: str, packet_text: str, *, max_turns: int = 30,
     spec = resolve(name)
     if spec["kind"] != "local":
         raise ValueError(f"{name} is not a local lane")
-    argv = [claude_bin, "-p", packet_text, "--bare", "--setting-sources", "",
+    # the packet goes on stdin, never on the command line: with a checkpoint appended it
+    # passed 32k chars and Windows refused to start the worker (WinError 206, measured on
+    # iterations 2 and 3 of a task whose first iteration had left a 10k tail)
+    argv = [claude_bin, "-p", "--bare", "--setting-sources", "",
             "--strict-mcp-config", "--tools", EDIT_TOOLS, "--allowedTools", EDIT_TOOLS,
             "--model", spec["model"], "--max-turns", str(max_turns),
             "--permission-mode", "acceptEdits", "--output-format", "json"]
@@ -61,16 +67,16 @@ def local_lane_command(name: str, packet_text: str, *, max_turns: int = 30,
     }
     if auth_token:
         env["ANTHROPIC_AUTH_TOKEN"] = auth_token
-    return {"argv": argv, "env": env, "unset": ["ANTHROPIC_API_KEY", "CLAUDECODE",
-                                                "CLAUDE_CODE_ENTRYPOINT"]}
+    return {"argv": argv, "env": env, "stdin": packet_text,
+            "unset": ["ANTHROPIC_API_KEY", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]}
 
 
 def claude_command(packet_text: str, *, max_turns: int = 40, claude_bin: str = "claude") -> dict:
     """PURE: argv for Claude Code on the subscription; Bash allowed so it can run the specs."""
-    argv = [claude_bin, "-p", packet_text, "--tools", CLAUDE_TOOLS, "--allowedTools", CLAUDE_TOOLS,
+    argv = [claude_bin, "-p", "--tools", CLAUDE_TOOLS, "--allowedTools", CLAUDE_TOOLS,
             "--max-turns", str(max_turns), "--permission-mode", "acceptEdits",
             "--output-format", "json"]
-    return {"argv": argv, "env": {}, "unset": []}
+    return {"argv": argv, "env": {}, "stdin": packet_text, "unset": []}
 
 
 #: OpenHands tools for a packet-driven task: edit and look, no terminal. The specs are run by

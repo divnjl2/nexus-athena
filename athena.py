@@ -1390,13 +1390,14 @@ def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tupl
         env.pop(name, None)
     env.update(cmd.get("env", {}))
     try:
-        proc = subprocess.Popen(cmd["argv"], cwd=str(cwd), env=env, stdin=subprocess.DEVNULL,
+        proc = subprocess.Popen(cmd["argv"], cwd=str(cwd), env=env,
+                                stdin=subprocess.PIPE if cmd.get("stdin") else subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                 encoding="utf-8", errors="replace")
     except OSError as e:
         return "", {}, f"could not start the worker: {e}"
     try:
-        out, err_text = proc.communicate(timeout=timeout)
+        out, err_text = proc.communicate(input=cmd.get("stdin"), timeout=timeout)
     except subprocess.TimeoutExpired:
         # the claude launcher spawns a child that inherits the pipes: kill() alone leaves
         # communicate() hanging forever (measured: a 15-minute timeout became a 30-minute
@@ -1652,7 +1653,9 @@ def cmd_dispatch(a) -> int:
     # C-1.6: the executor starts knowing which specs are RED right now — a model that saw a
     # complete-looking file and no failing check called finish without editing (measured)
     from lib.dispatch import packet_with_status
-    pk = packet_with_status(pk, run_checks())
+    from lib.executors import LOCAL_OUTPUT_TOKENS
+    pk = packet_with_status(pk, run_checks(),
+                            output_tokens=LOCAL_OUTPUT_TOKENS.get(a.executor, 0) if spec["kind"] == "local" else 0)
     loop = run_iterations(pk, attempt, budget=a.iterations)
     v, checks, tokens, err, duration = loop["verdict"], state["checks"], state["tokens"], state["err"], state["duration"]
 

@@ -374,3 +374,7 @@ def test_the_packet_ends_with_the_order_to_act():
     assert out["text"].index("=== end of lib/demo.py ===") < out["text"].index("## Now act")
     assert out["text"].index("## Current state of the specs") < out["text"].index("## Now act")
     assert "1 spec is RED" in text
+    # the output budget, thinking included, is stated when the executor has one
+    budgeted = packet_with_status(pk, [{"cmd": "x", "exit": 1, "tail": ""}], output_tokens=8192)
+    assert "8192 tokens" in budgeted["text"] and "thinking counts" in budgeted["text"]
+    assert "capped at" not in out["text"]
