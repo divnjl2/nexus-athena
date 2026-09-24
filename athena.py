@@ -1280,7 +1280,7 @@ def cmd_merge(a) -> int:
     if not workspace.is_dir():
         print(f"merge: workspace is not a directory: {workspace}", file=sys.stderr)
         return 2
-    plan = parse_plan(pathlib.Path(a.front).read_text(encoding="utf-8")) if a.front else None
+    plan = _parse_front_auto(a.front, False) if a.front else None
     slug = a.slug or _slugify(getattr(plan, "title", "") or contract.parent.name)
     ts = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
 
