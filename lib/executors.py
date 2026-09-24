@@ -58,9 +58,11 @@ PI_HASHLINE_PACKAGE = "pi-hashline-edit-pro"
 PI_STRICT_SUFFIX = "-strict"
 PI_STRICT_RELAYS = {"lane27": ("8416", "http://127.0.0.1:8000"), "lane9": ("8417", "http://127.0.0.1:8001")}
 PI_ORDER = ("The task is the text above. There is no user here and no question will be "
-            "answered: make the edit with the edit or write tool, run the spec command with "
-            "bash if you want to see it — always as `<command> -q 2>&1 | tail -n 40`, never the "
-            "full output — then answer with one line: DONE.")
+            "answered: make the edit with the edit or write tool. Do not read files that are already "
+            "in this message; when you must read, read a slice (offset and limit, at most 120 lines), "
+            "never a whole file — the window is small and a full read ends the attempt. Run the spec "
+            "command with bash if you want to see it — always as `<command> -q 2>&1 | tail -n 40`, "
+            "never the full output — then answer with one line: DONE.")
 
 
 def resolve(name: str) -> dict:
@@ -178,9 +180,10 @@ def hashline_order(files) -> str:
     the anchored read tool, edit by anchors."""
     named = ", ".join(files) if files else "the task's files"
     return ("The task is the text above. There is no user here and no question will be answered. "
-            f"The files are not in this message: read {named} with the read tool (every line comes "
-            "back with an anchor), then make the edit with replace or insert by those anchors — never "
-            "retype a file. Run the spec command with bash if you want to see it — always as "
+            f"The files are not in this message: read {named} with the read tool in slices of at most "
+            "150 lines around the place you will change (every line comes back with an anchor), then "
+            "make the edit with replace or insert by those anchors — never retype a file, never read a "
+            "whole large file. Run the spec command with bash if you want to see it — always as "
             "`<command> -q 2>&1 | tail -n 40`, never the full output — then answer with one line: DONE.")
 
 
