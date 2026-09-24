@@ -1420,8 +1420,12 @@ def cmd_testwrite(a) -> int:
     copies = _fan_out(root, fan_names(str(root), max(1, a.n)))
     candidates = []
     try:
+        from lib.dispatch import retarget
         for k, ws in enumerate(copies, 1):
-            cmd = pi_command(a.executor, prompt, pi_bin=pi_binary(), thinking=a.pi_thinking)
+            # each copy is told its own root, or every worker writes into the base (measured
+            # twice now: the fan-out and this demo)
+            cmd = pi_command(a.executor, retarget(prompt, str(root), str(ws)), pi_bin=pi_binary(),
+                             thinking=a.pi_thinking, strict=a.pi_strict)
             claim, tokens, err = _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
             new_text = (ws / module).read_text(encoding="utf-8") if (ws / module).is_file() else ""
             added = new_text[len(existing):] if new_text.startswith(existing) else new_text
@@ -2646,6 +2650,7 @@ def build_parser() -> argparse.ArgumentParser:
     tw.add_argument("--stall", type=int, default=300)
     tw.add_argument("--check-timeout", dest="check_timeout", type=int, default=300)
     tw.add_argument("--pi-thinking", dest="pi_thinking", default="")
+    tw.add_argument("--pi-strict", dest="pi_strict", action="store_true")
     tw.add_argument("--text", action="store_true")
     tw.set_defaults(fn=cmd_testwrite)
 
