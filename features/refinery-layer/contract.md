@@ -53,3 +53,11 @@
   - note: the ceiling worktree was assembled by cherry-pick from a lane's worktree and
     finished by Claude; it had no record, and the queue refused it twice. A verdict the frame
     computes is not anyone's word.
+- **C-2.8** — WHEN a feature carries a sealed acceptance directory THE SYSTEM SHALL run it only
+  in the refinery's check, never in a packet or a dispatch verdict, and judge a workspace that
+  changed anything under it as never green.
+  - source: review
+  - note: a passing test is not correctness — strengthened tests took 15-18 points off
+    bash-only agents (SWE-ABS); agents that can read the grader learn the grader. The visible
+    spec stays in the packet, because it is what made a small model land; the sealed tier is
+    the second reading, and only the queue takes it.

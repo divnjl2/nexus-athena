@@ -179,6 +179,14 @@
 - **When** the spec `test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin` is executed
 - **Then** the argv carries -p, JSON mode, the no-session/extensions/skills/context flags, the four tools, the provider and model, the order last; the packet is stdin; pi_result reads text, tokens and errors from the events; availability probes the binary.
 
+### S3.7 — a pi executor with hashline loads the extension and leaves files to the read tool
+- **verifies:** C-3.7
+- **pins:** cfee18b010544ce9
+- **run_cmd:** `python -m pytest tests/test_executors.py::test_a_pi_executor_with_hashline_loads_the_extension_and_leaves_files_to_the_read_tool -q`
+- **Given** tests/test_executors.py
+- **When** the spec `test_a_pi_executor_with_hashline_loads_the_extension_and_leaves_files_to_the_read_tool` is executed
+- **Then** the argv carries -e with the extension path and the anchored tools, the order names the files for the read tool, and without an installed extension the command is refused.
+
 ## C-4 — proved by the dispatch record and the CLI (lib/dispatch.py, athena.py)
 
 ### S4.1 — a dispatch appends one record
@@ -271,6 +279,14 @@
 - **When** the spec `test_without_a_green_attempt_the_least_red_landing_is_carried_forward` is executed
 - **Then** the landed attempt with the fewest red checks is picked, the quicker on a tie, and none when nothing landed.
 
+### S5.8 — attempts are clustered by behaviour and the largest green cluster wins
+- **verifies:** C-5.8
+- **pins:** 74453e57e8b0d83f
+- **run_cmd:** `python -m pytest tests/test_select.py::test_attempts_are_clustered_by_behaviour_and_the_largest_green_cluster_wins -q`
+- **Given** tests/test_select.py
+- **When** the spec `test_attempts_are_clustered_by_behaviour_and_the_largest_green_cluster_wins` is executed
+- **Then** spacing and comments do not split a cluster, the largest green cluster wins with its quicker member as representative, short of green the largest most-passing cluster, one representative per cluster is kept.
+
 ## C-6 — proved by the tool-call normaliser (lib/toolcalls.py)
 
 ### S6.1 — a tool call left as text becomes a structured call
@@ -354,3 +370,21 @@
 - **Given** tests/test_bench.py
 - **When** the spec `test_the_bench_command_prints_its_plan_without_running_when_dry` is executed
 - **Then** the parser takes the bench flags, the plan lists the runs with their workspaces and the dispatch flags, and a dry run dispatches nothing.
+
+## C-8 — proved by the test-writer module (lib/testwriter.py) and the locator module (lib/locate.py)
+
+### S8.1 — candidate tests are kept only when they fail on the current code and agree
+- **verifies:** C-8.1
+- **pins:** 58a48946c652784f
+- **run_cmd:** `python -m pytest tests/test_testwriter.py::test_candidate_tests_are_kept_only_when_they_fail_on_the_current_code_and_agree -q`
+- **Given** tests/test_testwriter.py
+- **When** the spec `test_candidate_tests_are_kept_only_when_they_fail_on_the_current_code_and_agree` is executed
+- **Then** a candidate is admissible only when it parses, holds one test naming the clause and fails for a failure; admissible ones cluster by normalised source and the largest cluster's representative is chosen.
+
+### S8.2 — a repo map is built from definitions and file votes are merged
+- **verifies:** C-8.2
+- **pins:** ff1ea612af689740
+- **run_cmd:** `python -m pytest tests/test_locate.py::test_a_repo_map_is_built_from_definitions_and_file_votes_are_merged -q`
+- **Given** tests/test_locate.py
+- **When** the spec `test_a_repo_map_is_built_from_definitions_and_file_votes_are_merged` is executed
+- **Then** the map lists Python files with their definitions within the budget and skips vendored dirs; replies parse as JSON, fenced JSON or bullets; votes merge by count then first mention.

@@ -88,3 +88,11 @@
 - **Given** tests/test_refinery.py
 - **When** the spec `test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs` is executed
 - **Then** landed follows the diff against the target, green follows the checks and the untouched spec files, a skipped check is red, and the verify parser takes the flags.
+
+### S2.8 — a sealed acceptance directory is run only by the refinery and never edited green
+- **verifies:** C-2.8
+- **pins:** 7a355e40e7f3a417
+- **run_cmd:** `python -m pytest tests/test_refinery.py::test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green -q`
+- **Given** tests/test_refinery.py
+- **When** the spec `test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green` is executed
+- **Then** sealed directories are found under features, their commands are those the refinery runs, a change under sealed/ is flagged and never green in the verdict, and the packet never lists them.

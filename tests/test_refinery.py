@@ -304,3 +304,28 @@ def test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_s
     args = athena.build_parser().parse_args(["verify", "c.md", "--front", "p.md", "--task", "T7.1",
                                              "--workspace", "D:/w", "--target", "master"])
     assert args.fn is athena.cmd_verify and args.target == "master"
+
+
+def test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green(tmp_path):
+    """C-2.8 — sealed dirs are found under features/*, the refinery runs them as one pytest
+    each, a change under sealed/ makes a verdict red and flagged, and a packet's files never
+    include them."""
+    from lib.dispatch import verdict
+    from lib.refinery import sealed_checks, sealed_dirs, sealed_touched
+    (tmp_path / "features" / "x" / "sealed").mkdir(parents=True)
+    (tmp_path / "features" / "x" / "sealed" / "test_accept.py").write_text("def test_a():\n    assert True\n", encoding="utf-8")
+    (tmp_path / "features" / "y").mkdir(parents=True)
+    dirs = sealed_dirs(str(tmp_path))
+    assert [d.replace("\\", "/") for d in dirs] == ["features/x/sealed"]
+    assert sealed_checks(dirs) == ["python -m pytest features/x/sealed -q"]
+    assert sealed_touched(["lib/a.py", "features/x/sealed/test_accept.py"]) == ["features/x/sealed/test_accept.py"]
+    assert sealed_touched(["lib/a.py"]) == []
+
+    before = {"lib/a.py": (1, 1), "features/x/sealed/test_accept.py": (1, 1)}
+    after = {"lib/a.py": (2, 1), "features/x/sealed/test_accept.py": (2, 1)}
+    v = verdict(before, after, [{"cmd": "python -m pytest t.py::a -q", "exit": 0, "tail": "1 passed"}])
+    assert v["green"] is False and "features/x/sealed/test_accept.py" in v["review_flags"]
+    assert "sealed" in v["reason"]
+    clean = verdict({"lib/a.py": (1, 1)}, {"lib/a.py": (2, 1)},
+                    [{"cmd": "python -m pytest t.py::a -q", "exit": 0, "tail": "1 passed"}])
+    assert clean["green"] is True

@@ -109,6 +109,14 @@
     packet did. Through pi the vanilla 27B edited a file in three turns on the first try and
     the vanilla 9B in two; pi's system prompt is ~200 tokens against Claude Code's thousands,
     and it speaks the lane's OpenAI shape directly, no gateway translation in between.
+- **C-3.7** — WHEN a pi executor is run with hashline THE SYSTEM SHALL load the hashline
+  extension, offer its anchored read and edit tools in place of the string-replace edit,
+  leave the task's files out of the packet and name them for the read tool.
+  - source: review
+  - note: both lanes broke on edits inside large files — inserts at the top, syntax errors,
+    duplicated functions — while new modules landed first time. Bölük's benchmark (16
+    models, 180 tasks): anchored line edits beat patch for 14 of 16 models, the weakest
+    gaining most; a stale anchor refuses the edit instead of missing silently.
 
 ## C-4 — The record
 
@@ -149,6 +157,14 @@
 - **C-5.7** — WHEN no fanned attempt is green THE SYSTEM SHALL carry forward the attempt that
   landed with the fewest red checks, the quicker one on a tie, and record every attempt.
   - source: review
+- **C-5.8** — WHEN several fanned attempts have landed THE SYSTEM SHALL cluster them by
+  behaviour — which checks passed and the normalised patch — keep one representative per
+  cluster for review, and choose the largest green cluster, else the largest cluster with the
+  most passed checks.
+  - source: review
+  - note: CodeMonkeys: coverage ceiling 69.8%, random pick 45.8%, real selection 57.4% — the
+    gap between coverage and selection is the reserve. Agentless votes over normalised
+    patches; Self-MoA says the copies of one model, not a mixture, are what to vote over.
 
 ## C-6 — The gateway relay: adapt on the client side, never on the lanes
 
@@ -213,3 +229,20 @@
   prints the plan and dispatches nothing.
   - source: review
   - note: the rung a change across two files sits on: the module of C-7.1 and the CLI.
+
+## C-8 — The swarm's second source: tests and locations the orchestrator did not write
+
+- **C-8.1** — WHEN candidate reproduction tests are written for a clause THE SYSTEM SHALL keep
+  only those that parse, define one test naming the clause and fail on the current code for
+  a failure rather than an error or a skip, cluster the rest by normalised source and choose
+  the largest cluster's representative.
+  - source: review
+  - note: the orchestrator writing every red spec by hand is the factory's ceiling; a test
+    that fails on the code as it is, chosen by agreement, is the cheapest way to raise the
+    verifier's quality (Agentless reproduction tests; CodeMonkeys' selector).
+- **C-8.2** — WHEN a clause has no files named THE SYSTEM SHALL build a repo map of Python
+  files with their top-level definitions within a character budget, ask the localiser for
+  the files, and merge several samples' votes by count then first mention.
+  - source: review
+  - note: Agentless with better localisation went from 32.0% to 38.3% and empty patches fell
+    2.7x; localisation is a lever of its own, and one a 27B is good at without editing.

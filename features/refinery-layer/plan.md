@@ -64,6 +64,10 @@ injected `run(argv, cwd) -> (code, output)`; the CLI wires the real git.
   - success_check: `python -m pytest tests/test_refinery.py::test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs -q`
   - files: `lib/refinery.py, athena.py`
   - verifies: S2.7
+- [ ] T2.9 The sealed tier: found under features, run only by the refinery, never edited green
+  - success_check: `python -m pytest tests/test_refinery.py::test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green -q`
+  - files: `lib/refinery.py, lib/dispatch.py, athena.py`
+  - verifies: S2.8
 - [ ] T2.7 Wire `athena merge` and print the merge section in `athena metrics`
   - success_check: `python -m pytest tests/test_refinery.py -q`
   - files: `athena.py`

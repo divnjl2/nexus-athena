@@ -40,7 +40,7 @@ that says, per executor, how often the work landed and went green.
 - [ ] T3.1 Registry, the local-lane command, the OpenHands configuration, availability
   - success_check: `python -m pytest tests/test_executors.py -q`
   - files: `lib/executors.py, tests/test_executors.py`
-  - verifies: S3.1, S3.2, S3.3, S3.4, S3.5, S3.6
+  - verifies: S3.1, S3.2, S3.3, S3.4, S3.5, S3.6, S3.7
 ### Manual Verification
 - `python athena.py dispatch ... --executor local-27b` lands the C-5.7 change in a worktree and its spec goes green.
 
@@ -71,6 +71,10 @@ that says, per executor, how often the work landed and went green.
   - success_check: `python -m pytest tests/test_dispatch.py -q -k "fanned or least_red"`
   - files: `lib/dispatch.py, athena.py, tests/test_dispatch.py`
   - verifies: S5.6, S5.7
+- [ ] T5.3 The selection module: cluster attempts by behaviour, choose the largest green cluster
+  - success_check: `python -m pytest tests/test_select.py -q`
+  - files: `lib/select.py`
+  - verifies: S5.8
 ### Manual Verification
 - `python athena.py dispatch ... --executor local-27b --iterations 3 --text` reports the iteration count and leaves `.athena/checkpoints/<task>.md` when short of green.
 
@@ -107,3 +111,19 @@ that says, per executor, how often the work landed and went green.
   - verifies: S7.4
 ### Manual Verification
 - `python athena.py bench features/refinery-layer/contract.md --front features/refinery-layer/plan.md --tasks T2.1,T2.3 --executors pi-9b,pi-27b --base-workspace <dir> --dry-run` prints the plan.
+
+## Phase 8: The second source
+**Goal:** tests and locations the swarm proposes and the frame selects by behaviour.
+**Depends on:** Phase 5
+### Tasks
+- [ ] T8.1 The test-writer module: admissible candidates, clustering, the chosen test
+  - success_check: `python -m pytest tests/test_testwriter.py -q`
+  - files: `lib/testwriter.py`
+  - verifies: S8.1
+- [ ] T8.2 The locator module: repo map within a budget, reply parsing, merged votes
+  - success_check: `python -m pytest tests/test_locate.py -q`
+  - files: `lib/locate.py`
+  - verifies: S8.2
+### Manual Verification
+- `python athena.py testwrite <contract> --clause C-x.y --executor pi-9b --n 4` leaves one red test that fails on the current code.
+- `python athena.py locate <contract> --clause C-x.y --executor pi-27b --n 3` prints the top files.

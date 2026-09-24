@@ -117,3 +117,20 @@ def test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin():
     assert pi_result(bad)[2] == "400 Unexpected message role."
     assert availability("pi-27b", which=lambda n: "C:/bin/pi" if n == "pi" else None)["available"]
     assert not availability("pi-27b", which=lambda n: None)["available"]
+
+
+def test_a_pi_executor_with_hashline_loads_the_extension_and_leaves_files_to_the_read_tool():
+    """C-3.7 — with hashline the argv loads the extension and offers the anchored tools; the
+    order names the files for the read tool; without an installed extension it is refused."""
+    from lib.executors import PI_HASHLINE_TOOLS, hashline_order, pi_command
+    cmd = pi_command("pi-9b", "# Task", hashline="C:/ext/hashline/index.ts", files=["lib/x.py", "lib/y.py"])
+    argv = cmd["argv"]
+    assert argv[argv.index("-e") + 1] == "C:/ext/hashline/index.ts"
+    assert argv[argv.index("--tools") + 1] == PI_HASHLINE_TOOLS and "edit" not in PI_HASHLINE_TOOLS.split(",")
+    assert "replace" in PI_HASHLINE_TOOLS and "read" in PI_HASHLINE_TOOLS
+    assert argv[-1] == hashline_order(["lib/x.py", "lib/y.py"])
+    assert "lib/x.py" in argv[-1] and "read" in argv[-1] and "anchor" in argv[-1].lower()
+    plain = pi_command("pi-9b", "# Task")
+    assert "-e" not in plain["argv"]
+    with pytest.raises(ValueError):
+        pi_command("pi-9b", "# Task", hashline="", files=["lib/x.py"], require_hashline=True)
