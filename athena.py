@@ -1281,6 +1281,113 @@ def bench_plan(a) -> dict:
             "dry_run": bool(a.dry_run), "ran": 0}
 
 
+def _pi_text(executor: str, prompt: str, *, cwd: pathlib.Path, timeout: int, thinking: str = "") -> tuple[str, dict, str]:
+    """EFFECTFUL: one pi print-mode call with no tools — a text answer from the lane."""
+    from lib.executors import pi_binary, pi_command
+    cmd = pi_command(executor, prompt, pi_bin=pi_binary(), thinking=thinking)
+    argv = cmd["argv"]
+    i = argv.index("--tools")
+    argv[i:i + 2] = ["--no-tools"]
+    argv[-1] = "Answer the question above. There is no user here. Reply with the answer only."
+    return _run_command_executor(cmd, cwd=cwd, timeout=timeout)
+
+
+def cmd_locate(a) -> int:
+    """C-8.2: a clause with no files named gets its files from the swarm — a repo map within a
+    budget, N localiser samples, votes merged by count then first mention."""
+    from lib.locate import merge_votes, parse_files_reply, repo_map
+    contract = _load_contract(a)
+    cl = contract.by_id(a.clause)
+    if cl is None:
+        _emit({"error": f"no clause {a.clause}"})
+        return 2
+    root = pathlib.Path(a.workspace).resolve()
+    the_map = repo_map(str(root), budget_chars=a.budget)
+    prompt = (f"# Locate the files for one requirement\n\nRepository root: {str(root).replace(chr(92), '/')}\n\n"
+              f"## The requirement\n- **{cl.id}** — {cl.text}\n\n## The repository map (path: definitions, lines)\n"
+              f"{the_map}\n\n## Question\nWhich files must change or be created to satisfy this requirement? "
+              f"Answer with a JSON list of at most {a.top} repository-relative paths, most likely first. "
+              f"A file that does not exist yet may be named. Nothing but the JSON list.")
+    votes, claims = [], []
+    for k in range(max(1, a.n)):
+        text, tokens, err = _pi_text(a.executor, prompt, cwd=root, timeout=a.timeout, thinking=a.pi_thinking)
+        files = parse_files_reply(text)
+        votes.append(files)
+        claims.append({"sample": k + 1, "files": files, "tokens": tokens, "error": err})
+    merged = merge_votes(votes, top=a.top)
+    out = {"clause": cl.id, "executor": a.executor, "files": merged, "samples": claims,
+           "map_chars": len(the_map)}
+    if a.text:
+        print(f"# locate {cl.id} -> {a.executor} ({a.n} samples): " + (", ".join(merged) or "(nothing)"))
+        for c in claims:
+            print(f"  sample {c['sample']}: {', '.join(c['files']) or '-'}" + (f"  [{c['error'][:80]}]" if c["error"] else ""))
+    else:
+        _emit(out)
+    return 0 if merged else 1
+
+
+def cmd_testwrite(a) -> int:
+    """C-8.1: N candidate reproduction tests for a clause, each written by the executor in its
+    own copy of the workspace, kept only when they fail on the code as it is, clustered, the
+    largest cluster's representative appended to the module in the workspace."""
+    import ast
+    from lib.dispatch import fan_names, snapshot
+    from lib.executors import pi_binary, pi_command
+    from lib.spec_runner import _spawn
+    from lib.testwriter import choose_test, test_function_name
+    contract = _load_contract(a)
+    cl = contract.by_id(a.clause)
+    if cl is None:
+        _emit({"error": f"no clause {a.clause}"})
+        return 2
+    root = pathlib.Path(a.workspace).resolve()
+    module = a.module.replace("\\", "/")
+    existing = (root / module).read_text(encoding="utf-8") if (root / module).is_file() else ""
+    prompt = (f"# Write ONE failing test for one requirement\n\nRepository root: {str(root).replace(chr(92), '/')}\n\n"
+              f"## The requirement\n- **{cl.id}** — {cl.text}\n\n"
+              f"## Where\nAppend exactly one pytest function to `{module}` (create the file if it does not exist; "
+              f"keep what is there). Its name starts with `test_` and reads as a sentence; its docstring starts "
+              f"with `{cl.id} — `. It imports what it needs from the module under test and asserts the behaviour "
+              f"the requirement promises.\n\n## Rules\nDo NOT implement the behaviour: the test must FAIL on the "
+              f"code as it is, for an assertion or a missing name, not for a syntax error and not by skipping. "
+              f"Write only the test. Then answer with one line: DONE.\n"
+              + (f"\n## The module today\n```python\n{existing[-6000:]}\n```\n" if existing else ""))
+    copies = _fan_out(root, fan_names(str(root), max(1, a.n)))
+    candidates = []
+    try:
+        for k, ws in enumerate(copies, 1):
+            cmd = pi_command(a.executor, prompt, pi_bin=pi_binary(), thinking=a.pi_thinking)
+            claim, tokens, err = _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
+            new_text = (ws / module).read_text(encoding="utf-8") if (ws / module).is_file() else ""
+            added = new_text[len(existing):] if new_text.startswith(existing) else new_text
+            name = test_function_name(added)
+            run = {"exit": 126, "tail": "no test function added"}
+            if name:
+                argv = [sys.executable, "-m", "pytest", f"{module}::{name}", "-q"]
+                code, tail = _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+                run = {"exit": code, "tail": tail}
+            candidates.append({"source": added.strip("\n") + "\n" if added.strip() else "", "run": run,
+                               "sample": k, "error": err})
+    finally:
+        _fan_in(root, copies)
+    pick = choose_test(candidates, clause=cl.id)
+    if pick["source"]:
+        with (root / module).open("a", encoding="utf-8") as fh:
+            fh.write(("\n\n" if existing and not existing.endswith("\n\n") else "") + pick["source"])
+    out = {"clause": cl.id, "executor": a.executor, "module": module, "chosen": pick["source"],
+           "cluster_size": pick["cluster_size"], "admissible": pick["admissible"], "rejected": pick["rejected"],
+           "candidates": [{"sample": c["sample"], "exit": c["run"]["exit"], "name": test_function_name(c["source"]),
+                           "error": c["error"][:120]} for c in candidates]}
+    if a.text:
+        print(f"# testwrite {cl.id} -> {a.executor}: {a.n} candidates, {pick['admissible']} admissible, "
+              f"cluster {pick['cluster_size']}" + (f", appended to {module}" if pick["source"] else ", nothing chosen"))
+        for c in out["candidates"]:
+            print(f"  sample {c['sample']}: {c['name'] or '(no test)'} exit {c['exit']}" + (f"  [{c['error']}]" if c["error"] else ""))
+    else:
+        _emit(out)
+    return 0 if pick["source"] else 1
+
+
 def cmd_next(a) -> int:
     """C-7.3: the next ready task of a slug out of bd, claimed, dispatched with the flags given
     — Gas Town's "if there is work on your hook, run it", with bd as the hook."""
@@ -2390,6 +2497,34 @@ def build_parser() -> argparse.ArgumentParser:
     me.add_argument("contract", nargs="?", default="contract.md")
     me.add_argument("--text", action="store_true")
     me.set_defaults(fn=cmd_metrics)
+
+    lo = sub.add_parser("locate", help="the files for a clause, from a repo map and N localiser samples (C-8.2)")
+    lo.add_argument("contract")
+    lo.add_argument("--clause", required=True)
+    lo.add_argument("--executor", default="pi-27b")
+    lo.add_argument("--workspace", default=".")
+    lo.add_argument("--n", type=int, default=3)
+    lo.add_argument("--top", type=int, default=5)
+    lo.add_argument("--budget", type=int, default=12000, help="repo map characters")
+    lo.add_argument("--timeout", type=int, default=600)
+    lo.add_argument("--pi-thinking", dest="pi_thinking", default="")
+    lo.add_argument("--text", action="store_true")
+    lo.set_defaults(fn=cmd_locate)
+
+    tw = sub.add_parser("testwrite", help="N candidate failing tests for a clause, kept only when they fail on "
+                                          "the current code, the largest cluster appended to the module (C-8.1)")
+    tw.add_argument("contract")
+    tw.add_argument("--clause", required=True)
+    tw.add_argument("--module", required=True, help="tests/test_<name>.py to append to")
+    tw.add_argument("--executor", default="pi-9b")
+    tw.add_argument("--workspace", default=".")
+    tw.add_argument("--n", type=int, default=4)
+    tw.add_argument("--timeout", type=int, default=900)
+    tw.add_argument("--stall", type=int, default=300)
+    tw.add_argument("--check-timeout", dest="check_timeout", type=int, default=300)
+    tw.add_argument("--pi-thinking", dest="pi_thinking", default="")
+    tw.add_argument("--text", action="store_true")
+    tw.set_defaults(fn=cmd_testwrite)
 
     nx = sub.add_parser("next", help="the next ready task of a slug from bd, claimed and dispatched (C-7.3)")
     nx.add_argument("contract")

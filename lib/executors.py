@@ -52,7 +52,8 @@ PI_HASHLINE_TOOLS = "read,bash,replace,insert,anchor_grep"
 PI_HASHLINE_PACKAGE = "pi-hashline-edit-pro"
 PI_ORDER = ("The task is the text above. There is no user here and no question will be "
             "answered: make the edit with the edit or write tool, run the spec command with "
-            "bash if you want to see it, then answer with one line: DONE.")
+            "bash if you want to see it — always as `<command> -q 2>&1 | tail -n 40`, never the "
+            "full output — then answer with one line: DONE.")
 
 
 def resolve(name: str) -> dict:
@@ -172,8 +173,8 @@ def hashline_order(files) -> str:
     return ("The task is the text above. There is no user here and no question will be answered. "
             f"The files are not in this message: read {named} with the read tool (every line comes "
             "back with an anchor), then make the edit with replace or insert by those anchors — never "
-            "retype a file. Run the spec command with bash if you want to see it, then answer with one "
-            "line: DONE.")
+            "retype a file. Run the spec command with bash if you want to see it — always as "
+            "`<command> -q 2>&1 | tail -n 40`, never the full output — then answer with one line: DONE.")
 
 
 def hashline_extension(*, which=None, exists=None) -> str:
