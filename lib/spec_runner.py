@@ -276,6 +276,10 @@ def attribute(sc: Scenario, cases: dict) -> SpecResult:
     if not hits:
         return SpecResult(passed=False, exit_code=_NOT_REPORTED, duration_ms=0,
                           output_tail=f"not in the runner's report: {' '.join(nodes)}", **base)
+    skipped = [c for c in hits if c["skipped"]]
+    if skipped:
+        return SpecResult(passed=False, exit_code=1, duration_ms=duration,
+                          output_tail="skipped: a skipped spec is not proof (C-1.2)", **base)
     failed = [c for c in hits if not c["passed"]]
     if failed:
         return SpecResult(passed=False, exit_code=1, duration_ms=duration,
