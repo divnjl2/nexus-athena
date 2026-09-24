@@ -1288,6 +1288,10 @@ def _pi_text(executor: str, prompt: str, *, cwd: pathlib.Path, timeout: int, thi
     argv = cmd["argv"]
     i = argv.index("--tools")
     argv[i:i + 2] = ["--no-tools"]
+    # a text answer needs a short output budget: prompt + maxTokens must fit the lane's 30720
+    # (measured: a brief on a large packet was refused with 400 at 12288 output tokens)
+    j = argv.index("--provider")
+    argv[j + 1] = argv[j + 1] + "-text"
     argv[-1] = "Answer the question above. There is no user here. Reply with the answer only."
     return _run_command_executor(cmd, cwd=cwd, timeout=timeout)
 
