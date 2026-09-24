@@ -1,157 +1,100 @@
-import re
-from collections import defaultdict
+"""The test-writer's selector (C-8.1): candidate reproduction tests are kept by what they do.
+
+Drafted by the vanilla 9B through pi (three iterations, one reason string short); finished
+by Claude (ADR-0007). A candidate is admissible when it parses, defines exactly one test
+function whose docstring names the clause, and its run on the code as it is fails for a
+failure — not an error, not a skip, not a pass. Admissible candidates cluster by normalised
+source; the largest cluster's first member is chosen; one representative per cluster is
+kept for review.
+
+PURE throughout.
+"""
+from __future__ import annotations
+
+import ast
 
 
-def test_function_name(code):
-    """Extract the test function name from source code. Returns empty string for 
-    multiple functions or no test."""
-    # Check if code parses
+def _tests(source: str):
+    """The test functions of a candidate module text, or None when it does not parse."""
     try:
-        compile(code, '<test_candidate>', 'exec')
-    except SyntaxError:
+        tree = ast.parse(source or "")
+    except (SyntaxError, ValueError):
+        return None
+    return [n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.name.startswith("test_")]
+
+
+def test_function_name(source: str) -> str:
+    """The one test function's name, "" when the text does not parse or holds any number of
+    test functions other than one."""
+    tests = _tests(source)
+    if not tests or len(tests) != 1:
         return ""
-    
-    # Find def statements
-    funcs = re.findall(r'^def\s+(\w+)\s*\(', code, re.MULTILINE)
-    if len(funcs) != 1:
-        return ""
-    
-    return funcs[0]
+    return tests[0].name
 
 
-def normalize_source(source):
-    """Normalize source code for clustering by removing whitespace variations."""
-    return re.sub(r'\s+', ' ', source).strip()
-
-
-def adapt_to_match_clause(source, clause=""):
-    """Helper: check if clause in the form C-X.Y appears in source."""
-    if not clause or not source:
-        return True
-    
-    parts = clause.split('-')
-    if len(parts) >= 2:
-        clause_num = parts[1]
-        return re.search(r'C-' + re.escape(clause_num), source, re.IGNORECASE) is not None
-    return True
-
-
-def admissible(source, run_result, clause=""):
-    """Determine if a candidate test is admissible.
-    
-    A candidate is admissible when:
-    - It parses successfully
-    - It defines exactly one test function that names the clause
-    - Its run on the current code is red for a failure (not an error, not a skip)
-    """
-    # Check if code parses
+def normalize_source(source: str) -> str:
     try:
-        compile(source, '<test_candidate>', 'exec')
-    except SyntaxError:
-        return "parse"
-    
-    funcs = re.findall(r'^def\s+(\w+)\s*\(', source, re.MULTILINE)
-    
-    # Must have at least one function
-    if len(funcs) < 1:
-        return "one test"
-    
-    # Check exit code - error case
-    outcome = run_result.get("exit")
-    tail = run_result.get("tail", "")
-    
-    # Error (exit code 2)
-    if outcome == 2:
-        return "error"
-    
-    # ImportError check
-    if "ImportError" in tail:
-        return "error"
-    
-    # Skip check
-    if "skipped" in tail.lower():
-        return "skip"
-    
-    # Passed - this is not admissible (should fail the test)
-    if "passed" in tail.lower():
-        return "passes"
-    
-    # Check if clause provided
-    if clause:
-        parts = clause.split('-')
-        if len(parts) >= 2:
-            clause_num = parts[1]
-            # Must have exactly one function and clause must be in docstring
-            if len(funcs) != 1:
-                return "one test"
-            
-            name = funcs[0]
-            # Find docstring - account for optional () after function name
-            docstring_pattern = r'^def\s+' + re.escape(name) + r'\s*\(\s*\)*\s*:\s*"""(.*?)"""'
-            doc_match = re.search(docstring_pattern, source, re.DOTALL | re.MULTILINE)
-            
-            if not doc_match or not doc_match.group(1):
-                # No docstring - not admissible
-                return "one test"
-            
-            if not re.search(r'C-' + re.escape(clause_num), doc_match.group(1), re.IGNORECASE):
-                return "one test"
-    
-    # Must have exactly one function
-    if len(funcs) != 1:
-        return "one test"
-    
+        return ast.unparse(ast.parse(source or ""))
+    except (SyntaxError, ValueError):
+        return source or ""
+
+
+def _pytest_counts(tail: str) -> dict:
+    import re
+    out = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0}
+    for m in re.finditer(r"(\d+)\s+(passed|failed|skipped|errors?)\b", tail or ""):
+        key = m.group(2)
+        out["errors" if key.startswith("error") else key] += int(m.group(1))
+    return out
+
+
+def admissible(source: str, run: dict, *, clause: str = "") -> str:
+    """Why a candidate is NOT admissible, "" when it is. The reasons are words a reviewer can
+    grep: parse, one test, <clause id>, error, skip, passes."""
+    tests = _tests(source)
+    if tests is None:
+        return "does not parse"
+    if len(tests) != 1:
+        return f"one test function expected, {len(tests)} found"
+    fn = tests[0]
+    doc = ast.get_docstring(fn) or ""
+    if clause and not doc.startswith(clause + " "):
+        return f"the docstring does not name {clause}"
+    exit_code = int(run.get("exit", 1) or 0) if run.get("exit") is not None else 1
+    tail = str(run.get("tail") or "")
+    counts = _pytest_counts(tail)
+    if counts["skipped"] or "skipped" in tail.lower():
+        return "the run skipped: a skipped test proves nothing"
+    if counts["errors"] or exit_code in (2, 3, 4) or "Error:" in tail and counts["failed"] == 0 and "Assertion" not in tail:
+        return "the run ended in an error, not a failure"
+    if exit_code == 0 or (counts["passed"] and not counts["failed"]):
+        return "the test passes on the current code: it reproduces nothing"
     return ""
 
 
-def choose_test(candidates, clause=""):
-    """Choose the largest cluster's representative from admissible candidates.
-    
-    Clusters by normalized source. Returns the representative of the largest
-    cluster that are admissible (return empty string on admissible()).
-    """
-    # Filter and categorize candidates
-    admissible_results = []
-    rejected = []
-    
-    for cand in candidates:
-        source = cand.get("source", "")
-        run = cand.get("run", {})
-        
-        result = admissible(source, run, clause)
-        
-        cluster_info = {
-            "source": source,
-            "run": run,
-            "normalized": normalize_source(source)
-        }
-        
-        if result == "":
-            admissible_results.append(cluster_info)
+def choose_test(candidates: list, *, clause: str = "") -> dict:
+    """The chosen test source ("" when none is admissible), the size of its cluster, how many
+    candidates were admissible and rejected, and one representative per cluster."""
+    kept, rejected = [], 0
+    for cand in candidates or []:
+        src = str(cand.get("source") or "")
+        why = admissible(src, cand.get("run") or {}, clause=clause)
+        if why:
+            rejected += 1
         else:
-            rejected.append(cluster_info)
-    
-    # Cluster by normalized source
-    clusters = defaultdict(list)
-    for cand in admissible_results:
-        key = cand["normalized"]
-        clusters[key].append(cand)
-    
-    # Find largest cluster
-    if not clusters:
-        return {"source": "", "cluster_size": 0, "admissible": 0, "rejected": 0, "representatives": []}
-    
-    largest_cluster = max(clusters.items(), key=lambda x: len(x[1]))
-    cluster_key = largest_cluster[0]
-    
-    representatives = []
-    for cluster_source in list(set([cand["source"] for cand in largest_cluster[1]])):
-        representatives.append({"source": cluster_source})
-    
-    return {
-        "source": largest_cluster[1][0]["source"],
-        "cluster_size": len(largest_cluster[1]),
-        "admissible": len(admissible_results),
-        "rejected": len(rejected),
-        "representatives": representatives
-    }
+            kept.append(src)
+    if not kept:
+        return {"source": "", "cluster_size": 0, "admissible": 0, "rejected": rejected, "representatives": []}
+    clusters: dict = {}
+    order: list = []
+    for src in kept:
+        key = normalize_source(src)
+        if key not in clusters:
+            clusters[key] = []
+            order.append(key)
+        clusters[key].append(src)
+    best_key = max(order, key=lambda k: (len(clusters[k]), -order.index(k)))
+    return {"source": clusters[best_key][0], "cluster_size": len(clusters[best_key]),
+            "admissible": len(kept), "rejected": rejected,
+            "representatives": [{"source": clusters[k][0], "size": len(clusters[k])} for k in order]}
