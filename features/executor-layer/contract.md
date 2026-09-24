@@ -155,9 +155,24 @@
   use it and leave the gateway address as the operator set it.
 - **C-6.4** — WHEN a request through the relay carries tools THE SYSTEM SHALL turn the model's
   thinking off for it unless the caller decided otherwise.
+  - superseded-by: C-6.6
   - source: review
   - see: https://github.com/vllm-project/vllm/issues/42021
   - note: found by searching before inventing: Qwen3.5 under vLLM's qwen3 reasoning parser
     with thinking on writes its tool calls inside the reasoning in a non-standard shape and
     the tool parser never sees them; `enable_thinking=false` per request is the workaround
     the issue names. Our lane answers with reasoning_content present, so this was our bug.
+- **C-6.5** — WHEN a response on the messages path carries a tool call as text THE SYSTEM SHALL
+  return it as tool_use blocks with stop_reason tool_use, streamed as the client asked, and a
+  local lane may be pointed at the relay.
+  - source: ledger
+  - note: measured with the excerpted packet and no tools: Qwopus 27B wrote
+    `<tool_call><function=Read>...` as text, 8330 output tokens. Behind Claude Code that text
+    is a turn with no tool_use, and the worker reports instead of editing. The relay already
+    knew the shape on the OpenAI path; Claude Code speaks the Anthropic one.
+- **C-6.6** — WHEN a request through the relay carries tools THE SYSTEM SHALL leave the
+  model's thinking as the lane has it and turn it off only when the caller asks.
+  - supersedes: C-6.4
+  - source: review
+  - note: the operator's decision: the lanes think; the frame adapts the budget and the
+    packet, not the model.

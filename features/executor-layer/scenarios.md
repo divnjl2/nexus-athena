@@ -296,3 +296,19 @@
 - **Given** tests/test_toolcalls.py
 - **When** the spec `test_a_tool_carrying_request_goes_out_with_thinking_off` is executed
 - **Then** a request with tools gains chat_template_kwargs.enable_thinking=false; one that set it already, or has no tools, is left alone.
+
+### S6.5 — a messages response with a textual tool call becomes tool_use blocks
+- **verifies:** C-6.5
+- **pins:** 2ff53728c00396c9
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_messages_response_with_a_textual_tool_call_becomes_tool_use_blocks -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_messages_response_with_a_textual_tool_call_becomes_tool_use_blocks` is executed
+- **Then** the text block becomes text + tool_use with stop_reason tool_use, the SSE frames carry the call, prose and real tool_use pass through.
+
+### S6.6 — the relay leaves thinking as the lane has it unless asked
+- **verifies:** C-6.6
+- **pins:** fa01125cbd4a59ee
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked` is executed
+- **Then** the relay's default is thinking on; only an explicit off changes a tool-carrying request.

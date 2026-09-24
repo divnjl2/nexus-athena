@@ -373,7 +373,7 @@ def test_a_packet_without_an_executor_is_printed_and_not_recorded(tmp_path, caps
 
 
 def test_the_packet_ends_with_the_order_to_act():
-    """C-1.7: after the inlined files and the status block the packet ends with the order —
+    """C-1.7 — after the inlined files and the status block the packet ends with the order —
     the first file to edit, and that there is no user to ask."""
     from lib.dispatch import packet_with_status
     pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1", files={"lib/demo.py": "def b():\n    pass\n"},
@@ -395,7 +395,7 @@ def test_the_packet_ends_with_the_order_to_act():
 
 
 def test_fanned_attempts_keep_the_first_green_verdict():
-    """C-5.6: of the attempts of one iteration, run in separate copies of the workspace, the
+    """C-5.6 — of the attempts of one iteration, run in separate copies of the workspace, the
     first green verdict is the iteration's result; the copies are named beside the workspace."""
     from lib.dispatch import fan_names, pick_winner
     red = {"landed": True, "green": False, "red": [{"cmd": "x", "exit": 1}], "duration_ms": 50}
@@ -418,7 +418,7 @@ def test_fanned_attempts_keep_the_first_green_verdict():
 
 
 def test_without_a_green_attempt_the_least_red_landing_is_carried_forward():
-    """C-5.7: short of green, the attempt that landed with the fewest red checks (the quicker
+    """C-5.7 — short of green, the attempt that landed with the fewest red checks (the quicker
     one on a tie) is carried forward; nothing is when no attempt landed."""
     from lib.dispatch import pick_winner
     nothing = {"landed": False, "green": False, "red": [{"cmd": "x", "exit": 1}], "duration_ms": 10}
@@ -433,7 +433,7 @@ def test_without_a_green_attempt_the_least_red_landing_is_carried_forward():
 
 
 def test_a_long_module_is_inlined_as_what_the_task_needs_of_it():
-    """C-1.8: past the threshold a module goes in as header + the imported definitions whole
+    """C-1.8 — past the threshold a module goes in as header + the imported definitions whole
     + the other signatures + the names not defined yet; under it, whole."""
     from lib.dispatch import excerpt, spec_imports
     module = nl_join([

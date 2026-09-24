@@ -1636,7 +1636,11 @@ def cmd_dispatch(a) -> int:
 
     def run_executor(text: str, ws: pathlib.Path):
         if spec["kind"] == "local":
-            cmd = local_lane_command(a.executor, text, max_turns=a.max_turns,
+            gateway = LOCAL_GATEWAY
+            if a.base_url:                       # C-6.5: a lane through the relay
+                gateway = a.base_url.rstrip("/")
+                gateway = gateway[:-3] if gateway.endswith("/v1") else gateway
+            cmd = local_lane_command(a.executor, text, max_turns=a.max_turns, gateway=gateway,
                                      claude_bin=claude_binary(), auth_token=_gateway_key())
             return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
         if spec["kind"] == "claude":
@@ -1864,6 +1868,36 @@ def cmd_relay(a) -> int:
                         body = json.dumps(parsed, ensure_ascii=False).encode("utf-8")
             except (ValueError, AttributeError):
                 streaming = False
+            if self.path.rstrip("/").endswith("/messages") and isinstance(parsed, dict):
+                # C-6.5: the Anthropic path Claude Code speaks. The upstream is asked without
+                # a stream, the reply is normalised (a textual tool call -> tool_use), and
+                # the client gets the SSE frames it asked for, or JSON. Thinking untouched.
+                from lib.toolcalls import normalize_messages_response, sse_events
+                wanted_stream = streaming
+                if streaming:
+                    parsed = {**parsed, "stream": False}
+                    body = json.dumps(parsed, ensure_ascii=False).encode("utf-8")
+                resp = self._forward(body)
+                raw = resp.read()
+                if resp.status != 200:
+                    self._send(resp.status, resp.getheaders(), raw)
+                    return
+                try:
+                    payload = json.loads(raw)
+                except ValueError:
+                    self._send(resp.status, resp.getheaders(), raw)
+                    return
+                payload, changed = normalize_messages_response(payload)
+                if changed:
+                    note("messages normalised: " + ", ".join(
+                        b.get("name", "?") for b in payload.get("content", []) if b.get("type") == "tool_use"))
+                if wanted_stream:
+                    data = "".join(sse_events(payload)).encode("utf-8")
+                    self._send(200, [("Content-Type", "text/event-stream"), ("Cache-Control", "no-cache")], data)
+                else:
+                    self._send(200, [("Content-Type", "application/json")],
+                               json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+                return
             resp = self._forward(body)
             if streaming or not self.path.endswith("/chat/completions") or resp.status != 200:
                 # pass through, chunk by chunk when the upstream streams
@@ -2112,7 +2146,7 @@ def build_parser() -> argparse.ArgumentParser:
     rl.add_argument("--port", type=int, default=8414)
     rl.add_argument("--timeout", type=int, default=900)
     rl.add_argument("--log", default="", help="append a line per normalised completion here")
-    rl.add_argument("--thinking", choices=("off", "on"), default="off",
+    rl.add_argument("--thinking", choices=("off", "on"), default="on",
                     help="for requests that carry tools: set chat_template_kwargs.enable_thinking "
                          "(off by default; vLLM #42021: with thinking on, Qwen3.5 hides its tool "
                          "calls inside the reasoning)")

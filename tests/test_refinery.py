@@ -29,7 +29,7 @@ TS = "2026-09-24T12:00:00+00:00"
 # --- C-1: a skip is not proof ----------------------------------------------------------
 
 def test_a_check_that_skipped_is_red_even_at_exit_zero():
-    """C-1.1: exit 0 with a skipped or absent test is red in the verdict; a non-pytest check
+    """C-1.1 — exit 0 with a skipped or absent test is red in the verdict; a non-pytest check
     keeps its exit code."""
     from lib.dispatch import pytest_outcome, verdict
     before, after = {"lib/x.py": (1, 1)}, {"lib/x.py": (2, 1)}
@@ -60,7 +60,7 @@ def test_a_check_that_skipped_is_red_even_at_exit_zero():
 
 
 def test_a_skipped_node_in_the_runners_report_is_not_passed():
-    """C-1.2: a junit testcase carrying <skipped> attributes to a SpecResult that is not
+    """C-1.2 — a junit testcase carrying <skipped> attributes to a SpecResult that is not
     passed and whose tail names the skip."""
     from lib.spec_runner import attribute, parse_junit
     xml = ('<testsuites><testsuite name="pytest">'
@@ -79,7 +79,7 @@ def test_a_skipped_node_in_the_runners_report_is_not_passed():
 
 
 def test_a_spec_command_exiting_zero_with_a_skip_is_not_passed():
-    """C-1.3: through the per-command executor seam, exit 0 with a skipped or absent test is
+    """C-1.3 — through the per-command executor seam, exit 0 with a skipped or absent test is
     not passed; exit 0 with a passed test is."""
     from lib.spec_runner import run_specs
 
@@ -135,7 +135,7 @@ def _rev(cwd, ref="HEAD") -> str:
 
 
 def test_an_offer_is_admitted_only_on_a_green_last_record():
-    """C-2.1: the last record of the task decides; its words come back in the reason."""
+    """C-2.1 — the last record of the task decides; its words come back in the reason."""
     from lib.refinery import admit
     red = {"task": "T1.1", "executor": "local-27b", "landed": True, "green": False,
            "passed": False, "iteration": 1}
@@ -157,7 +157,7 @@ def test_an_offer_is_admitted_only_on_a_green_last_record():
 
 
 def test_a_conflicting_rebase_is_aborted_and_the_files_named(tmp_path):
-    """C-2.2: on a real repository a conflicting rebase is aborted, refused and names the
+    """C-2.2 — on a real repository a conflicting rebase is aborted, refused and names the
     file; a clean one lands on top of the target."""
     from lib.refinery import conflicts_from, rebase
 
@@ -185,7 +185,7 @@ def test_a_conflicting_rebase_is_aborted_and_the_files_named(tmp_path):
 
 
 def test_a_failing_contract_refuses_the_offer_with_its_first_cause():
-    """C-2.3: over gate-shaped verdicts, empty when every contract holds, else the first
+    """C-2.3 — over gate-shaped verdicts, empty when every contract holds, else the first
     failing contract and its first cause."""
     from lib.refinery import first_failure
     ok = [{"contract": "features/a/contract.md", "report": {"passed": True}}]
@@ -205,7 +205,7 @@ def test_a_failing_contract_refuses_the_offer_with_its_first_cause():
 
 
 def test_the_target_is_fast_forwarded_to_the_workspace_head_or_refused(tmp_path):
-    """C-2.4: on a real repository the target ref moves to the workspace head when it is an
+    """C-2.4 — on a real repository the target ref moves to the workspace head when it is an
     ancestor, and the offer is refused, naming the fast-forward, when it is not."""
     from lib.refinery import fast_forward
 
@@ -228,7 +228,7 @@ def test_the_target_is_fast_forwarded_to_the_workspace_head_or_refused(tmp_path)
 
 
 def test_an_offer_ends_in_a_merge_record_and_a_refusal_returns_the_task_to_bd():
-    """C-2.5: the record carries task, executor, stage, ok, reason and ts; the bd command
+    """C-2.5 — the record carries task, executor, stage, ok, reason and ts; the bd command
     reopens the task with the stage and reason in its notes."""
     from lib.refinery import bd_return_command, merge_record, parse_merges
     rec = merge_record("T2.1", "local-27b", "check", False,
@@ -251,7 +251,7 @@ def test_an_offer_ends_in_a_merge_record_and_a_refusal_returns_the_task_to_bd():
 
 
 def test_metrics_report_merged_green_dispatches_per_executor_and_refusal_stages():
-    """C-2.6: per executor — distinct tasks that went green, how many of them merged, and the
+    """C-2.6 — per executor — distinct tasks that went green, how many of them merged, and the
     refusals by stage; the render names them."""
     from lib.refinery import merge_metrics, merge_record, render_merge_metrics
     disp = [

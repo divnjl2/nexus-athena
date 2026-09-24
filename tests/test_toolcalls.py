@@ -81,3 +81,46 @@ def test_the_openhands_executor_can_be_pointed_at_the_relay():
                            base_url="http://127.0.0.1:8414/v1")
     assert cfg["base_url"] == "http://127.0.0.1:8414/v1"
     assert LOCAL_GATEWAY.endswith(":8413"), "the gateway itself stays where the operator put it"
+
+
+def test_a_messages_response_with_a_textual_tool_call_becomes_tool_use_blocks():
+    """C-6.5 — on the Anthropic path a text block holding the model's own call shape becomes a
+    tool_use block with stop_reason tool_use; the SSE rendering carries it; prose and real
+    tool_use pass through."""
+    from lib.toolcalls import normalize_messages_response, sse_events
+    text = ("Let me look." + chr(10) + "<tool_call>" + chr(10) + "<function=Read>" + chr(10)
+            + "<parameter=file_path>" + chr(10) + "D:/w/lib/x.py" + chr(10) + "</parameter>" + chr(10)
+            + "</function>" + chr(10) + "</tool_call>")
+    payload = {"id": "msg_1", "type": "message", "role": "assistant", "model": "qwopus-27b",
+               "content": [{"type": "text", "text": text}], "stop_reason": "end_turn",
+               "usage": {"input_tokens": 10, "output_tokens": 20}}
+    out, changed = normalize_messages_response(payload, id_factory=lambda: "toolu_x")
+    assert changed and out["stop_reason"] == "tool_use"
+    kinds = [b["type"] for b in out["content"]]
+    assert kinds == ["text", "tool_use"]
+    assert out["content"][0]["text"].strip() == "Let me look."
+    assert out["content"][1] == {"type": "tool_use", "id": "toolu_x", "name": "Read",
+                                 "input": {"file_path": "D:/w/lib/x.py"}}
+    frames = sse_events(out)
+    assert frames[0].startswith("event: message_start")
+    assert any("input_json_delta" in f and "D:/w/lib/x.py" in f for f in frames)
+    assert any('"stop_reason": "tool_use"' in f for f in frames) and frames[-1].startswith("event: message_stop")
+    prose = {"content": [{"type": "text", "text": "DONE"}], "stop_reason": "end_turn"}
+    assert normalize_messages_response(dict(prose)) == (prose, False)
+    real = {"content": [{"type": "tool_use", "id": "t", "name": "Edit", "input": {}}], "stop_reason": "tool_use"}
+    assert normalize_messages_response(dict(real)) == (real, False)
+
+
+def test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked():
+    """C-6.6 — the operator keeps the lanes thinking: the relay's default is on, and a
+    tool-carrying request is changed only when the caller asks for off."""
+    import athena
+    from lib.toolcalls import prepare_request
+    args = athena.build_parser().parse_args(["relay"])
+    assert args.thinking == "on"
+    tools = [{"type": "function", "function": {"name": "Edit", "parameters": {}}}]
+    body, changed = prepare_request({"model": "m", "messages": [], "tools": tools},
+                                    thinking=(args.thinking == "on"))
+    assert body["chat_template_kwargs"]["enable_thinking"] is True
+    off, changed = prepare_request({"model": "m", "messages": [], "tools": tools}, thinking=False)
+    assert changed and off["chat_template_kwargs"]["enable_thinking"] is False

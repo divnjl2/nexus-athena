@@ -157,3 +157,76 @@ def normalize_completion(payload: dict, *, id_factory=None) -> tuple[dict, bool]
         choice["finish_reason"] = "tool_calls"
         changed = True
     return payload, changed
+
+
+# --- the Anthropic messages path: what Claude Code speaks (C-6.5) ------------------------
+
+def normalize_messages_response(payload: dict, *, id_factory=None) -> tuple[dict, bool]:
+    """PURE (C-6.5): an Anthropic messages response -> (response, changed). A text block that
+    holds a tool call in the model's own shape becomes a tool_use block (the text before it
+    kept), and stop_reason becomes tool_use. A response that already has tool_use, or plain
+    prose, passes through. Measured: Qwopus 27B answered `<tool_call><function=Read>...` as
+    text and Claude Code, seeing no tool_use, took the turn as finished."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("content"), list):
+        return payload, False
+    if any(isinstance(b, dict) and b.get("type") == "tool_use" for b in payload["content"]):
+        return payload, False
+    id_factory = id_factory or (lambda: "toolu_" + uuid.uuid4().hex[:24])
+    blocks: list = []
+    changed = False
+    for b in payload["content"]:
+        text = b.get("text") if isinstance(b, dict) and b.get("type") == "text" else None
+        if not isinstance(text, str) or ("<tool_call>" not in text and "<function=" not in text):
+            blocks.append(b)
+            continue
+        calls = extract_calls(text)
+        if not calls:
+            blocks.append(b)
+            continue
+        before = content_before_calls(text)
+        if before:
+            blocks.append({"type": "text", "text": before})
+        for c in calls:
+            blocks.append({"type": "tool_use", "id": id_factory(), "name": c["name"],
+                           "input": c["arguments"] if isinstance(c["arguments"], dict) else {"value": c["arguments"]}})
+        changed = True
+    if changed:
+        payload["content"] = blocks
+        payload["stop_reason"] = "tool_use"
+    return payload, changed
+
+
+def sse_events(payload: dict) -> list:
+    """PURE (C-6.5): a complete Anthropic message rendered as the SSE frames a streaming client
+    expects: message_start, one start/delta/stop per content block, message_delta with the
+    stop reason and usage, message_stop."""
+    def frame(event: str, data: dict) -> str:
+        return f"event: {event}" + chr(10) + "data: " + json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
+    usage = payload.get("usage") or {}
+    head = {k: v for k, v in payload.items() if k not in ("content", "stop_reason", "stop_sequence")}
+    head.update({"content": [], "stop_reason": None, "stop_sequence": None,
+                 "usage": {"input_tokens": int(usage.get("input_tokens", 0)), "output_tokens": 0}})
+    out = [frame("message_start", {"type": "message_start", "message": head})]
+    for i, b in enumerate(payload.get("content") or []):
+        kind = b.get("type")
+        if kind == "tool_use":
+            out.append(frame("content_block_start", {"type": "content_block_start", "index": i,
+                             "content_block": {"type": "tool_use", "id": b.get("id"), "name": b.get("name"), "input": {}}}))
+            out.append(frame("content_block_delta", {"type": "content_block_delta", "index": i,
+                             "delta": {"type": "input_json_delta", "partial_json": json.dumps(b.get("input") or {}, ensure_ascii=False)}}))
+        elif kind == "thinking":
+            out.append(frame("content_block_start", {"type": "content_block_start", "index": i,
+                             "content_block": {"type": "thinking", "thinking": ""}}))
+            out.append(frame("content_block_delta", {"type": "content_block_delta", "index": i,
+                             "delta": {"type": "thinking_delta", "thinking": b.get("thinking", "")}}))
+        else:
+            out.append(frame("content_block_start", {"type": "content_block_start", "index": i,
+                             "content_block": {"type": "text", "text": ""}}))
+            out.append(frame("content_block_delta", {"type": "content_block_delta", "index": i,
+                             "delta": {"type": "text_delta", "text": b.get("text", "")}}))
+        out.append(frame("content_block_stop", {"type": "content_block_stop", "index": i}))
+    out.append(frame("message_delta", {"type": "message_delta",
+                     "delta": {"stop_reason": payload.get("stop_reason") or "end_turn", "stop_sequence": payload.get("stop_sequence")},
+                     "usage": {"output_tokens": int(usage.get("output_tokens", 0))}}))
+    out.append(frame("message_stop", {"type": "message_stop"}))
+    return out
