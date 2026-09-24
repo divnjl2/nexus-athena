@@ -26,7 +26,7 @@
 - **C-2.1** — WHEN a workspace is offered to the queue THE SYSTEM SHALL admit it only when the
   last record for its task in the workspace's dispatch record is green, and refuse it
   otherwise, saying what the record says.
-  - see: ../../docs/adr/0006-executors-under-the-gate.md@0257c4b849eae98c
+  - see: ../../docs/adr/0008-the-refinery-merges-nothing-by-hand.md@243fea567065ac35
   - source: review
 - **C-2.2** — WHEN an admitted workspace is rebased onto the target branch and the rebase
   stops THE SYSTEM SHALL abort the rebase, refuse the offer and name the conflicting files.
@@ -37,6 +37,7 @@
   - source: review
 - **C-2.4** — WHEN every contract holds THE SYSTEM SHALL fast-forward the target branch to the
   workspace head, and refuse when the target cannot be fast-forwarded.
+  - see: ../../docs/adr/0008-the-refinery-merges-nothing-by-hand.md@243fea567065ac35
   - source: review
 - **C-2.5** — WHEN an offer ends THE SYSTEM SHALL append a merge record with its task,
   executor, stage and reason, and for a refusal emit the command that returns the task to bd
