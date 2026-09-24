@@ -78,6 +78,29 @@ _UNBATCHABLE = ("-x", "--exitfirst", "--maxfail", "--sw", "--stepwise", "--lf", 
 _MIN_BATCH = 8
 
 
+def _skip_reason(code: int, tail: str) -> str:
+    """PURE (C-1.3): why an exit-zero spec run is not a pass, "" when it is. Counts are read
+    from pytest's own last line; a tail without pytest counts is judged by the exit code."""
+    import re
+    if code != 0:
+        return ""
+    text = tail or ""
+    counts = {"passed": 0, "skipped": 0}
+    seen = False
+    for m in re.finditer(r"(\d+)\s+(passed|skipped)\b", text):
+        counts[m.group(2)] += int(m.group(1))
+        seen = True
+    if re.search(r"\bno tests ran\b", text):
+        seen = True
+    if not seen:
+        return ""
+    if counts["skipped"]:
+        return f"{counts['skipped']} skipped: a skipped spec is not proof (C-1.3)"
+    if counts["passed"] == 0:
+        return "no test passed: nothing ran is not proof (C-1.3)"
+    return ""
+
+
 def default_jobs() -> int:
     """One worker per logical core.
 
@@ -369,11 +392,16 @@ def run_specs(scenarios: tuple[Scenario, ...], *, cwd: str = ".", timeout: int =
         def one(sc: Scenario) -> SpecResult:
             t0 = clock()
             code, tail = executor(sc.run_cmd, cwd=cwd, timeout=timeout)
+            # C-1.3: exit zero with a skipped or absent test is not a pass — the same
+            # reading the dispatch verdict gives an exit-zero check
+            why = _skip_reason(code, tail)
+            passed = code == 0 and not why
             return SpecResult(
-                scenario_id=sc.id, clause_id=sc.requirement_key, passed=(code == 0),
-                exit_code=code, duration_ms=int((clock() - t0) * 1000),
+                scenario_id=sc.id, clause_id=sc.requirement_key, passed=passed,
+                exit_code=code if passed or code != 0 else 1,
+                duration_ms=int((clock() - t0) * 1000),
                 clause_version=sc.clause_version, run_cmd=sc.run_cmd,
-                output_tail="" if code == 0 else tail,
+                output_tail="" if passed else (why or tail),
             )
         with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
             return tuple(pool.map(one, scenarios))
