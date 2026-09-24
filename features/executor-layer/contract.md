@@ -85,3 +85,16 @@
   to the task's notes in the task graph.
 - **C-5.5** — WHEN the iteration budget is spent short of green THE SYSTEM SHALL keep the last
   checkpoint and report the dispatch red.
+
+## C-6 — The gateway relay: adapt on the client side, never on the lanes
+
+- **C-6.1** — WHEN a completion carries a tool call as plain text THE SYSTEM SHALL return it
+  as a structured tool call with the text before it kept as content.
+  - source: incident
+  - note: the operator's hard rule is that the inference lanes are not touched. The local
+    27b answered OpenHands' schemas in a shape vLLM's hermes parser refused, 73 times in one
+    night; a relay in front of the gateway is where the frame absorbs that.
+- **C-6.2** — WHEN a completion is already well formed, plain prose, or holds tags nothing
+  can parse THE SYSTEM SHALL pass it through unchanged.
+- **C-6.3** — WHEN the OpenHands executor is given the relay as its base url THE SYSTEM SHALL
+  use it and leave the gateway address as the operator set it.

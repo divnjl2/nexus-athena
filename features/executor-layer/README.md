@@ -24,6 +24,12 @@ python athena.py dispatch <contract> --front <plan> --task T1.1 --executor openh
 python athena.py dispatch <contract> --front <plan> --task T1.1 --executor local-27b \
     --iterations 3 --bd --workspace <worktree> --text
 
+# the lanes are the operator's and are never touched: a model whose tool-call shape the
+# lane's parser refuses is absorbed by a relay in front of the gateway
+python athena.py relay --port 8414                 # then point an executor at it:
+python athena.py dispatch <contract> --front <plan> --task T1.1 --executor openhands \
+    --base-url http://127.0.0.1:8414/v1 --iterations 3 --text
+
 python athena.py metrics <contract> --text        # runs to green + per-executor landed/green rates
 python athena.py check features/executor-layer/contract.md --front features/executor-layer/plan.md \
     --ledger features/executor-layer/spec_ledger.json --map features/executor-layer/clause_map.json --text
