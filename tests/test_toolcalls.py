@@ -162,8 +162,8 @@ def test_the_relay_clamps_the_output_budget_to_what_the_window_leaves():
     same, changed = clamp_output(body, prompt_tokens=5000, window=30720)
     assert not changed and same is body
     both = {"model": "m", "messages": [], "max_completion_tokens": 8192}
-    out, changed = clamp_output(both, prompt_tokens=29000, window=30720)
-    assert changed and out["max_completion_tokens"] == OUTPUT_FLOOR
+    out, changed = clamp_output(both, prompt_tokens=30000, window=30720)
+    assert changed and out["max_completion_tokens"] == OUTPUT_FLOOR       # the remainder is negative: the floor holds
     given, changed = clamp_output({"model": "m", "messages": []}, prompt_tokens=1000, window=30720)
     assert changed and given["max_tokens"] == 30720 - 1000 - 1024
     assert clamp_output(body, prompt_tokens=None, window=30720) == (body, False)
