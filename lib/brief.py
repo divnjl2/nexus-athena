@@ -17,6 +17,8 @@ def brief_prompt(packet_text: str, checkpoint_text: str = "") -> str:
     when there is one, and the request for a plan without code."""
     parts = ["# Brief this task for a smaller executor", "",
              "You are the senior reader. A smaller model will type the change; you will not. "
+             "You have no tools in this conversation: do not call any, do not ask to read files — "
+             "everything you may know is below. "
              "Read the task below and, when there is one, the checkpoint of its failed attempts.",
              "", "## The task as the executor sees it", "", packet_text.strip()]
     if checkpoint_text and checkpoint_text.strip():
@@ -34,6 +36,10 @@ def clean_brief(raw: str) -> str:
     """The brief as it goes into the packet: fenced code removed, chatter and a trailing
     DONE dropped, blank when nothing useful remains."""
     text = re.sub(r"```.*?```", "", raw or "", flags=re.DOTALL)
+    # a reader with no tools that calls one anyway (measured: `<tool_call>function=read_file>`)
+    # has written nothing usable
+    text = re.sub(r"<tool_call>.*?(</tool_call>|$)", "", text, flags=re.DOTALL)
+    text = re.sub(r"<function=.*?(</function>|$)", "", text, flags=re.DOTALL)
     lines = []
     for line in text.splitlines():
         s = line.rstrip()

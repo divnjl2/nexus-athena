@@ -452,7 +452,8 @@ def test_a_long_module_is_inlined_as_what_the_task_needs_of_it():
     assert "class Gamma:" in out and "return 1" not in out
     assert "NOT DEFINED YET" in out and "zeta" in out
     assert excerpt(module, names, full_under=100000) == module
-    assert excerpt(module, [], full_under=10) == module
+    bare = excerpt(module, [], full_under=10)          # nothing imported: header + signatures only
+    assert "import os" in bare and "def alpha(x):" in bare and "return x + 1" not in bare and "NOT DEFINED" not in bare
     pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1", files={"lib/demo.py": module},
                 spec_sources=specs)
     assert pk["excerpted"] == [] and "return x + 1" in pk["text"]     # short module: whole

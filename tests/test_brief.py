@@ -24,6 +24,14 @@ def test_a_brief_is_asked_from_the_packet_and_the_checkpoint_and_carried_in_the_
     assert "lib/x.py" in brief and "```" not in brief and "print(" not in brief
     assert not brief.lower().startswith("sure")
     assert clean_brief("   ") == "" and clean_brief("DONE") == ""
+    assert clean_brief("<tool_call>
+function=read_file>
+<parameter=path>
+x.py
+</parameter>
+</function>
+</tool_call>") == ""
+    assert "no tools" in brief_prompt("p", "").lower()
 
     pk = {"text": packet, "chars": len(packet), "budget_chars": 36000, "over_budget": False}
     with_brief = packet_with_brief(pk, brief)

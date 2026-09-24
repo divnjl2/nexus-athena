@@ -104,8 +104,11 @@ def excerpt(module_text: str, names: list, *, full_under: int = EXCERPT_FULL_UND
     green; the model read, summarised, asked what to do, or rewrote what was already there."""
     import ast
     text = module_text or ""
-    if len(text) <= full_under or not names:
+    if len(text) <= full_under:
         return text
+    # no name imported by the specs and the module is long: header and signatures only —
+    # measured: a two-file task whose spec did `import athena` carried the whole 100k-char
+    # module and the packet alone was 30,465 tokens, more than the window
     try:
         tree = ast.parse(text)
     except SyntaxError:

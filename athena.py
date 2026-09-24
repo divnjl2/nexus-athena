@@ -2024,7 +2024,7 @@ def cmd_dispatch(a) -> int:
     if not av["available"]:
         _emit({"passed": False, "executor": a.executor, "available": False, "reason": av["reason"]})
         return 2
-    if pk["over_budget"] and spec["kind"] == "local":
+    if pk["over_budget"] and spec["kind"] in ("local", "pi"):
         _emit({"passed": False, "executor": a.executor, "error":
                f"packet is {pk['chars']} chars, over the {pk['budget_chars']} budget of a local "
                f"lane: split the task or drop files from it"})
