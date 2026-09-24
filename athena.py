@@ -988,10 +988,15 @@ def _gate_one(contract: pathlib.Path, root: pathlib.Path, *, run_specs: bool = F
         argv += ["--scenarios", str(d / "scenarios.md")]
     if (d / "plan.md").exists():
         argv += ["--front", str(d / "plan.md")]
-    for cand in (d / "spec_ledger.json", d / ".athena" / "spec_ledger.json"):
-        if cand.exists():
-            argv += ["--ledger", str(cand)]
-            break
+    if run_specs:
+        # the run writes a ledger: never over the committed one, or the workspace is left
+        # dirty and the next offer's rebase refuses (measured on the refinery's second offer)
+        argv += ["--ledger", str(d / ".athena" / "spec_ledger.json")]
+    else:
+        for cand in (d / "spec_ledger.json", d / ".athena" / "spec_ledger.json"):
+            if cand.exists():
+                argv += ["--ledger", str(cand)]
+                break
     try:
         shown = str(contract.relative_to(root)).replace("\\", "/")
     except ValueError:
