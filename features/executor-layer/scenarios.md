@@ -140,3 +140,45 @@
 - **Given** tests/test_dispatch.py
 - **When** the spec `test_a_packet_without_an_executor_is_printed_and_not_recorded` is executed
 - **Then** `athena dispatch --executor none` prints the packet and leaves the dispatch record untouched.
+
+## C-5 — proved by the iteration loop in the dispatch module (lib/dispatch.py)
+
+### S5.1 — a short iteration writes a checkpoint with files, reds and last words
+- **verifies:** C-5.1
+- **pins:** a3308008101ea43e
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_short_iteration_writes_a_checkpoint_with_files_reds_and_last_words -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_short_iteration_writes_a_checkpoint_with_files_reds_and_last_words` is executed
+- **Then** the checkpoint names the changed files, the red commands with their tails and the executor's last words.
+
+### S5.2 — the next iteration carries the checkpoint and starts fresh
+- **verifies:** C-5.2
+- **pins:** 644c2f4b0e867a45
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_the_next_iteration_carries_the_checkpoint_and_starts_fresh -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_the_next_iteration_carries_the_checkpoint_and_starts_fresh` is executed
+- **Then** the next packet holds the checkpoint section and the untouched clauses, and nothing of the previous conversation.
+
+### S5.3 — a passing iteration stops the loop and records the count
+- **verifies:** C-5.3
+- **pins:** 27efd5ac5055f0f1
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_passing_iteration_stops_the_loop_and_records_the_count -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_passing_iteration_stops_the_loop_and_records_the_count` is executed
+- **Then** with a fail-then-pass attempt the loop stops after two iterations and says so.
+
+### S5.4 — a checkpoint emits the bd notes command
+- **verifies:** C-5.4
+- **pins:** d525bc4978a64e49
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_checkpoint_emits_the_bd_notes_command -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_checkpoint_emits_the_bd_notes_command` is executed
+- **Then** the command is `bd update <task key> --append-notes <checkpoint>`.
+
+### S5.5 — a spent budget keeps the checkpoint and reports red
+- **verifies:** C-5.5
+- **pins:** acaf8fb97c70da7f
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_spent_budget_keeps_the_checkpoint_and_reports_red -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_spent_budget_keeps_the_checkpoint_and_reports_red` is executed
+- **Then** three failing iterations end red with three checkpoints, the last one kept.

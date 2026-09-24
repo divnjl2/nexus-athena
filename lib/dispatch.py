@@ -166,6 +166,8 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "") -> dict
         "landed": landed, "green": green, "passed": landed and green,
         "changed_files": changed, "deleted_files": deleted, "review_flags": flags,
         "red": [{"cmd": c.get("cmd"), "exit": c.get("exit")} for c in red],
+        "red_full": [{"cmd": c.get("cmd"), "exit": c.get("exit"), "tail": str(c.get("tail", ""))[-300:]}
+                     for c in red],
         "claim": (claim or "")[:400], "reason": "; ".join(reasons),
     }
 
@@ -190,6 +192,75 @@ def record(task_id: str, executor: str, result: dict, *, duration_ms: int, token
             "tokens": {k: int(v) for k, v in (tokens or {}).items() if isinstance(v, int)},
             "changed": len(result.get("changed_files", [])),
             "review_flags": list(result.get("review_flags", []))}
+
+
+# --- iterations with checkpoints: a small window is enough (C-5.*) --------------------
+
+TASK_KEY_PREFIX = "athena"
+
+
+def checkpoint(task_id: str, iteration: int, result: dict, *, claim: str = "") -> dict:
+    """PURE: what the next iteration needs to know (C-5.1): the files changed so far, the
+    red commands with their tails, the executor's last words. Never the conversation."""
+    return {
+        "task": task_id, "iteration": int(iteration),
+        "files": list(result.get("changed_files", [])) + [f"{p} (deleted)" for p in result.get("deleted_files", [])],
+        "red": [{"cmd": r.get("cmd"), "exit": r.get("exit"), "tail": (r.get("tail") or "")[-300:]}
+                for r in result.get("red_full", result.get("red", []))],
+        "last_words": (claim or "").strip()[-400:],
+        "passed": bool(result.get("passed")),
+    }
+
+
+def render_checkpoint(cp: dict) -> str:
+    """PURE: the checkpoint as the section the next packet carries."""
+    out = [f"## Checkpoint from iteration {cp['iteration']} (task {cp['task']})",
+           "The workspace already holds the changes below; continue from this state, do not redo them."]
+    out.append("Files changed so far: " + (", ".join(cp["files"]) if cp["files"] else "none"))
+    if cp["red"]:
+        out.append("Still red:")
+        for r in cp["red"]:
+            tail = f" -> {r['tail']}" if r.get("tail") else ""
+            out.append(f"  - `{r['cmd']}` (exit {r.get('exit')}){tail}")
+    else:
+        out.append("Still red: nothing ran green yet")
+    if cp["last_words"]:
+        out.append(f"Last words of the previous attempt: {cp['last_words']}")
+    return "\n".join(out) + "\n"
+
+
+def packet_with_checkpoint(pk: dict, cp: dict) -> dict:
+    """PURE: the packet for the next iteration (C-5.2): the same clauses, specs and files,
+    plus the checkpoint section; nothing of the previous conversation, so the executor
+    starts with a fresh context and the same window."""
+    text = pk["text"].rstrip("\n") + "\n\n" + render_checkpoint(cp)
+    return {**pk, "text": text, "chars": len(text), "over_budget": len(text) > pk["budget_chars"],
+            "iteration": cp["iteration"] + 1}
+
+
+def bd_checkpoint_command(slug: str, task_id: str, cp: dict) -> list:
+    """PURE: append the checkpoint to the task's notes in the task graph (C-5.4)."""
+    key = f"{TASK_KEY_PREFIX}:{slug}:{task_id}"
+    return ["bd", "update", key, "--append-notes", render_checkpoint(cp).rstrip("\n")]
+
+
+def run_iterations(pk: dict, attempt, *, budget: int = 1) -> dict:
+    """PURE given `attempt`: the loop (C-5.3, C-5.5). `attempt(iteration, packet) -> (verdict,
+    claim)`; the executor is started afresh by the caller inside `attempt`. Stops on the first
+    green iteration; a spent budget keeps the last checkpoint and reports red."""
+    checkpoints: list[dict] = []
+    current = dict(pk)
+    result: dict = {}
+    for i in range(1, max(1, budget) + 1):
+        result, claim = attempt(i, current)
+        if result.get("passed"):
+            return {"passed": True, "iterations": i, "checkpoints": checkpoints, "verdict": result,
+                    "last_checkpoint": checkpoints[-1] if checkpoints else None}
+        cp = checkpoint(pk["task"]["id"], i, result, claim=claim)
+        checkpoints.append(cp)
+        current = packet_with_checkpoint(pk, cp)
+    return {"passed": False, "iterations": max(1, budget), "checkpoints": checkpoints,
+            "verdict": result, "last_checkpoint": checkpoints[-1] if checkpoints else None}
 
 
 def parse_dispatches(text: str) -> tuple[list[dict], int]:

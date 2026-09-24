@@ -1429,47 +1429,79 @@ def cmd_dispatch(a) -> int:
                f"lane: split the task or drop files from it"})
         return 2
 
+    from lib.dispatch import bd_checkpoint_command, run_iterations
+    here = pathlib.Path(a.contract).resolve().parent
+    dpath = here / ".athena" / "dispatch.jsonl"
+    dpath.parent.mkdir(parents=True, exist_ok=True)
+    slug = a.slug or _slugify(getattr(plan, "title", "") or here.name)
     before = snapshot(workspace)
-    t0 = time.perf_counter()
-    if spec["kind"] == "local":
-        cmd = local_lane_command(a.executor, pk["text"], max_turns=a.max_turns,
-                                 claude_bin=claude_binary(), auth_token=_gateway_key())
-        claim, tokens, err = _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
-    elif spec["kind"] == "claude":
-        cmd = claude_command(pk["text"], max_turns=a.max_turns, claude_bin=claude_binary())
-        cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
-        claim, tokens, err = _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
-    else:
-        cfg = openhands_config(pk["text"], workspace=str(workspace),
+    state = {"tokens": {}, "err": "", "checks": [], "duration": 0, "claim": ""}
+
+    def run_executor(text: str):
+        if spec["kind"] == "local":
+            cmd = local_lane_command(a.executor, text, max_turns=a.max_turns,
+                                     claude_bin=claude_binary(), auth_token=_gateway_key())
+            return _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
+        if spec["kind"] == "claude":
+            cmd = claude_command(text, max_turns=a.max_turns, claude_bin=claude_binary())
+            cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
+            return _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
+        cfg = openhands_config(text, workspace=str(workspace),
                                model=a.model or "openai/qwopus-27b",
                                base_url=a.base_url if a.base_url is not None else LOCAL_GATEWAY + "/v1",
                                max_iterations=a.max_turns, terminal=a.terminal)
         cfg["native_tools"] = None if a.native_tools == "auto" else (a.native_tools == "on")
-        claim, tokens, err = _run_openhands(cfg)
-    duration = int((time.perf_counter() - t0) * 1000)
+        return _run_openhands(cfg)
 
-    checks = []
-    for cmdline in pk["checks"]:
-        argv, why = _tokenize(cmdline)
-        if argv and argv[0] in ("python", "python3") and a.check_python:
-            # `python` on PATH is not necessarily the interpreter that has the test deps: when
-            # dispatch itself runs from a venv, Windows resolves `python` from the parent's
-            # image directory. The check runs with the interpreter the caller named.
-            argv[0] = a.check_python
-        code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
-        checks.append({"cmd": cmdline, "exit": code, "tail": tail})
-    v = verdict(before, snapshot(workspace), checks, claim=claim)
-    rec = record(a.task, a.executor, v, duration_ms=duration, tokens=tokens,
-                 ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
-    dpath = pathlib.Path(a.contract).resolve().parent / ".athena" / "dispatch.jsonl"
-    dpath.parent.mkdir(parents=True, exist_ok=True)
-    with dpath.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    def run_checks() -> list:
+        rows = []
+        for cmdline in pk["checks"]:
+            argv, why = _tokenize(cmdline)
+            if argv and argv[0] in ("python", "python3") and a.check_python:
+                # `python` on PATH is not necessarily the interpreter that has the test deps:
+                # when dispatch itself runs from a venv, Windows resolves `python` from the
+                # parent's image directory. The check runs with the interpreter the caller named.
+                argv[0] = a.check_python
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+            rows.append({"cmd": cmdline, "exit": code, "tail": tail})
+        return rows
+
+    def attempt(iteration: int, current: dict):
+        # C-5.2: every iteration is a NEW executor process with the same window; the only
+        # memory between them is the checkpoint inside the packet and the workspace itself
+        t0 = time.perf_counter()
+        claim, tokens, err = run_executor(current["text"])
+        duration = int((time.perf_counter() - t0) * 1000)
+        checks = run_checks()
+        v = verdict(before, snapshot(workspace), checks, claim=claim)
+        rec = record(a.task, a.executor, v, duration_ms=duration, tokens=tokens,
+                     ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
+        rec["iteration"] = iteration
+        with dpath.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        state.update(tokens=tokens, err=err, checks=checks, duration=duration, claim=claim)
+        if not v["passed"]:
+            from lib.dispatch import checkpoint as make_checkpoint, render_checkpoint
+            cp = make_checkpoint(a.task, iteration, v, claim=claim)
+            cpath = here / ".athena" / "checkpoints" / f"{a.task}.md"
+            cpath.parent.mkdir(parents=True, exist_ok=True)
+            cpath.write_text(render_checkpoint(cp), encoding="utf-8")   # C-5.1, C-5.5
+            if a.bd:
+                argv = bd_checkpoint_command(slug, a.task, cp)
+                _spawn(argv, cwd=str(workspace), timeout=60)             # C-5.4, on request
+        return v, claim
+
+    loop = run_iterations(pk, attempt, budget=a.iterations)
+    v, checks, tokens, err, duration = loop["verdict"], state["checks"], state["tokens"], state["err"], state["duration"]
 
     out = {**v, "task": a.task, "executor": a.executor, "duration_ms": duration,
-           "tokens": tokens, "worker_error": err, "checks": checks, "record": str(dpath)}
+           "tokens": tokens, "worker_error": err, "checks": checks, "record": str(dpath),
+           "iterations": loop["iterations"], "budget": a.iterations,
+           "checkpoint": str(here / ".athena" / "checkpoints" / f"{a.task}.md") if loop["checkpoints"] else "",
+           "bd_note": bd_checkpoint_command(slug, a.task, loop["last_checkpoint"])[:4] if loop["last_checkpoint"] else []}
     if a.text:
-        print(f"# dispatch {a.task} -> {a.executor}: {'PASS' if v['passed'] else 'FAIL'}")
+        print(f"# dispatch {a.task} -> {a.executor}: {'PASS' if v['passed'] else 'FAIL'}"
+              f"  (iteration {loop['iterations']} of {a.iterations})")
         print(f"  landed={v['landed']}  green={v['green']}  changed={len(v['changed_files'])}  "
               f"{duration} ms  tokens={tokens.get('input_tokens', '?')}/{tokens.get('output_tokens', '?')}")
         for c in checks:
@@ -1484,6 +1516,8 @@ def cmd_dispatch(a) -> int:
             print(f"  worker: {err}")
         if v["reason"]:
             print(f"  reason: {v['reason'][:400]}")
+        if out["checkpoint"]:
+            print(f"  checkpoint: {out['checkpoint']}" + ("  (also appended to bd)" if a.bd else ""))
     else:
         _emit(out)
     return 0 if v["passed"] else 1
@@ -1664,6 +1698,12 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--iterations", type=int, default=1,
+                    help="fresh-context iterations on the same task; a checkpoint (files changed, "
+                         "red commands, last words) carries between them so a 30k window is enough")
+    dp.add_argument("--bd", action="store_true",
+                    help="also append each checkpoint to the task's notes in bd")
+    dp.add_argument("--slug", default="", help="bd project slug (default: from the plan title)")
     dp.add_argument("--max-turns", dest="max_turns", type=int, default=30)
     dp.add_argument("--timeout", type=int, default=900, help="seconds for the executor")
     dp.add_argument("--check-timeout", dest="check_timeout", type=int, default=300)

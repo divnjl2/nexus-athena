@@ -54,3 +54,14 @@ that says, per executor, how often the work landed and went green.
   - verifies: S4.1, S4.2, S4.3
 ### Manual Verification
 - `python athena.py metrics features/executor-layer/contract.md --text` shows a dispatch section.
+
+## Phase 5: Iterations with checkpoints
+**Goal:** long work crosses iterations through checkpoints, so a 30k window and six slots stay.
+**Depends on:** Phase 2, Phase 3
+### Tasks
+- [ ] T5.1 Checkpoint after a short iteration, carry it into the next packet, stop on green, note it in bd
+  - success_check: `python -m pytest tests/test_dispatch.py -q -k "checkpoint or iteration or budget"`
+  - files: `lib/dispatch.py, athena.py, tests/test_dispatch.py`
+  - verifies: S5.1, S5.2, S5.3, S5.4, S5.5
+### Manual Verification
+- `python athena.py dispatch ... --executor local-27b --iterations 3 --text` reports the iteration count and leaves `.athena/checkpoints/<task>.md` when short of green.

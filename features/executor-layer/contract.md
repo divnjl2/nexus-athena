@@ -63,3 +63,19 @@
   attempts, the landed rate and the green rate.
 - **C-4.3** — WHEN a packet is requested without an executor THE SYSTEM SHALL print it and
   record nothing.
+
+## C-5 — Iterations with checkpoints, so a small window is enough
+
+- **C-5.1** — WHEN an iteration ends short of green THE SYSTEM SHALL write a checkpoint naming
+  the files changed, the red commands and the executor's last words.
+  - source: review
+  - note: the operator's call: keep the 30k window and six slots for multitasking, and let
+    long work cross iterations through checkpoints instead of a bigger context.
+- **C-5.2** — WHEN the next iteration starts THE SYSTEM SHALL carry the checkpoint into the
+  packet and give the executor a fresh context.
+- **C-5.3** — WHEN an iteration passes THE SYSTEM SHALL stop the loop and record the number of
+  iterations it took.
+- **C-5.4** — WHEN a checkpoint is written THE SYSTEM SHALL emit the command that appends it
+  to the task's notes in the task graph.
+- **C-5.5** — WHEN the iteration budget is spent short of green THE SYSTEM SHALL keep the last
+  checkpoint and report the dispatch red.

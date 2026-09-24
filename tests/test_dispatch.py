@@ -159,6 +159,77 @@ def test_a_tool_call_left_as_text_is_named_a_parser_mismatch():
     assert "tool-parser mismatch" not in verdict(*same, GREEN, claim="")["reason"]
 
 
+RED = [{"cmd": "python -m pytest tests/test_demo.py::test_b -q", "exit": 1,
+        "tail": "AssertionError: b was not done"}]
+
+
+def test_a_short_iteration_writes_a_checkpoint_with_files_reds_and_last_words():
+    """C-5.1 — what the next iteration needs: the files changed so far, the red commands with
+    their tails, the executor's last words. Never the conversation."""
+    from lib.dispatch import checkpoint, render_checkpoint
+    v = verdict({"lib/demo.py": (1, 1), "old.py": (1, 1)}, {"lib/demo.py": (2, 2)}, RED,
+                claim="I added the helper but did not wire it yet")
+    cp = checkpoint("T1.1", 1, v, claim="I added the helper but did not wire it yet")
+    assert cp["files"] == ["lib/demo.py", "old.py (deleted)"] and cp["iteration"] == 1
+    assert cp["red"][0]["cmd"].endswith("test_b -q") and "b was not done" in cp["red"][0]["tail"]
+    assert cp["last_words"].startswith("I added the helper")
+    text = render_checkpoint(cp)
+    assert "iteration 1" in text and "lib/demo.py" in text and "b was not done" in text
+    assert "do not redo" in text
+
+
+def test_the_next_iteration_carries_the_checkpoint_and_starts_fresh():
+    """C-5.2 — the next packet is the same clauses, specs and files plus the checkpoint: a
+    fresh context with the same window, not a longer conversation."""
+    from lib.dispatch import checkpoint, packet_with_checkpoint
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1")
+    v = verdict({"a.py": (1, 1)}, {"a.py": (2, 2)}, RED, claim="halfway")
+    nxt = packet_with_checkpoint(pk, checkpoint("T1.1", 1, v, claim="halfway"))
+    assert "## Checkpoint from iteration 1" in nxt["text"] and nxt["iteration"] == 2
+    assert "WHEN a starts THE SYSTEM SHALL do b." in nxt["text"], "clauses intact"
+    assert nxt["text"].startswith(pk["text"].rstrip("\n")), "the packet, then the checkpoint"
+    assert "halfway" in nxt["text"] and "Human:" not in nxt["text"] and "Assistant:" not in nxt["text"]
+    assert nxt["clauses"] == pk["clauses"] and nxt["checks"] == pk["checks"]
+
+
+def test_a_passing_iteration_stops_the_loop_and_records_the_count():
+    """C-5.3 — stop on the first green iteration and say how many it took."""
+    from lib.dispatch import run_iterations
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1")
+    seen = []
+
+    def attempt(i, current):
+        seen.append((i, "Checkpoint from iteration" in current["text"]))
+        if i == 1:
+            return verdict({"a.py": (1, 1)}, {"a.py": (2, 2)}, RED, claim="not yet"), "not yet"
+        return verdict({"a.py": (1, 1)}, {"a.py": (3, 3)}, GREEN, claim="DONE"), "DONE"
+
+    out = run_iterations(pk, attempt, budget=5)
+    assert out["passed"] and out["iterations"] == 2
+    assert seen == [(1, False), (2, True)], "the second iteration saw the checkpoint"
+    assert len(out["checkpoints"]) == 1 and out["last_checkpoint"]["iteration"] == 1
+
+
+def test_a_checkpoint_emits_the_bd_notes_command():
+    """C-5.4 — the checkpoint lives on the task in the graph, appended, never overwritten."""
+    from lib.dispatch import bd_checkpoint_command, checkpoint
+    v = verdict({"a.py": (1, 1)}, {"a.py": (2, 2)}, RED, claim="halfway")
+    cmd = bd_checkpoint_command("demo", "T1.1", checkpoint("T1.1", 2, v, claim="halfway"))
+    assert cmd[:4] == ["bd", "update", "athena:demo:T1.1", "--append-notes"]
+    assert "iteration 2" in cmd[4] and "a.py" in cmd[4] and "halfway" in cmd[4]
+
+
+def test_a_spent_budget_keeps_the_checkpoint_and_reports_red():
+    """C-5.5 — three red iterations: three checkpoints, the last one kept, the dispatch red."""
+    from lib.dispatch import run_iterations
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1")
+    out = run_iterations(pk, lambda i, cur: (verdict({"a.py": (1, 1)}, {"a.py": (i + 1, 1)}, RED,
+                                                     claim=f"try {i}"), f"try {i}"), budget=3)
+    assert not out["passed"] and out["iterations"] == 3
+    assert [c["iteration"] for c in out["checkpoints"]] == [1, 2, 3]
+    assert out["last_checkpoint"]["last_words"] == "try 3"
+
+
 def test_a_dispatch_appends_one_record():
     """C-4.1 — executor, task, landed, green, duration, tokens: one line per attempt."""
     v = verdict({"a.py": (1, 1)}, {"a.py": (2, 2)}, GREEN, claim="DONE")
