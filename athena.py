@@ -1976,7 +1976,8 @@ def cmd_dispatch(a) -> int:
             from lib.executors import hashline_extension, pi_binary, pi_command
             ext = hashline_extension() if a.pi_hashline else ""
             cmd = pi_command(a.executor, text, pi_bin=pi_binary(), thinking=a.pi_thinking,
-                             hashline=ext, files=list(task_files), require_hashline=bool(a.pi_hashline))
+                             hashline=ext, files=list(task_files), require_hashline=bool(a.pi_hashline),
+                             strict=a.pi_strict)
             return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         cfg = openhands_config(text, workspace=str(ws),
                                model=a.model or "openai/qwopus-27b",
@@ -2195,7 +2196,7 @@ def cmd_relay(a) -> int:
                 streaming = bool(parsed.get("stream"))
                 if self.path.endswith("/chat/completions") and isinstance(parsed, dict):
                     # C-6.4: tool-carrying requests go out with thinking off (vLLM #42021)
-                    parsed, changed = prepare_request(parsed, thinking=(a.thinking == "on"))
+                    parsed, changed = prepare_request(parsed, thinking=(a.thinking == "on"), strict=a.strict)
                     if changed:
                         body = json.dumps(parsed, ensure_ascii=False).encode("utf-8")
             except (ValueError, AttributeError):
@@ -2440,6 +2441,9 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--pi-strict", dest="pi_strict", action="store_true",
+                    help="pi executors: use the lane's strict relay provider (<provider>-strict), tool "
+                         "calls under the lane's grammar (C-6.7)")
     dp.add_argument("--pi-hashline", dest="pi_hashline", action="store_true",
                     help="pi executors: load the hashline extension, anchored read/replace/insert "
                          "instead of str_replace, files left out of the packet (C-3.7)")
@@ -2487,6 +2491,9 @@ def build_parser() -> argparse.ArgumentParser:
     rl.add_argument("--port", type=int, default=8414)
     rl.add_argument("--timeout", type=int, default=900)
     rl.add_argument("--log", default="", help="append a line per normalised completion here")
+    rl.add_argument("--strict", action="store_true",
+                    help="set strict: true on every function tool so the lane applies its grammar "
+                         "to the call (C-6.7); the lane itself is not touched")
     rl.add_argument("--thinking", choices=("off", "on"), default="on",
                     help="for requests that carry tools: set chat_template_kwargs.enable_thinking "
                          "(off by default; vLLM #42021: with thinking on, Qwen3.5 hides its tool "

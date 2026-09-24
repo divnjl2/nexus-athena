@@ -337,6 +337,14 @@
 - **When** the spec `test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked` is executed
 - **Then** the relay's default is thinking on; only an explicit off changes a tool-carrying request.
 
+### S6.7 — a strict relay marks every function tool strict and a pi executor can use it
+- **verifies:** C-6.7
+- **pins:** 429f86bc0d44ea1d
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_strict_relay_marks_every_function_tool_strict_and_a_pi_executor_can_use_it -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_strict_relay_marks_every_function_tool_strict_and_a_pi_executor_can_use_it` is executed
+- **Then** with strict every function tool gains strict: true and already-strict or tool-less requests are untouched; the relay parser takes --strict; the pi command names the <provider>-strict provider.
+
 ## C-7 — proved by the bench module (lib/bench.py), the queue module (lib/queue.py) and the CLI
 
 ### S7.1 — a bench matrix is planned and read back from the record

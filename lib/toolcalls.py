@@ -109,7 +109,7 @@ def content_before_calls(text: str) -> str | None:
     return kept or None
 
 
-def prepare_request(body: dict, *, thinking: bool = False) -> tuple[dict, bool]:
+def _prepare_thinking(body: dict, *, thinking: bool = False) -> tuple[dict, bool]:
     """PURE: the request side of the relay (C-6.4). A request that carries tools gets
     `chat_template_kwargs.enable_thinking` set to `thinking` (default off) unless the caller
     already set it; a request without tools is left as it is.
@@ -230,3 +230,35 @@ def sse_events(payload: dict) -> list:
                      "usage": {"output_tokens": int(usage.get("output_tokens", 0))}}))
     out.append(frame("message_stop", {"type": "message_stop"}))
     return out
+
+
+def strict_tools(body: dict) -> tuple[dict, bool]:
+    """PURE (C-6.7): every function tool in a chat-completions request gets `strict: true`,
+    so vLLM applies its grammar to the call under tool_choice=auto (its enforce flag
+    defaults to on, but only strict tools are pinned). Tools already strict, and requests
+    without tools, are left alone."""
+    tools = body.get("tools") if isinstance(body, dict) else None
+    if not isinstance(tools, list) or not tools:
+        return body, False
+    changed = False
+    out = []
+    for tool in tools:
+        if isinstance(tool, dict) and tool.get("type") == "function" and isinstance(tool.get("function"), dict):
+            fn = tool["function"]
+            if fn.get("strict") is not True:
+                tool = {**tool, "function": {**fn, "strict": True}}
+                changed = True
+        out.append(tool)
+    if not changed:
+        return body, False
+    return {**body, "tools": out}, True
+
+
+def prepare_request(body: dict, *, thinking: bool = False, strict: bool = False) -> tuple[dict, bool]:
+    """PURE: the request as the relay forwards it — thinking as asked (C-6.4/C-6.6), tools
+    strict when asked (C-6.7)."""
+    body, changed = _prepare_thinking(body, thinking=thinking)
+    if strict:
+        body, c2 = strict_tools(body)
+        changed = changed or c2
+    return body, changed

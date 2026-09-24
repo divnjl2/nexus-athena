@@ -124,3 +124,28 @@ def test_the_relay_leaves_thinking_as_the_lane_has_it_unless_asked():
     assert body["chat_template_kwargs"]["enable_thinking"] is True
     off, changed = prepare_request({"model": "m", "messages": [], "tools": tools}, thinking=False)
     assert changed and off["chat_template_kwargs"]["enable_thinking"] is False
+
+
+def test_a_strict_relay_marks_every_function_tool_strict_and_a_pi_executor_can_use_it():
+    """C-6.7 — strict marks every function tool; already-strict and tool-less requests pass
+    untouched; the relay takes --strict; the pi command names the strict provider."""
+    import athena
+    from lib.executors import PI_STRICT_SUFFIX, pi_command
+    from lib.toolcalls import prepare_request, strict_tools
+    tools = [{"type": "function", "function": {"name": "Edit", "parameters": {"type": "object"}}},
+             {"type": "function", "function": {"name": "Read", "parameters": {"type": "object"}, "strict": True}}]
+    body, changed = strict_tools({"model": "m", "messages": [], "tools": tools})
+    assert changed and all(t["function"]["strict"] is True for t in body["tools"])
+    assert tools[0]["function"].get("strict") is None, "the input is not mutated"
+    again, changed = strict_tools(body)
+    assert not changed and again is body
+    plain = {"model": "m", "messages": [{"role": "user", "content": "hi"}]}
+    assert strict_tools(dict(plain)) == (plain, False)
+    both, changed = prepare_request({"model": "m", "messages": [], "tools": tools}, thinking=True, strict=True)
+    assert changed and both["tools"][0]["function"]["strict"] is True
+    assert both["chat_template_kwargs"]["enable_thinking"] is True
+    args = athena.build_parser().parse_args(["relay", "--strict"])
+    assert args.strict is True and athena.build_parser().parse_args(["relay"]).strict is False
+    cmd = pi_command("pi-9b", "# Task", strict=True)
+    assert cmd["argv"][cmd["argv"].index("--provider") + 1] == "lane9" + PI_STRICT_SUFFIX
+    assert pi_command("pi-9b", "# Task")["argv"][cmd["argv"].index("--provider") + 1] == "lane9"

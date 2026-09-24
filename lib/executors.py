@@ -50,6 +50,10 @@ PI_THINKING = {"pi-27b": "low", "pi-9b": "medium"}
 #: of missing silently. Measured motive: both lanes broke on edits inside large files.
 PI_HASHLINE_TOOLS = "read,bash,replace,insert,anchor_grep"
 PI_HASHLINE_PACKAGE = "pi-hashline-edit-pro"
+#: strict tool calling (C-6.7): a relay per lane with --strict, registered in pi's models.json
+#: as provider "<lane>-strict" (lane27-strict -> :8416 -> :8000, lane9-strict -> :8417 -> :8001)
+PI_STRICT_SUFFIX = "-strict"
+PI_STRICT_RELAYS = {"lane27": ("8416", "http://127.0.0.1:8000"), "lane9": ("8417", "http://127.0.0.1:8001")}
 PI_ORDER = ("The task is the text above. There is no user here and no question will be "
             "answered: make the edit with the edit or write tool, run the spec command with "
             "bash if you want to see it — always as `<command> -q 2>&1 | tail -n 40`, never the "
@@ -199,7 +203,7 @@ def hashline_extension(*, which=None, exists=None) -> str:
 
 
 def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str = "",
-               hashline: str = "", files=(), require_hashline: bool = False) -> dict:
+               hashline: str = "", files=(), require_hashline: bool = False, strict: bool = False) -> dict:
     """PURE: argv + stdin for a pi worker (C-3.6). Print mode, JSON events, no session, no
     extensions, no skills, no context files: the packet on stdin is the whole context, and
     the closing order is the prompt argument, the last thing the model reads. With
@@ -211,6 +215,8 @@ def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str
         raise ValueError("hashline was asked for but the extension is not installed "
                          f"(pi install npm:{PI_HASHLINE_PACKAGE})")
     provider, model = PI_PROVIDERS[name]
+    if strict:
+        provider = provider + PI_STRICT_SUFFIX     # C-6.7: the same lane behind a strict relay
     level = thinking or PI_THINKING.get(name, "medium")
     argv = [pi_bin, "-p", "--mode", "json", "--no-session", "--no-extensions", "--no-skills",
             "--no-context-files"]

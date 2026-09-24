@@ -201,6 +201,14 @@
   - source: review
   - note: the operator's decision: the lanes think; the frame adapts the budget and the
     packet, not the model.
+- **C-6.7** — WHEN a request through a strict relay carries function tools THE SYSTEM SHALL mark
+  every tool strict so the lane applies its grammar to the call under automatic tool choice,
+  and a pi executor may be pointed at that relay by name.
+  - source: review
+  - note: vLLM's enforce flag defaults to on, but under tool_choice=auto the grammar is
+    applied only to tools that set strict; most clients never set it, and a broken call
+    shape leaks into the text (the morning's C-2.5). The lane keeps its flags; the relay
+    sets the field.
 
 ## C-7 — The ceiling: graded tasks a local model in a harness is measured against
 
