@@ -14,3 +14,25 @@ def admit(records: list[dict], task: str) -> dict:
         return {"ok": False, "reason": "not green"}
 
     return {"ok": True, "reason": "green"}
+
+
+def first_failure(records: list[dict]) -> str:
+    """C-2.3: over gate-shaped verdicts, empty when every contract holds,
+    else the first failing contract and its first cause.
+
+    Scans reports in order, skips any that passed, and returns a string
+    like "features/b/contract.md: ledger has red specs" on the first failure,
+    or "" when none fail."""
+    for record in records:
+        passed = record.get("report", {}).get("passed", True)
+        if not passed:
+            contract_path = record["contract"]
+            cause = record["report"]["first_cause"]
+            return f"{contract_path}: {cause}"
+
+    return ""
+
+
+
+
+__all__ = ["admit"]
