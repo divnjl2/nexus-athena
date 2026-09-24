@@ -289,6 +289,38 @@ def snapshot(root) -> dict:
     return out
 
 
+def pytest_outcome(tail: str) -> dict:
+    """PURE (C-1.1): the counts pytest prints in its last line — passed, failed, skipped,
+    errors — from a check's output tail; zeros when the tail is not pytest's. "seen" says
+    whether any pytest count was there at all."""
+    import re
+    out = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0, "seen": False}
+    text = tail or ""
+    for m in re.finditer(r"(\d+)\s+(passed|failed|skipped|errors?)\b", text):
+        key = m.group(2)
+        key = "errors" if key.startswith("error") else key
+        out[key] += int(m.group(1))
+        out["seen"] = True
+    if re.search(r"\bno tests ran\b", text):
+        out["seen"] = True
+    return out
+
+
+def skip_reason(check: dict) -> str:
+    """PURE (C-1.1): why an exit-zero check is red anyway, or "" when it is green. A skipped
+    test, or a pytest run with nothing passed, is not proof."""
+    if check.get("exit", 1) != 0:
+        return ""
+    o = pytest_outcome(str(check.get("tail", "")))
+    if not o["seen"]:
+        return ""
+    if o["skipped"]:
+        return f"{o['skipped']} skipped: a skipped test is not proof"
+    if o["passed"] == 0:
+        return "no test passed: nothing ran is not proof"
+    return ""
+
+
 def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
             spec_files=()) -> dict:
     """PURE: the decision (C-2.1..C-2.4, C-2.7). `checks` is [{cmd, exit, tail}] from the
@@ -299,7 +331,7 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     deleted = sorted(p for p in before if p not in after)
     touched = changed + deleted
     landed = bool(touched)
-    red = [c for c in checks if c.get("exit", 1) != 0]
+    red = [c for c in checks if c.get("exit", 1) != 0 or skip_reason(c)]
     spec_set = {str(s).replace("\\", "/") for s in spec_files}
     spec_touched = [p for p in touched if p.replace("\\", "/") in spec_set]
     green = bool(checks) and not red and not spec_touched
@@ -315,7 +347,9 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     if not checks:
         reasons.append("no check was run: silence is not proof")
     for c in red:
-        reasons.append(f"{c.get('cmd')} exit {c.get('exit')}: {str(c.get('tail', ''))[-300:]}")
+        why = skip_reason(c)
+        reasons.append(f"{c.get('cmd')} exit {c.get('exit')}: "
+                       + (why if why else str(c.get('tail', ''))[-300:]))
     if flags:
         reasons.append("touched a derived or hand-written file: " + ", ".join(flags))
     if unparsed_tool_call(claim):
