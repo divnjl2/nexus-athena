@@ -325,7 +325,7 @@ def skip_reason(check: dict) -> str:
 
 
 def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
-            spec_files=()) -> dict:
+            spec_files=(), allowed=()) -> dict:
     """PURE: the decision (C-2.1..C-2.4, C-2.7). `checks` is [{cmd, exit, tail}] from the
     spec commands run AFTER the executor. The claim is kept for the record and ignored.
     `spec_files` are the test modules the task's specs live in: a change there is not the
@@ -340,10 +340,16 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     spec_touched = [p for p in touched
                     if p.replace("\\", "/") in spec_set or "/sealed/" in ("/" + p.replace("\\", "/"))]
     green = bool(checks) and not red and not spec_touched
+    allowed_set = {str(x).replace("\\", "/") for x in (allowed or ())}
+    # C-2.8: what landed outside the task's files is not the task — flagged, and named
+    outside = [p for p in touched if allowed_set and p.replace("\\", "/") not in allowed_set]
     flags = [p for p in touched
              if is_derived(p) or p.rsplit("/", 1)[-1] in HAND_WRITTEN or "/docs/adr/" in f"/{p}"
-             or p in spec_touched]
+             or p in spec_touched or p in outside]
     reasons: list[str] = []
+    if outside:
+        reasons.append("changed outside the task's files: " + ", ".join(outside[:8])
+                       + (" ..." if len(outside) > 8 else ""))
     if spec_touched:
         sealed = [p for p in spec_touched if "/sealed/" in ("/" + p.replace("\\", "/"))]
         reasons.append(("a sealed acceptance file was edited: " + ", ".join(sealed) + "; " if sealed else "")
@@ -366,7 +372,7 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
                        "(the model's call format does not match the server's --tool-call-parser)")
     return {
         "landed": landed, "green": green, "passed": landed and green,
-        "changed_files": changed, "deleted_files": deleted, "review_flags": flags,
+        "changed_files": changed, "deleted_files": deleted, "review_flags": flags, "outside": outside,
         "red": [{"cmd": c.get("cmd"), "exit": c.get("exit")} for c in red],
         "red_full": [{"cmd": c.get("cmd"), "exit": c.get("exit"), "tail": str(c.get("tail", ""))[-300:]}
                      for c in red],

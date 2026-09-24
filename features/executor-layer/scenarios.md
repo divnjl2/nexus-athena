@@ -129,6 +129,14 @@
 - **When** the spec `test_editing_the_specs_own_test_file_is_flagged_and_never_green` is executed
 - **Then** a change to the test module of the task's spec sets review_flags, green=False and a reason, even when every check exited 0.
 
+### S2.8 — a change outside the task's files is flagged and named
+- **verifies:** C-2.8
+- **pins:** 94aa3329ac407c00
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_change_outside_the_tasks_files_is_flagged_and_named -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_change_outside_the_tasks_files_is_flagged_and_named` is executed
+- **Then** with the task's files named, a stray file is in review_flags and outside and in the reason; the task's own files are not; with no files named nothing is flagged as outside.
+
 ## C-3 — proved by the executor registry (lib/executors.py)
 
 ### S3.1 — the registry resolves known executors and refuses unknown

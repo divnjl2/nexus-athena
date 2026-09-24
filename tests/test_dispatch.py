@@ -465,3 +465,17 @@ def test_a_long_module_is_inlined_as_what_the_task_needs_of_it():
 
 def nl_join(parts):
     return chr(10).join(parts)
+
+
+def test_a_change_outside_the_tasks_files_is_flagged_and_named():
+    """C-2.8 — a stray file beside the task's own is flagged for review and named in the
+    reason; the task's files are not; with no files named nothing is outside."""
+    before = {"lib/refinery.py": (1, 1)}
+    after = {"lib/refinery.py": (2, 1), "tmp_debug/notes.txt": (1, 1)}
+    checks = [{"cmd": "python -m pytest t.py::a -q", "exit": 0, "tail": "1 passed"}]
+    v = verdict(before, after, checks, allowed=["lib/refinery.py"])
+    assert v["green"] is True, "a stray file is a review flag, not a red verdict"
+    assert v["outside"] == ["tmp_debug/notes.txt"] and "tmp_debug/notes.txt" in v["review_flags"]
+    assert "outside the task's files" in v["reason"] and "lib/refinery.py" not in v["review_flags"]
+    free = verdict(before, after, checks)
+    assert free["outside"] == [] and "outside" not in free["reason"]

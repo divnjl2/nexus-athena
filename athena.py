@@ -2116,7 +2116,7 @@ def cmd_dispatch(a) -> int:
             code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
             checks.append({"cmd": batch["cmd"], "exit": code, "tail": tail, "radius": True,
                            "members": batch["members"]})
-        v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files)
+        v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files, allowed=list(task_files))
         v["duration_ms"] = duration
         return {"v": v, "claim": claim, "tokens": tokens, "err": err, "checks": checks,
                 "duration": duration, "ws": ws}

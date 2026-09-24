@@ -80,6 +80,12 @@
     `{"function": "glob", "parameter": {...}}`; vLLM's hermes parser raised KeyError 'name'
     and handed the text back as content. The run ended after 160 tokens with a claim and no
     edit. A silent failure with a known signature deserves its name.
+- **C-2.8** — WHEN a run changed files the task does not name THE SYSTEM SHALL flag them for
+  review and name them in the reason, so a stray file never merges unseen.
+  - source: ledger
+  - note: a green self-briefed run left a tmp_debug/ directory beside its module; the verdict
+    counted six files landed and the queue would have taken them. Microsoft's rule for
+    agent PRs is the same: a diff outside the scoped files is a reject, not a nit.
 
 ## C-3 — Executors
 
