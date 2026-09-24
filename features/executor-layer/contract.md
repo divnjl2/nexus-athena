@@ -31,6 +31,14 @@
   - note: given the implementer prompt, the file and the test, the 27B viewed the file once
     and called finish: "already complete and correct". Nothing in the packet said the spec
     was red at that moment. Now the packet does.
+- **C-1.7** — WHEN a packet is closed THE SYSTEM SHALL end it, after every inlined file and
+  the spec status, with the order to act: the first action is an edit of a named file, and
+  there is no user to ask.
+  - source: ledger
+  - note: on a 24k-char packet whose last 270 lines were the inlined lib/dispatch.py, the
+    27B read the file and answered "Would you like me to: 1. Continue reading the file…":
+    two iterations, no edit. The last thing in the window decides what the model thinks it
+    is doing; the last thing is now the order.
 
 ## C-2 — The verdict
 

@@ -170,8 +170,29 @@ def packet_with_status(pk: dict, checks: list) -> dict:
             "A RED spec below is the work: the task is not done until it is green. Do not answer "
             "that the code is already complete while any of these is RED.\n")
     text = pk["text"].rstrip("\n") + "\n\n" + head + "\n".join(rows) + "\n"
+    text += "\n" + closing_order(pk.get("task") or {}, red=red)
     return {**pk, "text": text, "chars": len(text), "over_budget": len(text) > pk["budget_chars"],
             "status": {"red": red, "total": len(checks)}}
+
+
+def closing_order(task: dict, *, red: int = 1) -> str:
+    """PURE: the last lines of a packet (C-1.7). After 270 inlined lines a 27B answered
+    "Would you like me to continue reading the file?" — the end of the window is what the
+    model takes to be its situation, so the end is the order: edit this file now, nobody is
+    here to ask."""
+    files = list(task.get("files") or [])
+    first = files[0] if files else "the file this task names"
+    lines = ["## Now act",
+             "There is no user in this conversation and no question will be answered. "
+             f"Your first action is an Edit or Write call on `{first}`"
+             + (f" (the task's files: {', '.join(files)})" if len(files) > 1 else "") + ".",
+             "Do not summarise the files above, do not offer options, do not ask how to proceed."]
+    if red:
+        lines.append(f"{red} spec{'s are' if red != 1 else ' is'} RED above: make the edit that "
+                     "turns them green, then answer with one line: DONE.")
+    else:
+        lines.append("Every spec above is green: answer with one line: DONE.")
+    return "\n".join(lines) + "\n"
 
 
 def snapshot(root) -> dict:

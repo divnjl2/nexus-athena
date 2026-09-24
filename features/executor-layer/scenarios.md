@@ -55,6 +55,14 @@
 - **When** the spec `test_the_packet_states_each_specs_current_verdict_before_the_executor_starts` is executed
 - **Then** a red check appears as RED with its tail, a green one as green, and the text says the task is not done while a spec is RED.
 
+### S1.7 — the packet ends with the order to act
+- **verifies:** C-1.7
+- **pins:** 0632e85afb29e720
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_the_packet_ends_with_the_order_to_act -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_the_packet_ends_with_the_order_to_act` is executed
+- **Then** after the inlined files and the status block, the last lines of the packet name the first file to edit and say there is no user to ask.
+
 ## C-2 — proved by the dispatch module (lib/dispatch.py)
 
 ### S2.1 — the verdict ignores the executor's report

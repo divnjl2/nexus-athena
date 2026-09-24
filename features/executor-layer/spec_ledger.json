@@ -1,10 +1,10 @@
 {
-  "contract_version": "b357cfebb0196b73",
+  "contract_version": "032da44330c824f6",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "2371c7363375554f",
-      "duration_ms": 1,
+      "duration_ms": 162,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-1.5",
       "clause_version": "6a01fd5af2fc5805",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -62,6 +62,16 @@
       "scenario": "S1.6"
     },
     {
+      "clause": "C-1.7",
+      "clause_version": "0632e85afb29e720",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_the_packet_ends_with_the_order_to_act -q",
+      "scenario": "S1.7"
+    },
+    {
       "clause": "C-2.1",
       "clause_version": "c855249d81fc3ccb",
       "duration_ms": 1,
@@ -74,7 +84,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "cb9eddee2ee0afa8",
-      "duration_ms": 1,
+      "duration_ms": 174,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -154,7 +164,7 @@
     {
       "clause": "C-3.3",
       "clause_version": "ef06c7bf4a5d3e03",
-      "duration_ms": 1,
+      "duration_ms": 161,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -184,7 +194,7 @@
     {
       "clause": "C-4.1",
       "clause_version": "d380cd8bf00a64a5",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,7 +214,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 95,
+      "duration_ms": 128,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -234,7 +244,7 @@
     {
       "clause": "C-5.2",
       "clause_version": "644c2f4b0e867a45",
-      "duration_ms": 1,
+      "duration_ms": 165,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -312,13 +322,13 @@
       "scenario": "S6.4"
     }
   ],
-  "scenario_version": "8ae5c7804727aed2",
+  "scenario_version": "ebfbc9249f8bcbd9",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 125,
+    "duration_ms": 819,
     "failed": 0,
-    "passed": 31,
-    "total": 31
+    "passed": 32,
+    "total": 32
   },
-  "ts": "2026-09-24T08:30:01+00:00"
+  "ts": "2026-09-24T09:01:06+00:00"
 }

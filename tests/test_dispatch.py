@@ -356,3 +356,21 @@ def test_a_packet_without_an_executor_is_printed_and_not_recorded(tmp_path, caps
     assert rc == 0
     assert "# Task T1.1" in out and "your own report of success does not count" in out
     assert not (feature / ".athena" / "dispatch.jsonl").exists()
+
+
+def test_the_packet_ends_with_the_order_to_act():
+    """C-1.7: after the inlined files and the status block the packet ends with the order —
+    the first file to edit, and that there is no user to ask."""
+    from lib.dispatch import packet_with_status
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1", files={"lib/demo.py": "def b():\n    pass\n"},
+                root="D:/work/repo")
+    out = packet_with_status(pk, [{"cmd": "python -m pytest tests/test_demo.py::test_b -q",
+                                   "exit": 1, "tail": "AssertionError"}])
+    tail = out["text"].rstrip("\n").splitlines()[-6:]
+    text = "\n".join(tail)
+    assert "lib/demo.py" in text, "the first file to edit is named at the very end"
+    assert "no user" in text.lower()
+    assert "Edit or Write" in text
+    assert out["text"].index("=== end of lib/demo.py ===") < out["text"].index("## Now act")
+    assert out["text"].index("## Current state of the specs") < out["text"].index("## Now act")
+    assert "1 spec is RED" in text
