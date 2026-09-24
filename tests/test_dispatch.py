@@ -285,6 +285,20 @@ def test_a_changed_file_brings_the_specs_of_its_owning_clauses_into_the_verdict(
     assert radius_checks(["lib/nobody.py"], maps, scen) == []
     dedup = radius_checks(["lib/demo.py"], maps, scen, already=["python -m pytest tests/test_demo.py::test_b -q"])
     assert dedup == ["python -m pytest tests/test_b.py::test_seven -q"]
+    # the radius runs as one pytest per module, each batch knowing its members: 288 commands
+    # for one touched line of lib/__init__.py were 288 processes and an hour (measured)
+    from lib.dispatch import batch_radius
+    batches = batch_radius(["python -m pytest tests/test_demo.py::test_b -q",
+                            "python -m pytest tests/test_demo.py::test_c -q",
+                            "python -m pytest tests/test_b.py::test_seven -q",
+                            "python cases/run.py S1.2"])
+    assert [b["cmd"] for b in batches] == [
+        "python -m pytest tests/test_demo.py::test_b tests/test_demo.py::test_c -q",
+        "python -m pytest tests/test_b.py::test_seven -q",
+        "python cases/run.py S1.2"]
+    assert batches[0]["members"] == ["python -m pytest tests/test_demo.py::test_b -q",
+                                     "python -m pytest tests/test_demo.py::test_c -q"]
+    assert batch_radius([]) == []
 
 
 def test_editing_the_specs_own_test_file_is_flagged_and_never_green():

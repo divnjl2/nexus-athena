@@ -1693,12 +1693,14 @@ def cmd_dispatch(a) -> int:
         changed_now = sorted(p for p, sig in after.items() if before_ws.get(p) != sig)
         extra = radius_checks(changed_now, radius_maps, radius_scen, already=pk["checks"])
         checks = run_checks(ws)
-        for cmdline in extra:
-            argv, why = _tokenize(cmdline)
+        from lib.dispatch import batch_radius
+        for batch in batch_radius(extra):          # one pytest per module, not per command
+            argv, why = _tokenize(batch["cmd"])
             if argv and argv[0] in ("python", "python3") and a.check_python:
                 argv[0] = a.check_python
             code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
-            checks.append({"cmd": cmdline, "exit": code, "tail": tail, "radius": True})
+            checks.append({"cmd": batch["cmd"], "exit": code, "tail": tail, "radius": True,
+                           "members": batch["members"]})
         v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files)
         v["duration_ms"] = duration
         return {"v": v, "claim": claim, "tokens": tokens, "err": err, "checks": checks,

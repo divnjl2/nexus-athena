@@ -459,6 +459,29 @@ def render_metrics(rep: dict) -> str:
     return "\n".join(lines)
 
 
+def batch_radius(cmds: list) -> list:
+    """PURE (C-2.6): the radius commands grouped into one pytest invocation per test module,
+    each batch remembering its members. Measured: a one-line change to lib/__init__.py owned
+    288 radius commands, and 288 pytest processes in a row took the verdict past an hour."""
+    groups: dict = {}
+    order: list = []
+    singles: list = []
+    for c in cmds:
+        path, func = test_node(c)
+        toks = (c or "").split()
+        if path and func and toks[:3] == ["python", "-m", "pytest"]:
+            node = next(t for t in toks if "::" in t)
+            if path not in groups:
+                order.append(path)
+            groups.setdefault(path, []).append((c, node))
+        else:
+            singles.append(c)
+    out = [{"cmd": "python -m pytest " + " ".join(n for _, n in groups[p]) + " -q",
+            "members": [c for c, _ in groups[p]]} for p in order]
+    out += [{"cmd": c, "members": [c]} for c in singles]
+    return out
+
+
 def radius_checks(changed_files, maps: dict, scenarios_by_label: dict, *, already=()) -> list:
     """PURE: the spec commands of every clause whose map owns lines in a changed file, across
     every contract that has a map (C-2.6) — the blast radius the pre-edit hook shows the
