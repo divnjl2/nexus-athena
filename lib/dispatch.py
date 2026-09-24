@@ -333,14 +333,18 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     landed = bool(touched)
     red = [c for c in checks if c.get("exit", 1) != 0 or skip_reason(c)]
     spec_set = {str(s).replace("\\", "/") for s in spec_files}
-    spec_touched = [p for p in touched if p.replace("\\", "/") in spec_set]
+    # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file
+    spec_touched = [p for p in touched
+                    if p.replace("\\", "/") in spec_set or "/sealed/" in ("/" + p.replace("\\", "/"))]
     green = bool(checks) and not red and not spec_touched
     flags = [p for p in touched
              if is_derived(p) or p.rsplit("/", 1)[-1] in HAND_WRITTEN or "/docs/adr/" in f"/{p}"
              or p in spec_touched]
     reasons: list[str] = []
     if spec_touched:
-        reasons.append("the spec's own test file was edited: " + ", ".join(spec_touched)
+        sealed = [p for p in spec_touched if "/sealed/" in ("/" + p.replace("\\", "/"))]
+        reasons.append(("a sealed acceptance file was edited: " + ", ".join(sealed) + "; " if sealed else "")
+                       + "the spec's own test file was edited: " + ", ".join(spec_touched)
                        + " — a spec made to pass is not a requirement met")
     if not landed:
         reasons.append("no file changed: the executor's answer is a claim, not an edit")

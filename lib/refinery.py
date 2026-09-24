@@ -1,3 +1,4 @@
+import pathlib
 import json
 
 def admit(records: list, task: str, workspace: str = "") -> dict:
@@ -192,3 +193,30 @@ def verify_verdict(changed_files: list, checks: list, *, spec_files=()) -> dict:
             "deleted_files": [], "review_flags": spec_touched,
             "red": [{"cmd": c.get("cmd"), "exit": c.get("exit")} for c in red],
             "reason": "; ".join(reasons)}
+
+
+# --- the sealed tier (C-2.8) -------------------------------------------------------------------
+
+SEALED_DIR = "sealed"
+
+
+def sealed_dirs(root: str) -> list:
+    """EFFECTFUL (directory walk): every features/*/sealed directory, relative, sorted."""
+    base = pathlib.Path(root) / "features"
+    out = []
+    if base.is_dir():
+        for d in sorted(base.iterdir()):
+            s = d / SEALED_DIR
+            if s.is_dir():
+                out.append(str(s.relative_to(root)).replace("\\", "/"))
+    return out
+
+
+def sealed_checks(dirs) -> list:
+    """PURE: one pytest per sealed directory — what the refinery runs and nothing else does."""
+    return [f"python -m pytest {d} -q" for d in dirs]
+
+
+def sealed_touched(changed) -> list:
+    """PURE: the changed paths that lie under a sealed directory."""
+    return [p for p in changed if f"/{SEALED_DIR}/" in ("/" + str(p).replace("\\", "/"))]

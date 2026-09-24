@@ -1487,6 +1487,16 @@ def cmd_merge(a) -> int:
     fail = first_failure(verdicts)
     if fail:
         return end("check", False, fail)
+    # C-2.8: the sealed tier — run here and nowhere else
+    from lib.refinery import sealed_checks, sealed_dirs
+    from lib.spec_runner import _spawn, _tokenize
+    for cmdline in sealed_checks(sealed_dirs(str(workspace))):
+        argv, why = _tokenize(cmdline)
+        if argv and argv[0] in ("python", "python3"):
+            argv[0] = sys.executable
+        code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.timeout)
+        if code != 0:
+            return end("check", False, f"sealed acceptance: {cmdline} exit {code}: {tail[-300:]}")
 
     f = fast_forward(run, str(workspace), a.target)
     if not f.get("ok"):
@@ -1790,12 +1800,14 @@ def cmd_dispatch(a) -> int:
     files: dict = {}
     # executors without Bash get the files inlined: the local lanes, and OpenHands, whose
     # explorer instincts on a 30k window are the measured failure mode
-    inline = (spec is not None and spec["kind"] in ("local", "openhands")) or a.inline
+    inline = (spec is not None and spec["kind"] in ("local", "openhands", "pi")) or a.inline
+    try:
+        task_files = next(t for ph in plan.phases for t in ph.tasks if t.id == a.task).files
+    except StopIteration:
+        task_files = ()
+    if inline and getattr(a, "pi_hashline", False) and spec is not None and spec["kind"] == "pi":
+        inline = False          # C-3.7: the files stay out; the anchored read tool brings them
     if inline:
-        try:
-            task_files = next(t for ph in plan.phases for t in ph.tasks if t.id == a.task).files
-        except StopIteration:
-            task_files = ()
         for rel in task_files:
             p = workspace / rel
             if p.is_file():
@@ -1854,8 +1866,10 @@ def cmd_dispatch(a) -> int:
             cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
             return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         if spec["kind"] == "pi":
-            from lib.executors import pi_binary, pi_command
-            cmd = pi_command(a.executor, text, pi_bin=pi_binary(), thinking=a.pi_thinking)
+            from lib.executors import hashline_extension, pi_binary, pi_command
+            ext = hashline_extension() if a.pi_hashline else ""
+            cmd = pi_command(a.executor, text, pi_bin=pi_binary(), thinking=a.pi_thinking,
+                             hashline=ext, files=list(task_files), require_hashline=bool(a.pi_hashline))
             return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         cfg = openhands_config(text, workspace=str(ws),
                                model=a.model or "openai/qwopus-27b",
@@ -2319,6 +2333,9 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--pi-hashline", dest="pi_hashline", action="store_true",
+                    help="pi executors: load the hashline extension, anchored read/replace/insert "
+                         "instead of str_replace, files left out of the packet (C-3.7)")
     dp.add_argument("--pi-thinking", dest="pi_thinking", default="",
                     choices=("", "off", "minimal", "low", "medium", "high", "xhigh"),
                     help="pi executors: the thinking level pi asks the model for")

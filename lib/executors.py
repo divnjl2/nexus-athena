@@ -44,6 +44,12 @@ PI_TOOLS = "read,bash,edit,write"
 #: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,
 #: medium in 46 s; "high" the lane rejects with a 400.
 PI_THINKING = {"pi-27b": "low", "pi-9b": "medium"}
+#: hashline (C-3.7): the pi-hashline-edit-pro extension registers read / replace / insert /
+#: anchor_grep / undo_last_change and disables the string-replace edit. Lines come back as
+#: `Dafo│content`; an edit names anchors; a stale anchor is refused ([E_RANGE_STALE]) instead
+#: of missing silently. Measured motive: both lanes broke on edits inside large files.
+PI_HASHLINE_TOOLS = "read,bash,replace,insert,anchor_grep"
+PI_HASHLINE_PACKAGE = "pi-hashline-edit-pro"
 PI_ORDER = ("The task is the text above. There is no user here and no question will be "
             "answered: make the edit with the edit or write tool, run the spec command with "
             "bash if you want to see it, then answer with one line: DONE.")
@@ -159,17 +165,60 @@ def availability(name: str, *, which=None, find_spec=None, exists=None) -> dict:
     return {"available": ok, "reason": "" if ok else "the `claude` executable was not found"}
 
 
-def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str = "") -> dict:
+def hashline_order(files) -> str:
+    """PURE (C-3.7): the closing order when the files are NOT in the packet — read them with
+    the anchored read tool, edit by anchors."""
+    named = ", ".join(files) if files else "the task's files"
+    return ("The task is the text above. There is no user here and no question will be answered. "
+            f"The files are not in this message: read {named} with the read tool (every line comes "
+            "back with an anchor), then make the edit with replace or insert by those anchors — never "
+            "retype a file. Run the spec command with bash if you want to see it, then answer with one "
+            "line: DONE.")
+
+
+def hashline_extension(*, which=None, exists=None) -> str:
+    """The installed extension's entry file, "" when it is not installed. pi keeps npm
+    packages in the global node_modules; `pi install npm:pi-hashline-edit-pro` puts it there."""
+    import os
+    import shutil
+    exists = exists or (lambda p: pathlib.Path(p).exists())
+    roots = []
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        roots.append(pathlib.Path(appdata) / "npm" / "node_modules")
+    npm = (which or shutil.which)("npm")
+    if npm:
+        roots.append(pathlib.Path(npm).resolve().parent / "node_modules")
+    roots.append(pathlib.Path.home() / ".pi" / "agent" / "node_modules")
+    for root in roots:
+        cand = root / PI_HASHLINE_PACKAGE / "index.ts"
+        if exists(cand):
+            return str(cand).replace("\\", "/")
+    return ""
+
+
+def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str = "",
+               hashline: str = "", files=(), require_hashline: bool = False) -> dict:
     """PURE: argv + stdin for a pi worker (C-3.6). Print mode, JSON events, no session, no
     extensions, no skills, no context files: the packet on stdin is the whole context, and
-    the closing order is the prompt argument, the last thing the model reads."""
+    the closing order is the prompt argument, the last thing the model reads. With
+    `hashline` (the extension's entry file, C-3.7) the anchored tools replace edit and the
+    order sends the model to read the named files."""
     if name not in PI_PROVIDERS:
         raise ValueError(f"{name} is not a pi executor (one of {', '.join(PI_PROVIDERS)})")
+    if require_hashline and not hashline:
+        raise ValueError("hashline was asked for but the extension is not installed "
+                         f"(pi install npm:{PI_HASHLINE_PACKAGE})")
     provider, model = PI_PROVIDERS[name]
     level = thinking or PI_THINKING.get(name, "medium")
     argv = [pi_bin, "-p", "--mode", "json", "--no-session", "--no-extensions", "--no-skills",
-            "--no-context-files", "--tools", PI_TOOLS, "--provider", provider, "--model", model,
-            "--thinking", level, PI_ORDER]
+            "--no-context-files"]
+    if hashline:
+        argv += ["-e", hashline, "--tools", PI_HASHLINE_TOOLS]
+    else:
+        argv += ["--tools", PI_TOOLS]
+    argv += ["--provider", provider, "--model", model, "--thinking", level,
+             hashline_order(list(files)) if hashline else PI_ORDER]
     return {"argv": argv, "env": {}, "stdin": packet_text, "parse": "pi", "unset": []}
 
 
