@@ -1519,6 +1519,14 @@ def cmd_bench(a) -> int:
                 "--front", a.front, "--task", run["task"], "--executor", run["executor"],
                 "--workspace", str(ws), "--iterations", str(a.iterations), "--fanout", str(a.fanout),
                 "--timeout", str(a.timeout), "--stall", str(a.stall), "--max-turns", str(a.max_turns), "--text"]
+        if a.pi_thinking:
+            argv += ["--pi-thinking", a.pi_thinking]
+        if a.pi_strict:
+            argv += ["--pi-strict"]
+        if a.pi_hashline:
+            argv += ["--pi-hashline"]
+        if a.tag:
+            argv += ["--tag", a.tag]
         print(f"# bench {run['task']} -> {run['executor']} in {ws}", flush=True)
         proc = subprocess.run(argv, cwd=str(repo), capture_output=True, text=True, encoding="utf-8", errors="replace")
         print((proc.stdout or "").strip().splitlines()[0] if (proc.stdout or "").strip() else f"  exit {proc.returncode}", flush=True)
@@ -1529,7 +1537,7 @@ def cmd_bench(a) -> int:
     records, _ = parse_dispatches(dpath.read_text(encoding="utf-8") if dpath.exists() else "")
     tasks = [r["task"] for r in plan["runs"]]
     tasks = list(dict.fromkeys(tasks))
-    executors = list(dict.fromkeys(r["executor"] for r in plan["runs"]))
+    executors = list(dict.fromkeys(r["executor"] + (f"#{a.tag}" if a.tag else "") for r in plan["runs"]))
     table = matrix_table(records, tasks, executors)
     if a.text:
         print(render_matrix(table, tasks, executors))
@@ -2122,7 +2130,8 @@ def cmd_dispatch(a) -> int:
                 "duration": duration, "ws": ws}
 
     def write_record(r: dict, iteration: int, *, attempt_no: int = 0, winner: bool = True) -> None:
-        rec = record(a.task, a.executor, r["v"], duration_ms=r["duration"], tokens=r["tokens"],
+        named = a.executor + (f"#{a.tag}" if getattr(a, "tag", "") else "")   # a setting under test
+        rec = record(a.task, named, r["v"], duration_ms=r["duration"], tokens=r["tokens"],
                      ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
                      workspace=str(workspace))
         rec["iteration"] = iteration
@@ -2581,6 +2590,7 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
     dp.add_argument("--brief", default="", help="a senior's brief (athena brief) carried in the packet (C-8.4)")
+    dp.add_argument("--tag", default="", help="a label appended to the executor name in the record, e.g. low, strict")
     dp.add_argument("--pi-strict", dest="pi_strict", action="store_true",
                     help="pi executors: use the lane's strict relay provider (<provider>-strict), tool "
                          "calls under the lane's grammar (C-6.7)")
@@ -2725,6 +2735,10 @@ def build_parser() -> argparse.ArgumentParser:
     bn.add_argument("--timeout", type=int, default=900)
     bn.add_argument("--stall", type=int, default=0)
     bn.add_argument("--max-turns", dest="max_turns", type=int, default=30)
+    bn.add_argument("--pi-thinking", dest="pi_thinking", default="")
+    bn.add_argument("--pi-strict", dest="pi_strict", action="store_true")
+    bn.add_argument("--pi-hashline", dest="pi_hashline", action="store_true")
+    bn.add_argument("--tag", default="", help="label for the record's executor name, e.g. low")
     bn.add_argument("--dry-run", dest="dry_run", action="store_true")
     bn.add_argument("--text", action="store_true")
     bn.set_defaults(fn=cmd_bench)
