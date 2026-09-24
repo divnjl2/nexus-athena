@@ -254,3 +254,10 @@
   - source: review
   - note: Agentless with better localisation went from 32.0% to 38.3% and empty patches fell
     2.7x; localisation is a lever of its own, and one a 27B is good at without editing.
+- **C-8.4** — WHEN a task is briefed THE SYSTEM SHALL ask a stronger reader for a plan without
+  code from the packet and the task's last checkpoint, and carry that brief in the next
+  packet as its own section ahead of the spec status.
+  - source: review
+  - note: AI21's junior/senior/principal: the seniors do not type, they read the juniors'
+    attempts and hand the writer a brief. Here the senior is the 27B at low effort — the
+    reading role it measured well in (locate) — and the writer the 9B, or Claude.

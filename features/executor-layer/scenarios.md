@@ -396,3 +396,11 @@
 - **Given** tests/test_locate.py
 - **When** the spec `test_a_repo_map_is_built_from_definitions_and_file_votes_are_merged` is executed
 - **Then** the map lists Python files with their definitions within the budget and skips vendored dirs; replies parse as JSON, fenced JSON or bullets; votes merge by count then first mention.
+
+### S8.4 — a brief is asked from the packet and the checkpoint and carried in the next packet
+- **verifies:** C-8.4
+- **pins:** 7c2a217b8bcae942
+- **run_cmd:** `python -m pytest tests/test_brief.py::test_a_brief_is_asked_from_the_packet_and_the_checkpoint_and_carried_in_the_next_packet -q`
+- **Given** tests/test_brief.py
+- **When** the spec `test_a_brief_is_asked_from_the_packet_and_the_checkpoint_and_carried_in_the_next_packet` is executed
+- **Then** the prompt carries the packet and the checkpoint and asks for a plan without code; the brief is cleaned of fences and chatter; the packet gains a senior section ahead of the status; an empty brief changes nothing.

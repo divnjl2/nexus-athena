@@ -1292,6 +1292,67 @@ def _pi_text(executor: str, prompt: str, *, cwd: pathlib.Path, timeout: int, thi
     return _run_command_executor(cmd, cwd=cwd, timeout=timeout)
 
 
+def _packet_for(a, workspace: pathlib.Path):
+    """The packet for a task as a local executor would see it: files inlined (excerpted), the
+    spec sources carried. Shared by dispatch-like commands that need the executor's view."""
+    from lib.dispatch import packet, test_node, test_source
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    plan = _parse_front_auto(a.front, "auto")
+    try:
+        task_files = next(tk for ph in plan.phases for tk in ph.tasks if tk.id == a.task).files
+    except StopIteration:
+        task_files = ()
+    files = {}
+    for rel in task_files:
+        p = workspace / rel
+        if p.is_file():
+            files[rel] = p.read_text(encoding="utf-8", errors="replace")
+    spec_sources = {}
+    for s in scenarios:
+        path, func = test_node(s.run_cmd)
+        if path and func and (workspace / path).is_file():
+            src = test_source((workspace / path).read_text(encoding="utf-8", errors="replace"), func)
+            if src:
+                spec_sources[s.id] = src
+    return packet(contract, scenarios, plan, a.task, files=files, budget_chars=getattr(a, "budget", 36000),
+                  root=str(workspace), spec_sources=spec_sources)
+
+
+def cmd_brief(a) -> int:
+    """C-8.4: the senior (a stronger reader, no tools) reads the packet and the task's last
+    checkpoint and writes a plan without code; the brief is saved beside the checkpoints
+    and can be carried in the next dispatch with --brief."""
+    from lib.brief import brief_prompt, clean_brief
+    from lib.dispatch import DispatchError
+    workspace = pathlib.Path(a.workspace).resolve()
+    try:
+        pk = _packet_for(a, workspace)
+    except DispatchError as e:
+        _emit({"error": str(e)})
+        return 2
+    here = pathlib.Path(a.contract).resolve().parent / ".athena"
+    cp_path = here / "checkpoints" / f"{a.task}.md"
+    checkpoint = cp_path.read_text(encoding="utf-8") if cp_path.exists() and not a.no_checkpoint else ""
+    prompt = brief_prompt(pk["text"], checkpoint)
+    text, tokens, err = _pi_text(a.executor, prompt, cwd=workspace, timeout=a.timeout, thinking=a.pi_thinking)
+    brief = clean_brief(text)
+    out_path = here / "briefs" / f"{a.task}.md"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if brief:
+        out_path.write_text(brief + "\n", encoding="utf-8")
+    out = {"task": a.task, "executor": a.executor, "brief": brief, "path": str(out_path) if brief else "",
+           "tokens": tokens, "error": err, "checkpoint_used": bool(checkpoint)}
+    if a.text:
+        print(f"# brief {a.task} <- {a.executor}: {'written to ' + str(out_path) if brief else 'nothing usable'}"
+              + (f"  [{err[:100]}]" if err else ""))
+        if brief:
+            print(brief)
+    else:
+        _emit(out)
+    return 0 if brief else 1
+
+
 def cmd_locate(a) -> int:
     """C-8.2: a clause with no files named gets its files from the swarm — a repo map within a
     budget, N localiser samples, votes merged by count then first mention."""
@@ -2134,6 +2195,12 @@ def cmd_dispatch(a) -> int:
     # complete-looking file and no failing check called finish without editing (measured)
     from lib.dispatch import packet_with_status
     from lib.executors import LOCAL_OUTPUT_TOKENS
+    if getattr(a, "brief", ""):
+        # C-8.4: the senior's brief travels in the packet, ahead of the spec status
+        from lib.brief import packet_with_brief
+        bp = pathlib.Path(a.brief)
+        if bp.is_file():
+            pk = packet_with_brief(pk, bp.read_text(encoding="utf-8"))
     pk = packet_with_status(pk, run_checks(),
                             output_tokens=LOCAL_OUTPUT_TOKENS.get(a.executor, 0) if spec["kind"] == "local" else 0)
     loop = run_iterations(pk, attempt, budget=a.iterations)
@@ -2469,6 +2536,7 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--brief", default="", help="a senior's brief (athena brief) carried in the packet (C-8.4)")
     dp.add_argument("--pi-strict", dest="pi_strict", action="store_true",
                     help="pi executors: use the lane's strict relay provider (<provider>-strict), tool "
                          "calls under the lane's grammar (C-6.7)")
@@ -2532,6 +2600,22 @@ def build_parser() -> argparse.ArgumentParser:
     me.add_argument("contract", nargs="?", default="contract.md")
     me.add_argument("--text", action="store_true")
     me.set_defaults(fn=cmd_metrics)
+
+    br = sub.add_parser("brief", help="the senior reads the packet and the last checkpoint and writes a plan "
+                                      "without code, for the next dispatch (C-8.4)")
+    br.add_argument("contract")
+    br.add_argument("--scenarios", default="")
+    br.add_argument("--front", required=True)
+    br.add_argument("--task", required=True)
+    br.add_argument("--executor", default="pi-27b")
+    br.add_argument("--workspace", default=".")
+    br.add_argument("--budget", type=int, default=36000)
+    br.add_argument("--timeout", type=int, default=600)
+    br.add_argument("--pi-thinking", dest="pi_thinking", default="")
+    br.add_argument("--no-checkpoint", dest="no_checkpoint", action="store_true")
+    br.add_argument("--speckit", default="auto")
+    br.add_argument("--text", action="store_true")
+    br.set_defaults(fn=cmd_brief)
 
     lo = sub.add_parser("locate", help="the files for a clause, from a repo map and N localiser samples (C-8.2)")
     lo.add_argument("contract")

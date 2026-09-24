@@ -124,6 +124,10 @@ that says, per executor, how often the work landed and went green.
   - success_check: `python -m pytest tests/test_locate.py -q`
   - files: `lib/locate.py`
   - verifies: S8.2
+- [ ] T8.3 The brief: the senior's plan from the packet and the checkpoint, carried in the next packet
+  - success_check: `python -m pytest tests/test_brief.py -q`
+  - files: `lib/brief.py, athena.py`
+  - verifies: S8.4
 ### Manual Verification
 - `python athena.py testwrite <contract> --clause C-x.y --executor pi-9b --n 4` leaves one red test that fails on the current code.
 - `python athena.py locate <contract> --clause C-x.y --executor pi-27b --n 3` prints the top files.
