@@ -1264,6 +1264,94 @@ def cmd_metrics(a) -> int:
     return 0
 
 
+# --- v3.14: the ceiling — a bench matrix through dispatch (C-7.4) ----------------------------
+
+def bench_plan(a) -> dict:
+    """PURE given args: the runs of tasks × executors, one workspace per executor, and the
+    flags every dispatch will get. `dry_run` and `ran` are part of the plan so the caller
+    can print it before, or instead of, running it."""
+    from lib.bench import plan_matrix
+    tasks = [s.strip() for s in (a.tasks or "").split(",") if s.strip()]
+    executors = [s.strip() for s in (a.executors or "").split(",") if s.strip()]
+    runs = plan_matrix(tasks, executors, str(a.base_workspace).replace("\\", "/").rstrip("/"))
+    return {"contract": a.contract, "front": a.front, "runs": runs,
+            "dispatch_flags": {"executor": "<per run>", "iterations": int(a.iterations),
+                               "fanout": int(a.fanout), "timeout": int(a.timeout),
+                               "stall": int(a.stall), "max_turns": int(a.max_turns)},
+            "dry_run": bool(a.dry_run), "ran": 0}
+
+
+def cmd_next(a) -> int:
+    """C-7.3: the next ready task of a slug out of bd, claimed, dispatched with the flags given
+    — Gas Town's "if there is work on your hook, run it", with bd as the hook."""
+    import subprocess
+    from lib.queue import claim_command, pick_ready, ready_command
+    plan = _parse_front_auto(a.front, "auto")
+    slug = a.slug or _slugify(getattr(plan, "title", "") or pathlib.Path(a.contract).resolve().parent.name)
+    try:
+        listed = subprocess.run(ready_command(slug), capture_output=True, text=True, encoding="utf-8",
+                                errors="replace", timeout=60)
+        ready_json = listed.stdout or ""
+    except (OSError, subprocess.SubprocessError) as e:
+        _emit({"slug": slug, "task": "", "error": f"bd ready failed: {e}"})
+        return 2
+    task = pick_ready(ready_json, slug)
+    if not task:
+        print(f"next: nothing ready for {slug}" if a.text else json.dumps({"slug": slug, "task": ""}))
+        return 1
+    if a.dry_run:
+        print(f"next: {task} ({slug})" if a.text else json.dumps({"slug": slug, "task": task, "dry_run": True}))
+        return 0
+    subprocess.run(claim_command(slug, task), capture_output=True, timeout=60)
+    argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", a.front,
+            "--task", task, "--executor", a.executor, "--workspace", a.workspace,
+            "--iterations", str(a.iterations), "--fanout", str(a.fanout), "--timeout", str(a.timeout),
+            "--stall", str(a.stall), "--slug", slug, "--bd"] + (["--text"] if a.text else [])
+    print(f"# next: {task} -> {a.executor}", flush=True)
+    return subprocess.run(argv).returncode
+
+
+def cmd_bench(a) -> int:
+    """Run the matrix: each run is `athena dispatch` in its executor's workspace, a worktree
+    created from the current HEAD when it does not exist; then the table from the record."""
+    import subprocess
+    from lib.bench import matrix_table, render_matrix
+    from lib.dispatch import parse_dispatches
+    plan = bench_plan(a)
+    if a.dry_run:
+        print(json.dumps(plan, ensure_ascii=False, sort_keys=True) if not a.text
+              else "\n".join(f"{r['task']:8} {r['executor']:10} {r['workspace']}" for r in plan["runs"]))
+        return 0
+    repo = pathlib.Path(a.repo or ".").resolve()
+    here = pathlib.Path(a.contract).resolve().parent / ".athena"
+    for run in plan["runs"]:
+        ws = pathlib.Path(run["workspace"])
+        if not ws.exists():
+            subprocess.run(["git", "worktree", "add", "--detach", str(ws), "HEAD"], cwd=str(repo),
+                           capture_output=True, text=True)
+        argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract,
+                "--front", a.front, "--task", run["task"], "--executor", run["executor"],
+                "--workspace", str(ws), "--iterations", str(a.iterations), "--fanout", str(a.fanout),
+                "--timeout", str(a.timeout), "--stall", str(a.stall), "--max-turns", str(a.max_turns), "--text"]
+        print(f"# bench {run['task']} -> {run['executor']} in {ws}", flush=True)
+        proc = subprocess.run(argv, cwd=str(repo), capture_output=True, text=True, encoding="utf-8", errors="replace")
+        print((proc.stdout or "").strip().splitlines()[0] if (proc.stdout or "").strip() else f"  exit {proc.returncode}", flush=True)
+        subprocess.run(["git", "add", "-A"], cwd=str(ws), capture_output=True)
+        subprocess.run(["git", "commit", "-q", "-m", f"bench {run['executor']} {run['task']}"], cwd=str(ws), capture_output=True)
+        plan["ran"] += 1
+    dpath = here / "dispatch.jsonl"
+    records, _ = parse_dispatches(dpath.read_text(encoding="utf-8") if dpath.exists() else "")
+    tasks = [r["task"] for r in plan["runs"]]
+    tasks = list(dict.fromkeys(tasks))
+    executors = list(dict.fromkeys(r["executor"] for r in plan["runs"]))
+    table = matrix_table(records, tasks, executors)
+    if a.text:
+        print(render_matrix(table, tasks, executors))
+    else:
+        _emit({**plan, "table": table})
+    return 0
+
+
 # --- v3.13: the refinery — a green workspace reaches the target through four stages -------
 
 def cmd_merge(a) -> int:
@@ -1454,10 +1542,33 @@ def _fan_in(workspace: pathlib.Path, copies: list) -> None:
     _git(["worktree", "prune"], workspace)
 
 
-def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tuple[str, dict, str]:
-    """EFFECTFUL: spawn a Claude Code worker (local lane or subscription); return
-    (claim text, tokens, worker error)."""
+def _kill_tree(proc) -> None:
+    """EFFECTFUL: end a worker and everything it spawned. The claude launcher's child inherits
+    the pipes: kill() alone leaves communicate() hanging (measured: a 15-minute timeout
+    became a 30-minute hang)."""
     import subprocess
+    if os.name == "nt":
+        try:
+            # taskkill has been seen to sit for 30 s under a test runner: bounded, then kill()
+            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True,
+                           stdin=subprocess.DEVNULL, timeout=8)
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+    try:
+        proc.kill()
+    except OSError:
+        pass
+
+
+def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int, stall: int = 0) -> tuple[str, dict, str]:
+    """EFFECTFUL: spawn a worker (a Claude Code lane, pi, the subscription); return
+    (claim text, tokens, worker error). stdout is read as it comes: with `stall` > 0 a
+    worker that writes nothing for that many seconds is ended and reported as STALLED,
+    distinct from the timeout (C-7.2) — the hung workers were held to the 900-second
+    timeout and their orphaned requests kept the lane's slots."""
+    import subprocess
+    import threading
+    import time as _time
     env = os.environ.copy()
     for name in cmd.get("unset", []):
         env.pop(name, None)
@@ -1469,22 +1580,52 @@ def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tupl
                                 encoding="utf-8", errors="replace")
     except OSError as e:
         return "", {}, f"could not start the worker: {e}"
-    try:
-        out, err_text = proc.communicate(input=cmd.get("stdin"), timeout=timeout)
-    except subprocess.TimeoutExpired:
-        # the claude launcher spawns a child that inherits the pipes: kill() alone leaves
-        # communicate() hanging forever (measured: a 15-minute timeout became a 30-minute
-        # hang). End the whole tree.
-        if os.name == "nt":
-            subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-                           capture_output=True, timeout=30)
-        else:
-            proc.kill()
+
+    chunks: list = []
+    errs: list = []
+    last = [_time.monotonic()]
+
+    def pump(stream, sink, touch):
         try:
-            proc.communicate(timeout=30)
+            for line in iter(stream.readline, ""):
+                sink.append(line)
+                if touch:
+                    last[0] = _time.monotonic()
+        except (OSError, ValueError):
+            pass
+
+    t_out = threading.Thread(target=pump, args=(proc.stdout, chunks, True), daemon=True)
+    t_err = threading.Thread(target=pump, args=(proc.stderr, errs, False), daemon=True)
+    t_out.start()
+    t_err.start()
+    if cmd.get("stdin"):
+        try:
+            proc.stdin.write(cmd["stdin"])
+            proc.stdin.close()
+        except (OSError, ValueError):
+            pass
+    started = _time.monotonic()
+    ended_by = ""
+    while proc.poll() is None:
+        now = _time.monotonic()
+        if now - started > timeout:
+            ended_by = f"worker timed out after {timeout}s (process tree killed)"
+            break
+        if stall and now - last[0] > stall:
+            ended_by = f"worker stalled: no output for {stall}s (process tree killed)"
+            break
+        _time.sleep(0.2)
+    if ended_by:
+        _kill_tree(proc)
+        try:
+            proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
             pass
-        return "", {}, f"worker timed out after {timeout}s (process tree killed)"
+    t_out.join(timeout=5)
+    t_err.join(timeout=5)
+    out, err_text = "".join(chunks), "".join(errs)
+    if ended_by:
+        return "", {}, ended_by
     p = subprocess.CompletedProcess(cmd["argv"], proc.returncode, out, err_text)
     if cmd.get("parse") == "pi":                      # C-3.6: pi's JSONL events
         from lib.executors import pi_result
@@ -1653,15 +1794,15 @@ def cmd_dispatch(a) -> int:
                 gateway = gateway[:-3] if gateway.endswith("/v1") else gateway
             cmd = local_lane_command(a.executor, text, max_turns=a.max_turns, gateway=gateway,
                                      claude_bin=claude_binary(), auth_token=_gateway_key())
-            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
+            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         if spec["kind"] == "claude":
             cmd = claude_command(text, max_turns=a.max_turns, claude_bin=claude_binary())
             cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
-            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
+            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         if spec["kind"] == "pi":
             from lib.executors import pi_binary, pi_command
             cmd = pi_command(a.executor, text, pi_bin=pi_binary(), thinking=a.pi_thinking)
-            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
+            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         cfg = openhands_config(text, workspace=str(ws),
                                model=a.model or "openai/qwopus-27b",
                                base_url=a.base_url if a.base_url is not None else LOCAL_GATEWAY + "/v1",
@@ -2126,6 +2267,9 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--pi-thinking", dest="pi_thinking", default="medium",
                     choices=("off", "minimal", "low", "medium", "high", "xhigh"),
                     help="pi executors: the thinking level pi asks the model for")
+    dp.add_argument("--stall", type=int, default=0,
+                    help="seconds of worker silence on stdout before it is ended as stalled (C-7.2); "
+                         "0 = only the timeout")
     dp.add_argument("--fanout", type=int, default=1,
                     help="attempts per iteration, each in its own copy of the workspace; the "
                          "first green wins, else the least red landing is carried forward (C-5.6)")
@@ -2174,6 +2318,38 @@ def build_parser() -> argparse.ArgumentParser:
     me.add_argument("contract", nargs="?", default="contract.md")
     me.add_argument("--text", action="store_true")
     me.set_defaults(fn=cmd_metrics)
+
+    nx = sub.add_parser("next", help="the next ready task of a slug from bd, claimed and dispatched (C-7.3)")
+    nx.add_argument("contract")
+    nx.add_argument("--front", required=True)
+    nx.add_argument("--slug", default="")
+    nx.add_argument("--executor", default="pi-9b")
+    nx.add_argument("--workspace", default=".")
+    nx.add_argument("--iterations", type=int, default=3)
+    nx.add_argument("--fanout", type=int, default=1)
+    nx.add_argument("--timeout", type=int, default=900)
+    nx.add_argument("--stall", type=int, default=0)
+    nx.add_argument("--dry-run", dest="dry_run", action="store_true")
+    nx.add_argument("--text", action="store_true")
+    nx.set_defaults(fn=cmd_next)
+
+    bn = sub.add_parser("bench", help="run a matrix of tasks x executors through dispatch, one "
+                                      "worktree per executor, and print the table (C-7.4)")
+    bn.add_argument("contract")
+    bn.add_argument("--front", required=True, help="plan.md holding the tasks")
+    bn.add_argument("--tasks", required=True, help="comma-separated task ids")
+    bn.add_argument("--executors", required=True, help="comma-separated executor names")
+    bn.add_argument("--base-workspace", dest="base_workspace", required=True,
+                    help="prefix for the per-executor worktrees: <prefix>-<executor>")
+    bn.add_argument("--repo", default="", help="repository the worktrees are made from (default: cwd)")
+    bn.add_argument("--iterations", type=int, default=3)
+    bn.add_argument("--fanout", type=int, default=1)
+    bn.add_argument("--timeout", type=int, default=900)
+    bn.add_argument("--stall", type=int, default=0)
+    bn.add_argument("--max-turns", dest="max_turns", type=int, default=30)
+    bn.add_argument("--dry-run", dest="dry_run", action="store_true")
+    bn.add_argument("--text", action="store_true")
+    bn.set_defaults(fn=cmd_bench)
 
     mg = sub.add_parser("merge", help="offer a workspace to the refinery: admit on the record, "
                                       "rebase, run every contract, fast-forward the target")
