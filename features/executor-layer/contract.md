@@ -100,6 +100,15 @@
   - note: with the SDK's explorer prompt the 27B spent every turn on glob and view across
     eight dispatches and never attempted an edit; the packet already holds what an explorer
     would go looking for.
+- **C-3.6** — WHEN a pi executor is chosen THE SYSTEM SHALL run pi in print mode with its four
+  tools and no session, extensions, skills or context files, the lane named as its provider,
+  the packet on stdin and the order as the prompt, and read the claim, the tokens and any
+  error from its JSON events.
+  - source: review
+  - note: measured before the clause: the harness moved the same weights more than the
+    packet did. Through pi the vanilla 27B edited a file in three turns on the first try and
+    the vanilla 9B in two; pi's system prompt is ~200 tokens against Claude Code's thousands,
+    and it speaks the lane's OpenAI shape directly, no gateway translation in between.
 
 ## C-4 — The record
 

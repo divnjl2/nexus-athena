@@ -25,13 +25,24 @@ from __future__ import annotations
 
 import pathlib
 
-EXECUTORS = ("local-27b", "local-9b", "openhands", "claude")
+EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b")
 LANE_MODELS = {"local-27b": "qwopus-27b", "local-9b": "qwable-9b"}
 LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"
 CLAUDE_TOOLS = "Read,Glob,Grep,Edit,Write,Bash"
 LOCAL_CONTEXT_TOKENS = 30720
 LOCAL_OUTPUT_TOKENS = {"local-27b": 8192, "local-9b": 8192}
+
+#: pi (badlogic/pi-mono coding agent) in print mode: four tools, a ~200-token system prompt,
+#: the lane addressed DIRECTLY as an OpenAI-compatible provider from ~/.pi/agent/models.json
+#: (provider, model id; compat.supportsDeveloperRole=false, the 9B's template refused the
+#: developer role). Measured before adding it: the vanilla 27B edited a file in three turns
+#: through pi on the first try, the vanilla 9B in two.
+PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5-9b")}
+PI_TOOLS = "read,bash,edit,write"
+PI_ORDER = ("The task is the text above. There is no user here and no question will be "
+            "answered: make the edit with the edit or write tool, run the spec command with "
+            "bash if you want to see it, then answer with one line: DONE.")
 
 
 def resolve(name: str) -> dict:
@@ -40,6 +51,8 @@ def resolve(name: str) -> dict:
         raise ValueError(f"unknown executor {name!r} (one of {', '.join(EXECUTORS)})")
     if name.startswith("local-"):
         return {"name": name, "kind": "local", "model": LANE_MODELS[name]}
+    if name in PI_PROVIDERS:
+        return {"name": name, "kind": "pi", "model": PI_PROVIDERS[name][1]}
     return {"name": name, "kind": name, "model": ""}
 
 
@@ -133,9 +146,62 @@ def availability(name: str, *, which=None, find_spec=None, exists=None) -> dict:
             ok = False
         return {"available": ok, "reason": "" if ok else
                 "openhands-sdk is not importable in this interpreter (pip install openhands-sdk openhands-tools)"}
+    if spec["kind"] == "pi":
+        ok = which("pi") is not None
+        return {"available": ok, "reason": "" if ok else
+                "the `pi` executable was not found (npm i -g @mariozechner/pi-coding-agent)"}
     home_bin = pathlib.Path.home() / ".local" / "bin" / "claude.exe"
     ok = which("claude") is not None or exists(home_bin)
     return {"available": ok, "reason": "" if ok else "the `claude` executable was not found"}
+
+
+def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str = "medium") -> dict:
+    """PURE: argv + stdin for a pi worker (C-3.6). Print mode, JSON events, no session, no
+    extensions, no skills, no context files: the packet on stdin is the whole context, and
+    the closing order is the prompt argument, the last thing the model reads."""
+    if name not in PI_PROVIDERS:
+        raise ValueError(f"{name} is not a pi executor (one of {', '.join(PI_PROVIDERS)})")
+    provider, model = PI_PROVIDERS[name]
+    argv = [pi_bin, "-p", "--mode", "json", "--no-session", "--no-extensions", "--no-skills",
+            "--no-context-files", "--tools", PI_TOOLS, "--provider", provider, "--model", model,
+            "--thinking", thinking, PI_ORDER]
+    return {"argv": argv, "env": {}, "stdin": packet_text, "parse": "pi", "unset": []}
+
+
+def pi_result(stdout: str) -> tuple[str, dict, str]:
+    """PURE (C-3.6): (final text, tokens, error) out of pi's JSONL events. The claim is the
+    last assistant message's text blocks; tokens are summed over every assistant message; an
+    assistant message that stopped with an error names it."""
+    import json
+    text, err = "", ""
+    tokens = {"input_tokens": 0, "output_tokens": 0}
+    for line in (stdout or "").splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        if ev.get("type") != "message_end":
+            continue
+        msg = ev.get("message") or {}
+        if msg.get("role") != "assistant":
+            continue
+        usage = msg.get("usage") or {}
+        tokens["input_tokens"] += int(usage.get("input") or 0)
+        tokens["output_tokens"] += int(usage.get("output") or 0)
+        parts = [b.get("text", "") for b in msg.get("content") or [] if b.get("type") == "text"]
+        if any(p.strip() for p in parts):
+            text = "".join(parts).strip()
+        if msg.get("stopReason") == "error":
+            err = str(msg.get("errorMessage") or "pi: assistant message stopped with an error")
+    return text, tokens, err
+
+
+def pi_binary(*, which=None) -> str:
+    import shutil
+    return (which or shutil.which)("pi") or "pi"
 
 
 def claude_binary(*, which=None, exists=None) -> str:

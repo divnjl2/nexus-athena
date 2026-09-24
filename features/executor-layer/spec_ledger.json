@@ -1,10 +1,10 @@
 {
-  "contract_version": "f841875286b8fbe5",
+  "contract_version": "7df9efc2c0b2b45f",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "2371c7363375554f",
-      "duration_ms": 152,
+      "duration_ms": 134,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "0810505d0b526139",
-      "duration_ms": 150,
+      "duration_ms": 156,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -124,7 +124,7 @@
     {
       "clause": "C-2.5",
       "clause_version": "446c1f953d7fbb9b",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -134,7 +134,7 @@
     {
       "clause": "C-2.6",
       "clause_version": "e265cd1cfc8abb60",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -202,9 +202,19 @@
       "scenario": "S3.5"
     },
     {
+      "clause": "C-3.6",
+      "clause_version": "5c01151cd397fa0a",
+      "duration_ms": 145,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_executors.py::test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin -q",
+      "scenario": "S3.6"
+    },
+    {
       "clause": "C-4.1",
       "clause_version": "d380cd8bf00a64a5",
-      "duration_ms": 143,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -224,7 +234,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 106,
+      "duration_ms": 43,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -294,7 +304,7 @@
     {
       "clause": "C-5.6",
       "clause_version": "cfe15fba21bf653d",
-      "duration_ms": 1,
+      "duration_ms": 138,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -304,7 +314,7 @@
     {
       "clause": "C-5.7",
       "clause_version": "f889324f9b1b2971",
-      "duration_ms": 144,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -364,7 +374,7 @@
     {
       "clause": "C-6.6",
       "clause_version": "fa01125cbd4a59ee",
-      "duration_ms": 46,
+      "duration_ms": 15,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -372,13 +382,13 @@
       "scenario": "S6.6"
     }
   ],
-  "scenario_version": "8741cadaaed08a65",
+  "scenario_version": "ef2a1420b896c666",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 780,
+    "duration_ms": 669,
     "failed": 0,
-    "passed": 37,
-    "total": 37
+    "passed": 38,
+    "total": 38
   },
-  "ts": "2026-09-24T11:19:00+00:00"
+  "ts": "2026-09-24T13:35:11+00:00"
 }

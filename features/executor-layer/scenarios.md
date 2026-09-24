@@ -171,6 +171,14 @@
 - **When** the spec `test_openhands_gets_an_implementers_prompt_not_an_explorers` is executed
 - **Then** the config carries the implementer prompt by default, forbids exploring and names the done criterion; `prompt="default"` leaves it empty.
 
+### S3.6 — the pi executor runs print mode on the lane with the packet on stdin
+- **verifies:** C-3.6
+- **pins:** 5c01151cd397fa0a
+- **run_cmd:** `python -m pytest tests/test_executors.py::test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin -q`
+- **Given** tests/test_executors.py
+- **When** the spec `test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin` is executed
+- **Then** the argv carries -p, JSON mode, the no-session/extensions/skills/context flags, the four tools, the provider and model, the order last; the packet is stdin; pi_result reads text, tokens and errors from the events; availability probes the binary.
+
 ## C-4 — proved by the dispatch record and the CLI (lib/dispatch.py, athena.py)
 
 ### S4.1 — a dispatch appends one record

@@ -1486,6 +1486,12 @@ def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tupl
             pass
         return "", {}, f"worker timed out after {timeout}s (process tree killed)"
     p = subprocess.CompletedProcess(cmd["argv"], proc.returncode, out, err_text)
+    if cmd.get("parse") == "pi":                      # C-3.6: pi's JSONL events
+        from lib.executors import pi_result
+        claim, tokens, err = pi_result(p.stdout or "")
+        if p.returncode != 0 and not err:
+            err = f"exit {p.returncode}: {(p.stderr or '')[-600:]}"
+        return claim, tokens, err
     data = _worker_json(p.stdout or "")
     claim = str(data.get("result", "")) if data else (p.stdout or "")[-2000:]
     tokens = data.get("usage") or {}
@@ -1651,6 +1657,10 @@ def cmd_dispatch(a) -> int:
         if spec["kind"] == "claude":
             cmd = claude_command(text, max_turns=a.max_turns, claude_bin=claude_binary())
             cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
+            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
+        if spec["kind"] == "pi":
+            from lib.executors import pi_binary, pi_command
+            cmd = pi_command(a.executor, text, pi_bin=pi_binary(), thinking=a.pi_thinking)
             return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
         cfg = openhands_config(text, workspace=str(ws),
                                model=a.model or "openai/qwopus-27b",
@@ -2113,6 +2123,9 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--pi-thinking", dest="pi_thinking", default="medium",
+                    choices=("off", "minimal", "low", "medium", "high", "xhigh"),
+                    help="pi executors: the thinking level pi asks the model for")
     dp.add_argument("--fanout", type=int, default=1,
                     help="attempts per iteration, each in its own copy of the workspace; the "
                          "first green wins, else the least red landing is carried forward (C-5.6)")

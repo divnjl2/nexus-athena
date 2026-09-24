@@ -40,7 +40,7 @@ that says, per executor, how often the work landed and went green.
 - [ ] T3.1 Registry, the local-lane command, the OpenHands configuration, availability
   - success_check: `python -m pytest tests/test_executors.py -q`
   - files: `lib/executors.py, tests/test_executors.py`
-  - verifies: S3.1, S3.2, S3.3, S3.4, S3.5
+  - verifies: S3.1, S3.2, S3.3, S3.4, S3.5, S3.6
 ### Manual Verification
 - `python athena.py dispatch ... --executor local-27b` lands the C-5.7 change in a worktree and its spec goes green.
 

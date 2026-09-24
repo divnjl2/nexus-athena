@@ -12,7 +12,7 @@ from lib.executors import (EDIT_TOOLS, EXECUTORS, LOCAL_GATEWAY, availability, c
 
 def test_the_registry_resolves_known_executors_and_refuses_unknown():
     """C-3.1 — four names, no guessing: an unknown executor is refused with the list."""
-    assert set(EXECUTORS) == {"local-27b", "local-9b", "openhands", "claude"}
+    assert set(EXECUTORS) == {"local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b"}
     assert resolve("local-27b") == {"name": "local-27b", "kind": "local", "model": "qwopus-27b"}
     assert resolve("openhands")["kind"] == "openhands" and resolve("claude")["kind"] == "claude"
     with pytest.raises(ValueError) as e:
@@ -75,3 +75,43 @@ def test_a_missing_executor_is_unavailable_not_a_traceback():
     assert gone["available"] is False and "claude" in gone["reason"]
     here = availability("claude", which=lambda name: "C:/bin/claude.exe", exists=lambda p: False)
     assert here["available"] is True
+
+
+def test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin():
+    """C-3.6 — pi in print mode, JSON events, nothing loaded but the packet; the lane is the
+    provider; the claim, the tokens and an error come out of the events."""
+    import json
+    from lib.executors import PI_ORDER, availability, pi_command, pi_result, resolve
+    assert resolve("pi-27b") == {"name": "pi-27b", "kind": "pi", "model": "qwen3.8-27b"}
+    cmd = pi_command("pi-9b", "# Task T1.1 ...", pi_bin="C:/bin/pi", thinking="low")
+    argv = cmd["argv"]
+    assert argv[0] == "C:/bin/pi" and "-p" in argv and argv[argv.index("--mode") + 1] == "json"
+    for flag in ("--no-session", "--no-extensions", "--no-skills", "--no-context-files"):
+        assert flag in argv
+    assert argv[argv.index("--tools") + 1] == "read,bash,edit,write"
+    assert argv[argv.index("--provider") + 1] == "lane9" and argv[argv.index("--model") + 1] == "qwen3.5-9b"
+    assert argv[argv.index("--thinking") + 1] == "low"
+    assert argv[-1] == PI_ORDER and cmd["stdin"] == "# Task T1.1 ..." and cmd["parse"] == "pi"
+    with pytest.raises(ValueError):
+        pi_command("local-27b", "x")
+
+    def ev(msg):
+        return json.dumps({"type": "message_end", "message": msg})
+    out = "\n".join([
+        json.dumps({"type": "session", "id": "s"}),
+        ev({"role": "user", "content": [{"type": "text", "text": "hi"}]}),
+        ev({"role": "assistant", "content": [{"type": "thinking", "thinking": "t"},
+                                             {"type": "toolCall", "id": "1", "name": "edit", "arguments": {}}],
+            "usage": {"input": 1000, "output": 40}, "stopReason": "toolUse"}),
+        ev({"role": "assistant", "content": [{"type": "text", "text": "\n\nDONE"}],
+            "usage": {"input": 1200, "output": 5}, "stopReason": "stop"}),
+        "not json",
+    ])
+    claim, tokens, err = pi_result(out)
+    assert claim == "DONE" and err == ""
+    assert tokens == {"input_tokens": 2200, "output_tokens": 45}
+    bad = ev({"role": "assistant", "content": [], "usage": {}, "stopReason": "error",
+              "errorMessage": "400 Unexpected message role."})
+    assert pi_result(bad)[2] == "400 Unexpected message role."
+    assert availability("pi-27b", which=lambda n: "C:/bin/pi" if n == "pi" else None)["available"]
+    assert not availability("pi-27b", which=lambda n: None)["available"]
