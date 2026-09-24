@@ -12,6 +12,7 @@ import pathlib
 import pytest
 
 import athena
+from lib.ast import Scenario
 from lib.contract import parse as parse_contract
 from lib.dispatch import (DispatchError, dispatch_metrics, packet, parse_dispatches, record,
                           verdict)
@@ -268,6 +269,36 @@ def test_a_spent_budget_keeps_the_checkpoint_and_reports_red():
     assert out["last_checkpoint"]["last_words"] == "try 3"
 
 
+def test_a_changed_file_brings_the_specs_of_its_owning_clauses_into_the_verdict():
+    """C-2.6 — the blast radius the pre-edit hook shows is what the verdict runs: a regression
+    in a sibling clause of the same module is no longer invisible."""
+    from lib.dispatch import radius_checks
+    maps = {"features/a/contract.md": {"clauses": {"C-1.1": {"lib/demo.py": [1, 2]},
+                                                   "C-1.2": {"lib/other.py": [5]}}},
+            "features/b/contract.md": {"clauses": {"C-7.3": {"lib/demo.py": [9]}}}}
+    scen = {"features/a/contract.md": SCENARIOS,
+            "features/b/contract.md": (Scenario(id="S7.3", requirement_key="C-7.3", gwt_text="g",
+                                                run_cmd="python -m pytest tests/test_b.py::test_seven -q"),)}
+    cmds = radius_checks(["lib/demo.py"], maps, scen)
+    assert cmds == ["python -m pytest tests/test_demo.py::test_b -q",
+                    "python -m pytest tests/test_b.py::test_seven -q"]
+    assert radius_checks(["lib/nobody.py"], maps, scen) == []
+    dedup = radius_checks(["lib/demo.py"], maps, scen, already=["python -m pytest tests/test_demo.py::test_b -q"])
+    assert dedup == ["python -m pytest tests/test_b.py::test_seven -q"]
+
+
+def test_editing_the_specs_own_test_file_is_flagged_and_never_green():
+    """C-2.7 — a spec made to pass is not a requirement met: touching the test module is a
+    review flag and a red verdict whatever the exit codes say."""
+    before = {"lib/demo.py": (1, 1), "tests/test_demo.py": (1, 1)}
+    after = {"lib/demo.py": (2, 2), "tests/test_demo.py": (3, 3)}
+    v = verdict(before, after, GREEN, spec_files=["tests/test_demo.py"])
+    assert v["landed"] and not v["green"] and not v["passed"]
+    assert v["review_flags"] == ["tests/test_demo.py"] and "own test file was edited" in v["reason"]
+    clean = verdict(before, {**before, "lib/demo.py": (2, 2)}, GREEN, spec_files=["tests/test_demo.py"])
+    assert clean["passed"] and clean["review_flags"] == []
+
+
 def test_a_dispatch_appends_one_record():
     """C-4.1 — executor, task, landed, green, duration, tokens: one line per attempt."""
     v = verdict({"a.py": (1, 1)}, {"a.py": (2, 2)}, GREEN, claim="DONE")
@@ -291,6 +322,26 @@ def test_dispatch_metrics_report_landed_and_green_rates_per_executor():
     assert lane["attempts"] == 3 and lane["landed_rate"] == 0.67 and lane["green_rate"] == 0.33
     assert lane["mean_duration_ms"] == 2000
     assert rep["by_executor"]["claude"]["green_rate"] == 1.0 and rep["attempts"] == 4
+
+
+def test_dispatch_metrics_report_iterations_to_green_per_task():
+    """C-4.4 — per task: how many attempts, and at which iteration it went green (none when it
+    never did). This is the number the operator's own success metric asks for."""
+    def r(task, iteration, passed, executor="local-27b"):
+        return {"task": task, "executor": executor, "iteration": iteration,
+                "landed": passed, "green": passed, "passed": passed, "duration_ms": 1000}
+    rep = dispatch_metrics([r("T5.2", 1, False), r("T5.2", 2, False), r("T5.2", 3, True),
+                            r("T6.1", 1, False), r("T7.1", 1, True, executor="claude")])
+    by_task = rep["by_task"]
+    assert by_task["T5.2"] == {"attempts": 3, "green_at": 3, "passed": True}
+    assert by_task["T6.1"] == {"attempts": 1, "green_at": None, "passed": False}
+    assert by_task["T7.1"] == {"attempts": 1, "green_at": 1, "passed": True}
+    assert rep["by_executor"]["local-27b"]["attempts"] == 4, "the per-executor view is unchanged"
+    from lib.dispatch import render_metrics
+    text = render_metrics(rep)
+    assert "T5.2" in text and "green at iteration 3" in text
+    assert "T6.1" in text and "not green" in text
+    assert dispatch_metrics([])["by_task"] == {}
 
 
 def test_a_packet_without_an_executor_is_printed_and_not_recorded(tmp_path, capsys):

@@ -1488,14 +1488,43 @@ def cmd_dispatch(a) -> int:
             rows.append({"cmd": cmdline, "exit": code, "tail": tail})
         return rows
 
+    # C-2.6: the blast radius — every contract's map and scenarios under the workspace, so a
+    # change to a shared module runs the sibling clauses' specs too
+    from lib.dispatch import radius_checks
+    from lib.scenario_parser import parse as parse_scenarios_text
+    radius_maps: dict = {}
+    radius_scen: dict = {}
+    for mp in _walk(workspace, "clause_map.json", 3):
+        try:
+            label = str(mp.parent.relative_to(workspace)).replace("\\", "/") + "/contract.md"
+            radius_maps[label] = json.loads(mp.read_text(encoding="utf-8"))
+            sp = mp.parent / "scenarios.md"
+            if sp.exists():
+                radius_scen[label] = parse_scenarios_text(sp.read_text(encoding="utf-8"))
+        except (OSError, ValueError, ParseError):
+            continue
+    # C-2.7: the test modules the task's specs live in — touching them is never green
+    spec_files = [test_node(s.run_cmd)[0] for s in scenarios
+                  if s.id in pk["task"].get("verifies", ()) or s.run_cmd in pk["checks"]]
+    spec_files = [f for f in spec_files if f]
+
     def attempt(iteration: int, current: dict):
         # C-5.2: every iteration is a NEW executor process with the same window; the only
         # memory between them is the checkpoint inside the packet and the workspace itself
         t0 = time.perf_counter()
         claim, tokens, err = run_executor(current["text"])
         duration = int((time.perf_counter() - t0) * 1000)
+        after = snapshot(workspace)
+        changed_now = sorted(p for p, sig in after.items() if before.get(p) != sig)
+        extra = radius_checks(changed_now, radius_maps, radius_scen, already=pk["checks"])
         checks = run_checks()
-        v = verdict(before, snapshot(workspace), checks, claim=claim)
+        for cmdline in extra:
+            argv, why = _tokenize(cmdline)
+            if argv and argv[0] in ("python", "python3") and a.check_python:
+                argv[0] = a.check_python
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+            checks.append({"cmd": cmdline, "exit": code, "tail": tail, "radius": True})
+        v = verdict(before, after, checks, claim=claim, spec_files=spec_files)
         rec = record(a.task, a.executor, v, duration_ms=duration, tokens=tokens,
                      ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
         rec["iteration"] = iteration

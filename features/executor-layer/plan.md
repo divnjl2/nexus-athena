@@ -29,7 +29,7 @@ that says, per executor, how often the work landed and went green.
 - [ ] T2.1 Compute the verdict from snapshots and check results; flag touched contracts and derived files
   - success_check: `python -m pytest tests/test_dispatch.py -q -k "verdict or landed or red or flags"`
   - files: `lib/dispatch.py, tests/test_dispatch.py`
-  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5
+  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.6, S2.7
 ### Manual Verification
 - A dispatch whose worker changed nothing ends with `landed: false` whatever the worker said.
 
@@ -52,6 +52,10 @@ that says, per executor, how often the work landed and went green.
   - success_check: `python -m pytest tests/test_dispatch.py -q -k "record or metrics or printed"`
   - files: `lib/dispatch.py, athena.py, tests/test_dispatch.py`
   - verifies: S4.1, S4.2, S4.3
+- [ ] T4.2 Report iterations to green per task in the dispatch metrics
+  - success_check: `python -m pytest tests/test_dispatch.py::test_dispatch_metrics_report_iterations_to_green_per_task -q`
+  - files: `lib/dispatch.py`
+  - verifies: S4.4
 ### Manual Verification
 - `python athena.py metrics features/executor-layer/contract.md --text` shows a dispatch section.
 

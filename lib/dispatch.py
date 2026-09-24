@@ -190,18 +190,27 @@ def snapshot(root) -> dict:
     return out
 
 
-def verdict(before: dict, after: dict, checks: list, *, claim: str = "") -> dict:
-    """PURE: the decision (C-2.1..C-2.4). `checks` is [{cmd, exit, tail}] from the spec
-    commands run AFTER the executor. The claim is kept for the record and ignored."""
+def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
+            spec_files=()) -> dict:
+    """PURE: the decision (C-2.1..C-2.4, C-2.7). `checks` is [{cmd, exit, tail}] from the
+    spec commands run AFTER the executor. The claim is kept for the record and ignored.
+    `spec_files` are the test modules the task's specs live in: a change there is not the
+    task, it is the question being rewritten, and it cannot be green."""
     changed = sorted(p for p, sig in after.items() if before.get(p) != sig)
     deleted = sorted(p for p in before if p not in after)
     touched = changed + deleted
     landed = bool(touched)
     red = [c for c in checks if c.get("exit", 1) != 0]
-    green = bool(checks) and not red
+    spec_set = {str(s).replace("\\", "/") for s in spec_files}
+    spec_touched = [p for p in touched if p.replace("\\", "/") in spec_set]
+    green = bool(checks) and not red and not spec_touched
     flags = [p for p in touched
-             if is_derived(p) or p.rsplit("/", 1)[-1] in HAND_WRITTEN or "/docs/adr/" in f"/{p}"]
+             if is_derived(p) or p.rsplit("/", 1)[-1] in HAND_WRITTEN or "/docs/adr/" in f"/{p}"
+             or p in spec_touched]
     reasons: list[str] = []
+    if spec_touched:
+        reasons.append("the spec's own test file was edited: " + ", ".join(spec_touched)
+                       + " — a spec made to pass is not a requirement met")
     if not landed:
         reasons.append("no file changed: the executor's answer is a claim, not an edit")
     if not checks:
@@ -335,8 +344,15 @@ def parse_dispatches(text: str) -> tuple[list[dict], int]:
 
 
 def dispatch_metrics(records: list) -> dict:
-    """PURE: per executor — attempts, landed rate, green rate, mean duration (C-4.2)."""
+    """PURE: per executor — attempts, landed rate, green rate, mean duration (C-4.2); per
+    task — attempts and the iteration at which it went green, None when it never did (C-4.4).
+
+    The per-task half was dispatched to the local 27b lane (three iterations): it wrote the
+    grouping correctly, forgot the render, and broke the per-executor mean on the way — a
+    regression its own spec could not see, which is what C-2.6 now runs for.
+    """
     by: dict = {}
+    by_task: dict = {}
     for r in records:
         row = by.setdefault(r.get("executor", "?"), {"attempts": 0, "landed": 0, "green": 0,
                                                      "duration_ms": 0})
@@ -344,6 +360,13 @@ def dispatch_metrics(records: list) -> dict:
         row["landed"] += bool(r.get("landed"))
         row["green"] += bool(r.get("green"))
         row["duration_ms"] += int(r.get("duration_ms", 0))
+        task_id = r.get("task")
+        if task_id:
+            t = by_task.setdefault(task_id, {"attempts": 0, "green_at": None, "passed": False})
+            t["attempts"] += 1
+            if r.get("green") and t["green_at"] is None:
+                t["green_at"] = int(r.get("iteration") or t["attempts"])
+                t["passed"] = True
     out = {}
     for name, row in sorted(by.items()):
         n = row["attempts"]
@@ -351,7 +374,8 @@ def dispatch_metrics(records: list) -> dict:
                      "landed_rate": round(row["landed"] / n, 2) if n else 0.0,
                      "green_rate": round(row["green"] / n, 2) if n else 0.0,
                      "mean_duration_ms": round(row["duration_ms"] / n) if n else 0}
-    return {"schema": SCHEMA, "by_executor": out, "attempts": len(records)}
+    return {"schema": SCHEMA, "by_executor": out,
+            "by_task": {k: by_task[k] for k in sorted(by_task)}, "attempts": len(records)}
 
 
 def render_metrics(rep: dict) -> str:
@@ -361,4 +385,29 @@ def render_metrics(rep: dict) -> str:
     for name, row in rep["by_executor"].items():
         lines.append(f"  {name:12} attempts={row['attempts']}  landed={row['landed_rate']}  "
                      f"green={row['green_rate']}  mean={row['mean_duration_ms']} ms")
+    if rep.get("by_task"):
+        lines.append("# dispatch — per task")
+        for task, row in rep["by_task"].items():
+            state = (f"green at iteration {row['green_at']}" if row["passed"]
+                     else f"not green after {row['attempts']}")
+            lines.append(f"  {task:8} attempts={row['attempts']}  {state}")
     return "\n".join(lines)
+
+
+def radius_checks(changed_files, maps: dict, scenarios_by_label: dict, *, already=()) -> list:
+    """PURE: the spec commands of every clause whose map owns lines in a changed file, across
+    every contract that has a map (C-2.6) — the blast radius the pre-edit hook shows the
+    agent, run by the verdict. `maps` and `scenarios_by_label` are keyed by contract label.
+    Commands already in the task's own checks are not repeated."""
+    from lib.hooks import owners_for
+    out: list = []
+    seen = set(already)
+    for path in changed_files:
+        owners = owners_for(path, maps)
+        for label, rows in owners.items():
+            wanted = {cid for cid, _ in rows}
+            for s in scenarios_by_label.get(label, ()):
+                if s.requirement_key in wanted and s.run_cmd not in seen:
+                    seen.add(s.run_cmd)
+                    out.append(s.run_cmd)
+    return out

@@ -21,16 +21,16 @@
   rather than shorten the clauses silently.
 - **C-1.5** — WHEN a spec is a test node whose source can be read THE SYSTEM SHALL carry that
   test's source in the packet.
+  - source: ledger
+  - note: the three iterations that landed nothing spent 3, 4 and 9 turns on Read, one of
+    them into the context ceiling; the one that landed did a single Read. With the spec's
+    own source in the packet there is nothing left to go and read.
 - **C-1.6** — WHEN a packet is about to be executed THE SYSTEM SHALL state each spec's current
   verdict in it, a red one with its output tail.
   - source: ledger
   - note: given the implementer prompt, the file and the test, the 27B viewed the file once
     and called finish: "already complete and correct". Nothing in the packet said the spec
     was red at that moment. Now the packet does.
-  - source: ledger
-  - note: the three iterations that landed nothing spent 3, 4 and 9 turns on Read, one of
-    them into the context ceiling; the one that landed did a single Read. With the spec's
-    own source in the packet there is nothing left to go and read.
 
 ## C-2 — The verdict
 
@@ -47,6 +47,18 @@
   SHALL flag the attempt for review.
 - **C-2.5** — WHEN the executor's claim carries a tool call as plain text THE SYSTEM SHALL
   name a tool-parser mismatch in the reason.
+- **C-2.6** — WHEN a run changed a file THE SYSTEM SHALL also run the specs of every clause
+  whose map owns lines in that file before deciding.
+  - source: ledger
+  - note: the lane implemented C-4.4's grouping correctly and, in the same edit, broke the
+    per-executor mean that C-4.2 proves. The task's own check was the only one run, so the
+    regression was invisible to the verdict. The blast radius the pre-edit hook already
+    computes is now part of the verdict.
+- **C-2.7** — WHEN a run changed the file that holds a spec's test THE SYSTEM SHALL flag the
+  attempt for review and refuse to call it green.
+  - source: review
+  - note: an executor with write access can make a spec pass by editing the spec. The
+    verdict flagged contracts and derived files; the tests were the remaining door.
   - source: incident
   - note: the 27b lane through OpenHands answered the tool schema with
     `{"function": "glob", "parameter": {...}}`; vLLM's hermes parser raised KeyError 'name'
@@ -81,6 +93,10 @@
   attempts, the landed rate and the green rate.
 - **C-4.3** — WHEN a packet is requested without an executor THE SYSTEM SHALL print it and
   record nothing.
+- **C-4.4** — WHEN dispatch metrics are requested THE SYSTEM SHALL report per task the number
+  of iterations it took to reach green or the number spent short of it.
+  - see: ../../docs/adr/0007-qwopus-executes-through-claude-code.md@c0ff469190eeaf07
+  - source: design
 
 ## C-5 — Iterations with checkpoints, so a small window is enough
 
