@@ -29,6 +29,7 @@ def test_a_repo_map_is_built_from_definitions_and_file_votes_are_merged(tmp_path
     assert parse_files_reply('Sure. ```json\n["lib/b.py"]\n```') == ["lib/b.py"]
     assert parse_files_reply("- lib/a.py\n- lib/b.py\n") == ["lib/a.py", "lib/b.py"]
     assert parse_files_reply("I do not know") == []
+    assert parse_files_reply('["C-7.2", "athena.py", "not a path"]') == ["athena.py"]   # measured: a sample answered the clause id
 
     merged = merge_votes([["lib/a.py", "lib/b.py"], ["lib/b.py"], ["lib/b.py", "lib/c.py"]], top=2)
     assert merged == ["lib/b.py", "lib/a.py"]

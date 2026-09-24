@@ -122,7 +122,24 @@ def merge_votes(votes_list, top=None):
     return result
 
 
+def _pathlike(items):
+    """Only entries that look like repository paths: a slash or a file extension, no spaces,
+    not a clause id. Measured: one 27B sample answered "C-7.2" for the files question."""
+    out = []
+    for x in items or []:
+        s = str(x).strip().strip("`'\"").replace("\\", "/")
+        if not s or " " in s or s.startswith("C-") or not ("/" in s or "." in s.rsplit("/", 1)[-1]):
+            continue
+        if s not in out:
+            out.append(s)
+    return out
+
+
 def parse_files_reply(reply):
+    return _pathlike(_parse_files_reply_raw(reply))
+
+
+def _parse_files_reply_raw(reply):
     """Parse a files reply from a localiser, handling various formats."""
     reply = reply.strip()
     
