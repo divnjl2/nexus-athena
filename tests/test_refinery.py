@@ -154,6 +154,14 @@ def test_an_offer_is_admitted_only_on_a_green_last_record():
     assert none["ok"] is False and "no record" in none["reason"]
 
     assert admit([], "T1.1")["ok"] is False
+    # the workspace narrows the record: another executor's later red run elsewhere is not
+    # this worktree's verdict, and a record without a workspace still counts
+    here = dict(green, workspace="D:/w/ref-9")
+    elsewhere = dict(red, executor="pi-27b", workspace="D:/w/ref-27")
+    assert admit([here, elsewhere], "T1.1", workspace="D:/w/ref-9")["ok"] is True
+    assert admit([here, elsewhere], "T1.1")["ok"] is False
+    assert admit([here, elsewhere], "T1.1", workspace="D:/w/ref-27")["ok"] is False
+    assert admit([green, elsewhere], "T1.1", workspace="D:\\w\\ref-9")["ok"] is True
 
 
 def test_a_conflicting_rebase_is_aborted_and_the_files_named(tmp_path):

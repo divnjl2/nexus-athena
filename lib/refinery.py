@@ -1,21 +1,20 @@
 import json
 
-def admit(records: list[dict], task: str) -> dict:
-    """C-2.1: admit an offer only when its last record for the task is green.
-
-    Returns a dict with 'ok' and a 'reason' that includes 'green' if admitted,
-    or 'not green'/'no record' if refused."""
-    task_records = [r for r in records if r.get("task") == task]
-
-    if not task_records:
-        return {"ok": False, "reason": "no record"}
-
-    last_record = task_records[-1]
-
-    if not last_record.get("green"):
-        return {"ok": False, "reason": "not green"}
-
-    return {"ok": True, "reason": "green"}
+def admit(records: list, task: str, workspace: str = "") -> dict:
+    """C-2.1: admit an offer only when the last record for the task is green. With a
+    workspace named, only the records written from that workspace count — a benchmark of
+    the same task on another executor elsewhere is not this offer's verdict."""
+    ws = str(workspace).replace("\\", "/").rstrip("/") if workspace else ""
+    mine = [r for r in records if r.get("task") == task
+            and (not ws or not r.get("workspace") or str(r.get("workspace")).replace("\\", "/").rstrip("/") == ws)]
+    if not mine:
+        return {"ok": False, "reason": f"no record for task {task}" + (f" in {ws}" if ws else "")}
+    last = mine[-1]
+    if not last.get("green"):
+        return {"ok": False, "reason": f"last record is not green for task {task}: "
+                                       f"{last.get('executor', '?')} iteration {last.get('iteration', '?')}"}
+    return {"ok": True, "reason": f"last record is green for task {task}: "
+                                  f"{last.get('executor', '?')} iteration {last.get('iteration', '?')}"}
 
 
 def first_failure(records: list[dict]) -> str:

@@ -379,9 +379,12 @@ def unparsed_tool_call(claim: str) -> bool:
 
 
 def record(task_id: str, executor: str, result: dict, *, duration_ms: int, tokens: dict | None,
-           ts: str) -> dict:
-    """PURE: one line of the dispatch record (C-4.1)."""
+           ts: str, workspace: str = "") -> dict:
+    """PURE: one line of the dispatch record (C-4.1). The workspace is named so a merge offer
+    is admitted on THIS worktree's last verdict, not on another executor's run of the same
+    task elsewhere (C-2.1 of the refinery)."""
     return {"schema": SCHEMA, "ts": ts, "task": task_id, "executor": executor,
+            "workspace": str(workspace).replace("\\", "/").rstrip("/"),
             "landed": bool(result.get("landed")), "green": bool(result.get("green")),
             "passed": bool(result.get("passed")), "duration_ms": int(duration_ms),
             "tokens": {k: int(v) for k, v in (tokens or {}).items() if isinstance(v, int)},

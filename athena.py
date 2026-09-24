@@ -1415,7 +1415,7 @@ def cmd_merge(a) -> int:
             _emit(out)
         return 0 if ok else 1
 
-    d = admit(records, a.task)
+    d = admit(records, a.task, workspace=str(workspace))
     if not d.get("ok"):
         return end("admit", False, d.get("reason", "not admitted"))
 
@@ -1868,7 +1868,8 @@ def cmd_dispatch(a) -> int:
 
     def write_record(r: dict, iteration: int, *, attempt_no: int = 0, winner: bool = True) -> None:
         rec = record(a.task, a.executor, r["v"], duration_ms=r["duration"], tokens=r["tokens"],
-                     ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
+                     ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+                     workspace=str(workspace))
         rec["iteration"] = iteration
         if attempt_no:
             rec["attempt"] = attempt_no          # C-5.7: every fanned attempt is recorded
