@@ -102,3 +102,63 @@ def render_merge_metrics(rep: dict) -> str:
         refused = ", ".join(f"{k}={v}" for k, v in sorted(row["refused"].items())) or "none"
         lines.append(f"  {ex:12} green={row['green']}  merged={row['merged']}  refused: {refused}")
     return chr(10).join(lines)
+
+
+# --- rebase and fast-forward, through an injected runner (C-2.2, C-2.4) ------------------
+
+def conflicts_from(output: str) -> list:
+    """PURE: the paths git names in CONFLICT lines, in order, once each."""
+    out: list = []
+    for line in (output or "").splitlines():
+        line = line.strip()
+        if not line.startswith("CONFLICT"):
+            continue
+        _, _, detail = line.partition("): ")
+        if not detail:
+            continue
+        if detail.startswith("Merge conflict in "):
+            path = detail[len("Merge conflict in "):].strip()
+        else:
+            # "dir/b.py deleted in HEAD and modified in ..." / "a.txt added in ..."
+            path = detail.split(" deleted in ", 1)[0].split(" added in ", 1)[0].split(" modified in ", 1)[0].strip()
+        if path and path not in out:
+            out.append(path)
+    return out
+
+
+def rebase(run, workspace: str, target: str) -> dict:
+    """EFFECTFUL through `run` (C-2.2): rebase the workspace onto the target; a rebase that
+    stops is aborted and the offer refused with the conflicting files named."""
+    code, out = run(["git", "rebase", target], workspace)
+    if code == 0:
+        return {"ok": True, "conflicts": [], "reason": f"rebased onto {target}"}
+    conflicts = conflicts_from(out)
+    run(["git", "rebase", "--abort"], workspace)
+    named = ", ".join(conflicts) if conflicts else out.strip()[-300:]
+    return {"ok": False, "conflicts": conflicts,
+            "reason": f"rebase onto {target} stopped, aborted; conflicts: {named}"}
+
+
+def fast_forward(run, workspace: str, target: str) -> dict:
+    """EFFECTFUL through `run` (C-2.4): move the target ref to the workspace head when the
+    target is its ancestor — a compare-and-set on the ref, never a merge commit. When the
+    target is checked out somewhere, that worktree's files stay where they were."""
+    code, head = run(["git", "rev-parse", "HEAD"], workspace)
+    head = head.strip()
+    if code != 0 or not head:
+        return {"ok": False, "head": "", "old": "", "reason": f"no head in {workspace}: {head[-200:]}"}
+    code, old = run(["git", "rev-parse", "--verify", f"refs/heads/{target}"], workspace)
+    old = old.strip() if code == 0 else ""
+    if old:
+        code, _ = run(["git", "merge-base", "--is-ancestor", old, head], workspace)
+        if code != 0:
+            return {"ok": False, "head": head, "old": old,
+                    "reason": f"{target} cannot be fast-forwarded to {head[:12]}: it is not an ancestor "
+                              f"(rebase first)"}
+        if old == head:
+            return {"ok": True, "head": head, "old": old, "reason": f"{target} already at {head[:12]}"}
+    argv = ["git", "update-ref", f"refs/heads/{target}", head] + ([old] if old else [])
+    code, out = run(argv, workspace)
+    if code != 0:
+        return {"ok": False, "head": head, "old": old, "reason": f"update-ref failed: {out.strip()[-200:]}"}
+    return {"ok": True, "head": head, "old": old, "reason": f"{target} {old[:12] or '(new)'} -> {head[:12]}"}
