@@ -1,5 +1,5 @@
 {
-  "contract_version": "1e0d2dcc8ff02aad",
+  "contract_version": "51f7dfeacdd90373",
   "results": [
     {
       "clause": "C-1.1",
@@ -154,21 +154,71 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 87,
+      "duration_ms": 77,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_packet_without_an_executor_is_printed_and_not_recorded -q",
       "scenario": "S4.3"
+    },
+    {
+      "clause": "C-5.1",
+      "clause_version": "a3308008101ea43e",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_short_iteration_writes_a_checkpoint_with_files_reds_and_last_words -q",
+      "scenario": "S5.1"
+    },
+    {
+      "clause": "C-5.2",
+      "clause_version": "644c2f4b0e867a45",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_the_next_iteration_carries_the_checkpoint_and_starts_fresh -q",
+      "scenario": "S5.2"
+    },
+    {
+      "clause": "C-5.3",
+      "clause_version": "27efd5ac5055f0f1",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_passing_iteration_stops_the_loop_and_records_the_count -q",
+      "scenario": "S5.3"
+    },
+    {
+      "clause": "C-5.4",
+      "clause_version": "d525bc4978a64e49",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_checkpoint_emits_the_bd_notes_command -q",
+      "scenario": "S5.4"
+    },
+    {
+      "clause": "C-5.5",
+      "clause_version": "acaf8fb97c70da7f",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_dispatch.py::test_a_spent_budget_keeps_the_checkpoint_and_reports_red -q",
+      "scenario": "S5.5"
     }
   ],
-  "scenario_version": "af030c5748e88421",
+  "scenario_version": "81df535c2dcb99c4",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 102,
+    "duration_ms": 97,
     "failed": 0,
-    "passed": 16,
-    "total": 16
+    "passed": 21,
+    "total": 21
   },
-  "ts": "2026-09-23T21:06:01+00:00"
+  "ts": "2026-09-24T06:40:49+00:00"
 }

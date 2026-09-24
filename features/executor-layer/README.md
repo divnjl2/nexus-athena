@@ -19,6 +19,11 @@ python athena.py dispatch features/team-layer/contract.md --front features/team-
 python athena.py dispatch <contract> --front <plan> --task T1.1 --executor openhands \
     --model openai/qwopus-27b --workspace <worktree> --text
 
+# long work on a small window: fresh-context iterations, a checkpoint (files changed, red
+# commands, last words) carried in the packet, optionally appended to the bd task's notes
+python athena.py dispatch <contract> --front <plan> --task T1.1 --executor local-27b \
+    --iterations 3 --bd --workspace <worktree> --text
+
 python athena.py metrics <contract> --text        # runs to green + per-executor landed/green rates
 python athena.py check features/executor-layer/contract.md --front features/executor-layer/plan.md \
     --ledger features/executor-layer/spec_ledger.json --map features/executor-layer/clause_map.json --text

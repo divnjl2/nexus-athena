@@ -349,6 +349,7 @@ group in [`features/executor-layer/contract.md`](./features/executor-layer/contr
 | verdict | workspace snapshot before and after plus the spec commands run afterwards; no diff = not landed; a red command = red with its tail; a touched ledger, map or contract = flagged for review | C-2.* |
 | executors | a registry: `local-27b`, `local-9b` (Claude Code worker on a local model through the gateway, read and edit tools only, turns and output capped), `openhands` (SDK in-process, no Docker), `claude`; unavailable is an answer, not a traceback | C-3.* |
 | record | one line per attempt; `athena metrics` reports per executor the attempts, the landed rate and the green rate | C-4.* |
+| iterations | the window stays small (30k, six slots for multitasking); long work crosses fresh-context iterations through a checkpoint: files changed, red commands, last words, carried in the next packet and appended to the bd task's notes; stop on the first green | C-5.* |
 
 What made the local lane land edits at all, measured on this repository: inline the files
 the task names (the 27b worker had spent all its turns on Read, two of them on wrong paths)
