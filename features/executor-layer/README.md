@@ -37,7 +37,7 @@ dispatch, read the verdicts. Whoever typed the code is judged the same way.
 | executor | attempts | landed | what the verdict said |
 |---|---|---|---|
 | local-27b through the lanes bridge | 3 | 0 | ten turns spent on Read; `response exceeded the 2048 output token maximum`; a 15-minute timeout that hung for 30 (pipes inherited by a grandchild) |
-| local-27b through `athena dispatch` | 3 | **1 landed, green** | the whole T5.1 packet was over budget (112k chars: refused, as C-1.4 says); on T5.2 the worker read a memorised path 28 times; with the root named absolutely and the task sliced to one clause and one file it did one Read, one Edit, and the spec went green (9.5 min, 86k in / 13k out tokens) |
+| local-27b through `athena dispatch`, then `--iterations 3` with checkpoints | 6 | **1 landed, green** | the landing: one Read, one Edit at 30 turns. The three iterations at 20 turns: 3, 4 and 9 Reads, one ContextWindowExceeded, no edit; the checkpoint carried, the records show iteration 1..3, the verdict named each. The reads are the window killer: the packet now carries the spec's own test source so there is nothing left to read | the whole T5.1 packet was over budget (112k chars: refused, as C-1.4 says); on T5.2 the worker read a memorised path 28 times; with the root named absolutely and the task sliced to one clause and one file it did one Read, one Edit, and the spec went green (9.5 min, 86k in / 13k out tokens) |
 | openhands, 27b, terminal tool | 1 | 0 | bash spoken to PowerShell, stuck detector |
 | openhands, 27b, guessed tool calling | 1 | 0 | `{"function": ...}` text, hermes parser KeyError (C-2.5) |
 | openhands, 27b, native tools | 3 | 0 | context window exceeded once; then the condenser summary lost the task ("the user sent a greeting") |

@@ -1407,9 +1407,19 @@ def cmd_dispatch(a) -> int:
             p = workspace / rel
             if p.is_file():
                 files[rel] = p.read_text(encoding="utf-8", errors="replace")
+    # C-1.5: the spec's own test source travels in the packet, so the executor has nothing
+    # left to read — the reads were what blew the 30k window
+    from lib.dispatch import test_node, test_source
+    spec_sources: dict = {}
+    for s in scenarios:
+        path, func = test_node(s.run_cmd)
+        if path and func and (workspace / path).is_file():
+            src = test_source((workspace / path).read_text(encoding="utf-8", errors="replace"), func)
+            if src:
+                spec_sources[s.id] = src
     try:
         pk = packet(contract, scenarios, plan, a.task, files=files, budget_chars=a.budget,
-                    root=str(workspace))
+                    root=str(workspace), spec_sources=spec_sources)
     except DispatchError as e:
         _emit({"passed": False, "error": str(e)})
         return 2

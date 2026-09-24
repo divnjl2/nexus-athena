@@ -39,6 +39,14 @@
 - **When** the spec `test_an_oversized_packet_is_reported_not_trimmed` is executed
 - **Then** a packet over the budget carries over_budget with the estimate, and its clauses are intact.
 
+### S1.5 — a spec's own test source travels in the packet
+- **verifies:** C-1.5
+- **pins:** 6a01fd5af2fc5805
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_a_specs_own_test_source_travels_in_the_packet -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_a_specs_own_test_source_travels_in_the_packet` is executed
+- **Then** the test function named by a spec's run_cmd is extracted from its module and rendered in the packet under the spec's id.
+
 ## C-2 — proved by the dispatch module (lib/dispatch.py)
 
 ### S2.1 — the verdict ignores the executor's report

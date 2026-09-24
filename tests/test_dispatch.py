@@ -105,6 +105,25 @@ def test_an_oversized_packet_is_reported_not_trimmed():
     assert not packet(CONTRACT, SCENARIOS, PLAN, "T1.1")["over_budget"]
 
 
+def test_a_specs_own_test_source_travels_in_the_packet():
+    """C-1.5 — the reads are the window killer; the test the spec names rides in the packet
+    so there is nothing left to go and read."""
+    from lib.dispatch import test_node, test_source
+    module = ('import pytest\n\n\n@pytest.mark.slow\ndef test_b():\n    """C-1.1 — b."""\n'
+              '    assert do_b() == 1\n\n\ndef test_other():\n    assert True\n')
+    assert test_node("python -m pytest tests/test_demo.py::test_b -q") == ("tests/test_demo.py", "test_b")
+    assert test_node("python -m pytest tests/test_demo.py::test_b[x-y] -q")[1] == "test_b"
+    assert test_node("python -m athena case run cases/S1.2.json") == ("", "")
+    src = test_source(module, "test_b")
+    assert src.startswith("@pytest.mark.slow\ndef test_b():") and "do_b() == 1" in src
+    assert "test_other" not in src and test_source(module, "test_nope") == ""
+    assert test_source("def broken(:\n", "broken") == ""
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1", spec_sources={"S1.1": src})
+    assert pk["specs"][0]["source"] == src and pk["specs"][1]["source"] == ""
+    assert "### S1.1" in pk["text"] and "do_b() == 1" in pk["text"]
+    assert "do not Read the test files" in pk["text"]
+
+
 GREEN = [{"cmd": "python -m pytest tests/test_demo.py -q", "exit": 0, "tail": ""}]
 
 
