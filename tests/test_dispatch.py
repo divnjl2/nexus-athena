@@ -124,6 +124,25 @@ def test_a_specs_own_test_source_travels_in_the_packet():
     assert "do not Read the test files" in pk["text"]
 
 
+def test_the_packet_states_each_specs_current_verdict_before_the_executor_starts():
+    """C-1.6 — a red spec with its tail is what tells an executor the task is not done;
+    a model without it looked at a complete-looking file and called finish."""
+    from lib.dispatch import packet_with_status
+    pk = packet(CONTRACT, SCENARIOS, PLAN, "T1.1")
+    checks = [{"cmd": "python -m pytest tests/test_demo.py::test_b -q", "exit": 1,
+               "tail": "AssertionError: expected 12 names, got 20"},
+              {"cmd": "python -m pytest tests/test_demo.py -q", "exit": 0, "tail": ""}]
+    out = packet_with_status(pk, checks)
+    assert out["status"] == {"red": 1, "total": 2}
+    assert "1 red of 2" in out["text"]
+    assert "RED: `python -m pytest tests/test_demo.py::test_b -q`" in out["text"]
+    assert "expected 12 names, got 20" in out["text"]
+    assert "green: `python -m pytest tests/test_demo.py -q`" in out["text"]
+    assert "not done until it is green" in out["text"]
+    assert out["text"].startswith(pk["text"].rstrip("\n")), "the packet first, then the state"
+    assert out["clauses"] == pk["clauses"]
+
+
 GREEN = [{"cmd": "python -m pytest tests/test_demo.py -q", "exit": 0, "tail": ""}]
 
 

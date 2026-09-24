@@ -21,6 +21,12 @@
   rather than shorten the clauses silently.
 - **C-1.5** — WHEN a spec is a test node whose source can be read THE SYSTEM SHALL carry that
   test's source in the packet.
+- **C-1.6** — WHEN a packet is about to be executed THE SYSTEM SHALL state each spec's current
+  verdict in it, a red one with its output tail.
+  - source: ledger
+  - note: given the implementer prompt, the file and the test, the 27B viewed the file once
+    and called finish: "already complete and correct". Nothing in the packet said the spec
+    was red at that moment. Now the packet does.
   - source: ledger
   - note: the three iterations that landed nothing spent 3, 4 and 9 turns on Read, one of
     them into the context ceiling; the one that landed did a single Read. With the spec's
