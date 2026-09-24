@@ -104,3 +104,24 @@ Two harness levers measured after that, on the 9B:
 - **strict tool calling** (C-6.7, the relay marks tools strict; the lane's grammar applies):
   the smoke went read -> edit -> DONE in two clean calls where the plain run had fumbled a
   `replacement_lines` argument three times. Default for the next batch.
+
+## Measured on 2026-09-24, night: strict tool calling against the senior's brief
+
+Controls run after the brief looked like the lever. Same packets, vanilla 9B through pi:
+
+| task | no strict, no brief | strict only | strict + 27B brief | strict + 9B brief |
+|---|---|---|---|---|
+| C-2.2 rebase, real git | 0 of 3 | green @2, 135 s | green @1, 368 s | green @2, 366 s |
+| C-1.1 edit in a 20k module | 0 of 3 (0 of 12 in the day) | green @1, 397 s | green @2 | - |
+| T7.4 two files | 0 of 3 | - | red x3, landed each time | - |
+| T7.2 threads in a 2,400-line module | 0 of 3 | - | red x3, landed each time, 350 lines | - |
+
+The lever was strict tool calling (C-6.7), not the brief: with the lane's grammar on the
+call the 9B lands the two "impossible" tasks without any reader. The brief moved nothing
+measurable (one iteration either way, n=1 per cell). The class past the envelope — two
+files, concurrency inside a large module — stays red with or without a brief.
+
+Speed, measured: the prompt prefix pi sends is byte-identical between turns (traced: same
+system prompt, same tools, history appended), so the 13-23% prefix-cache hit rate in
+production against 89% in a controlled test is the KV pool: the 27B lane holds 80,457
+tokens, 2.6 full contexts, block 2,080 tokens — three concurrent requests evict everything.
