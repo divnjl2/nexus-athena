@@ -121,6 +121,17 @@
   to the task's notes in the task graph.
 - **C-5.5** — WHEN the iteration budget is spent short of green THE SYSTEM SHALL keep the last
   checkpoint and report the dispatch red.
+- **C-5.6** — WHEN a dispatch is fanned out THE SYSTEM SHALL run the attempts of one iteration
+  concurrently, each in its own copy of the workspace, and take the first green verdict as
+  the iteration's result.
+  - source: review
+  - note: reasoning models in agentic loops overthink — analysis paralysis, rogue actions,
+    premature disengagement — and picking the lower-overthinking trajectory out of several
+    gave about +30% on SWE tasks at -43% cost (arXiv 2502.08235). The lanes think before
+    every action; a second attempt costs a slot, not a subscription.
+- **C-5.7** — WHEN no fanned attempt is green THE SYSTEM SHALL carry forward the attempt that
+  landed with the fewest red checks, the quicker one on a tie, and record every attempt.
+  - source: review
 
 ## C-6 — The gateway relay: adapt on the client side, never on the lanes
 

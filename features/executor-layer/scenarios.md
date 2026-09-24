@@ -239,6 +239,22 @@
 - **When** the spec `test_a_spent_budget_keeps_the_checkpoint_and_reports_red` is executed
 - **Then** three failing iterations end red with three checkpoints, the last one kept.
 
+### S5.6 — fanned attempts keep the first green verdict
+- **verifies:** C-5.6
+- **pins:** cfe15fba21bf653d
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_fanned_attempts_keep_the_first_green_verdict -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_fanned_attempts_keep_the_first_green_verdict` is executed
+- **Then** of several attempts' verdicts the first green one is picked, and the copies are named beside the workspace.
+
+### S5.7 — without a green attempt the least red landing is carried forward
+- **verifies:** C-5.7
+- **pins:** f889324f9b1b2971
+- **run_cmd:** `python -m pytest tests/test_dispatch.py::test_without_a_green_attempt_the_least_red_landing_is_carried_forward -q`
+- **Given** tests/test_dispatch.py
+- **When** the spec `test_without_a_green_attempt_the_least_red_landing_is_carried_forward` is executed
+- **Then** the landed attempt with the fewest red checks is picked, the quicker on a tie, and none when nothing landed.
+
 ## C-6 — proved by the tool-call normaliser (lib/toolcalls.py)
 
 ### S6.1 — a tool call left as text becomes a structured call

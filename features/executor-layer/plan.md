@@ -67,6 +67,10 @@ that says, per executor, how often the work landed and went green.
   - success_check: `python -m pytest tests/test_dispatch.py -q -k "checkpoint or iteration or budget"`
   - files: `lib/dispatch.py, athena.py, tests/test_dispatch.py`
   - verifies: S5.1, S5.2, S5.3, S5.4, S5.5
+- [ ] T5.2 Fan out the attempts of an iteration over copies of the workspace; keep the first green, else the least red landing
+  - success_check: `python -m pytest tests/test_dispatch.py -q -k "fanned or least_red"`
+  - files: `lib/dispatch.py, athena.py, tests/test_dispatch.py`
+  - verifies: S5.6, S5.7
 ### Manual Verification
 - `python athena.py dispatch ... --executor local-27b --iterations 3 --text` reports the iteration count and leaves `.athena/checkpoints/<task>.md` when short of green.
 

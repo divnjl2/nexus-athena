@@ -353,6 +353,28 @@ def run_iterations(pk: dict, attempt, *, budget: int = 1) -> dict:
             "verdict": result, "last_checkpoint": checkpoints[-1] if checkpoints else None}
 
 
+def pick_winner(results: list) -> int | None:
+    """PURE: which fanned attempt the iteration keeps (C-5.6, C-5.7). `results` are the
+    attempts' verdicts in completion order. The first green wins. Short of green, the
+    attempt that landed with the fewest red checks, the quicker one on a tie — the
+    lower-overthinking trajectory, which the measured literature says to prefer. None when
+    nothing landed: there is nothing to carry forward."""
+    for i, r in enumerate(results):
+        if r.get("green") and r.get("landed"):
+            return i
+    landed = [(len(r.get("red") or []), int(r.get("duration_ms") or 0), i)
+              for i, r in enumerate(results) if r.get("landed")]
+    if not landed:
+        return None
+    return min(landed)[2]
+
+
+def fan_names(workspace: str, n: int) -> list:
+    """PURE: the sibling paths the fanned attempts work in, one copy of the workspace each."""
+    base = str(workspace).replace("\\", "/").rstrip("/")
+    return [f"{base}-fan{k}" for k in range(1, max(1, int(n)) + 1)]
+
+
 def parse_dispatches(text: str) -> tuple[list[dict], int]:
     """PURE: dispatch.jsonl -> (records, skipped)."""
     records, skipped = [], 0

@@ -1381,6 +1381,74 @@ def _worker_json(stdout: str) -> dict:
     return {}
 
 
+def _git(argv: list, cwd) -> tuple[int, str]:
+    import subprocess
+    try:
+        p = subprocess.run(["git", *argv], cwd=str(cwd), capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=300)
+    except (OSError, subprocess.SubprocessError) as e:
+        return 127, str(e)
+    return p.returncode, (p.stdout or "") + (p.stderr or "")
+
+
+def _fan_out(workspace: pathlib.Path, names: list) -> list:
+    """EFFECTFUL (C-5.6): one detached worktree per fanned attempt at the workspace's HEAD,
+    carrying its uncommitted changes and untracked files, so every attempt starts from the
+    same state the checkpoint describes."""
+    import shutil
+    copies: list = []
+    code, head = _git(["rev-parse", "HEAD"], workspace)
+    if code != 0:
+        raise RuntimeError(f"fan-out needs a git workspace: {head.strip()[:200]}")
+    _, diff = _git(["diff", "--binary", "HEAD"], workspace)
+    _, untracked = _git(["ls-files", "--others", "--exclude-standard"], workspace)
+    for name in names:
+        ws = pathlib.Path(name)
+        if ws.exists():
+            _git(["worktree", "remove", "--force", str(ws)], workspace)
+            shutil.rmtree(ws, ignore_errors=True)
+        code, out = _git(["worktree", "add", "--detach", str(ws), head.strip()], workspace)
+        if code != 0:
+            raise RuntimeError(f"could not create {ws}: {out.strip()[:200]}")
+        if diff.strip():
+            import subprocess
+            subprocess.run(["git", "apply", "--binary", "--whitespace=nowarn"], cwd=str(ws), input=diff,
+                           capture_output=True, text=True, encoding="utf-8")
+        for rel in untracked.split("\n"):
+            rel = rel.strip()
+            if rel:
+                src, dst = workspace / rel, ws / rel
+                if src.is_file():
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dst)
+        copies.append(ws)
+    return copies
+
+
+def _adopt(workspace: pathlib.Path, winner: pathlib.Path, changed: list, deleted: list) -> None:
+    """EFFECTFUL (C-5.6, C-5.7): the kept attempt's files become the workspace's."""
+    import shutil
+    for rel in changed:
+        src, dst = winner / rel, workspace / rel
+        if src.is_file():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    for rel in deleted:
+        try:
+            (workspace / rel).unlink()
+        except OSError:
+            pass
+
+
+def _fan_in(workspace: pathlib.Path, copies: list) -> None:
+    """EFFECTFUL: the fanned worktrees are removed; the record keeps what they did."""
+    import shutil
+    for ws in copies:
+        _git(["worktree", "remove", "--force", str(ws)], workspace)
+        shutil.rmtree(ws, ignore_errors=True)
+    _git(["worktree", "prune"], workspace)
+
+
 def _run_command_executor(cmd: dict, *, cwd: pathlib.Path, timeout: int) -> tuple[str, dict, str]:
     """EFFECTFUL: spawn a Claude Code worker (local lane or subscription); return
     (claim text, tokens, worker error)."""
@@ -1566,16 +1634,16 @@ def cmd_dispatch(a) -> int:
     before = snapshot(workspace)
     state = {"tokens": {}, "err": "", "checks": [], "duration": 0, "claim": ""}
 
-    def run_executor(text: str):
+    def run_executor(text: str, ws: pathlib.Path):
         if spec["kind"] == "local":
             cmd = local_lane_command(a.executor, text, max_turns=a.max_turns,
                                      claude_bin=claude_binary(), auth_token=_gateway_key())
-            return _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
+            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
         if spec["kind"] == "claude":
             cmd = claude_command(text, max_turns=a.max_turns, claude_bin=claude_binary())
             cmd["unset"] = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]
-            return _run_command_executor(cmd, cwd=workspace, timeout=a.timeout)
-        cfg = openhands_config(text, workspace=str(workspace),
+            return _run_command_executor(cmd, cwd=ws, timeout=a.timeout)
+        cfg = openhands_config(text, workspace=str(ws),
                                model=a.model or "openai/qwopus-27b",
                                base_url=a.base_url if a.base_url is not None else LOCAL_GATEWAY + "/v1",
                                max_iterations=a.max_turns, terminal=a.terminal,
@@ -1583,7 +1651,7 @@ def cmd_dispatch(a) -> int:
         cfg["native_tools"] = None if a.native_tools == "auto" else (a.native_tools == "on")
         return _run_openhands(cfg)
 
-    def run_checks() -> list:
+    def run_checks(ws: pathlib.Path = workspace) -> list:
         rows = []
         for cmdline in pk["checks"]:
             argv, why = _tokenize(cmdline)
@@ -1592,7 +1660,7 @@ def cmd_dispatch(a) -> int:
                 # when dispatch itself runs from a venv, Windows resolves `python` from the
                 # parent's image directory. The check runs with the interpreter the caller named.
                 argv[0] = a.check_python
-            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
             rows.append({"cmd": cmdline, "exit": code, "tail": tail})
         return rows
 
@@ -1616,28 +1684,69 @@ def cmd_dispatch(a) -> int:
                   if s.id in pk["task"].get("verifies", ()) or s.run_cmd in pk["checks"]]
     spec_files = [f for f in spec_files if f]
 
-    def attempt(iteration: int, current: dict):
-        # C-5.2: every iteration is a NEW executor process with the same window; the only
-        # memory between them is the checkpoint inside the packet and the workspace itself
+    def one_attempt(ws: pathlib.Path, before_ws: dict, current: dict) -> dict:
+        """One executor process in one workspace, judged there: verdict, claim, checks."""
         t0 = time.perf_counter()
-        claim, tokens, err = run_executor(current["text"])
+        claim, tokens, err = run_executor(current["text"], ws)
         duration = int((time.perf_counter() - t0) * 1000)
-        after = snapshot(workspace)
-        changed_now = sorted(p for p, sig in after.items() if before.get(p) != sig)
+        after = snapshot(ws)
+        changed_now = sorted(p for p, sig in after.items() if before_ws.get(p) != sig)
         extra = radius_checks(changed_now, radius_maps, radius_scen, already=pk["checks"])
-        checks = run_checks()
+        checks = run_checks(ws)
         for cmdline in extra:
             argv, why = _tokenize(cmdline)
             if argv and argv[0] in ("python", "python3") and a.check_python:
                 argv[0] = a.check_python
-            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
             checks.append({"cmd": cmdline, "exit": code, "tail": tail, "radius": True})
-        v = verdict(before, after, checks, claim=claim, spec_files=spec_files)
-        rec = record(a.task, a.executor, v, duration_ms=duration, tokens=tokens,
+        v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files)
+        v["duration_ms"] = duration
+        return {"v": v, "claim": claim, "tokens": tokens, "err": err, "checks": checks,
+                "duration": duration, "ws": ws}
+
+    def write_record(r: dict, iteration: int, *, attempt_no: int = 0, winner: bool = True) -> None:
+        rec = record(a.task, a.executor, r["v"], duration_ms=r["duration"], tokens=r["tokens"],
                      ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
         rec["iteration"] = iteration
+        if attempt_no:
+            rec["attempt"] = attempt_no          # C-5.7: every fanned attempt is recorded
+            rec["winner"] = winner
         with dpath.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+    def attempt(iteration: int, current: dict):
+        # C-5.2: every iteration is a NEW executor process with the same window; the only
+        # memory between them is the checkpoint inside the packet and the workspace itself
+        if a.fanout <= 1:
+            r = one_attempt(workspace, before, current)
+            write_record(r, iteration)
+        else:
+            # C-5.6: the same packet into N copies of the workspace at once; the first green
+            # verdict is the iteration's, else the least red landing is carried forward
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            from lib.dispatch import fan_names, pick_winner
+            copies = _fan_out(workspace, fan_names(str(workspace), a.fanout))
+            results: list = []
+            try:
+                befores = {ws: snapshot(ws) for ws in copies}
+                with ThreadPoolExecutor(max_workers=len(copies)) as pool:
+                    futs = {pool.submit(one_attempt, ws, befores[ws], current): ws for ws in copies}
+                    for fut in as_completed(futs):
+                        results.append(fut.result())
+                win = pick_winner([r["v"] for r in results])
+                for k, r in enumerate(results, 1):
+                    write_record(r, iteration, attempt_no=k, winner=(win is not None and results[win] is r))
+                if win is None:
+                    r = results[0]
+                    r["v"]["reason"] = (f"{len(results)} fanned attempts, none landed; " + r["v"]["reason"])
+                else:
+                    r = results[win]
+                    _adopt(workspace, r["ws"], r["v"]["changed_files"], r["v"]["deleted_files"])
+                    r["v"]["reason"] = (f"attempt {win + 1} of {len(results)} kept" + ("; " if r["v"]["reason"] else "")
+                                        + r["v"]["reason"])
+            finally:
+                _fan_in(workspace, copies)
+        v, claim, tokens, err, checks, duration = r["v"], r["claim"], r["tokens"], r["err"], r["checks"], r["duration"]
         state.update(tokens=tokens, err=err, checks=checks, duration=duration, claim=claim)
         if not v["passed"]:
             from lib.dispatch import checkpoint as make_checkpoint, render_checkpoint
@@ -1959,6 +2068,9 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
+    dp.add_argument("--fanout", type=int, default=1,
+                    help="attempts per iteration, each in its own copy of the workspace; the "
+                         "first green wins, else the least red landing is carried forward (C-5.6)")
     dp.add_argument("--iterations", type=int, default=1,
                     help="fresh-context iterations on the same task; a checkpoint (files changed, "
                          "red commands, last words) carries between them so a 30k window is enough")

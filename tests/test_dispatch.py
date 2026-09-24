@@ -378,3 +378,32 @@ def test_the_packet_ends_with_the_order_to_act():
     budgeted = packet_with_status(pk, [{"cmd": "x", "exit": 1, "tail": ""}], output_tokens=8192)
     assert "8192 tokens" in budgeted["text"] and "thinking counts" in budgeted["text"]
     assert "capped at" not in out["text"]
+
+
+def test_fanned_attempts_keep_the_first_green_verdict():
+    """C-5.6: of the attempts of one iteration, run in separate copies of the workspace, the
+    first green verdict is the iteration's result; the copies are named beside the workspace."""
+    from lib.dispatch import fan_names, pick_winner
+    red = {"landed": True, "green": False, "red": [{"cmd": "x", "exit": 1}], "duration_ms": 50}
+    green = {"landed": True, "green": True, "red": [], "duration_ms": 90}
+    later_green = {"landed": True, "green": True, "red": [], "duration_ms": 120}
+    assert pick_winner([red, green, later_green]) == 1
+    assert pick_winner([green]) == 0
+    assert fan_names("D:/w/ref-a", 3) == ["D:/w/ref-a-fan1", "D:/w/ref-a-fan2", "D:/w/ref-a-fan3"]
+    assert fan_names("D:/w/ref-a/", 1) == ["D:/w/ref-a-fan1"]
+    assert fan_names(str(pathlib.PureWindowsPath("D:/w/ref-a")), 1) == ["D:/w/ref-a-fan1"]
+
+
+def test_without_a_green_attempt_the_least_red_landing_is_carried_forward():
+    """C-5.7: short of green, the attempt that landed with the fewest red checks (the quicker
+    one on a tie) is carried forward; nothing is when no attempt landed."""
+    from lib.dispatch import pick_winner
+    nothing = {"landed": False, "green": False, "red": [{"cmd": "x", "exit": 1}], "duration_ms": 10}
+    two_red = {"landed": True, "green": False, "red": [{"cmd": "x", "exit": 1}, {"cmd": "y", "exit": 1}],
+               "duration_ms": 30}
+    one_red_slow = {"landed": True, "green": False, "red": [{"cmd": "x", "exit": 1}], "duration_ms": 300}
+    one_red_fast = {"landed": True, "green": False, "red": [{"cmd": "x", "exit": 1}], "duration_ms": 100}
+    assert pick_winner([nothing, two_red, one_red_slow, one_red_fast]) == 3
+    assert pick_winner([nothing, two_red]) == 1
+    assert pick_winner([nothing, nothing]) is None
+    assert pick_winner([]) is None
