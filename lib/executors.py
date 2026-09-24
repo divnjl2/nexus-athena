@@ -40,6 +40,10 @@ LOCAL_OUTPUT_TOKENS = {"local-27b": 8192, "local-9b": 8192}
 #: through pi on the first try, the vanilla 9B in two.
 PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5-9b")}
 PI_TOOLS = "read,bash,edit,write"
+#: reasoning effort per lane. Measured on the vanilla 27B, one coding prompt: its default
+#: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,
+#: medium in 46 s; "high" the lane rejects with a 400.
+PI_THINKING = {"pi-27b": "low", "pi-9b": "medium"}
 PI_ORDER = ("The task is the text above. There is no user here and no question will be "
             "answered: make the edit with the edit or write tool, run the spec command with "
             "bash if you want to see it, then answer with one line: DONE.")
@@ -155,16 +159,17 @@ def availability(name: str, *, which=None, find_spec=None, exists=None) -> dict:
     return {"available": ok, "reason": "" if ok else "the `claude` executable was not found"}
 
 
-def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str = "medium") -> dict:
+def pi_command(name: str, packet_text: str, *, pi_bin: str = "pi", thinking: str = "") -> dict:
     """PURE: argv + stdin for a pi worker (C-3.6). Print mode, JSON events, no session, no
     extensions, no skills, no context files: the packet on stdin is the whole context, and
     the closing order is the prompt argument, the last thing the model reads."""
     if name not in PI_PROVIDERS:
         raise ValueError(f"{name} is not a pi executor (one of {', '.join(PI_PROVIDERS)})")
     provider, model = PI_PROVIDERS[name]
+    level = thinking or PI_THINKING.get(name, "medium")
     argv = [pi_bin, "-p", "--mode", "json", "--no-session", "--no-extensions", "--no-skills",
             "--no-context-files", "--tools", PI_TOOLS, "--provider", provider, "--model", model,
-            "--thinking", thinking, PI_ORDER]
+            "--thinking", level, PI_ORDER]
     return {"argv": argv, "env": {}, "stdin": packet_text, "parse": "pi", "unset": []}
 
 

@@ -46,3 +46,10 @@
 - **C-2.6** — WHEN metrics are rendered THE SYSTEM SHALL report per executor how many of its
   green dispatches were merged and at which stage the others were refused.
   - source: review
+- **C-2.7** — WHEN a workspace nobody dispatched is verified against the target THE SYSTEM SHALL
+  compute its verdict from the diff against the target and the task's spec commands run now,
+  and record it under the executor `verify`, so the queue can admit it on the same terms.
+  - source: ledger
+  - note: the ceiling worktree was assembled by cherry-pick from a lane's worktree and
+    finished by Claude; it had no record, and the queue refused it twice. A verdict the frame
+    computes is not anyone's word.

@@ -281,3 +281,26 @@ def test_metrics_report_merged_green_dispatches_per_executor_and_refusal_stages(
     text = render_merge_metrics(rep)
     assert "local-27b" in text and "merged" in text and "check" in text
     assert "(no merge recorded yet)" in render_merge_metrics({})
+
+
+def test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs():
+    """C-2.7 — landed is the diff against the target, green is the checks plus untouched spec
+    files, a skipped check is red; the verify command takes its flags."""
+    import athena
+    from lib.refinery import VERIFY_EXECUTOR, verify_verdict
+    ok = verify_verdict(["lib/bench.py"], [{"cmd": "python -m pytest t.py::a -q", "exit": 0, "tail": "1 passed in 0.1s"}],
+                        spec_files=["tests/test_bench.py"])
+    assert ok["passed"] is True and ok["landed"] is True and ok["green"] is True
+    nothing = verify_verdict([], [{"cmd": "x", "exit": 0, "tail": "1 passed"}])
+    assert nothing["landed"] is False and nothing["passed"] is False and "nothing to merge" in nothing["reason"]
+    red = verify_verdict(["lib/bench.py"], [{"cmd": "x", "exit": 1, "tail": "boom"}])
+    assert red["green"] is False and red["red"] == [{"cmd": "x", "exit": 1}]
+    skipped = verify_verdict(["lib/bench.py"], [{"cmd": "python -m pytest t.py::a -q", "exit": 0, "tail": "1 skipped in 0.1s"}])
+    assert skipped["green"] is False and "skip" in skipped["reason"]
+    touched = verify_verdict(["lib/bench.py", "tests/test_bench.py"],
+                             [{"cmd": "x", "exit": 0, "tail": "1 passed"}], spec_files=["tests/test_bench.py"])
+    assert touched["green"] is False and touched["review_flags"] == ["tests/test_bench.py"]
+    assert VERIFY_EXECUTOR == "verify"
+    args = athena.build_parser().parse_args(["verify", "c.md", "--front", "p.md", "--task", "T7.1",
+                                             "--workspace", "D:/w", "--target", "master"])
+    assert args.fn is athena.cmd_verify and args.target == "master"

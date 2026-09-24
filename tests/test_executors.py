@@ -92,6 +92,8 @@ def test_the_pi_executor_runs_print_mode_on_the_lane_with_the_packet_on_stdin():
     assert argv[argv.index("--provider") + 1] == "lane9" and argv[argv.index("--model") + 1] == "qwen3.5-9b"
     assert argv[argv.index("--thinking") + 1] == "low"
     assert argv[-1] == PI_ORDER and cmd["stdin"] == "# Task T1.1 ..." and cmd["parse"] == "pi"
+    # the lane's own default effort when none is asked: the 27B's default xhigh never answered
+    assert pi_command("pi-27b", "x")["argv"][pi_command("pi-27b", "x")["argv"].index("--thinking") + 1] == "low"
     with pytest.raises(ValueError):
         pi_command("local-27b", "x")
 

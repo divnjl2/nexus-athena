@@ -161,3 +161,34 @@ def fast_forward(run, workspace: str, target: str) -> dict:
     if code != 0:
         return {"ok": False, "head": head, "old": old, "reason": f"update-ref failed: {out.strip()[-200:]}"}
     return {"ok": True, "head": head, "old": old, "reason": f"{target} {old[:12] or '(new)'} -> {head[:12]}"}
+
+
+# --- a verdict for a workspace nobody dispatched (C-2.7) ------------------------------------
+
+VERIFY_EXECUTOR = "verify"
+
+
+def verify_verdict(changed_files: list, checks: list, *, spec_files=()) -> dict:
+    """PURE (C-2.7): the verdict of a workspace against its target — landed when the diff
+    against the target is not empty, green when every check is green and no spec file is in
+    the diff; the same reading dispatch gives an executor's run."""
+    from lib.dispatch import skip_reason
+    changed = [str(p).replace("\\", "/") for p in changed_files]
+    spec_set = {str(s).replace("\\", "/") for s in spec_files}
+    spec_touched = [p for p in changed if p in spec_set]
+    red = [c for c in checks if c.get("exit", 1) != 0 or skip_reason(c)]
+    landed = bool(changed)
+    green = bool(checks) and not red and not spec_touched
+    reasons = []
+    if not landed:
+        reasons.append("no difference against the target: nothing to merge")
+    if not checks:
+        reasons.append("no check was run: silence is not proof")
+    for c in red:
+        reasons.append(f"{c.get('cmd')} exit {c.get('exit')}: {skip_reason(c) or str(c.get('tail', ''))[-300:]}")
+    if spec_touched:
+        reasons.append("the spec's own test file differs from the target: " + ", ".join(spec_touched))
+    return {"landed": landed, "green": green, "passed": landed and green, "changed_files": changed,
+            "deleted_files": [], "review_flags": spec_touched,
+            "red": [{"cmd": c.get("cmd"), "exit": c.get("exit")} for c in red],
+            "reason": "; ".join(reasons)}

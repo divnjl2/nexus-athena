@@ -80,3 +80,11 @@
 - **Given** tests/test_refinery.py
 - **When** the spec `test_metrics_report_merged_green_dispatches_per_executor_and_refusal_stages` is executed
 - **Then** merge_metrics() counts per executor the green dispatches, the merged ones and the refusals by stage, and its render names them.
+
+### S2.7 — a workspace nobody dispatched earns its verdict from the diff and the specs
+- **verifies:** C-2.7
+- **pins:** b35327df17374460
+- **run_cmd:** `python -m pytest tests/test_refinery.py::test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs -q`
+- **Given** tests/test_refinery.py
+- **When** the spec `test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs` is executed
+- **Then** landed follows the diff against the target, green follows the checks and the untouched spec files, a skipped check is red, and the verify parser takes the flags.

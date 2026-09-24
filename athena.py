@@ -1354,6 +1354,60 @@ def cmd_bench(a) -> int:
 
 # --- v3.13: the refinery — a green workspace reaches the target through four stages -------
 
+def cmd_verify(a) -> int:
+    """C-2.7: a workspace nobody dispatched — assembled by cherry-pick, finished by hand —
+    earns its dispatch record from the frame: the diff against the target and the task's
+    spec commands, run now, decide; the record is written under executor `verify`."""
+    import datetime
+    import subprocess
+    from lib.dispatch import record, test_node
+    from lib.refinery import VERIFY_EXECUTOR, verify_verdict
+    from lib.spec_runner import _spawn, _tokenize
+    contract = _load_contract(a)
+    scenarios = _load_scenarios(a, anchor=a.contract)
+    plan = _parse_front_auto(a.front, "auto")
+    workspace = pathlib.Path(a.workspace).resolve()
+    try:
+        task = next(tk for ph in plan.phases for tk in ph.tasks if tk.id == a.task)
+    except StopIteration:
+        _emit({"passed": False, "error": f"plan has no task {a.task}"})
+        return 2
+    by_id = {s.id: s for s in scenarios}
+    cmds = [by_id[v].run_cmd for v in task.verifies if v in by_id and by_id[v].run_cmd]
+    if task.success_check and task.success_check not in cmds:
+        cmds.append(task.success_check)
+    spec_files = [test_node(c)[0] for c in cmds]
+    p = subprocess.run(["git", "diff", "--name-only", f"{a.target}...HEAD"], cwd=str(workspace),
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    changed = [ln.strip() for ln in (p.stdout or "").splitlines() if ln.strip()]
+    checks = []
+    for cmdline in cmds:
+        argv, why = _tokenize(cmdline)
+        if argv and argv[0] in ("python", "python3") and a.check_python:
+            argv[0] = a.check_python
+        code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+        checks.append({"cmd": cmdline, "exit": code, "tail": tail})
+    v = verify_verdict(changed, checks, spec_files=[f for f in spec_files if f])
+    here = pathlib.Path(a.contract).resolve().parent / ".athena"
+    here.mkdir(parents=True, exist_ok=True)
+    rec = record(a.task, VERIFY_EXECUTOR, v, duration_ms=0, tokens={},
+                 ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+                 workspace=str(workspace))
+    rec["target"] = a.target
+    with (here / "dispatch.jsonl").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    if a.text:
+        print(f"# verify {a.task} in {workspace} against {a.target}: {'GREEN' if v['green'] else 'RED'}"
+              f"  landed={v['landed']} changed={len(changed)}")
+        for c in checks:
+            print(f"  {'ok  ' if c['exit'] == 0 else 'FAIL'} {c['cmd']}")
+        if v["reason"]:
+            print("  " + v["reason"][:400])
+    else:
+        _emit({**v, "task": a.task, "workspace": str(workspace), "target": a.target})
+    return 0 if v["passed"] else 1
+
+
 def cmd_merge(a) -> int:
     """Offer a workspace to the merge queue (C-2.1..C-2.5). Admit on the task's last dispatch
     record, rebase onto the target, run every contract in the workspace, fast-forward the
@@ -2265,8 +2319,8 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--model", default="", help="openhands: model id (default openai/qwopus-27b)")
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
-    dp.add_argument("--pi-thinking", dest="pi_thinking", default="medium",
-                    choices=("off", "minimal", "low", "medium", "high", "xhigh"),
+    dp.add_argument("--pi-thinking", dest="pi_thinking", default="",
+                    choices=("", "off", "minimal", "low", "medium", "high", "xhigh"),
                     help="pi executors: the thinking level pi asks the model for")
     dp.add_argument("--stall", type=int, default=0,
                     help="seconds of worker silence on stdout before it is ended as stalled (C-7.2); "
@@ -2351,6 +2405,20 @@ def build_parser() -> argparse.ArgumentParser:
     bn.add_argument("--dry-run", dest="dry_run", action="store_true")
     bn.add_argument("--text", action="store_true")
     bn.set_defaults(fn=cmd_bench)
+
+    vf = sub.add_parser("verify", help="a workspace nobody dispatched earns its record: diff against "
+                                       "the target + the task's specs, run now (C-2.7)")
+    vf.add_argument("contract")
+    vf.add_argument("--scenarios", default="")
+    vf.add_argument("--front", required=True)
+    vf.add_argument("--task", required=True)
+    vf.add_argument("--workspace", required=True)
+    vf.add_argument("--target", default="master")
+    vf.add_argument("--check-python", dest="check_python", default=sys.executable)
+    vf.add_argument("--check-timeout", dest="check_timeout", type=int, default=600)
+    vf.add_argument("--speckit", default="auto")
+    vf.add_argument("--text", action="store_true")
+    vf.set_defaults(fn=cmd_verify)
 
     mg = sub.add_parser("merge", help="offer a workspace to the refinery: admit on the record, "
                                       "rebase, run every contract, fast-forward the target")

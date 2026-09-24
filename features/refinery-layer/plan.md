@@ -60,6 +60,10 @@ injected `run(argv, cwd) -> (code, output)`; the CLI wires the real git.
   - success_check: `python -m pytest tests/test_refinery.py::test_metrics_report_merged_green_dispatches_per_executor_and_refusal_stages -q`
   - files: `lib/refinery.py`
   - verifies: S2.6
+- [ ] T2.8 `athena verify`: a workspace nobody dispatched earns its record
+  - success_check: `python -m pytest tests/test_refinery.py::test_a_workspace_nobody_dispatched_earns_its_verdict_from_the_diff_and_the_specs -q`
+  - files: `lib/refinery.py, athena.py`
+  - verifies: S2.7
 - [ ] T2.7 Wire `athena merge` and print the merge section in `athena metrics`
   - success_check: `python -m pytest tests/test_refinery.py -q`
   - files: `athena.py`
