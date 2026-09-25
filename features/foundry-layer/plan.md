@@ -57,6 +57,10 @@ admitted by their own metrics; the loop is a command.
   - success_check: `python -m pytest tests/test_foundry_daemon.py::test_a_shared_packet_prefix_is_routed_to_the_lane_that_last_served_it_while_warm tests/test_foundry_daemon.py::test_two_server_errors_in_a_row_cool_a_lane_down_for_a_period -q`
   - files: `lib/lanes.py`
   - verifies: S4.3, S4.4
+- [ ] T2.6 The speculation oracle: paired verdicts and greedy outputs
+  - success_check: `python -m pytest tests/test_foundry_daemon.py::test_a_speculation_flag_is_admitted_only_when_verdicts_and_temperature_zero_outputs_agree -q`
+  - files: `lib/lanes.py`
+  - verifies: S4.5
 - [ ] T2.5 `athena daemon`: the loop as a command, dry by flag
   - success_check: `python -m pytest tests/test_foundry_daemon.py::test_the_daemon_command_prints_its_tick_without_running_when_dry -q`
   - files: `athena.py, lib/daemon.py`

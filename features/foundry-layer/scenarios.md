@@ -141,6 +141,14 @@
 - **When** the spec `test_two_server_errors_in_a_row_cool_a_lane_down_for_a_period` is executed
 - **Then** two consecutive 5xx start the cooldown; a 200 in between resets it; the lane is routable again when the period ends.
 
+### S4.5 — a speculation flag is admitted only when verdicts and temperature zero outputs agree
+- **verifies:** C-4.5
+- **pins:** cc3fb42e64e67b4d
+- **run_cmd:** `python -m pytest tests/test_foundry_daemon.py::test_a_speculation_flag_is_admitted_only_when_verdicts_and_temperature_zero_outputs_agree -q`
+- **Given** tests/test_foundry_daemon.py
+- **When** the spec `test_a_speculation_flag_is_admitted_only_when_verdicts_and_temperature_zero_outputs_agree` is executed
+- **Then** paired runs with equal verdicts and identical greedy outputs admit the flag; a verdict that differs or a token that diverges refuses it naming the task and the position of the first divergence.
+
 ## C-5 — the ladder (lib/ladder.py)
 
 ### S5.1 — pre dispatch features are logged per task

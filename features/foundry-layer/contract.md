@@ -101,6 +101,15 @@
   down for a period and route around it until the period ends.
   - source: design
 
+- **C-4.5** — WHEN a lane is offered a speculative-decoding flag THE SYSTEM SHALL admit the flag
+  only after the same tasks land the same verdicts with and without it and temperature-zero
+  outputs are token-identical, and name the first divergence otherwise.
+  - source: design
+  - note: SuffixDecoding (Arctic Inference, in vLLM as `method: suffix`) is lossless by
+    construction and up to 5x on agentic loops — and on our GDN hybrids (Qwen3.5/3.8) vLLM's
+    ngram and suffix paths silently corrupt output until PR #56531 or #55504 lands (Sept
+    2026: unmerged). A speed flag enters through this oracle, never through a blog post.
+
 ## C-5 — The ladder: cheap first, escalate on evidence
 
 - **C-5.1** — WHEN a task is dispatched THE SYSTEM SHALL log its pre-dispatch features: packet

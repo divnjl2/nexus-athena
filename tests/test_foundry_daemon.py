@@ -139,3 +139,20 @@ def test_two_server_errors_in_a_row_cool_a_lane_down_for_a_period():
     assert cooling(events, now=240.0, period_s=120) == (False, "")
     assert cooling([(100.0, 500), (105.0, 200), (110.0, 503)], now=120.0, period_s=120) == (False, "")
     assert cooling([], now=0.0, period_s=120) == (False, "")
+
+
+def test_a_speculation_flag_is_admitted_only_when_verdicts_and_temperature_zero_outputs_agree():
+    """C-4.5 — paired runs (plain, speculative) per task: equal verdicts and identical greedy
+    outputs admit the flag; a differing verdict or a diverging token refuses it, naming the
+    task and the first divergence."""
+    from lib.lanes import speculation_verdict
+    same = [{"task": "T2.1", "plain": {"green": True, "tokens": [1, 2, 3]}, "spec": {"green": True, "tokens": [1, 2, 3]}},
+            {"task": "T2.3", "plain": {"green": False, "tokens": [9]}, "spec": {"green": False, "tokens": [9]}}]
+    assert speculation_verdict(same) == (True, "2 tasks agree")
+    verdict_differs = [{"task": "T2.1", "plain": {"green": True, "tokens": [1]}, "spec": {"green": False, "tokens": [1]}}]
+    assert speculation_verdict(verdict_differs) == (False, "T2.1: verdict green without, red with")
+    tokens_differ = [{"task": "T2.5", "plain": {"green": True, "tokens": [1, 2, 3, 4]}, "spec": {"green": True, "tokens": [1, 2, 7, 4]}}]
+    assert speculation_verdict(tokens_differ) == (False, "T2.5: outputs diverge at token 2")
+    shorter = [{"task": "T2.5", "plain": {"green": True, "tokens": [1, 2, 3]}, "spec": {"green": True, "tokens": [1, 2]}}]
+    assert speculation_verdict(shorter) == (False, "T2.5: outputs diverge at token 2")
+    assert speculation_verdict([]) == (False, "no paired runs")
