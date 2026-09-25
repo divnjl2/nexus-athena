@@ -363,6 +363,7 @@
 
 ### S6.9 — a headless call closed by </tool_call> is normalised like a tagged one
 - **verifies:** C-6.9
+- **pins:** be44b66389e93435
 - **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_headless_call_closed_by_the_end_tag_is_normalised_like_a_tagged_one -q`
 - **Given** tests/test_toolcalls.py
 - **When** the spec `test_a_headless_call_closed_by_the_end_tag_is_normalised_like_a_tagged_one` is executed
@@ -370,6 +371,7 @@
 
 ### S6.10 — a streaming chat completion with tools is normalised and replayed as chunks
 - **verifies:** C-6.10
+- **pins:** e585df068e0bbfd0
 - **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_streaming_chat_completion_with_tools_is_normalised_and_replayed_as_chunks -q`
 - **Given** tests/test_toolcalls.py
 - **When** the spec `test_a_streaming_chat_completion_with_tools_is_normalised_and_replayed_as_chunks` is executed
