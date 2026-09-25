@@ -11,6 +11,7 @@
 - **C-1.1** — WHEN a workspace is checked by the refinery THE SYSTEM SHALL restrict the mutation
   sweep to the lines the task changed, mapped through the clause map to the clauses that own
   them, and report which changed lines no clause owns.
+  - see: ../../docs/adr/0009-the-foundry-wraps-oss-and-runs-itself.md@364e242e5a983636
   - source: design
   - note: cosmic-ray (MIT, runs on native Windows; mutmut needs fork) has `cr-filter-git` for
     exactly this; the frame supplies the diff lines and the ownership. Whole-module sweeps are
@@ -57,6 +58,7 @@
 - **C-3.1** — WHEN the daemon ticks THE SYSTEM SHALL take the ready task of highest priority
   that no lane is running, claim it, and name its worktree by task id and packet digest, so a
   restart finds the same worktree for the same work.
+  - see: ../../docs/adr/0009-the-foundry-wraps-oss-and-runs-itself.md@364e242e5a983636
   - source: design
   - note: beads (`bd ready --json`, `bd update --claim`) is the ledger and the lease; Gas
     Town's Refinery and Witness are the reference design, not code to vendor.
@@ -75,6 +77,7 @@
 - **C-3.5** — WHEN `athena daemon` runs THE SYSTEM SHALL loop tick, dispatch, verdict, offer
   and escalation over the plan's tasks with the lane admission of C-4 and the ladder of C-5,
   and stop cleanly on a stop file.
+  - see: ../../docs/adr/0009-the-foundry-wraps-oss-and-runs-itself.md@364e242e5a983636
   - source: review
 
 ## C-4 — Lanes admit by capacity
