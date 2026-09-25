@@ -186,8 +186,30 @@ tasks and two controls, low, strict, no brief:
 Two of the three morning reds were the slot, not the model. With the window honest the
 agent-trained 3B holds 8 of the 9 refinery clauses, first attempt on 7 of them; what stays
 red is C-2.4, the class-B clause (real git, compare-and-set) the vanilla 9B also needed
-strict tool calling and a second attempt for. The brief leg on the same five tasks
-(`pi-3b#gpu32k-brief9`) is recorded below it when it lands.
+strict tool calling and a second attempt for.
+
+**The same five tasks with a brief from the 9B** (medium, no tools, `pi-3b#gpu32k-brief9`):
+
+| task | 3B alone | 3B with the 9B's brief |
+|---|---|---|
+| C-1.2 | green @1, 154 s | green @1, 380 s |
+| C-2.2 | green @1, 396 s | red x3, 507 s |
+| C-2.4 | red x3 | red x3, 1,132 s |
+| C-2.1 | green @1, 98 s | green @1, 58 s |
+| C-1.1 | green @1, 162 s | (pending) |
+
+The brief did not open the one red task, cost 2.5x on one it already had, and turned one
+green task red. For an executor that lands on the spec alone, a second plan on top of the
+spec is noise; the brief's only remaining case is the task the executor is red on by
+itself, and there it did not help either. Same finding as on the 9B with a 27B brief.
+
+**Opus tokens, first measurement** (this session's transcript against the dispatch records,
+hours grouped by whether a lane dispatch happened in them): in the 18 hours the lanes
+executed, Opus produced 130k output tokens per hour and 46k per lane-green clause (writing
+the clause and its spec, reading verdicts, finishing after three lane iterations, and the
+day's lane operations); in the 5 hours Opus worked alone since 23.09 it produced 460k per
+hour, writing contracts. A 3.5x lower Opus burn rate while the code lands; the per-clause
+figure is the number to drive down with the intake and the orchestrator.
 
 Lane facts of the day, in memory too: the 27B lane is off by the operator's word (removed
 from the llama-swap config, backup beside it), the 3090 carries the floor lanes; the 9B lane
