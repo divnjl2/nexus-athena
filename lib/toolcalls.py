@@ -109,6 +109,117 @@ def content_before_calls(text: str) -> str | None:
     return kept or None
 
 
+_HEADLESS = re.compile(r"(\{.*\})\s*</tool_call>", re.DOTALL)
+
+
+def repair_headless_call(text: str) -> str:
+    """PURE (C-6.9): a call closed by `</tool_call>` with no opening tag gets the tag back in
+    front of its JSON; anything else is returned as it came. Measured on Ternary Bonsai 4B
+    behind llama.cpp b11165 (Qwen3 template, tool_choice auto): the lane's parser consumed
+    the opening tag as its grammar trigger, failed the rest, and left it as content."""
+    if not isinstance(text, str) or "</tool_call>" not in text or "<tool_call>" in text:
+        return text
+    m = _HEADLESS.search(text)
+    if not m or not normalize_call(_first_json(m.group(1))):
+        return text
+    return text[:m.start(1)] + "<tool_call>" + text[m.start(1):]
+
+
+def wants_replay(body, path: str) -> bool:
+    """PURE (C-6.10): a streaming chat completion that carries tools is the one the relay
+    asks for without a stream and replays as chunks; everything else streams through."""
+    return (isinstance(body, dict) and bool(body.get("stream")) and bool(body.get("tools"))
+            and str(path).endswith("/chat/completions"))
+
+
+def chat_chunks(payload: dict) -> list:
+    """PURE (C-6.10): a complete chat completion rendered as the `chat.completion.chunk` SSE
+    frames a streaming client expects: role, content, reasoning, tool_calls with index and
+    id, finish_reason, then the usage when there is one, then [DONE]."""
+    base = {"id": payload.get("id"), "object": "chat.completion.chunk",
+            "created": payload.get("created"), "model": payload.get("model")}
+
+    def frame(choices, **extra):
+        return "data: " + json.dumps({**base, "choices": choices, **extra}, ensure_ascii=False) + chr(10) * 2
+
+    frames = []
+    for choice in payload.get("choices") or []:
+        idx = choice.get("index", 0)
+        msg = choice.get("message") or {}
+        frames.append(frame([{"index": idx, "delta": {"role": msg.get("role") or "assistant", "content": ""},
+                              "finish_reason": None}]))
+        if msg.get("reasoning_content"):
+            frames.append(frame([{"index": idx, "delta": {"reasoning_content": msg["reasoning_content"]},
+                                  "finish_reason": None}]))
+        if msg.get("content"):
+            frames.append(frame([{"index": idx, "delta": {"content": msg["content"]}, "finish_reason": None}]))
+        for k, call in enumerate(msg.get("tool_calls") or []):
+            fn = call.get("function") or {}
+            frames.append(frame([{"index": idx, "delta": {"tool_calls": [
+                {"index": k, "id": call.get("id"), "type": "function",
+                 "function": {"name": fn.get("name"), "arguments": fn.get("arguments", "")}}]},
+                "finish_reason": None}]))
+        frames.append(frame([{"index": idx, "delta": {}, "finish_reason": choice.get("finish_reason") or "stop"}]))
+    if payload.get("usage") is not None:
+        frames.append(frame([], usage=payload["usage"]))
+    frames.append("data: [DONE]" + chr(10) * 2)
+    return frames
+
+
+def completion_from_chunks(frames) -> dict:
+    """PURE (C-6.10): the completion a sequence of chunk frames describes — the reading side
+    of chat_chunks, for the spec and for anyone who needs the whole message back."""
+    out: dict = {"object": "chat.completion", "choices": []}
+    by_index: dict = {}
+    for f in frames:
+        line = str(f).strip()
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            body = json.loads(data)
+        except ValueError:
+            continue
+        for k in ("id", "created", "model"):
+            if body.get(k) is not None:
+                out[k] = body[k]
+        if body.get("usage") is not None:
+            out["usage"] = body["usage"]
+        for ch in body.get("choices") or []:
+            idx = ch.get("index", 0)
+            slot = by_index.setdefault(idx, {"index": idx, "finish_reason": None,
+                                             "message": {"role": "assistant", "content": None, "tool_calls": []}})
+            delta = ch.get("delta") or {}
+            if delta.get("role"):
+                slot["message"]["role"] = delta["role"]
+            if delta.get("content"):
+                slot["message"]["content"] = (slot["message"]["content"] or "") + delta["content"]
+            if delta.get("reasoning_content"):
+                slot["message"]["reasoning_content"] = slot["message"].get("reasoning_content", "") + delta["reasoning_content"]
+            for tc in delta.get("tool_calls") or []:
+                k = int(tc.get("index", 0))
+                calls = slot["message"]["tool_calls"]
+                while len(calls) <= k:
+                    calls.append({"id": None, "type": "function", "function": {"name": "", "arguments": ""}})
+                if tc.get("id"):
+                    calls[k]["id"] = tc["id"]
+                fn = tc.get("function") or {}
+                if fn.get("name"):
+                    calls[k]["function"]["name"] = fn["name"]
+                if fn.get("arguments"):
+                    calls[k]["function"]["arguments"] += fn["arguments"]
+            if ch.get("finish_reason"):
+                slot["finish_reason"] = ch["finish_reason"]
+    for idx in sorted(by_index):
+        slot = by_index[idx]
+        if not slot["message"]["tool_calls"]:
+            del slot["message"]["tool_calls"]
+        out["choices"].append(slot)
+    return out
+
+
 def _prepare_thinking(body: dict, *, thinking: bool = False) -> tuple[dict, bool]:
     """PURE: the request side of the relay (C-6.4). A request that carries tools gets
     `chat_template_kwargs.enable_thinking` set to `thinking` (default off) unless the caller
@@ -143,7 +254,7 @@ def normalize_completion(payload: dict, *, id_factory=None) -> tuple[dict, bool]
         msg = choice.get("message") if isinstance(choice, dict) else None
         if not isinstance(msg, dict) or msg.get("tool_calls"):
             continue
-        text = msg.get("content")
+        text = repair_headless_call(msg.get("content"))          # C-6.9
         if not isinstance(text, str) or ("<tool_call>" not in text and "<function=" not in text):
             continue
         calls = extract_calls(text)
@@ -176,6 +287,7 @@ def normalize_messages_response(payload: dict, *, id_factory=None) -> tuple[dict
     changed = False
     for b in payload["content"]:
         text = b.get("text") if isinstance(b, dict) and b.get("type") == "text" else None
+        text = repair_headless_call(text)                        # C-6.9
         if not isinstance(text, str) or ("<tool_call>" not in text and "<function=" not in text):
             blocks.append(b)
             continue

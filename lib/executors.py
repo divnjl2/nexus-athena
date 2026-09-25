@@ -39,9 +39,10 @@ LOCAL_OUTPUT_TOKENS = {"local-27b": 8192, "local-9b": 8192}
 #: developer role). Measured before adding it: the vanilla 27B edited a file in three turns
 #: through pi on the first try, the vanilla 9B in two.
 PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5-9b"),
-                # the floor experiment: small GGUFs on disk (Qwen3.5-4B Q4_K_M, Qwen3.5-2B) behind a
-                # llama.cpp server the operator starts; the providers are registered in models.json
-                "pi-4b": ("lane4", "qwen3.5-4b"), "pi-2b": ("lane2", "qwen3.5-2b")}
+                # the floor experiment: Ternary Bonsai 4B (prism-ml, Q2_0_g64, 1.1 GB) on the 3090 behind
+                # mainline llama.cpp b11165 at :8003; measured before it: Nanbeige4.2-3B Q4_K_M landed
+                # 6/9 refinery tasks on the same GPU. The providers are registered in models.json
+                "pi-4b": ("lane4", "bonsai-4b"), "pi-2b": ("lane2", "qwen3.5-2b")}
 PI_TOOLS = "read,bash,edit,write"
 #: reasoning effort per lane. Measured on the vanilla 27B, one coding prompt: its default
 #: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,

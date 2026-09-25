@@ -86,6 +86,10 @@ that says, per executor, how often the work landed and went green.
   - success_check: `python -m pytest tests/test_toolcalls.py -q`
   - files: `lib/toolcalls.py, athena.py, lib/executors.py, tests/test_toolcalls.py`
   - verifies: S6.1, S6.2, S6.3, S6.4, S6.5, S6.6, S6.7, S6.8
+- [ ] T6.2 The headless call shape and the streaming replay on the OpenAI path
+  - success_check: `python -m pytest tests/test_toolcalls.py::test_a_headless_call_closed_by_the_end_tag_is_normalised_like_a_tagged_one tests/test_toolcalls.py::test_a_streaming_chat_completion_with_tools_is_normalised_and_replayed_as_chunks -q`
+  - files: `lib/toolcalls.py, athena.py`
+  - verifies: S6.9, S6.10
 ### Manual Verification
 - `python athena.py relay --port 8414` then `athena dispatch ... --executor openhands --base-url http://127.0.0.1:8414/v1` makes tool calls the lane's parser refused.
 

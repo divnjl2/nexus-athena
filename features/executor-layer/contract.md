@@ -223,6 +223,22 @@
     contains ...", each a lost attempt: a brief on a large packet, a test-writer candidate, a
     two-file task. The arithmetic is done once, here, with the lane's count; pi's own
     compaction is tuned for the window (reserve 6144, keep 12288) for the multi-turn side.
+- **C-6.9** — WHEN a completion's text is a call in the model's own shape closed by
+  `</tool_call>` with no opening tag THE SYSTEM SHALL normalise it as if the tag were there.
+  - source: ledger
+  - note: measured 25.09 on Ternary Bonsai 4B behind llama.cpp b11165 (Qwen3 template, tool
+    choice auto): the lane's parser consumed `<tool_call>` as its grammar trigger, failed the
+    rest, and returned `{"name": ..., "arguments": ...}` followed by `</tool_call>` as
+    content; with `tool_choice: required` the same lane returned a structured call. The relay
+    is where the frame absorbs a lane's parser (C-6.1); this is one more shape it has seen.
+- **C-6.10** — WHEN a streaming chat completion that carries tools goes through the relay
+  THE SYSTEM SHALL ask the lane without a stream, normalise the reply, and replay it to the
+  client as the chunks it asked for, ending with the usage and `[DONE]`.
+  - source: ledger
+  - note: pi streams every turn, and the relay forwarded streams byte for byte (C-6.2), so on
+    the OpenAI path C-6.1 never applied to the executor that needed it most: a Bonsai turn
+    whose only content was a textual call ended the attempt as prose. The Anthropic path
+    already does this (C-6.5); the OpenAI path now does the same.
 
 ## C-7 — The ceiling: graded tasks a local model in a harness is measured against
 

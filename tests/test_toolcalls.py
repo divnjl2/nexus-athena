@@ -169,3 +169,70 @@ def test_the_relay_clamps_the_output_budget_to_what_the_window_leaves():
     assert clamp_output(body, prompt_tokens=None, window=30720) == (body, False)
     args = athena.build_parser().parse_args(["relay", "--clamp", "--margin", "512"])
     assert args.clamp is True and args.margin == 512 and athena.build_parser().parse_args(["relay"]).clamp is False
+
+
+HEADLESS = '{"name": "read", "arguments": {"path": "lib/demo.py"}}\n</tool_call>'
+
+
+def test_a_headless_call_closed_by_the_end_tag_is_normalised_like_a_tagged_one():
+    """C-6.9 — the shape measured on Bonsai 4B behind llama.cpp (the lane ate the opening tag):
+    a call on the chat path, a tool_use block on the messages path; prose that mentions the
+    tag and JSON without the closing tag pass through."""
+    from lib.toolcalls import normalize_messages_response, repair_headless_call
+    assert repair_headless_call(HEADLESS) == "<tool_call>" + HEADLESS
+    assert repair_headless_call(HERMES) == HERMES
+    assert repair_headless_call("write </tool_call> at the end") == "write </tool_call> at the end"
+    bare = '{"name": "read", "arguments": {}}'
+    assert repair_headless_call(bare) == bare
+    out, changed = normalize_completion(_completion(HEADLESS), id_factory=lambda: "call_h")
+    assert changed
+    msg = out["choices"][0]["message"]
+    assert msg["tool_calls"] == [{"id": "call_h", "type": "function",
+                                  "function": {"name": "read", "arguments": json.dumps({"path": "lib/demo.py"})}}]
+    assert not msg["content"]
+    assert out["choices"][0]["finish_reason"] == "tool_calls"
+    resp = {"id": "m", "type": "message", "role": "assistant", "stop_reason": "end_turn",
+            "content": [{"type": "text", "text": HEADLESS}]}
+    out, changed = normalize_messages_response(resp, id_factory=lambda: "toolu_h")
+    assert changed and out["stop_reason"] == "tool_use"
+    assert out["content"] == [{"type": "tool_use", "id": "toolu_h", "name": "read", "input": {"path": "lib/demo.py"}}]
+    prose = _completion("I would write </tool_call> here")
+    assert normalize_completion(json.loads(json.dumps(prose))) == (prose, False)
+
+
+def test_a_streaming_chat_completion_with_tools_is_normalised_and_replayed_as_chunks():
+    """C-6.10 — a complete completion renders as chat.completion.chunk frames (role, content,
+    tool_calls with index and id, finish_reason, usage) ending with [DONE]; read back, the
+    frames give the completion; the relay replays only streaming tool-carrying chat completions."""
+    from lib.toolcalls import chat_chunks, completion_from_chunks, wants_replay
+    args = json.dumps({"path": "x"})
+    done = {"id": "chatcmpl-1", "object": "chat.completion", "created": 1, "model": "bonsai-4b",
+            "choices": [{"index": 0, "finish_reason": "tool_calls",
+                         "message": {"role": "assistant", "content": "sure",
+                                     "tool_calls": [{"id": "call_1", "type": "function",
+                                                     "function": {"name": "read", "arguments": args}}]}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}}
+    frames = chat_chunks(done)
+    assert all(f.startswith("data: ") and f.endswith(chr(10) * 2) for f in frames)
+    assert frames[-1] == "data: [DONE]" + chr(10) * 2
+    bodies = [json.loads(f[6:]) for f in frames[:-1]]
+    assert all(b["object"] == "chat.completion.chunk" and b["id"] == "chatcmpl-1" and b["model"] == "bonsai-4b" for b in bodies)
+    assert bodies[0]["choices"][0]["delta"]["role"] == "assistant"
+    tool_deltas = [b for b in bodies if b["choices"] and b["choices"][0]["delta"].get("tool_calls")]
+    assert tool_deltas and tool_deltas[0]["choices"][0]["delta"]["tool_calls"][0]["index"] == 0
+    assert tool_deltas[0]["choices"][0]["delta"]["tool_calls"][0]["id"] == "call_1"
+    finals = [b for b in bodies if b["choices"] and b["choices"][0].get("finish_reason")]
+    assert finals[-1]["choices"][0]["finish_reason"] == "tool_calls"
+    assert bodies[-1].get("usage") == done["usage"]
+    back = completion_from_chunks(frames)
+    assert back["choices"][0]["message"]["content"] == "sure"
+    assert back["choices"][0]["message"]["tool_calls"][0]["function"] == {"name": "read", "arguments": args}
+    assert back["choices"][0]["finish_reason"] == "tool_calls" and back["usage"] == done["usage"]
+    plain = {"id": "chatcmpl-2", "object": "chat.completion", "created": 1, "model": "m",
+             "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "DONE"}}]}
+    back = completion_from_chunks(chat_chunks(plain))
+    assert back["choices"][0]["message"]["content"] == "DONE" and back["choices"][0]["finish_reason"] == "stop"
+    assert wants_replay({"stream": True, "tools": [{"type": "function"}]}, "/v1/chat/completions")
+    assert not wants_replay({"stream": True}, "/v1/chat/completions")
+    assert not wants_replay({"stream": False, "tools": [{}]}, "/v1/chat/completions")
+    assert not wants_replay({"stream": True, "tools": [{}]}, "/v1/completions")

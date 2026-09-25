@@ -361,6 +361,20 @@
 - **When** the spec `test_the_relay_clamps_the_output_budget_to_what_the_window_leaves` is executed
 - **Then** a budget over the remainder is brought down, one under it is untouched, a missing budget is set, the floor holds, and the relay parser takes --clamp with a margin.
 
+### S6.9 — a headless call closed by </tool_call> is normalised like a tagged one
+- **verifies:** C-6.9
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_headless_call_closed_by_the_end_tag_is_normalised_like_a_tagged_one -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_headless_call_closed_by_the_end_tag_is_normalised_like_a_tagged_one` is executed
+- **Then** the measured Bonsai shape becomes a structured call on the chat path and a tool_use block on the messages path; prose that merely mentions the tag, and JSON without the closing tag, pass through.
+
+### S6.10 — a streaming chat completion with tools is normalised and replayed as chunks
+- **verifies:** C-6.10
+- **run_cmd:** `python -m pytest tests/test_toolcalls.py::test_a_streaming_chat_completion_with_tools_is_normalised_and_replayed_as_chunks -q`
+- **Given** tests/test_toolcalls.py
+- **When** the spec `test_a_streaming_chat_completion_with_tools_is_normalised_and_replayed_as_chunks` is executed
+- **Then** a complete completion renders as chat.completion.chunk frames — role, content, tool_calls with index and id, finish_reason, usage — ending with [DONE], and reading the frames back gives the completion; the relay replays only streaming tool-carrying chat completions.
+
 ## C-7 — proved by the bench module (lib/bench.py), the queue module (lib/queue.py) and the CLI
 
 ### S7.1 — a bench matrix is planned and read back from the record

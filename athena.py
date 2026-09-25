@@ -2353,7 +2353,7 @@ def cmd_relay(a) -> int:
     import http.server
     import urllib.error
     import urllib.request
-    from lib.toolcalls import normalize_completion, prepare_request
+    from lib.toolcalls import chat_chunks, normalize_completion, prepare_request, wants_replay
 
     upstream = a.upstream.rstrip("/")
     log = open(a.log, "a", encoding="utf-8") if a.log else None
@@ -2413,6 +2413,7 @@ def cmd_relay(a) -> int:
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else b""
             streaming = False
+            parsed = None
             try:
                 parsed = json.loads(body or b"{}")
                 streaming = bool(parsed.get("stream"))
@@ -2463,6 +2464,15 @@ def cmd_relay(a) -> int:
                     self._send(200, [("Content-Type", "application/json")],
                                json.dumps(payload, ensure_ascii=False).encode("utf-8"))
                 return
+            replay = False
+            if wants_replay(parsed, self.path):
+                # C-6.10: pi streams every turn; the lane is asked without a stream so the reply
+                # can be normalised (C-6.1, C-6.9), and the client gets the chunks it asked for
+                replay = True
+                parsed = {k: v for k, v in parsed.items() if k != "stream_options"}
+                parsed["stream"] = False
+                body = json.dumps(parsed, ensure_ascii=False).encode("utf-8")
+                streaming = False
             resp = self._forward(body)
             if streaming or not self.path.endswith("/chat/completions") or resp.status != 200:
                 # pass through, chunk by chunk when the upstream streams
@@ -2484,12 +2494,16 @@ def cmd_relay(a) -> int:
             payload, changed = normalize_completion(payload)
             if changed:
                 note(f"normalised: {[c['message']['tool_calls'][0]['function']['name'] for c in payload['choices'] if c.get('message', {}).get('tool_calls')]}")
+            if replay:
+                data = "".join(chat_chunks(payload)).encode("utf-8")
+                self._send(200, [("Content-Type", "text/event-stream"), ("Cache-Control", "no-cache")], data)
+                return
             self._send(200, [("Content-Type", "application/json")],
                        json.dumps(payload, ensure_ascii=False).encode("utf-8"))
 
     server = http.server.ThreadingHTTPServer((a.host, a.port), Relay)
     print(json.dumps({"relay": f"http://{a.host}:{a.port}/v1", "upstream": upstream,
-                      "note": "non-streaming chat completions are normalised; the lanes are untouched"}))
+                      "note": "chat completions are normalised (streaming ones with tools are replayed as chunks); the lanes are untouched"}))
     sys.stdout.flush()
     try:
         server.serve_forever()
