@@ -214,3 +214,29 @@ figure is the number to drive down with the intake and the orchestrator.
 Lane facts of the day, in memory too: the 27B lane is off by the operator's word (removed
 from the llama-swap config, backup beside it), the 3090 carries the floor lanes; the 9B lane
 cold-started twice after the reboot because its compile ran past llama-swap's 900 s.
+
+## Measured on 2026-09-25, evening: OmniCoder-9B against the vanilla 9B, same day, same packets
+
+OmniCoder-9B (Tesslate's agentic LoRA over Qwen3.5-9B, 425k frontier trajectories), served
+as compressed-tensors AWQ on the 3090 by the frame's own launcher (vLLM 0.21, legacy runner,
+fp8 KV: 570k tokens), against the operator's vanilla 9B lane on the 3060; both low + strict
+through a clamping relay, the nine refinery clauses, three iterations:
+
+| task | vanilla 9B (`pi-9b#van25`) | OmniCoder-9B (`pi-omni9#omni25`) |
+|---|---|---|
+| C-2.1 admit | green @1, 62 s | green @1, 26 s |
+| C-2.3 first_failure | green @1, 53 s | green @1, 25 s |
+| C-2.5 record + bd return | green @1, 202 s | green @1, 52 s |
+| C-2.6 merge metrics | green @1, 233 s | green @2, 243 s |
+| C-1.2 edit in the runner | green @1, 333 s | green @1, 188 s |
+| C-1.3 per-command skip | green @1, 286 s | green @1, 26 s |
+| C-2.2 rebase, real git | red x3, 2,036 s | red x3, 1,123 s |
+| C-2.4 fast-forward, CAS | red x3, 2,182 s | green @3, 884 s |
+| C-1.1 skip is red, 20k module | green @3, 967 s | green @2, 380 s |
+
+8 of 9 against 7 of 9, first attempt on 6 against 6, and 1.5-10x faster on seven tasks (the
+3090 against the 3060 is part of that; the first-attempt rate and the opened C-2.4 are not).
+The LoRA on agent trajectories is the practical distillate: same weights class, same runtime,
+one file swap. Decision: OmniCoder is the frame's 9B rung; the vanilla 9B stays the
+operator's general lane, both on the 3090 at 0.42 each (GDN KV is tiny); Nanbeige 3B moves to
+the 3060 (`D:\llm-lanes`, llama-swap `config.yaml.foundry`).
