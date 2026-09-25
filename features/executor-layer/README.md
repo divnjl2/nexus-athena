@@ -125,3 +125,70 @@ Speed, measured: the prompt prefix pi sends is byte-identical between turns (tra
 system prompt, same tools, history appended), so the 13-23% prefix-cache hit rate in
 production against 89% in a controlled test is the KV pool: the 27B lane holds 80,457
 tokens, 2.6 full contexts, block 2,080 tokens — three concurrent requests evict everything.
+
+## Measured on 2026-09-25: reasoning effort, the forge, the floor
+
+**medium against low on the vanilla 9B** (strict relay, one worker, witness 900 s for medium):
+
+| task | low + strict | medium + strict |
+|---|---|---|
+| C-2.1 admit (new function) | green @1, 38 s | red, two 900 s stalls |
+| C-2.3 first_failure | green @1, 38 s | green @1, 609 s |
+| C-2.5 record + bd return | green @1, 112 s | green @2, 984 s |
+| C-1.2 edit in the runner | red x3 | green @1, 393 s |
+
+Low is 8-16x faster on three of four and loses one edit-in-place. Production default for
+the 9B is low; medium is the second try on escalation, not the first.
+
+**The forge (C-7.5) on the 27B**, low + strict, single mutants in lines a clause exclusively
+owns, six targets: C-7.3 green @1 (369 s), C-6.1 green @2, C-8.1 green @1, C-6.7 red x2,
+C-3.6 red x2, one mutant the spec did not notice (dropped as a finding about the spec).
+Real tasks nobody wrote: a broken line inside a live module, no hint where.
+
+**The floor, leg one: Nanbeige4.2-3B Q4_K_M on the 3090** (llama.cpp b11165, direct, low,
+strict, the nine refinery clauses, record `pi-4b#gpu`): 6 of 9 green — C-2.1 @2 67 s,
+C-2.3 @1 59 s, C-2.5 @1 89 s, C-2.6 @1 52 s, C-1.3 @1 72 s, C-1.1 @2 276 s; red: C-1.2,
+C-2.2, C-2.4. Caveat found afterwards: the server ran `-c 32768 -np 2`, which is 16k per
+slot, and the three red tasks carried 19-24k tokens of prompt. They were rerun at 32k per
+slot (below).
+
+**The floor, leg two: Ternary Bonsai 4B** (prism-ml, the model the operator named), same
+nine clauses:
+- behind llama.cpp b11165 (the only mainline-compatible file is `Q2_0_g64`, 1.1 GB, 233
+  tok/s): the lane's parser ate `<tool_call>` and left the JSON as content, which is C-6.9;
+  and pi streams, so the relay's normalisation had never applied on the chat path, which
+  is C-6.10. With both in, the calls flow, and the 4B writes invalid JSON in edit arguments
+  (docstrings with triple quotes) that no client-side repair can fix. Not a harness for
+  agentic 4B without a grammar.
+- behind vLLM 0.21 (the unpacked BF16 weights, 8 GB, strict relay, 87k KV; needs
+  `VLLM_USE_V2_MODEL_RUNNER=0` on Windows): calls are structured, the smoke edit lands in
+  7 s, and the nine tasks are **0 of 9** — and **0 of 9 again with a brief from the 9B**
+  (medium, no tools, 6 of 9 briefs usable; the T2.1 brief was correct: filter by task, then
+  the last record's green). Traced on T2.5: read the missing module, wrote the spec's test
+  function into it as the implementation, said DONE. Six of 27 attempts changed a file.
+
+So the floor is not set by parameter count and not opened by a brief: an agent-trained 3B
+(Nanbeige, thinking on) lands class A first time; a chat-trained 4B with thinking forced
+off by its own template (Bonsai) lands nothing, brief or no brief, at 4-40 s per attempt.
+The literature's line — agentic post-training over size — measured here on our own tasks.
+
+**Nanbeige at 32k per slot** (`-c 65536 -np 2`, record `pi-3b#gpu32k`), the three red
+tasks and two controls, low, strict, no brief:
+
+| task | 16k per slot (morning) | 32k per slot |
+|---|---|---|
+| C-1.2 edit in the runner (19k prompt) | red x3, 277 s | green @1, 154 s |
+| C-2.2 rebase, real git (24k prompt) | red x3, 386 s | green @1, 396 s |
+| C-2.4 fast-forward, CAS on the ref | red x3, 422 s | red x3, 1,125 s |
+| C-2.1 admit (control) | green @2, 66 s | green @1, 98 s |
+| C-1.1 skip is red, 20k module (control) | green @2, 276 s | green @1, 162 s |
+
+Two of the three morning reds were the slot, not the model. With the window honest the
+agent-trained 3B holds 8 of the 9 refinery clauses, first attempt on 7 of them; what stays
+red is C-2.4, the class-B clause (real git, compare-and-set) the vanilla 9B also needed
+strict tool calling and a second attempt for. The brief leg on the same five tasks
+(`pi-3b#gpu32k-brief9`) is recorded below it when it lands.
+
+Lane facts of the day, in memory too: the 27B lane is off by the operator's word (removed
+from the llama-swap config, backup beside it), the 3090 carries the floor lanes; the 9B lane
+cold-started twice after the reboot because its compile ran past llama-swap's 900 s.

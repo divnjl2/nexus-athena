@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pathlib
 
-EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-4b", "pi-2b")
+EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b")
 LANE_MODELS = {"local-27b": "qwopus-27b", "local-9b": "qwable-9b"}
 LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"
@@ -39,15 +39,18 @@ LOCAL_OUTPUT_TOKENS = {"local-27b": 8192, "local-9b": 8192}
 #: developer role). Measured before adding it: the vanilla 27B edited a file in three turns
 #: through pi on the first try, the vanilla 9B in two.
 PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5-9b"),
+                # OmniCoder-9B: Tesslate's agentic LoRA over Qwen3.5-9B (425k frontier trajectories), served
+                # as compressed-tensors AWQ on the 3090 by the frame's own launcher for the A/B against vanilla
+                "pi-omni9": ("lane9o", "omnicoder-9b"),
                 # the floor experiment: Ternary Bonsai 4B (prism-ml, Q2_0_g64, 1.1 GB) on the 3090 behind
                 # mainline llama.cpp b11165 at :8003; measured before it: Nanbeige4.2-3B Q4_K_M landed
                 # 6/9 refinery tasks on the same GPU. The providers are registered in models.json
-                "pi-4b": ("lane4", "bonsai-4b"), "pi-2b": ("lane2", "qwen3.5-2b")}
+                "pi-4b": ("lane4", "bonsai-4b"), "pi-3b": ("lane3", "nanbeige-3b"), "pi-2b": ("lane2", "qwen3.5-2b")}
 PI_TOOLS = "read,bash,edit,write"
 #: reasoning effort per lane. Measured on the vanilla 27B, one coding prompt: its default
 #: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,
 #: medium in 46 s; "high" the lane rejects with a 400.
-PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-4b": "low", "pi-2b": "low"}
+PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-omni9": "low", "pi-4b": "low", "pi-3b": "low", "pi-2b": "low"}
 #: hashline (C-3.7): the pi-hashline-edit-pro extension registers read / replace / insert /
 #: anchor_grep / undo_last_change and disables the string-replace edit. Lines come back as
 #: `Dafo│content`; an edit names anchors; a stale anchor is refused ([E_RANGE_STALE]) instead
