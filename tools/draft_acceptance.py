@@ -44,9 +44,23 @@ if not clause_text:
         clause_text[m.group(1)] = " ".join(m.group(2).split())
 
 tree = ast.parse(sources[module])
-sigs = [f"def {n.name}({ast.unparse(n.args)})" + (f" -> {ast.unparse(n.returns)}" if n.returns else "")
-        for n in tree.body if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")]
+rich = len(sys.argv) > 6 and sys.argv[6] == "rich"   # arm 2: docstrings and one example spec ride along
+sigs = []
+for n in tree.body:
+    if isinstance(n, ast.FunctionDef) and not n.name.startswith("_"):
+        line = f"def {n.name}({ast.unparse(n.args)})" + (f" -> {ast.unparse(n.returns)}" if n.returns else "")
+        doc = (ast.get_docstring(n) or "").strip()
+        if rich and doc:
+            line += "\n        \"\"\"" + " ".join(doc.split())[:400] + "\"\"\""
+        sigs.append(line)
 modname = module[:-3].replace("/", ".")
+example = ""
+if rich:
+    # one existing spec of a DIFFERENT clause as the example of the house style and the shapes
+    src = (ROOT / "tests" / f"test_{pathlib.Path(module).stem}.py")
+    if src.exists():
+        m = re.search(r"\ndef (test_\w+)\(\):\n(?:.*\n)*?(?=\ndef |\Z)", src.read_text(encoding="utf-8"))
+        example = m.group(0).strip() if m else ""
 
 targets = pick_targets(clause_map, scenarios, sources, n=50, mutants_per_task=1, seed=11, clause_prefix=prefix)
 by_clause = {}
@@ -68,6 +82,8 @@ for cid in sorted(by_clause):
             "The clause (EARS):", "", clause_text.get(cid, "(see contract)"), "",
             f"Public signatures of `{modname}` (import from it; do not read the module's body, it is not the spec):", "",
             *[f"    {s}" for s in sigs], "",
+            *(["One existing spec of another clause, for the house style and the shapes the functions return:", "",
+               "```python", example, "```", ""] if example else []),
             "Rules: write exactly one function `def test_...():` with a docstring that starts with the clause id",
             f"(`\"\"\"{cid} — ...\"\"\"`), pure, no files, no network, deterministic. Build the inputs from the",
             "clause's own words. Reply with the Python code of the test function ONLY, in one ```python block.",
