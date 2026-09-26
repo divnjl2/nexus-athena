@@ -115,3 +115,72 @@ def select_lessons(lessons, clause_ids=None, files=None, n=5, cap_chars=200):
 def decay(lessons, green_rides=None, limit=10):
     green_rides = green_rides or {}
     return [l for l in lessons if green_rides.get(l.get("id", ""), 0) < limit]
+
+
+def packet_with_memory(pk, repo_map="", lessons=None):
+    """C-11.3 — WHEN a packet is packed, place the repository map and selected lessons
+    after the static prefix and before the requirement; add nothing when there is nothing.
+
+    Args:
+        pk: Packet dict with keys ``text``, ``chars``, ``budget_chars``, ``over_budget``.
+        repo_map: Repository map content to insert under "## Repository map".
+        lessons: List of lesson dicts with ``clause``, ``file``, ``rule`` keys.
+
+    Returns:
+        Packet dict with added ``text``, ``chars``, ``map_chars``, ``lesson_count``.
+        Returns the original ``pk`` unchanged when both repo_map and lessons are empty.
+    """
+    if lessons is None:
+        lessons = []
+
+    # Nothing to add — return the original packet object unchanged
+    if not repo_map and not lessons:
+        return pk
+
+    text = pk["text"]
+
+    # Build the repository map section (only if non-empty)
+    map_section = ""
+    if repo_map:
+        map_section = f"## Repository map\n{repo_map}"
+
+    # Build the lessons section (only if non-empty)
+    lessons_section = ""
+    if lessons:
+        lesson_lines = []
+        for lesson in lessons:
+            formatted = (
+                f"{lesson.get('clause', '')}: "
+                f"{lesson.get('rule', '')} ({lesson.get('file', '')})"
+            )
+            lesson_lines.append(formatted)
+        lessons_section = f"## Lessons\n{chr(10).join(lesson_lines)}"
+
+    # Insert sections after the static prefix and before "## The requirement"
+    parts = text.split("\n")
+    requirement_idx = -1
+    for i, p in enumerate(parts):
+        if p.strip().lower() == "## the requirement".lower():
+            requirement_idx = i
+            break
+
+    if requirement_idx < 0:
+        # No requirement marker — append sections at the end
+        combined = "\n".join([map_section, lessons_section])
+        new_text = "\n".join(parts + [combined])
+    else:
+        combined = "\n".join([map_section, lessons_section])
+        new_text = "\n".join(parts[:requirement_idx] + [combined] + parts[requirement_idx:])
+
+    map_chars = len(repo_map) if repo_map else 0
+    lesson_count = len([l for l in lessons if l.get("clause")])
+
+    out = {
+        "text": new_text,
+        "chars": len(new_text),
+        "budget_chars": pk["budget_chars"],
+        "over_budget": pk["over_budget"],
+        "map_chars": map_chars,
+        "lesson_count": lesson_count,
+    }
+    return out
