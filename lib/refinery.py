@@ -288,3 +288,42 @@ def sealed_checks(dirs) -> list:
 def sealed_touched(changed) -> list:
     """PURE: the changed paths that lie under a sealed directory."""
     return [p for p in changed if f"/{SEALED_DIR}/" in ("/" + str(p).replace("\\", "/"))]
+
+
+# --- C-11.2: the mutation stage of the merge queue ------------------------------------------
+
+STAGES = ("admit", "rebase", "check", "mutation", "fast-forward")
+
+
+def changed_lines_from_diff(diff_text: str) -> dict:
+    """PURE (C-11.2): {path: [new-side line numbers added or changed]} out of a unified diff
+    (`git diff --unified=0 target...HEAD`). Deleted-only hunks add nothing."""
+    import re as _re
+    out: dict = {}
+    path = None
+    for line in (diff_text or "").splitlines():
+        if line.startswith("+++ "):
+            name = line[4:].strip()
+            path = None if name == "/dev/null" else (name[2:] if name.startswith("b/") else name)
+            continue
+        m = _re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", line)
+        if m:
+            start = int(m.group(1)); count = int(m.group(2)) if m.group(2) is not None else 1
+            if path and count > 0:
+                out.setdefault(path, []).extend(range(start, start + count))
+            continue
+    return {k: sorted(set(v)) for k, v in out.items()}
+
+
+def mutation_stage(changed: dict, clause_map: dict, results: list, *, threshold: float = 0.7) -> dict:
+    """PURE (C-11.2): the stage's verdict — the changed lines mapped to the clauses that own them
+    (lib.mutgate), the sweep's results scored per clause, refused on a survivor on an added line
+    or a clause under the threshold there; `unowned` names changed lines no clause owns."""
+    from lib.mutgate import changed_targets, clause_scores, mutation_verdict
+    targets, unowned = changed_targets(changed or {}, clause_map or {})
+    scores = clause_scores(list(results or []), targets)
+    v = mutation_verdict(scores, threshold=threshold, added=changed or {})
+    v["stage"] = "mutation"
+    v["scores"] = scores
+    v["unowned"] = unowned
+    return v
