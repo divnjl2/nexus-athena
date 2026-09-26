@@ -209,6 +209,7 @@ three rounds (`tools/draft_acceptance.py ... rich 3`). Nine clauses, two drafts 
 |---|---|---|---|---|
 | 3 | 1 | 18 | 1 | 10 still red at HEAD after the repair, 2 green on the broken code too, 1 no test function |
 | 4 | up to 3 | 13 judged (C-2.1 to C-2.7, the run timed out) | 5 | 6 red at HEAD (in 5 of them the repair reply carried no test function, so the loop stopped at round 0), 2 green on the broken code too |
+| 5 | up to 3, a re-ask when the reply has no test function, pi in a scratch worktree, stall guard | 13 judged in the hour (C-2.1 to C-2.7) | 4 (C-2.1, C-2.3, C-2.6, C-2.7 — the last after three rounds) | 6 red at HEAD after the full three rounds, 4 green on the broken code too; no stall, no stray file |
 
 Admitted drafts by clause: C-2.1 (after 2 rounds), C-2.2 (1), C-2.3 (1), C-2.4 (both drafts, 1 and 2
 rounds). The lever is the loop, not the prompt: the rate goes from 1 in 18 to 5 in 13 when the model
@@ -219,7 +220,10 @@ repository root and the model left four test files there; it now runs pi in a sc
 when a repair reply carries no test function, asks once more for the function (arm 5). Arm 5's first
 run (27.09 00:00) judged 3 drafts, admitted 1, then died on a pi call that stalled for 20 minutes with
 the lane idle — the tool had no stall guard; every pi call is now bounded and a stall is a row, not a
-crash. The arm's number is the next run's (`/d/tmp/lanes/drafts_arm5b.log`).
+crash. The rerun (27.09 00:10 -> 01:10) judged 13 in its hour and admitted 4: the re-ask makes every repair
+round happen (seven drafts used all three) and changes which drafts land, not how many — four to five
+of thirteen is the 9B rung's rate with a three-round loop. What now stops the rest splits evenly: drafts
+still red after three repairs, and drafts that pass on the broken code too (the admission rule's catch).
 
 ## The ten gaps on 2026-09-27 00:10 — measured state
 
@@ -228,7 +232,7 @@ crash. The arm's number is the next run's (`/d/tmp/lanes/drafts_arm5b.log`).
 | 1 regeneration from the spec | measured three times; **a source at task granularity for the 9B rung**; equivalence under C-8.3 not reached | whole module: 6 specs at best; decomposed with the C-8.4 verdict: 7 of 9 tasks, 10 of 12 specs by the lane, 12 of 12 after the frontier's ADR-0007 finish; mutation 0.81 vs 0.85, diffbehavior still finds unpinned edge inputs in 9 lane-written functions and none in the 4 frontier-written |
 | 2 oracles of the second kind | three live | C-9.4 `lint-imports` on the frame's own structure; C-9.5 a time and memory budget as a spec (pytest-benchmark + tracemalloc, negative control); C-9.6 a golden file as a spec (the merge metrics rendering; a golden edit taints the verdict; snapshot-update flags refused) |
 | 3 mutation in the gate, sealed tier | live | `athena merge` runs the `mutation` stage on changed lines (first merge through it: no survivor on an added line); `features/foundry-layer/sealed/` with three second readings |
-| 4 authorship throughput | measured, the repair loop is the lever | 0 of 36 without repair, 1 of 18 with one round, 5 of 13 with up to three rounds; the admission rule caught every false draft; the frontier still edits what is admitted |
+| 4 authorship throughput | measured, the repair loop is the lever | 0 of 36 without repair, 1 of 18 with one round, 5 of 13 and 4 of 13 with up to three rounds (arms 4, 5); the admission rule caught every false draft; the frontier still edits what is admitted |
 | 5 the daemon | live | `athena daemon --once` on the real beads queue: claim by bd id, live admission, dispatch, rollback, provenance, release on red |
 | 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |
 | 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
