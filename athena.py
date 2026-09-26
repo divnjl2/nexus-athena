@@ -1486,7 +1486,7 @@ def cmd_next(a) -> int:
     plan = _parse_front_auto(a.front, "auto")
     slug = a.slug or _slugify(getattr(plan, "title", "") or pathlib.Path(a.contract).resolve().parent.name)
     try:
-        listed = subprocess.run(ready_command(slug), capture_output=True, text=True, encoding="utf-8",
+        listed = subprocess.run([_bd_bin()] + ready_command(slug)[1:], capture_output=True, text=True, encoding="utf-8",
                                 errors="replace", timeout=60)
         ready_json = listed.stdout or ""
     except (OSError, subprocess.SubprocessError) as e:
@@ -1499,7 +1499,7 @@ def cmd_next(a) -> int:
     if a.dry_run:
         print(f"next: {task} ({slug})" if a.text else json.dumps({"slug": slug, "task": task, "dry_run": True}))
         return 0
-    subprocess.run(claim_command(slug, task), capture_output=True, timeout=60)
+    subprocess.run([_bd_bin()] + claim_command(slug, task)[1:], capture_output=True, timeout=60)
     argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", a.front,
             "--task", task, "--executor", a.executor, "--workspace", a.workspace,
             "--iterations", str(a.iterations), "--fanout", str(a.fanout), "--timeout", str(a.timeout),
@@ -1535,7 +1535,7 @@ def cmd_daemon(a) -> int:
                 return []
             return data if isinstance(data, list) else []
         try:
-            listed = subprocess.run(ready_command(slug), capture_output=True, text=True, encoding="utf-8",
+            listed = subprocess.run([_bd_bin()] + ready_command(slug)[1:], capture_output=True, text=True, encoding="utf-8",
                                     errors="replace", timeout=60)
             data = json.loads(listed.stdout or "[]")
         except (OSError, ValueError, subprocess.SubprocessError):
@@ -1578,7 +1578,7 @@ def cmd_daemon(a) -> int:
             time.sleep(a.interval)
             continue
         from lib.daemon import bd_id_for
-        subprocess.run(["bd", "update", bd_id_for(ready_list(), slug, task), "--claim"], capture_output=True, timeout=60)
+        subprocess.run([_bd_bin(), "update", bd_id_for(ready_list(), slug, task), "--claim"], capture_output=True, timeout=60)
         log(task, "dispatch", f"ready, {a.executor}: {why}")
         running.add(task)
         argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", a.front,
@@ -2305,6 +2305,11 @@ def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants
             return v
         worst = v
     return worst
+
+def _bd_bin() -> str:
+    """beads on Windows is a bd.CMD shim: Python spawns it only by its resolved path."""
+    import shutil
+    return shutil.which("bd") or "bd"
 
 def cmd_dispatch(a) -> int:
     """Pour one plan task into an executor and judge it by the diff and the spec commands."""
