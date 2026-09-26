@@ -141,14 +141,75 @@ tokens for the research digest, 41 clauses with red specs, the review of six lan
 implementations, the wiring of `athena.py`, two merges through the refinery and the day's
 lane operations.
 
-## The ten gaps on 2026-09-26 18:20 — measured state
+
+## Regeneration from the spec, third run: decomposed by task (26.09 21:30 -> 23:20, C-8.4 / gap 1)
+
+The whole-module packet asked the 9B rung for 300 lines in one window and it rebuilt the skeleton
+and half the behaviour (runs 1 and 2). The third run keeps the module deleted but asks for it the
+way the frame asks for anything: `lib/refinery.py` stubbed to its signatures, constants and
+docstrings, then the nine refinery tasks whose specs went red dispatched in order, three
+iterations each, OmniCoder-9B strict low inside the OS sandbox. Two frame defects surfaced on the
+first pass and became C-8.4: every task's verdict counted the other stubs' red specs and could not
+be green however right its own function was; and an iteration that gutted the spec file was kept
+because the green counts tied. With `--inherit-red` (own checks and regressions from the base
+decide; inherited reds named; a tainted iteration never kept; a task that ends red restores the
+base; a radius batch inherited by its members):
+
+| task | function(s) regenerated | verdict | iteration | seconds | tokens in / out |
+|---|---|---|---|---|---|
+| T2.1 | `admit` | PASS | 1 of 3 | 101 | 69.7k / 5.4k |
+| T2.2 | `rebase`, `conflicts_from` | FAIL | 3 of 3 | 87 per iteration | 236.8k / 4.5k |
+| T2.3 | `first_failure` | PASS | 1 of 3 | 29 | 18.0k / 1.1k |
+| T2.4 | `fast_forward` | PASS | 2 of 3 | 174 | 330.6k / 11.5k |
+| T2.5 | `merge_record`, `parse_merges`, `bd_return_command` | PASS | 1 of 3 | 32 | 22.0k / 1.4k |
+| T2.6 | `merge_metrics`, `render_merge_metrics` | PASS | 1 of 3 | 95 | 102.4k / 4.7k |
+| T2.8 | `verify_verdict` | PASS | 1 of 3 | 148 | 251.3k / 8.2k |
+| T2.9 | `sealed_dirs`, `sealed_checks`, `sealed_touched` | PASS | 1 of 3 | 118 | 328.7k / 4.9k (packet budget raised to 40k chars; first try refused at 38k) |
+| T2.10 | `checked_out_at`, the read-tree sync | FAIL | 3 of 3 | 254 per iteration | 448.6k / 8.6k; hit the 30k window |
+
+Seven of nine tasks green, five of them in the first iteration; `tests/test_refinery.py` 11 of 13
+green on the reassembled module (runs 1 and 2: 6 of 13 at best). The two reds are the two git
+functions with the most branches (conflict handling in `rebase`; the two-tree sync of a
+checked-out target in `fast_forward`) — the 9B rung's envelope, not the frame's. The equivalence
+gates of C-8.3 on the reassembled module against the original:
+
+| gate | original | regenerated, run 3 |
+|---|---|---|
+| specs (`tests/test_refinery.py`, 13) | 13 green | 11 green, 2 red (T2.2, T2.10) |
+| `crosshair diffbehavior`, 15 public functions | — | 8 of the 12 implemented functions diverge on crosshair's edge inputs (reason texts, key order and extra keys in `merge_record` / `verify_verdict`, a side effect in `sealed_dirs`), plus the 3 still stubbed |
+| mutation score over the clauses' owned lines, 60 mutants asked, map recomputed on the regenerated module | 47 of 55 killed, 0.85, 180 owned lines, 9 clauses | 36 of 42 killed, 0.86, 206 owned lines, 8 clauses (C-2.9 owns nothing while its spec's neighbours are red); survivors: a default flag, four `and` flips in the sealed and verify paths |
+
+What changes in the answer to gap 1: the spec is a source at the granularity the frame already
+works at — one task, one window — and not at the granularity of a module for a 9B rung. The
+decomposition is the packet's, not the operator's: the plan's tasks and their specs cut the module.
+
+## Drafted specs, arm 4: the repair loop (26.09 21:20 -> 22:10, C-2.1 / gap 4)
+
+Arm 3 gave the 9B one repair round with the failure in hand and admitted 1 of 18. Arm 4 gives up to
+three rounds (`tools/draft_acceptance.py ... rich 3`). Nine clauses, two drafts each, judged in the
+50-minute budget the run had beside the regeneration series:
+
+| arm | repair rounds | drafted | admitted | why not |
+|---|---|---|---|---|
+| 3 | 1 | 18 | 1 | 10 still red at HEAD after the repair, 2 green on the broken code too, 1 no test function |
+| 4 | up to 3 | 13 judged (C-2.1 to C-2.7, the run timed out) | 5 | 6 red at HEAD (in 5 of them the repair reply carried no test function, so the loop stopped at round 0), 2 green on the broken code too |
+
+Admitted drafts by clause: C-2.1 (after 2 rounds), C-2.2 (1), C-2.3 (1), C-2.4 (both drafts, 1 and 2
+rounds). The lever is the loop, not the prompt: the rate goes from 1 in 18 to 5 in 13 when the model
+sees its own failure up to three times. What stops the rest is a repair reply without a test
+function; a round that re-asks for the function would be the next arm. The admission rule held:
+the two drafts that were green on the broken code were refused. The drafting tool ran pi in the
+repository root and the model left four test files there — the tool belongs in a worktree like
+every other executor (noted, not yet moved).
+
+## The ten gaps on 2026-09-26 23:30 — measured state
 
 | gap | state | evidence |
 |---|---|---|
-| 1 regeneration from the spec | measured, not yet equivalent for a 9B rung | two runs; three gates (specs 6/13, diffbehavior 8/15 diverge, mutation on partial coverage); C-11.6 born from run 1 |
-| 2 oracles of the second kind | one live | C-9.4 `lint-imports` on the frame's own structure, 2 contracts kept; the binding guard binds through the config; perf and golden renderers exist, no clause yet |
+| 1 regeneration from the spec | measured three times; **a source at task granularity for the 9B rung**, not at module granularity | whole module: 6 of 13 specs at best (runs 1, 2); decomposed by the plan's tasks with the C-8.4 verdict: 7 of 9 tasks green, 11 of 13 specs, the two reds are the two branchiest git functions; three gates on the result below |
+| 2 oracles of the second kind | two live | C-9.4 `lint-imports` on the frame's own structure; C-9.5 a time and memory budget as a spec (pytest-benchmark + tracemalloc on the packet packing, with a negative control that fails it); golden renderers exist, no snapshot clause yet |
 | 3 mutation in the gate, sealed tier | live | `athena merge` runs the `mutation` stage on changed lines (first merge through it: no survivor on an added line); `features/foundry-layer/sealed/` with three second readings |
-| 4 authorship throughput | measured, negative for the 9B | 1 of 54 drafts admitted over three arms (signatures; + docstrings and an example; + one repair round); the admission rule caught the rest |
+| 4 authorship throughput | measured, the repair loop is the lever | 0 of 36 without repair, 1 of 18 with one round, 5 of 13 with up to three rounds; the admission rule caught every false draft; the frontier still edits what is admitted |
 | 5 the daemon | live | `athena daemon --once` on the real beads queue: claim by bd id, live admission, dispatch, rollback, provenance, release on red |
 | 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |
 | 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
@@ -156,10 +217,10 @@ lane operations.
 | 9 sandbox | **live**: the OS sandbox runs the executor; the relay fence on every lane | C-10.1: `--sandbox required` — OmniCoder inside sandbox-runtime (account `srt-sandbox`, WFP fence, loopback only to the fenced relay 60081) regenerated `pick_admitted` from C-11.7, spec green in 51 s, 1 iteration (20:52). Probed from inside: writes to the lane, model and secret trees on D: refused, the caller's profile unreadable, github and the lane's direct port blocked, the relay reachable. C-10.3: all three executor relays (8417, 60081, 60083) refuse a `write` outside the worktree. Residual, said out loud: `D:/tmp` (where the worktrees live) stays writable to the account — the drive grants Authenticated Users modify and a deny on its root needs elevation |
 | 10 memory in the packet | live | repo map after the prefix, lessons appended on red (three from the regeneration run) and selected by clause and file |
 
-What stays open, in order: the OS sandbox's spawn on this box (logon of `srt-sandbox` refused; the
-relay fence holds meanwhile), a perf clause with pytest-benchmark (gap 2), and
-the two things the measurements say about the rungs: regeneration needs a bigger rung or the
-frontier's finish, and spec drafting stays the frontier's.
+What stays open, in order: the world-writable `D:/tmp` under the sandbox (the operator's drive layout),
+a snapshot clause (gap 2's third oracle), the drafting tool moved into a worktree with a round that
+re-asks for the test function, and the two functions the 9B rung did not regenerate (a bigger rung,
+or the frontier's finish under ADR-0007).
 
 
 ## The OS sandbox, live (26.09 19:00 -> 20:55, gap 9 / C-10.1)
