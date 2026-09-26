@@ -2781,6 +2781,14 @@ def cmd_dispatch(a) -> int:
         pk = packet_with_memory(pk, repo_map=_rm, lessons=_ls)
     loop = run_iterations(pk, attempt, budget=a.iterations)
     v, checks, tokens, err, duration = loop["verdict"], state["checks"], state["tokens"], state["err"], state["duration"]
+    if not v.get("passed") and state.get("base_sha") and getattr(a, "keep_best", True) and a.fanout <= 1:
+        # C-8.4: a task that ends red leaves the workspace as it found it — the iterations stay in
+        # the history for the record, the next task starts from the base, not from this one's debris
+        import subprocess as _sp1
+        _sp1.run(["git", "checkout", state["base_sha"], "--", "."], cwd=str(workspace), capture_output=True)
+        _sp1.run(["git", "commit", "-q", "--allow-empty", "-am", f"athena: {a.task} red after {loop['iterations']} iteration(s); workspace restored to the base"],
+                 cwd=str(workspace), capture_output=True)
+        print(f"# {a.task} red: workspace restored to the base {state['base_sha'][:7]} (C-8.4)", flush=True)
 
     out = {**v, "task": a.task, "executor": a.executor, "duration_ms": duration,
            "tokens": tokens, "worker_error": err, "checks": checks, "record": str(dpath),

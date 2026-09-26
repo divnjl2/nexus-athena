@@ -189,6 +189,8 @@
     however right its own function was; in T2.2 the executor gutted tests/test_refinery.py, the
     verdict refused the iteration and keep-best kept it because the counts tied. Inherited reds
     are the merge queue's business: its check stage runs everything on the rebased result.
+  - note: measured 26.09 22:30 on the third run: T2.10 ended red after breaking T2.8's spec and left
+    the breakage in the workspace for the next task; a task that ends red now restores the base.
 
 ## C-9 — Oracles of the second kind
 
