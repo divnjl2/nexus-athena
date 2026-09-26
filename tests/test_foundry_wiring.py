@@ -91,8 +91,11 @@ def test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_th
     assert lane_endpoint("pi-omni9", base_url="http://127.0.0.1:8006/v1") == ("metrics", "http://127.0.0.1:8006/metrics")
     assert lane_endpoint("pi-3b", base_url="http://127.0.0.1:8003/v1") == ("slots", "http://127.0.0.1:8003/slots")
     assert lane_endpoint("claude", base_url="") == ("", "")
+    assert lane_endpoint("pi-9b", base_url="http://127.0.0.1:8417/v1") == ("metrics", "http://127.0.0.1:8417/metrics")   # review: the rule is the runtime, not a name list
 
     def fetch(url):
+        if ":9999/" in url:
+            raise OSError("down")
         if url.endswith("/metrics"):
             return 'vllm:num_requests_running{m="x"} 1.0\nvllm:num_requests_waiting{m="x"} 0.0\nvllm:kv_cache_usage_perc{m="x"} 0.2\n'
         if url.endswith("/slots"):
