@@ -304,6 +304,14 @@
 - **When** the spec `test_without_a_sandbox_the_frame_says_so_and_runs_unsandboxed_only_when_allowed` is executed
 - **Then** flag required + unavailable: refuse; flag on + unavailable: run unsandboxed and say so; flag off: run plain; available: sandboxed.
 
+### S10.3 — the relay fences tool calls outside the worktree or on the deny list
+- **verifies:** C-10.3
+- **pins:** b82fa0cb6be54fb2
+- **run_cmd:** `python -m pytest tests/test_foundry_oracles.py::test_the_relay_fences_tool_calls_outside_the_worktree_or_on_the_deny_list -q`
+- **Given** tests/test_foundry_oracles.py
+- **When** the spec `test_the_relay_fences_tool_calls_outside_the_worktree_or_on_the_deny_list` is executed
+- **Then** a write or edit outside the worktree, a read of a denied path and a deny-listed command are refused with the reason; a call inside the worktree passes; a completion whose calls are all refused comes back as a text refusal with no tool_calls.
+
 ## C-11 — wired into the loop (lib/provenance.py, lib/refinery.py, lib/memory.py, lib/ladder.py, lib/lanes.py, athena.py)
 
 ### S11.1 — a dispatch record carries provenance built from the executor and the packet

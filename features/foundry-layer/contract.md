@@ -216,6 +216,14 @@
   when the flag allows it explicitly.
   - source: review
 
+- **C-10.3** — WHEN a tool call the relay carries would write or edit outside the worktree,
+  read a denied path, or run a command on the deny list THE SYSTEM SHALL replace it with a
+  refusal the executor reads and let nothing run.
+  - source: incident
+  - note: the allowlist in the harness, independent of the OS sandbox: measured 26.09, an
+    executor wrote `nul` and `a.txt` into the worktree root and a 4B model reached for absolute
+    paths. The relay is the choke point every tool call passes (C-6.1); the fence lives there
+    and the fenced call never reaches the harness that would execute it.
 ## C-11 — Wired into the loop
 
 - **C-11.1** — WHEN a dispatch records its verdict THE SYSTEM SHALL carry a provenance block

@@ -2282,6 +2282,39 @@ def _runtime_version(executor: str) -> str:
         except Exception:                                # noqa: BLE001
             return ""
 
+def _sandbox_available() -> bool:
+    """srt on the PATH and able to spawn as the sandbox user (on Windows that needs an elevated caller)."""
+    import shutil
+    import subprocess
+    exe = shutil.which("srt")
+    if not exe:
+        return False
+    try:
+        p = subprocess.run([exe, "-c", "cmd /c echo srt-ok" if os.name == "nt" else "echo srt-ok"], capture_output=True, text=True, timeout=60)
+        return p.returncode == 0 and "srt-ok" in (p.stdout or "")
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _sandbox_wrap(cmd: dict, workspace, *, lane_ports) -> dict:
+    """C-10.1: the executor command wrapped in the sandbox runtime — the settings file beside the
+    workspace's ledger, the pi agent directory the sandbox user can read, the relays it may reach."""
+    import shutil
+    from lib.executors import pi_binary
+    from lib.sandbox import sandbox_config
+    ws = pathlib.Path(workspace)
+    agent_dir = pathlib.Path(os.environ.get("ATHENA_SANDBOX_PI_AGENT_DIR", r"D:\llm-lanes\pi-agent"))
+    reads = [str(pathlib.Path(sys.executable).resolve().parent.parent), str(pathlib.Path(shutil.which("node") or "C:/Program Files/nodejs").parent),
+             str(pathlib.Path(pi_binary()).resolve().parent), str(agent_dir), str(ws)]
+    cfg = sandbox_config(ws, allow_read=reads, lane_ports=lane_ports)
+    cfg_path = ws / ".athena" / "sandbox.json"
+    cfg_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg_path.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
+    argv = [shutil.which("srt") or "srt", "--settings", str(cfg_path), "--"] + list(cmd["argv"])
+    env = dict(cmd.get("env") or {})
+    env["PI_CODING_AGENT_DIR"] = str(agent_dir)
+    return {**cmd, "argv": argv, "env": env}
+
 def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int):
     """C-11.2: the merge queue's mutation stage — the offer's changed lines (unified diff against
     the target) through every contract's clause map, the frame's own mutants on the owned lines,
@@ -2451,6 +2484,17 @@ def cmd_dispatch(a) -> int:
             cmd = pi_command(a.executor, text, pi_bin=pi_binary(), thinking=a.pi_thinking,
                              hashline=ext, files=list(task_files), require_hashline=bool(a.pi_hashline),
                              strict=a.pi_strict)
+            flag = getattr(a, "sandbox", "off")
+            if flag != "off":
+                # C-10.1 / C-10.2: the sandbox decision, said out loud
+                from lib.sandbox import sandbox_decision
+                run_it, sandboxed, why = sandbox_decision(available=_sandbox_available(), flag=flag)
+                print(f"# sandbox: {why}", flush=True)
+                if not run_it:
+                    return {"code": 1, "out": "", "err": why, "duration": 0, "tokens": {}}
+                if sandboxed:
+                    ports = [int(x) for x in str(getattr(a, "sandbox_ports", "")).split(",") if x.strip().isdigit()]
+                    cmd = _sandbox_wrap(cmd, ws, lane_ports=ports or [60081])
             return _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=a.stall)
         cfg = openhands_config(text, workspace=str(ws),
                                model=a.model or "openai/qwopus-27b",
@@ -2836,6 +2880,11 @@ def cmd_relay(a) -> int:
             payload, changed = normalize_completion(payload)
             if changed:
                 note(f"normalised: {[c['message']['tool_calls'][0]['function']['name'] for c in payload['choices'] if c.get('message', {}).get('tool_calls')]}")
+            if getattr(a, "fence", ""):
+                from lib.sandbox import fence_completion
+                payload, refused_n = fence_completion(payload, worktree=a.fence)
+                if refused_n:
+                    note(f"fenced: {refused_n} call(s) refused")
             if replay:
                 data = "".join(chat_chunks(payload)).encode("utf-8")
                 self._send(200, [("Content-Type", "text/event-stream"), ("Cache-Control", "no-cache")], data)
@@ -3031,6 +3080,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
     dp.add_argument("--brief", default="", help="a senior's brief (athena brief) carried in the packet (C-8.4)")
     dp.add_argument("--map-tokens", dest="map_tokens", type=int, default=800, help="repo map budget in the packet, 0 = none (C-11.3)")
+    dp.add_argument("--sandbox", choices=("off", "on", "required"), default="off",
+                    help="run the pi worker inside sandbox-runtime: on = if available, required = refuse otherwise (C-10.1, C-10.2)")
+    dp.add_argument("--sandbox-ports", dest="sandbox_ports", default="60081",
+                    help="loopback ports the sandboxed worker may reach (the relays inside the proxy range)")
     dp.add_argument("--no-keep-best", dest="keep_best", action="store_false", help="do not commit per iteration nor roll back a regression (C-11.6)")
     dp.add_argument("--tag", default="", help="a label appended to the executor name in the record, e.g. low, strict")
     dp.add_argument("--pi-strict", dest="pi_strict", action="store_true",
@@ -3091,6 +3144,7 @@ def build_parser() -> argparse.ArgumentParser:
     rl.add_argument("--strict", action="store_true",
                     help="set strict: true on every function tool so the lane applies its grammar "
                          "to the call (C-6.7); the lane itself is not touched")
+    rl.add_argument("--fence", default="", help="worktree the executor may write in: tool calls outside it or on the deny list are refused (C-10.3)")
     rl.add_argument("--thinking", choices=("off", "on"), default="on",
                     help="for requests that carry tools: set chat_template_kwargs.enable_thinking "
                          "(off by default; vLLM #42021: with thinking on, Qwen3.5 hides its tool "

@@ -115,6 +115,11 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_oracles.py::test_the_sandbox_wraps_a_command_with_the_worktree_writable_and_the_lane_ports_open tests/test_foundry_oracles.py::test_without_a_sandbox_the_frame_says_so_and_runs_unsandboxed_only_when_allowed -q`
   - files: `lib/sandbox.py`
   - verifies: S10.1, S10.2
+- [ ] T5.3 The relay fence: paths and commands the executor may not touch
+  - success_check: `python -m pytest tests/test_foundry_oracles.py::test_the_relay_fences_tool_calls_outside_the_worktree_or_on_the_deny_list -q`
+  - files: `lib/sandbox.py, athena.py`
+  - verifies: S10.3
+
 ## Phase 6: Wired into the loop
 **Goal:** provenance in every record, the mutation stage in the queue, memory in the packet, the ladder and live admission in the daemon.
 **Depends on:** Phase 5
