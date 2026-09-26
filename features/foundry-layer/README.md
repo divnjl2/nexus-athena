@@ -153,11 +153,11 @@ lane operations.
 | 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |
 | 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
 | 8 capacity-aware lanes | live | the daemon admits by `/metrics` or `/slots`; with `--executors` it routes by prefix affinity among the admitted lanes (C-11.7), warmth table beside the ledger |
-| 9 sandbox | pure only | config, argv and decision; sandbox-runtime not installed; measured need: an executor left `nul` and `a.txt` in the worktree |
+| 9 sandbox | fence live in the relay; OS sandbox installed, blocked on this box | C-10.3: the relay refuses writes and edits outside the worktree, denied reads and deny-listed commands before anything runs (live probe: a `write` to `C:/Windows` came back as `REFUSED`, no tool call); sandbox-runtime 0.0.77 installed (user `srt-sandbox`, 4 WFP filters, ports 60080-60089), `--sandbox on|required` wired with the real schema, but `CreateProcessWithLogonW(srt-sandbox)` is refused on this box even elevated, with seclogon running and the account in Users — the decision is said out loud and the run stays unsandboxed until that is solved |
 | 10 memory in the packet | live | repo map after the prefix, lessons appended on red (three from the regeneration run) and selected by clause and file |
 
-What stays open, in order: wire sandbox-runtime behind `--sandbox` (gap 9), a perf clause
-with pytest-benchmark (gap 2), and
+What stays open, in order: the OS sandbox's spawn on this box (logon of `srt-sandbox` refused; the
+relay fence holds meanwhile), a perf clause with pytest-benchmark (gap 2), and
 the two things the measurements say about the rungs: regeneration needs a bigger rung or the
 frontier's finish, and spec drafting stays the frontier's.
 
