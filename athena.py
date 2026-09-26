@@ -2615,7 +2615,9 @@ def cmd_dispatch(a) -> int:
         # own checks and the radius of the files it will change (what every attempt is judged on)
         from lib.dispatch import skip_reason as _skip
         _base = run_checks(workspace) + run_radius(workspace, list(task_files))
-        state["base_red"] = [c["cmd"] for c in _base if c.get("exit", 1) != 0 or _skip(c)]
+        _base_red = [c for c in _base if c.get("exit", 1) != 0 or _skip(c)]
+        # the batch commands and their members: an attempt's batch is cut by the files it changed
+        state["base_red"] = sorted({c["cmd"] for c in _base_red} | {str(m) for c in _base_red for m in (c.get("members") or [])})
         if state["base_red"]:
             print(f"# base: {len(state['base_red'])} red check(s) inherited, not this task's", flush=True)
         import subprocess as _sp0

@@ -339,7 +339,15 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     # is inherited — named in the record, never the task's fault; the merge queue re-runs it all
     base_set = {str(x) for x in (base_red or ())}
     own_set = {str(x) for x in (own or ())}
-    inherited = [c for c in red if str(c.get("cmd")) in base_set and str(c.get("cmd")) not in own_set]
+    # a radius batch is one pytest over several specs: it is inherited when every member was red at
+    # the base, however the batch was cut there (the member lists differ with the files changed)
+    def _inherited(c) -> bool:
+        cmd = str(c.get("cmd"))
+        if cmd in own_set:
+            return False
+        members = [str(m) for m in (c.get("members") or [])]
+        return cmd in base_set or (bool(members) and all(m in base_set for m in members))
+    inherited = [c for c in red if _inherited(c)]
     red = [c for c in red if c not in inherited]
     spec_set = {str(s).replace("\\", "/") for s in spec_files}
     # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file

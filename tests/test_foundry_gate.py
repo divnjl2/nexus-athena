@@ -141,6 +141,13 @@ def test_a_task_is_judged_by_its_own_checks_and_regressions_from_a_red_base():
     # a red the base did not have is a regression
     regressed = verdict(before, after, checks + [{"cmd": third, "exit": 1, "tail": "1 failed"}], base_red=[other], own=[own])
     assert regressed["green"] is False and third in regressed["reason"] and regressed["inherited"] == [other]
+    # a radius batch cut differently than at the base is inherited when all its members were red there
+    batch = {"cmd": "python -m pytest tests/t.py::other tests/t.py::more -q", "exit": 1, "tail": "2 failed",
+             "members": ["python -m pytest tests/t.py::other -q", "python -m pytest tests/t.py::more -q"]}
+    by_members = verdict(before, after, [checks[0], batch], base_red=[other, "python -m pytest tests/t.py::more -q"], own=[own])
+    assert by_members["green"] is True and by_members["inherited"] == [batch["cmd"]]
+    partly = verdict(before, after, [checks[0], batch], base_red=[other], own=[own])
+    assert partly["green"] is False and partly["inherited"] == []
     # an iteration that edited a spec file is tainted: restored to the best before it though the counts tie
     tainted = verdict(before, {**after, "tests/t.py": (9, 9)}, checks, spec_files=["tests/t.py"], base_red=[other], own=[own])
     assert tainted["green"] is False and tainted["spec_touched"] == ["tests/t.py"]
