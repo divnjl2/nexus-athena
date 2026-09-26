@@ -61,3 +61,10 @@
     bash-only agents (SWE-ABS); agents that can read the grader learn the grader. The visible
     spec stays in the packet, because it is what made a small model land; the sealed tier is
     the second reading, and only the queue takes it.
+- **C-2.9** — WHEN the fast-forward lands and the target is checked out in a worktree THE
+  SYSTEM SHALL bring that worktree's index and files to the new head with a keep-reset, and
+  move the ref back and refuse when local changes there would be lost.
+  - source: incident
+  - note: 26.09: the compare-and-set moved `master` under the operator's checkout; the next
+    commit made there, from the index the ref move had not touched, deleted every merged file
+    from the tree. A ref is not a checkout; the queue owns both when they are one branch.

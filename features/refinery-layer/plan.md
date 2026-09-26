@@ -68,6 +68,10 @@ injected `run(argv, cwd) -> (code, output)`; the CLI wires the real git.
   - success_check: `python -m pytest tests/test_refinery.py::test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green -q`
   - files: `lib/refinery.py, lib/dispatch.py, athena.py`
   - verifies: S2.8
+- [ ] T2.10 The fast-forward syncs a checked-out target or moves the ref back
+  - success_check: `python -m pytest tests/test_refinery.py::test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back -q`
+  - files: `lib/refinery.py`
+  - verifies: S2.9
 - [ ] T2.7 Wire `athena merge` and print the merge section in `athena metrics`
   - success_check: `python -m pytest tests/test_refinery.py -q`
   - files: `athena.py`

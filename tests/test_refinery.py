@@ -329,3 +329,45 @@ def test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edi
     clean = verdict({"lib/a.py": (1, 1)}, {"lib/a.py": (2, 1)},
                     [{"cmd": "python -m pytest t.py::a -q", "exit": 0, "tail": "1 passed"}])
     assert clean["green"] is True
+
+
+def test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back():
+    """C-2.9 — after the compare-and-set, a target checked out in a worktree gets a keep-reset
+    to the new head and the result names the synced path; a failing reset moves the ref back
+    and refuses with the path; a target checked out nowhere needs no sync."""
+    from lib.refinery import checked_out_at, fast_forward
+    porcelain = "worktree C:/repo" + chr(10) + "HEAD 1111" + chr(10) + "branch refs/heads/master" + chr(10) + chr(10) + "worktree D:/w/T1" + chr(10) + "HEAD 2222" + chr(10) + "detached" + chr(10)
+    assert checked_out_at(porcelain, "master") == "C:/repo"
+    assert checked_out_at(porcelain, "release") == ""
+    calls = []
+
+    def run_ok(argv, cwd):
+        calls.append(argv)
+        if argv[:2] == ["git", "rev-parse"] and argv[-1] == "HEAD":
+            return 0, "2222" + chr(10)
+        if argv[:2] == ["git", "rev-parse"]:
+            return 0, "1111" + chr(10)
+        if argv[:3] == ["git", "merge-base", "--is-ancestor"]:
+            return 0, ""
+        if argv[:3] == ["git", "worktree", "list"]:
+            return 0, porcelain
+        return 0, ""
+    r = fast_forward(run_ok, "D:/w/T1", "master")
+    assert r["ok"] and r["synced"] == "C:/repo"
+    assert ["git", "-C", "C:/repo", "reset", "--keep", "2222"] in calls
+
+    def run_dirty(argv, cwd):
+        if argv[:4] == ["git", "-C", "C:/repo", "reset"]:
+            return 1, "error: Entry lib/x.py would be overwritten"
+        return run_ok(argv, cwd)
+    calls.clear()
+    r = fast_forward(run_dirty, "D:/w/T1", "master")
+    assert r["ok"] is False and "C:/repo" in r["reason"] and "moved back" in r["reason"]
+    assert ["git", "update-ref", "refs/heads/master", "1111", "2222"] in calls
+
+    def run_nowhere(argv, cwd):
+        if argv[:3] == ["git", "worktree", "list"]:
+            return 0, "worktree D:/w/T1" + chr(10) + "HEAD 2222" + chr(10) + "detached" + chr(10)
+        return run_ok(argv, cwd)
+    r = fast_forward(run_nowhere, "D:/w/T1", "master")
+    assert r["ok"] and r["synced"] == ""

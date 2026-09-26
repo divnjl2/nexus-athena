@@ -296,3 +296,45 @@
 - **Given** tests/test_foundry_oracles.py
 - **When** the spec `test_without_a_sandbox_the_frame_says_so_and_runs_unsandboxed_only_when_allowed` is executed
 - **Then** flag required + unavailable: refuse; flag on + unavailable: run unsandboxed and say so; flag off: run plain; available: sandboxed.
+
+## C-11 — wired into the loop (lib/provenance.py, lib/refinery.py, lib/memory.py, lib/ladder.py, lib/lanes.py, athena.py)
+
+### S11.1 — a dispatch record carries provenance built from the executor and the packet
+- **verifies:** C-11.1
+- **pins:** 80f202ff2fbdf42d
+- **run_cmd:** `python -m pytest tests/test_foundry_wiring.py::test_a_dispatch_record_carries_provenance_built_from_the_executor_and_the_packet -q`
+- **Given** tests/test_foundry_wiring.py
+- **When** the spec `test_a_dispatch_record_carries_provenance_built_from_the_executor_and_the_packet` is executed
+- **Then** the block names the executor's model, the thinking level, the packet and tool digests and the frame's version; a record made with it carries it; unknown fields are named missing.
+
+### S11.2 — the merge queue has a mutation stage between check and fast forward
+- **verifies:** C-11.2
+- **pins:** 840a8c370cd3bc55
+- **run_cmd:** `python -m pytest tests/test_foundry_wiring.py::test_the_merge_queue_has_a_mutation_stage_between_check_and_fast_forward -q`
+- **Given** tests/test_foundry_wiring.py
+- **When** the spec `test_the_merge_queue_has_a_mutation_stage_between_check_and_fast_forward` is executed
+- **Then** the stages name mutation after check; changed lines come out of a unified diff; the stage refuses on a survivor on an added line naming the clause.
+
+### S11.3 — the packet carries the repo map and the lessons after the prefix
+- **verifies:** C-11.3
+- **pins:** 5a117e3c4a54258e
+- **run_cmd:** `python -m pytest tests/test_foundry_wiring.py::test_the_packet_carries_the_repo_map_and_the_lessons_after_the_prefix -q`
+- **Given** tests/test_foundry_wiring.py
+- **When** the spec `test_the_packet_carries_the_repo_map_and_the_lessons_after_the_prefix` is executed
+- **Then** the map and the lessons sit between the static prefix and the requirement; the counts are reported; nothing to add leaves the packet as it was.
+
+### S11.4 — the daemon climbs the ladder on the escalation rule and stops at its top
+- **verifies:** C-11.4
+- **pins:** 926d2a74f8abd620
+- **run_cmd:** `python -m pytest tests/test_foundry_wiring.py::test_the_daemon_climbs_the_ladder_on_the_escalation_rule_and_stops_at_its_top -q`
+- **Given** tests/test_foundry_wiring.py
+- **When** the spec `test_the_daemon_climbs_the_ladder_on_the_escalation_rule_and_stops_at_its_top` is executed
+- **Then** the next rung after the current one, none at the top, disabled rungs skipped.
+
+### S11.5 — lane endpoints are derived from the executor and the admission reads them
+- **verifies:** C-11.5
+- **pins:** 80810640d6a18bda
+- **run_cmd:** `python -m pytest tests/test_foundry_wiring.py::test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_them -q`
+- **Given** tests/test_foundry_wiring.py
+- **When** the spec `test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_them` is executed
+- **Then** a pi executor's lane has a metrics or slots endpoint beside its base url; the live state is read through an injected fetcher and is empty when the read fails.

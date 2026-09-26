@@ -96,3 +96,11 @@
 - **Given** tests/test_refinery.py
 - **When** the spec `test_a_sealed_acceptance_directory_is_run_only_by_the_refinery_and_never_edited_green` is executed
 - **Then** sealed directories are found under features, their commands are those the refinery runs, a change under sealed/ is flagged and never green in the verdict, and the packet never lists them.
+
+### S2.9 — the fast-forward syncs a checked-out target or refuses
+- **verifies:** C-2.9
+- **pins:** 816c9377477cddf8
+- **run_cmd:** `python -m pytest tests/test_refinery.py::test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back -q`
+- **Given** tests/test_refinery.py
+- **When** the spec `test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back` is executed
+- **Then** with the target checked out in a worktree the fast-forward runs a keep-reset there and reports the synced path; when that reset fails the ref is moved back and the offer refused with the path; a target checked out nowhere needs no sync.

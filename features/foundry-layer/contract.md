@@ -210,3 +210,26 @@
 - **C-10.2** — WHEN the sandbox is unavailable THE SYSTEM SHALL say so and run unsandboxed only
   when the flag allows it explicitly.
   - source: review
+
+## C-11 — Wired into the loop
+
+- **C-11.1** — WHEN a dispatch records its verdict THE SYSTEM SHALL carry a provenance block
+  built from the executor's model, the thinking level, the rendered packet's and the tool
+  set's digests and the frame's version, naming the fields it cannot know.
+  - source: review
+- **C-11.2** — WHEN the merge queue's check holds THE SYSTEM SHALL run a `mutation` stage on the
+  offer's changed lines through the clause map before the fast-forward, and refuse there on a
+  survivor on an added line.
+  - source: review
+- **C-11.3** — WHEN a packet is packed THE SYSTEM SHALL place the repository map and the
+  selected lessons after the static prefix and before the requirement, and add nothing when
+  there is nothing to add.
+  - source: review
+- **C-11.4** — WHEN the daemon's attempt ends red and the escalation rule fires THE SYSTEM
+  SHALL dispatch the next rung of the ladder with the handoff as its brief, skipping disabled
+  rungs and stopping at the top.
+  - source: review
+- **C-11.5** — WHEN the daemon offers a task to a lane THE SYSTEM SHALL read that lane's live
+  state from its metrics or slots endpoint, derived from the executor's base url, and fall back
+  to an empty state when the read fails.
+  - source: review

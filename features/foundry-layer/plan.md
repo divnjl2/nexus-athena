@@ -115,5 +115,25 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_oracles.py::test_the_sandbox_wraps_a_command_with_the_worktree_writable_and_the_lane_ports_open tests/test_foundry_oracles.py::test_without_a_sandbox_the_frame_says_so_and_runs_unsandboxed_only_when_allowed -q`
   - files: `lib/sandbox.py`
   - verifies: S10.1, S10.2
+## Phase 6: Wired into the loop
+**Goal:** provenance in every record, the mutation stage in the queue, memory in the packet, the ladder and live admission in the daemon.
+**Depends on:** Phase 5
+### Tasks
+- [ ] T6.1 Provenance for a dispatch and the record that carries it
+  - success_check: `python -m pytest tests/test_foundry_wiring.py::test_a_dispatch_record_carries_provenance_built_from_the_executor_and_the_packet -q`
+  - files: `lib/provenance.py, lib/dispatch.py`
+  - verifies: S11.1
+- [ ] T6.2 The mutation stage of the merge queue: stages, changed lines, verdict
+  - success_check: `python -m pytest tests/test_foundry_wiring.py::test_the_merge_queue_has_a_mutation_stage_between_check_and_fast_forward -q`
+  - files: `lib/refinery.py`
+  - verifies: S11.2
+- [ ] T6.3 Memory in the packet
+  - success_check: `python -m pytest tests/test_foundry_wiring.py::test_the_packet_carries_the_repo_map_and_the_lessons_after_the_prefix -q`
+  - files: `lib/memory.py`
+  - verifies: S11.3
+- [ ] T6.4 The next rung and the live lane state
+  - success_check: `python -m pytest tests/test_foundry_wiring.py::test_the_daemon_climbs_the_ladder_on_the_escalation_rule_and_stops_at_its_top tests/test_foundry_wiring.py::test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_them -q`
+  - files: `lib/ladder.py, lib/lanes.py`
+  - verifies: S11.4, S11.5
 ### Manual Verification
 - `python athena.py daemon features/foundry-layer/contract.md --front features/foundry-layer/plan.md --dry-run --text` names the next task and the lane it would take.
