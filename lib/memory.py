@@ -64,7 +64,34 @@ def place_after_prefix(packet: str, insert_text: str, marker: Optional[str] = No
 def lesson_from(verdict) -> Optional[dict]:
     if verdict.get("green", True):
         return None
-    return None
+    
+    tail = verdict["checks"][0].get("tail", "")
+    exit_code = verdict["checks"][0].get("exit", 0)
+    
+    # Determine failure type from tail and exit code
+    if exit_code == 124 or (len(tail) == 0 and exit_code == 124):
+        failure = "timeout"
+    elif "ImportError" in tail:
+        failure = "import"
+    elif " SyntaxError" in tail or tail.startswith("SyntaxError"):
+        failure = "syntax"
+    elif "assert" in tail.lower() or "AssertionError" in tail:
+        failure = "assertion"
+    elif exit_code != 0:
+        failure = "import"
+    else:
+        failure = "assertion"
+    
+    # Create a one-line rule from tail (strip newlines)
+    rule = "" .join(tail.split("\\n"))
+    
+    return {
+        "clause": verdict["clauses"][0] if verdict["clauses"] else "",
+        "file": verdict["changed_files"][0] if verdict["changed_files"] else "",
+        "verdict": verdict["id"],
+        "failure": failure,
+        "rule": rule
+    }
 
 
 def select_lessons(lessons, clause_ids=None, files=None, n=5, cap_chars=200):
@@ -77,11 +104,11 @@ def select_lessons(lessons, clause_ids=None, files=None, n=5, cap_chars=200):
         rule = lesson.get("rule", "")
         if len(rule) > cap_chars:
             rule = rule[:cap_chars - 3] + "..."
-        if c not in clause_ids or f not in files:
-            continue
-        result.append({**lesson, "rule": rule})
-        if len(result) >= n:
-            break
+        # Match if clause is in clause_ids OR file is in files
+        if c in clause_ids or f in files:
+            result.append({**lesson, "rule": rule})
+            if len(result) >= n:
+                break
     return result
 
 
