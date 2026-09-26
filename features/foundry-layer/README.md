@@ -195,6 +195,26 @@ original's, and the behaviour diff still finds inputs the specs never pinned. Wh
 the regenerated module does; what they do not pin (the wording of a reason, the order of keys, a
 `\x00` in a path) it does differently. That is the exact measure of how much of the module the spec
 is the source of today, and the survivors name the lines a spec should own next.
+**Second and third pass of the finish (27.09 02:10 -> 03:20).** With the full diff report in hand the
+frontier brought every named function to its clause — three kinds of edit, each stated: a record
+shape other modules consume (the merge record opens with its schema, C-2.5; the verify verdict has
+the dispatch verdict's shape, C-2.7), a wording the clause asks for (the reason names the task and
+the workspace, C-2.1; the bd note names the stage, C-2.5), and the domain the clause states
+(`features/*/sealed` is one level, C-2.8; a list is a list). The two foundry-owned functions (C-11.2)
+were finished from their foundry specs. What the visible specs left free is now pinned in the
+refinery's sealed tier, and the pins hold on the original module too. The third pass removed the
+guard branches the mutation survivors named — code no spec asked for.
+
+| gate | original | pass 2 | pass 3 |
+|---|---|---|---|
+| specs (`tests/test_refinery.py`, 12) + sealed + foundry wiring | green | 20 green | 20 green |
+| `crosshair diffbehavior`, 15 functions | — | **0 counterexamples** | not rerun: the run was stopped by the host's memory guard; the pass changed only guards in `rebase` and `fast_forward` |
+| mutation score, map recomputed, 60 mutants asked | 47 of 55, 0.85, 180 owned lines | 38 of 46, 0.83, 157 lines | **38 of 42, 0.90**, 156 lines; survivors: two `and` flips in `parse_merges`/`conflicts_from`, two in `verify_verdict`'s reasons |
+
+Verdict under C-8.3: the three legs hold, but not yet measured on one and the same state — the
+clean diff is pass 2's, the score above the original is pass 3's. One diff run on pass 3 settles it;
+it is queued for when the host has memory to spare (crosshair beside two vLLM lanes was what
+tripped the guard).
 What changes in the answer to gap 1: the spec is a source at the granularity the frame already
 works at — one task, one window — and not at the granularity of a module for a 9B rung. The
 decomposition is the packet's, not the operator's: the plan's tasks and their specs cut the module.
@@ -225,11 +245,11 @@ round happen (seven drafts used all three) and changes which drafts land, not ho
 of thirteen is the 9B rung's rate with a three-round loop. What now stops the rest splits evenly: drafts
 still red after three repairs, and drafts that pass on the broken code too (the admission rule's catch).
 
-## The ten gaps on 2026-09-27 01:40 — measured state
+## The ten gaps on 2026-09-27 03:25 — measured state
 
 | gap | state | evidence |
 |---|---|---|
-| 1 regeneration from the spec | measured three times; **a source at task granularity for the 9B rung**; equivalence under C-8.3 not reached | whole module: 6 specs at best; decomposed with the C-8.4 verdict: 7 of 9 tasks, 10 of 12 specs by the lane, 12 of 12 after the frontier's ADR-0007 finish; mutation 0.81 vs 0.85, diffbehavior still finds unpinned edge inputs in 9 lane-written functions and none in the 4 frontier-written |
+| 1 regeneration from the spec | measured three times, finished under ADR-0007 in three passes; equivalence gates: diff clean (pass 2), mutation 0.90 over the original's 0.85 (pass 3), one diff rerun outstanding on pass 3 | lane alone: whole module 6 specs at best, by task 7 of 9 tasks and 10 of 12 specs; frontier finish: 12 of 12 specs, 0 counterexamples in 15 functions, mutation 0.90; the unpinned behaviour the diff found is now pinned in the refinery's sealed tier |
 | 2 oracles of the second kind | three live | C-9.4 `lint-imports` on the frame's own structure; C-9.5 a time and memory budget as a spec (pytest-benchmark + tracemalloc, negative control); C-9.6 a golden file as a spec (the merge metrics rendering; a golden edit taints the verdict; snapshot-update flags refused) |
 | 3 mutation in the gate, sealed tier | live, and the sealed tier is the norm | `athena merge` runs the `mutation` stage on changed lines by default (`--no-mutation` is the exception, said on the command line); C-1.5: every feature with a contract carries a sealed second reading naming one of its clauses — six layers now, guarded by a spec that names a layer without one |
 | 4 authorship throughput | measured, the repair loop is the lever | 0 of 36 without repair, 1 of 18 with one round, 5 of 13 and 4 of 13 with up to three rounds (arms 4, 5); the admission rule caught every false draft; the frontier still edits what is admitted |
