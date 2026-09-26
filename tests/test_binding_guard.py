@@ -51,7 +51,14 @@ def _problem(feature, spec_id, clause, cmd, case):
     node = next((tok for tok in cmd.split() if "::" in tok), "")
     path, _, func = node.partition("::")
     target = REPO / path
-    if not node or not target.exists():
+    if not node:
+        # an oracle of the second kind (foundry C-9): no pytest node, but a config file the
+        # command reads must itself name the clause — the binding is in the artefact it runs
+        configs = [tok for tok in cmd.split() if (REPO / tok).is_file() and not tok.endswith(".py")]
+        if configs and any(clause in (REPO / c).read_text(encoding="utf-8", errors="replace") for c in configs):
+            return ""
+        return f"{feature} {spec_id}: run_cmd names no reachable pytest node nor a config naming {clause} ({cmd})"
+    if not target.exists():
         return f"{feature} {spec_id}: run_cmd names no reachable pytest node ({cmd})"
     tree = ast.parse(target.read_text(encoding="utf-8"))
     fn = next((n for n in tree.body
