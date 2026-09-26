@@ -70,3 +70,25 @@ included): 511k output tokens for 34 clauses and 18 tasks, that is 15k per claus
 29k per clause on 23.09 when Claude wrote contract and code alone. Half the frontier cost
 per clause, with the research digest, the contract, the specs, the lane operations of a
 reboot day and the three finished tasks inside the 511k.
+
+## Regeneration from the spec, first run (26.09, C-8 / gap 1)
+
+`lib/refinery.py` deleted in a worktree; the packet = the refinery contract's clauses, the
+executable specs (tests/test_refinery.py) and a brief of the fourteen public signatures with
+one line each; the executor OmniCoder-9B, low + strict, three iterations, verdict
+`pytest tests/test_refinery.py`:
+
+| iteration | seconds | what the module held after it | specs green |
+|---|---|---|---|
+| 1 | 462 | a first draft | red |
+| 2 | 902 | all 14 public functions and the constants, 301 lines | 5 of 11 |
+| 3 | 511 | one function, 35 lines: the model rewrote the file from scratch | 1 of 11 |
+
+The 9B rung regenerates the skeleton and about half the behaviour from clauses and specs
+alone; it does not reach equivalence in three iterations. The third iteration is a frame
+defect, not a model result: the checkpoint said "continue from this state", the workspace
+was not committed per iteration, and the better state was lost. Recorded as C-11.6
+(iterations never regress; the better iteration is restored). The run is repeated after
+C-11.6 lands; the equivalence gate (specs, `crosshair diffbehavior`, per-clause mutation
+score against the original) is measured on that run. The same experiment on the 3B rung is
+recorded when it lands.
