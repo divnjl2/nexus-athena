@@ -1,3 +1,4 @@
+import json
 import hashlib
 """Lane state parsing and admission logic (C-4.1, C-4.2)."""
 
@@ -231,3 +232,69 @@ def cooling(events, *, now: float, period_s: float = 120.0, errors: int = 2) -> 
     if float(now) >= until:
         return False, ""
     return True, f"{errors} server errors, cooling until {until:g}s"
+
+
+# ---------------------------------------------------------------------------
+# C-11.5: Lane endpoint derivation and live-state admission reading
+# ---------------------------------------------------------------------------
+
+LANE_ENDPOINT_MAP = {
+    "pi-omni9": "metrics",
+    "pi-3b": "slots",
+}
+
+
+def lane_endpoint(executor, base_url):
+    """C-11.5 — derive a lane's metrics or slots endpoint from the executor's base url.
+
+    Parameters:
+        executor: the pi executor identifier (e.g. "pi-omni9", "pi-3b").
+        base_url: the executor's base URL (may carry a /v1 version suffix).
+
+    Returns:
+        a tuple (endpoint_type, endpoint_url). Non-lane executors or empty base_url
+        yield ("", "").
+    """
+    if not base_url or executor not in LANE_ENDPOINT_MAP:
+        return ("", "")
+    endpoint_type = LANE_ENDPOINT_MAP[executor]
+    # Strip trailing /v1 version suffix before appending the endpoint path
+    base = base_url.rstrip("/")
+    while base.endswith("/v1"):
+        base = base[:-3]
+    endpoint_url = base + f"/{endpoint_type}"
+    return (endpoint_type, endpoint_url)
+
+
+def live_state(executor, base_url, fetch=None):
+    """C-11.5 — read that lane's live state from its metrics or slots endpoint,
+    derived from the executor's base url, and fall back to an empty state when the read fails.
+
+    Parameters:
+        executor: the pi executor identifier.
+        base_url: the executor's base URL.
+        fetch: an injected fetcher function(url) -> raw_data; if None, return empty state.
+
+    Returns:
+        a dict with keys running, waiting, kv_usage, prefix_hit_rate.
+    """
+    endpoint_type, endpoint_url = lane_endpoint(executor, base_url)
+
+    if not endpoint_type:
+        return {}
+
+    if fetch is None:
+        return {}
+
+    try:
+        raw = fetch(endpoint_url)
+    except Exception:
+        return {}
+
+    if endpoint_type == "metrics":
+        return lane_state_from_metrics(raw)
+    elif endpoint_type == "slots":
+        slots = json.loads(raw)
+        return lane_state_from_slots(slots)
+
+    return {}

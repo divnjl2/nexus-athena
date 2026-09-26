@@ -210,3 +210,43 @@ def enabled_rungs(rung_table, ladder, floor=0.0):
                     enabled.append(rung)
         result[cls] = enabled
     return result
+
+
+# ---------------------------------------------------------------------------
+# C-11.4: Next rung / escalation handoff logic
+# ---------------------------------------------------------------------------
+
+LANE_ENDPOINT_MAP = {
+    "pi-omni9": "metrics",
+    "pi-3b": "slots",
+}
+
+
+def next_rung(ladder, current_rung, disabled=None):
+    """C-11.4 — dispatch the next rung of the ladder with the handoff as its brief,
+    skipping disabled rungs and stopping at the top.
+
+    Parameters:
+        ladder: iterable of rung identifiers to consider.
+        current_rung: the rung whose attempt ended red and triggered escalation.
+        disabled: set of rung identifiers to skip for this dispatch.
+
+    Returns:
+        the next enabled rung, or None when at the top of the ladder.
+    """
+    if disabled is None:
+        disabled = set()
+
+    if not ladder:
+        return None
+
+    # If current rung is not in the ladder, fall back to the first rung.
+    if current_rung not in ladder:
+        return ladder[0]
+
+    idx = ladder.index(current_rung)
+    for i in range(idx + 1, len(ladder)):
+        if ladder[i] not in disabled:
+            return ladder[i]
+
+    return None
