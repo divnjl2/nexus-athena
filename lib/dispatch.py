@@ -623,3 +623,25 @@ def radius_checks(changed_files, maps: dict, scenarios_by_label: dict, *, alread
                     seen.add(s.run_cmd)
                     out.append(s.run_cmd)
     return out
+
+
+# --- C-11.6: iterations never regress ---------------------------------------------------
+
+def green_count(checks) -> int:
+    """PURE (C-11.6): how many of an iteration's checks exited zero."""
+    return sum(1 for c in (checks or []) if int((c or {}).get("exit", 1)) == 0)
+
+
+def regression(iterations) -> dict | None:
+    """PURE (C-11.6): when the last iteration holds fewer green checks than the best one before
+    it, name the iteration to restore (1-based) and both counts; None when the latest is as
+    good or better, or when it is the first."""
+    its = list(iterations or [])
+    if len(its) < 2:
+        return None
+    counts = [green_count(c) for c in its]
+    best_before = max(counts[:-1])
+    if counts[-1] >= best_before:
+        return None
+    restore = counts.index(best_before) + 1
+    return {"restore": restore, "from": len(its), "green_before": best_before, "green_after": counts[-1]}
