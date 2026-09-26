@@ -212,9 +212,22 @@
   - note: anthropics/sandbox-runtime (Apache-2.0) has a Windows alpha: dedicated local user,
     WFP egress fence, NTFS ACEs; both OpenAI and Anthropic rejected AppContainer for a
     shell-driving agent. Behind a flag until the alpha settles.
+  - note (measured 26.09 evening, live): the spawn as `srt-sandbox` works once the host is prepared
+    by `tools/sandbox_install.ps1` — the sandbox account must be able to read the srt package and
+    the toolchain trees (granted once: srt-win's per-run ACL stamp has a 60 s budget and Windows
+    walks the whole subtree), pi runs from a machine-wide copy under ProgramData (node's realpath
+    lstats every ancestor of a per-user install), and the world-writable D: trees of the lanes,
+    models and secrets carry a persistent write deny. The sandbox drops the environment, does not
+    forward stdin, splits `-c` on `&&` and option-parses positional arguments, so the wrapper runs
+    srt and pi as node scripts through a launcher in `<worktree>/.athena` (UTF-8, `chcp 65001`,
+    the packet redirected from a file, pi's agent directory seeded per run with relay-only
+    providers and no package installs). Worktrees live on D: (a C: working directory is refused as
+    a mapped drive). Residual, said out loud: `D:/tmp` itself stays writable to the account because
+    the drive grants Authenticated Users modify and a deny on the drive root needs elevation.
 - **C-10.2** — WHEN the sandbox is unavailable THE SYSTEM SHALL say so and run unsandboxed only
   when the flag allows it explicitly.
   - source: review
+  - note: availability is probed in the workspace itself (the probe's working directory is what the sandbox stamps and checks), with the .cmd shim, never the extensionless shim which() may return first.
 
 - **C-10.3** — WHEN a tool call the relay carries would write or edit outside the worktree,
   read a denied path, or run a command on the deny list THE SYSTEM SHALL replace it with a

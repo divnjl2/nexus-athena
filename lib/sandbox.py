@@ -1,22 +1,31 @@
-def sandbox_config(worktree, allow_read=(), lane_ports=(), proxy_range=(60080, 60089)):
-    """C-10.1 — the sandbox-runtime settings for one executor: writes only in the worktree, reads on
-    the toolchain paths given (the sandbox user is a different account: per-user installs need an
-    explicit ACE), no network but loopback to the lane ports. On Windows loopback is permitted only
+def sandbox_config(worktree, allow_read=(), lane_ports=(), proxy_range=(60080, 60089), allow_write=(), deny_write=()):
+    """C-10.1 — the sandbox-runtime settings for one executor: writes only in the worktree (and the
+    agent directory the executor keeps its sessions in), reads on the paths given, no network but
+    loopback to the lane ports. The sandbox user is a different account, so what it may open is what
+    NTFS lets that account open: these lists become per-run ACEs. On Windows loopback is permitted only
     inside the proxy port range (measured 26.09), so the ports named here are the executor's relays
-    listening in that range."""
-    wt = str(worktree).replace("\\", "/")
-    reads = [wt] + [str(x).replace("\\", "/") for x in (allow_read or ()) if str(x)]
-    seen = []
-    for r in reads:
-        if r not in seen:
-            seen.append(r)
+    listening in that range. Measured 26.09: the per-run stamp has a 60 s budget and an inheritable
+    ACE walks the whole subtree, so the toolchain trees (Python, npm) are granted once at install and
+    only small trees belong in these lists."""
+    def _norm(x):
+        return str(x).replace("\\", "/")
+    def _uniq(items):
+        seen = []
+        for r in items:
+            if r and r not in seen:
+                seen.append(r)
+        return seen
+    wt = _norm(worktree)
+    writes = _uniq([wt] + [_norm(x) for x in (allow_write or ())])
+    reads = _uniq(writes + [_norm(x) for x in (allow_read or ())])
+    denies = _uniq([_norm(x) for x in (deny_write or ())])
     ports = [int(x) for x in (lane_ports or ())]
     domains = []
     for port in ports:
         domains += [f"127.0.0.1:{port}", f"localhost:{port}"]
     return {
         "network": {"allowedDomains": domains, "deniedDomains": [], "allowLocalBinding": False},
-        "filesystem": {"denyRead": [], "allowRead": seen, "allowWrite": [wt], "denyWrite": []},
+        "filesystem": {"denyRead": [], "allowRead": reads, "allowWrite": writes, "denyWrite": denies},
         "windows": {"proxyPortRange": [int(proxy_range[0]), int(proxy_range[1])]},
     }
 

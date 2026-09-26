@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import os
 import pathlib
 import re
@@ -2282,38 +2283,97 @@ def _runtime_version(executor: str) -> str:
         except Exception:                                # noqa: BLE001
             return ""
 
-def _sandbox_available() -> bool:
-    """srt on the PATH and able to spawn as the sandbox user (on Windows that needs an elevated caller)."""
+def _srt_binary() -> str:
+    """the sandbox-runtime CLI: on Windows the .cmd shim, never the extensionless bash shim which
+    which() may return first and CreateProcess cannot start (the bd.CMD lesson, C-11.4)"""
     import shutil
+    return shutil.which("srt.cmd") or shutil.which("srt") or ""
+
+
+def _sandbox_available(cwd=None) -> bool:
+    """srt on the PATH and able to spawn as the sandbox user, probed in the workspace itself: the
+    probe's working directory is what the sandbox stamps and checks (measured 26.09)."""
     import subprocess
-    exe = shutil.which("srt")
+    exe = _srt_binary()
     if not exe:
         return False
     try:
-        p = subprocess.run([exe, "-c", "cmd /c echo srt-ok" if os.name == "nt" else "echo srt-ok"], capture_output=True, text=True, timeout=60)
+        p = subprocess.run([exe, "-c", "cmd /c echo srt-ok" if os.name == "nt" else "echo srt-ok"], capture_output=True, text=True, timeout=120,
+                           cwd=str(cwd) if cwd else None)
         return p.returncode == 0 and "srt-ok" in (p.stdout or "")
     except (OSError, subprocess.SubprocessError):
         return False
 
 
 def _sandbox_wrap(cmd: dict, workspace, *, lane_ports) -> dict:
-    """C-10.1: the executor command wrapped in the sandbox runtime — the settings file beside the
-    workspace's ledger, the pi agent directory the sandbox user can read, the relays it may reach."""
-    import shutil
-    from lib.executors import pi_binary
+    """C-10.1: the executor command wrapped in the sandbox runtime — the settings file, a launcher
+    and the packet beside the workspace's ledger, the relays it may reach. Measured 26.09 on Windows:
+    the sandbox drops the environment (only PATH and the proxy variables survive) and does not
+    forward stdin, so pi's agent directory for the run lives inside the worktree (seeded from the
+    install's seed directory: relay-only providers, no package installs) and the packet is a file the
+    launcher redirects; srt-win's per-run ACL stamp has a 60 s budget and walks the subtree, so the
+    toolchain trees are granted once at install (tools/sandbox_install.ps1) and only the worktree is
+    stamped per run. Denies for world-writable trees come from ATHENA_SANDBOX_DENY_WRITE
+    (semicolon-separated, small trees only)."""
     from lib.sandbox import sandbox_config
     ws = pathlib.Path(workspace)
-    agent_dir = pathlib.Path(os.environ.get("ATHENA_SANDBOX_PI_AGENT_DIR", r"D:\llm-lanes\pi-agent"))
-    reads = [str(pathlib.Path(sys.executable).resolve().parent.parent), str(pathlib.Path(shutil.which("node") or "C:/Program Files/nodejs").parent),
-             str(pathlib.Path(pi_binary()).resolve().parent), str(agent_dir), str(ws)]
-    cfg = sandbox_config(ws, allow_read=reads, lane_ports=lane_ports)
+    denies = [x for x in str(os.environ.get("ATHENA_SANDBOX_DENY_WRITE", "")).split(";") if x.strip()]
+    cfg = sandbox_config(ws, allow_read=[ws], lane_ports=lane_ports, deny_write=denies)
     cfg_path = ws / ".athena" / "sandbox.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(cfg, indent=1), encoding="utf-8")
-    argv = [shutil.which("srt") or "srt", "--settings", str(cfg_path), "--"] + list(cmd["argv"])
-    env = dict(cmd.get("env") or {})
-    env["PI_CODING_AGENT_DIR"] = str(agent_dir)
-    return {**cmd, "argv": argv, "env": env}
+    argv = list(cmd["argv"])
+    # the sandbox account cannot walk the caller's profile (node's realpath lstats every ancestor of
+    # a per-user npm install), so the executor runs the machine-wide pi under ProgramData when present
+    sandbox_pi = pathlib.Path(os.environ.get("ATHENA_SANDBOX_PI_BIN") or "C:/ProgramData/athena/npm/pi.cmd")
+    if argv and sandbox_pi.exists() and pathlib.Path(argv[0]).name.lower().startswith("pi"):
+        argv[0] = str(sandbox_pi)
+    # measured 26.09: positional arguments are parsed by srt's own option parser (pi's -p/--mode are
+    # eaten), so the executor goes in as one -c command string; the .cmd shims of srt and pi re-parse
+    # their arguments through cmd.exe and a backslash-escaped quote turns the packet's `|` into a pipe,
+    # so both run as node + their cli.js with one plain level of quotes; stdin (the packet) passes through
+    def _node_cli(shim: pathlib.Path, package: str) -> list[str]:
+        pkg = shim.parent / "node_modules" / package
+        try:
+            binmap = json.loads((pkg / "package.json").read_text(encoding="utf-8")).get("bin") or {}
+        except (OSError, ValueError):
+            return [str(shim)]
+        entry = binmap if isinstance(binmap, str) else next(iter(binmap.values()), "")
+        return ["node", str(pkg / entry)] if entry else [str(shim)]
+    if pathlib.Path(argv[0]).name.lower().startswith("pi"):
+        argv = _node_cli(pathlib.Path(argv[0]), "@mariozechner/pi-coding-agent") + argv[1:]
+    bad = [x for x in argv if '"' in x]
+    if bad:
+        raise ValueError("sandbox command: an argument with a double quote cannot pass through -c: " + bad[0][:60])
+    line = " ".join(f'"{x}"' if (" " in x or not x) else x for x in argv)
+    # pi's agent directory for this run lives inside the worktree: the dispatcher copies the relay-only
+    # models.json and a settings.json without package installs (the fence blocks npm) from the
+    # sandbox seed directory, and names it on the command line because the sandbox drops the environment
+    seed = pathlib.Path(os.environ.get("ATHENA_SANDBOX_PI_AGENT_DIR") or (pathlib.Path.home() / ".athena" / "sandbox" / "pi-agent"))
+    agent_dir = ws / ".athena" / "pi-agent"
+    agent_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("models.json", "settings.json"):
+        src = seed / name
+        if src.exists():
+            (agent_dir / name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    if os.name == "nt":
+        # srt splits its -c string on && itself, so the variable would not reach pi: a launcher script
+        # beside the settings carries the variable and the whole command; one level of quotes is enough
+        launcher = ws / ".athena" / "run_executor.cmd"
+        # the sandbox does not forward stdin (measured 26.09), so the packet goes to a file the launcher
+        # redirects; bytes, not text (text mode doubles the CR); chcp first, so cmd reads the rest as UTF-8
+        packet_path = ws / ".athena" / "packet.txt"
+        packet_path.write_bytes(str(cmd.get("stdin") or "").encode("utf-8"))
+        launcher.write_bytes(("@echo off\r\nchcp 65001 >nul\r\nset PI_CODING_AGENT_DIR=" + str(agent_dir) + "\r\n"
+                              + line + " < " + chr(34) + str(packet_path) + chr(34) + "\r\n").encode("utf-8"))
+        cmd = {**cmd, "stdin": None}
+        line = str(launcher)
+    else:
+        line = f"PI_CODING_AGENT_DIR={agent_dir} {line}"
+    srt_argv = _node_cli(pathlib.Path(_srt_binary() or "srt.cmd"), "@anthropic-ai/sandbox-runtime")
+    argv = srt_argv + ["--settings", str(cfg_path), "-c", line]
+    return {**cmd, "argv": argv}
+
 
 def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int):
     """C-11.2: the merge queue's mutation stage — the offer's changed lines (unified diff against
@@ -2488,10 +2548,10 @@ def cmd_dispatch(a) -> int:
             if flag != "off":
                 # C-10.1 / C-10.2: the sandbox decision, said out loud
                 from lib.sandbox import sandbox_decision
-                run_it, sandboxed, why = sandbox_decision(available=_sandbox_available(), flag=flag)
+                run_it, sandboxed, why = sandbox_decision(available=_sandbox_available(ws), flag=flag)
                 print(f"# sandbox: {why}", flush=True)
                 if not run_it:
-                    return {"code": 1, "out": "", "err": why, "duration": 0, "tokens": {}}
+                    return "", {}, why          # the executor's shape: claim, tokens, err
                 if sandboxed:
                     ports = [int(x) for x in str(getattr(a, "sandbox_ports", "")).split(",") if x.strip().isdigit()]
                     cmd = _sandbox_wrap(cmd, ws, lane_ports=ports or [60081])

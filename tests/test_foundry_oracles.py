@@ -60,6 +60,13 @@ def test_the_sandbox_wraps_a_command_with_the_worktree_writable_and_the_lane_por
     assert cfg["network"]["allowedDomains"] == ["127.0.0.1:60081", "localhost:60081", "127.0.0.1:60083", "localhost:60083"]
     assert cfg["network"]["allowLocalBinding"] is False and cfg["windows"]["proxyPortRange"] == [60080, 60089]
     assert "allowLocalPorts" not in cfg["network"]
+    # review 26.09 evening, the spawn works: pi keeps its sessions in an agent directory the sandbox
+    # user must write to, and a deny list is carried through as given (never on a big tree: 60 s budget)
+    cfg = sandbox_config(worktree="D:/w/T1", allow_read=["D:/w/T1"], lane_ports=[60081],
+                         allow_write=["C:/Users/x/.athena/sandbox/pi-agent"], deny_write=["D:/llama-swap"])
+    assert cfg["filesystem"]["allowWrite"] == ["D:/w/T1", "C:/Users/x/.athena/sandbox/pi-agent"]
+    assert cfg["filesystem"]["allowRead"] == ["D:/w/T1", "C:/Users/x/.athena/sandbox/pi-agent"]
+    assert cfg["filesystem"]["denyWrite"] == ["D:/llama-swap"]
     json.dumps(cfg)
     argv = sandbox_argv(["python", "-m", "pytest", "-q"], config_path="D:/w/T1/.athena/sandbox.json")
     assert argv[:2] == ["srt", "--settings"] and argv[2] == "D:/w/T1/.athena/sandbox.json"

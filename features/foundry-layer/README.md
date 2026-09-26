@@ -153,13 +153,42 @@ lane operations.
 | 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |
 | 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
 | 8 capacity-aware lanes | live | the daemon admits by `/metrics` or `/slots`; with `--executors` it routes by prefix affinity among the admitted lanes (C-11.7), warmth table beside the ledger |
-| 9 sandbox | fence live in the relay; OS sandbox installed, blocked on this box | C-10.3: the relay refuses writes and edits outside the worktree, denied reads and deny-listed commands before anything runs (live probe on all three executor relays, 8417 for the 9B, 60081 for OmniCoder, 60083 for the 3B: a `write` to `C:/Windows` came back as `REFUSED`, no tool call — every pi strict provider now goes through a fenced relay); sandbox-runtime 0.0.77 installed (user `srt-sandbox`, 4 WFP filters, ports 60080-60089), `--sandbox on|required` wired with the real schema, but `CreateProcessWithLogonW(srt-sandbox)` is refused on this box even elevated, with seclogon running and the account in Users — the decision is said out loud and the run stays unsandboxed until that is solved |
+| 9 sandbox | **live**: the OS sandbox runs the executor; the relay fence on every lane | C-10.1: `--sandbox required` — OmniCoder inside sandbox-runtime (account `srt-sandbox`, WFP fence, loopback only to the fenced relay 60081) regenerated `pick_admitted` from C-11.7, spec green in 51 s, 1 iteration (20:52). Probed from inside: writes to the lane, model and secret trees on D: refused, the caller's profile unreadable, github and the lane's direct port blocked, the relay reachable. C-10.3: all three executor relays (8417, 60081, 60083) refuse a `write` outside the worktree. Residual, said out loud: `D:/tmp` (where the worktrees live) stays writable to the account — the drive grants Authenticated Users modify and a deny on its root needs elevation |
 | 10 memory in the packet | live | repo map after the prefix, lessons appended on red (three from the regeneration run) and selected by clause and file |
 
 What stays open, in order: the OS sandbox's spawn on this box (logon of `srt-sandbox` refused; the
 relay fence holds meanwhile), a perf clause with pytest-benchmark (gap 2), and
 the two things the measurements say about the rungs: regeneration needs a bigger rung or the
 frontier's finish, and spec drafting stays the frontier's.
+
+
+## The OS sandbox, live (26.09 19:00 -> 20:55, gap 9 / C-10.1)
+
+The morning's verdict was wrong about the cause: `CreateProcessWithLogonW(srt-sandbox)` failed
+with 0x80070005 not for logon rights or seclogon but because the sandbox account could not read the
+srt package under the caller's profile. Each blocker after that was measured and closed the same
+evening; `tools/sandbox_install.ps1` replays the host preparation.
+
+| blocker (measured) | cause | closed by |
+|---|---|---|
+| spawn refused 0x80070005 | the runner image under `C:/Users/<me>/AppData/Roaming/npm` unreadable to `srt-sandbox` | `icacls <npm> /grant <sid>:(OI)(CI)RX /T`; spawn in 3 s |
+| `srt-win acl grant` timed out at 60 s | an inheritable ACE walks the whole subtree (Python311: 234k files, 446 s) | toolchain trees granted once at install; per run only the worktree is stamped |
+| `denyWrite: ["D:/"]` failed 0x5, per-tree denies timed out | the drive root needs elevation; big trees again | persistent `icacls /deny (OI)(CI)W` on the lane, model and secret trees, outside srt |
+| node `EPERM lstat C:/Users/<me>/AppData` | realpath lstats every ancestor of a per-user install | pi installed machine-wide under `C:/ProgramData/athena/npm` (same 0.73.1) |
+| pi died on `npm install -g pi-hashline-edit-pro` | the seeded settings listed a package; the fence blocks npm | seed settings without packages |
+| `PI_CODING_AGENT_DIR` never arrived | the sandbox drops the environment; srt splits `-c` on `&&`; positional args are option-parsed; the .cmd shims re-parse `\"` and a `\|` in the packet became a pipe | node + cli.js for srt and pi, a launcher `.cmd` in `<worktree>/.athena` |
+| instruction text corrupted (em-dashes) | cmd reads a batch file in the OEM code page; text mode doubled the CR | launcher written as UTF-8 bytes with `chcp 65001` first |
+| the packet never reached pi | the sandbox does not forward stdin | packet written to `<worktree>/.athena/packet.txt`, redirected by the launcher |
+| a C: working directory refused (`mapped_drive_cwd`, exit 16) | srt sees C: as a remote drive on this box | availability probed in the workspace; worktrees on D: |
+
+Probes from inside the sandbox after the fixes: `whoami` = `srt-sandbox`; write inside the
+worktree ok; writes to `D:/llama-swap`, `D:/models`, `D:/llm-lanes`, `D:/secrets` refused;
+`~/.pi/agent/models.json` of the caller unreadable; github 000; the lane's direct port 8006 000;
+the fenced relay 60081 200 from curl and from node. Residual: `D:/tmp/lanes` writable (the drive's
+Authenticated Users modify) — the worktrees' own drive is the one hole left, said out loud in C-10.1.
+
+The dispatch (T6.6 seeded red: `pick_admitted` body removed, `--sandbox required`, OmniCoder via
+60081): PASS in iteration 1 of 3, 51 s, 32.9k in / 1.4k out, one file changed, keep-best committed.
 
 ## The ladder, live (26.09 18:09 -> 18:51)
 
