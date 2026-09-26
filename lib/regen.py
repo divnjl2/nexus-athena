@@ -1,7 +1,5 @@
 """Regeneration module for module equivalence checking."""
 from typing import Any, Callable, Dict, List, Optional, Tuple
-import subprocess
-import time
 
 
 def regen_packet(module: str, clauses_text: str, specs_text: str, signatures: List[str]) -> str:
