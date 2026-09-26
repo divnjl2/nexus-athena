@@ -1,3 +1,4 @@
+import hashlib
 """Lane state parsing and admission logic (C-4.1, C-4.2)."""
 
 import re
@@ -183,3 +184,50 @@ def speculation_verdict(paired_runs: List) -> tuple:
         agree_count += 1
 
     return (True, f"{agree_count} tasks agree")
+
+
+# --- C-4.3: prefix affinity ------------------------------------------------------------
+
+def prefix_key(packet_text: str, chars: int = 1500) -> str:
+    """PURE (C-4.3): the key of a packet's static prefix — the first `chars` characters, which
+    pi keeps byte-stable between turns (traced 24.09); tasks sharing it share the lane's cache."""
+    return hashlib.sha1((packet_text or "")[:chars].encode("utf-8", "replace")).hexdigest()[:16]
+
+
+def served(warm: dict, key: str, lane: str, *, now: float) -> dict:
+    """PURE (C-4.3): the warmth table after `lane` served prefix `key` at `now`."""
+    out = dict(warm or {})
+    out[key] = (lane, float(now))
+    return out
+
+
+def choose_lane(key: str, lanes, warm: dict, *, now: float, warm_s: float = 600.0) -> str:
+    """PURE (C-4.3): the lane that last served this prefix while it is still warm, else the
+    first lane offered."""
+    lanes = list(lanes or [])
+    if not lanes:
+        return ""
+    hit = (warm or {}).get(key)
+    if hit:
+        lane, ts = hit
+        if lane in lanes and float(now) - float(ts) <= float(warm_s):
+            return lane
+    return lanes[0]
+
+
+# --- C-4.4: cooldown ---------------------------------------------------------------------
+
+def cooling(events, *, now: float, period_s: float = 120.0, errors: int = 2) -> tuple:
+    """PURE (C-4.4): (cooling, reason). `events` are (ts, http_status) in order; the last
+    `errors` events all 5xx start a cooldown of `period_s` from the last of them; any non-5xx
+    in between resets the count."""
+    events = list(events or [])
+    if len(events) < errors:
+        return False, ""
+    tail = events[-errors:]
+    if not all(int(status) >= 500 for _, status in tail):
+        return False, ""
+    until = float(tail[-1][0]) + float(period_s)
+    if float(now) >= until:
+        return False, ""
+    return True, f"{errors} server errors, cooling until {until:g}s"
