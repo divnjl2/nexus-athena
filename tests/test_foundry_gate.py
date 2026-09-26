@@ -156,3 +156,42 @@ def test_a_task_is_judged_by_its_own_checks_and_regressions_from_a_red_base():
     assert regression(its, tainted_last=True) == {"restore": 1, "from": 2, "green_before": 1, "green_after": 1, "tainted": True}
     assert regression([checks], tainted_last=True) is None   # nothing before it: the caller restores the base
 
+
+def _sealed_gaps(root) -> list:
+    """PURE over the tree: the features with a contract and no sealed second reading naming one of its clauses."""
+    import ast
+    import pathlib
+    import re
+    gaps = []
+    for feature in sorted(p for p in (root / "features").iterdir() if (p / "contract.md").exists()):
+        ids = set(re.findall(r"\*\*(C-\d+\.\d+)\*\*", (feature / "contract.md").read_text(encoding="utf-8")))
+        ok = False
+        for f in sorted((feature / "sealed").glob("test_*.py")) if (feature / "sealed").is_dir() else []:
+            for node in ast.parse(f.read_text(encoding="utf-8")).body:
+                if isinstance(node, ast.FunctionDef) and node.name.startswith("test_sealed_"):
+                    doc = ast.get_docstring(node) or ""
+                    named = re.findall(r"C-\d+\.\d+", doc.split("(sealed)")[0])
+                    if named and all(n in ids for n in named):
+                        ok = True
+        if not ok:
+            gaps.append(feature.name)
+    return gaps
+
+
+def test_every_feature_with_a_contract_carries_a_sealed_second_reading():
+    """C-1.5 — the sealed tier is the norm: every feature with a contract has a second reading that
+    names one of its own clauses, and the guard names a feature that lacks one."""
+    import pathlib
+    import tempfile
+    assert _sealed_gaps(pathlib.Path(__file__).resolve().parents[1]) == []
+    with tempfile.TemporaryDirectory() as td:
+        fake = pathlib.Path(td) / "features" / "bare-layer"
+        fake.mkdir(parents=True)
+        (fake / "contract.md").write_text("- **C-1.1** — WHEN a THE SYSTEM SHALL b.", encoding="utf-8")
+        assert _sealed_gaps(pathlib.Path(td)) == ["bare-layer"]
+        (fake / "sealed").mkdir()
+        (fake / "sealed" / "test_sealed_bare.py").write_text('def test_sealed_x():\n    """C-1.1 (sealed) — second reading."""\n', encoding="utf-8")
+        assert _sealed_gaps(pathlib.Path(td)) == []
+        (fake / "sealed" / "test_sealed_bare.py").write_text('def test_sealed_x():\n    """C-9.9 (sealed) — names a clause the contract does not have."""\n', encoding="utf-8")
+        assert _sealed_gaps(pathlib.Path(td)) == ["bare-layer"]
+

@@ -225,13 +225,13 @@ round happen (seven drafts used all three) and changes which drafts land, not ho
 of thirteen is the 9B rung's rate with a three-round loop. What now stops the rest splits evenly: drafts
 still red after three repairs, and drafts that pass on the broken code too (the admission rule's catch).
 
-## The ten gaps on 2026-09-27 00:10 — measured state
+## The ten gaps on 2026-09-27 01:40 — measured state
 
 | gap | state | evidence |
 |---|---|---|
 | 1 regeneration from the spec | measured three times; **a source at task granularity for the 9B rung**; equivalence under C-8.3 not reached | whole module: 6 specs at best; decomposed with the C-8.4 verdict: 7 of 9 tasks, 10 of 12 specs by the lane, 12 of 12 after the frontier's ADR-0007 finish; mutation 0.81 vs 0.85, diffbehavior still finds unpinned edge inputs in 9 lane-written functions and none in the 4 frontier-written |
 | 2 oracles of the second kind | three live | C-9.4 `lint-imports` on the frame's own structure; C-9.5 a time and memory budget as a spec (pytest-benchmark + tracemalloc, negative control); C-9.6 a golden file as a spec (the merge metrics rendering; a golden edit taints the verdict; snapshot-update flags refused) |
-| 3 mutation in the gate, sealed tier | live | `athena merge` runs the `mutation` stage on changed lines (first merge through it: no survivor on an added line); `features/foundry-layer/sealed/` with three second readings |
+| 3 mutation in the gate, sealed tier | live, and the sealed tier is the norm | `athena merge` runs the `mutation` stage on changed lines by default (`--no-mutation` is the exception, said on the command line); C-1.5: every feature with a contract carries a sealed second reading naming one of its clauses — six layers now, guarded by a spec that names a layer without one |
 | 4 authorship throughput | measured, the repair loop is the lever | 0 of 36 without repair, 1 of 18 with one round, 5 of 13 and 4 of 13 with up to three rounds (arms 4, 5); the admission rule caught every false draft; the frontier still edits what is admitted |
 | 5 the daemon | live | `athena daemon --once` on the real beads queue: claim by bd id, live admission, dispatch, rollback, provenance, release on red |
 | 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |

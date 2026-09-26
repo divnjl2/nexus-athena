@@ -41,6 +41,10 @@ test or clause is admitted by rule.
 admitted by their own metrics; the loop is a command.
 **Depends on:** Phase 1
 ### Tasks
+- [ ] T1.5 The sealed tier on every layer
+  - success_check: `python -m pytest tests/test_foundry_gate.py::test_every_feature_with_a_contract_carries_a_sealed_second_reading -q`
+  - files: `features/*/sealed/`
+  - verifies: S1.5
 - [ ] T2.1 The tick: next task, worktree name, stale claims
   - success_check: `python -m pytest tests/test_foundry_daemon.py::test_a_tick_takes_the_highest_priority_ready_task_no_lane_runs_and_names_its_worktree tests/test_foundry_daemon.py::test_a_stale_heartbeat_releases_the_claim_and_counts_a_crashed_attempt -q`
   - files: `lib/daemon.py`

@@ -41,6 +41,14 @@
 
 ## C-2 — drafted specs admitted (lib/drafts.py)
 
+### S1.5 — every feature with a contract carries a sealed second reading
+- **verifies:** C-1.5
+- **pins:** ab74bfbfd76ff3de
+- **run_cmd:** `python -m pytest tests/test_foundry_gate.py::test_every_feature_with_a_contract_carries_a_sealed_second_reading -q`
+- **Given** tests/test_foundry_gate.py
+- **When** the spec `test_every_feature_with_a_contract_carries_a_sealed_second_reading` is executed
+- **Then** every `features/*/` with a contract.md has `sealed/test_*.py` holding a `test_sealed_` function whose docstring opens with a clause id of that contract; the same check on a feature without one names it.
+
 ### S2.1 — a drafted test is admitted only when red at base green at head and covering owned lines
 - **verifies:** C-2.1
 - **pins:** 5f3a7f43cc4c2ceb

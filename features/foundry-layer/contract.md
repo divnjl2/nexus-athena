@@ -32,6 +32,14 @@
   - note: extends refinery C-2.8. Agents that read the grader learn the grader; the sealed
     tier leaks through error messages unless the frame strips them.
 
+- **C-1.5** — THE SYSTEM SHALL keep a sealed acceptance tier under every feature that carries a
+  contract: at least one second reading whose docstring names a clause of that feature's contract,
+  run only by the refinery (C-2.8 of the refinery).
+  - source: review
+  - note: gap 3 asked for the sealed tier as the norm of every layer, not only the refinery's; on
+    26.09 only the foundry had one. The guard is a spec, so a new layer without its second reading
+    is red before it merges.
+
 ## C-2 — Drafted specs are admitted, not trusted
 
 - **C-2.1** — WHEN a model drafts a test for a clause THE SYSTEM SHALL admit it only when it
