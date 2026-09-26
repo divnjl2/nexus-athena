@@ -139,3 +139,149 @@ def clause_scores(results, targets):
         }
     
     return scores
+
+
+def mutation_verdict(scores, threshold, added):
+    """
+    C-1.3 — when score below threshold on added lines or survivor on added line: refuse at mutation stage,
+    naming clause and first survivor; when under threshold on untouched lines only: advisory.
+    
+    scores: {clause_id: {score, killed, total, survivors}}
+    threshold: float
+    added: {filename: [line_nums]} lines that were added by the task
+    
+    Returns: verdict dict with ok, stage, clause, survivor, advisory
+    """
+    # Build set of added lines per file
+    added_lines = set()
+    for fname, lines in added.items():
+        for line in lines:
+            added_lines.add((fname, line))
+    
+    # Check if any clause has a survivor on an added line
+    failing_clauses = []
+    first_survivor = None
+    clauses_under_threshold = []
+    
+    for clause_id, data in scores.items():
+        score = data.get("score", 1.0)
+        
+        # Track clauses under threshold
+        if score < threshold:
+            clauses_under_threshold.append(clause_id)
+        
+        # Check if clause has survivors on added lines
+        for survivor in data.get("survivors", []):
+            path = survivor.get("path", "")
+            line = survivor.get("line", 0)
+            kind = survivor.get("kind", "")
+            
+            for (added_fname, added_line) in added_lines:
+                if path == added_fname and line == added_line:
+                    failing_clauses.append(clause_id)
+                    first_survivor = {
+                        "path": path,
+                        "line": line,
+                        "kind": kind
+                    }
+                    break
+    
+    # Determine the outcome
+    if failing_clauses:
+        # There is a survivor on an added line → reject
+        return {
+            "ok": False,
+            "stage": "mutation",
+            "clause": failing_clauses[0],
+            "survivor": first_survivor,
+            "advisory": []
+        }
+    else:
+        # No survivor on an added line; check if under threshold
+        if clauses_under_threshold:
+            # Under threshold on untouched lines → advisory
+            return {
+                "ok": True,
+                "stage": None,
+                "clause": None,
+                "survivor": None,
+                "advisory": clauses_under_threshold
+            }
+        else:
+            # No survivors on added lines and not under threshold → ok
+            return {
+                "ok": True,
+                "stage": None,
+                "clause": None,
+                "survivor": None,
+                "advisory": []
+            }
+
+
+def sealed_summary(tail):
+    """
+    C-1.4 — reduce a sealed run to pass/fail per test id; no assertion text, diffs, or tracebacks.
+    
+    tail: string of tail output containing test results lines and failures
+    
+    Returns: lines like 'PASS test_id' or 'FAIL test_id', summary, and 'no tests ran' if empty.
+    """
+    if not tail.strip():
+        return "no tests ran"
+    
+    failed_lines = []
+    passed_lines = []
+    passed = 0
+    failed = 0
+    
+    for line in tail.splitlines():
+        clean_line = line.strip()
+        
+        # Look for lines with "::" followed by a test name pattern (test_name PASSED/FAILED)
+        # Format: tests/file.py::test_name PASSED or tests/file.py::test_name FAILED
+        if "::" not in clean_line:
+            continue
+        
+        dcolon = clean_line.rfind("::")
+        if dcolon == -1:
+            continue
+        
+        path_part = clean_line[:dcolon]
+        after_part = clean_line[dcolon+2:]
+        parts = after_part.strip().split()
+        
+        if len(parts) < 1:
+            continue
+        
+        # Check if this is an actual test result line (has PASSED or ends with FAILED)
+        result_word = parts[-1] if len(parts) > 1 else parts[0] if parts[0] in ("PASSED", "FAILED", "XFAIL", "XPASS") else None
+        
+        if "PASSED" not in parts and (not result_word or result_word not in ("PASSED", "FAILED", "XFAIL", "XPASS", "SKIPPED")):
+            continue
+        
+        # Skip the summary line at the end
+        if " in " in clean_line and "=" in clean_line.split("=")[-1]:
+            continue
+        
+        # Build full test id
+        test_id = f"{path_part}.py" + ".py" if not path_part.endswith(".py") else path_part
+        if not path_part.endswith(".py"):
+            test_id = f"{path_part}.py"
+        
+        if "::test_" in clean_line or "test_" in after_part:
+            test_name = after_part.split()[0] if after_part.split() else ""
+        else:
+            test_name = test_id.split(".")[-1]
+        
+        # Form the result line
+        if result_word == "PASSED":
+            passed_lines.append(f"PASS {path_part}::{test_name}")
+            passed += 1
+        else:
+            failed_lines.append(f"FAIL {path_part}::{test_name}")
+            failed += 1
+    
+    result_lines = failed_lines + passed_lines
+    result_lines.append(f"{failed} failed, {passed} passed")
+    
+    return "\n".join(result_lines)
