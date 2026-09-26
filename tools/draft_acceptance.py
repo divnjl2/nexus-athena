@@ -23,6 +23,25 @@ from lib.drafts import acceptance, admit_draft, render_acceptance  # noqa: E402
 from lib.executors import pi_binary, pi_command  # noqa: E402
 from lib.forge import pick_targets  # noqa: E402
 
+def _ask(argv, prompt, cwd):
+    """one headless pi call; a stall (measured: 20 min with the lane idle) returns "" instead of killing the run"""
+    try:
+        p = subprocess.run(argv, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True, timeout=600, cwd=str(cwd))
+    except subprocess.TimeoutExpired:
+        subprocess.run(["powershell", "-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"name='node.exe'\" | Where-Object { $_.CommandLine -match 'pi-coding-agent' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"], capture_output=True)
+        return ""
+    text = ""
+    for line in (p.stdout or "").splitlines():
+        if line.startswith("{"):
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            if ev.get("type") == "message_end" and (ev.get("message") or {}).get("role") == "assistant":
+                text = "".join(b.get("text", "") for b in ev["message"].get("content") or [] if b.get("type") == "text")
+    return text
+
+
 feature = (ROOT / sys.argv[1]).resolve()
 module = sys.argv[2]
 executor = sys.argv[3]
@@ -107,16 +126,7 @@ for cid in sorted(by_clause):
             cleaned.append(x)
         cleaned = cleaned[:-1] + ["Answer with the test code only."]
         t0 = time.time()
-        p = subprocess.run(cleaned, input=prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True, timeout=600, cwd=str(SCRATCH))
-        text = ""
-        for line in (p.stdout or "").splitlines():
-            if line.startswith("{"):
-                try:
-                    ev = json.loads(line)
-                except ValueError:
-                    continue
-                if ev.get("type") == "message_end" and (ev.get("message") or {}).get("role") == "assistant":
-                    text = "".join(b.get("text", "") for b in ev["message"].get("content") or [] if b.get("type") == "text")
+        text = _ask(cleaned, prompt, SCRATCH)
         m = re.search(r"```python\s*(.*?)```", text, re.S)
         code = (m.group(1) if m else text).strip()
         fn = re.search(r"def (test_\w+)\s*\(", code)
@@ -146,31 +156,13 @@ for cid in sorted(by_clause):
                                     "The test, as written:", "```python", code, "```", "",
                                     "Fix ONLY the test so it passes against the real module (keep the clause's intent, one function,",
                                     "same name). Reply with the Python code of the test function ONLY, in one ```python block."])
-            p2 = subprocess.run(cleaned, input=fix_prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True, timeout=600, cwd=str(SCRATCH))
-            text2 = ""
-            for line in (p2.stdout or "").splitlines():
-                if line.startswith("{"):
-                    try:
-                        ev = json.loads(line)
-                    except ValueError:
-                        continue
-                    if ev.get("type") == "message_end" and (ev.get("message") or {}).get("role") == "assistant":
-                        text2 = "".join(b.get("text", "") for b in ev["message"].get("content") or [] if b.get("type") == "text")
+            text2 = _ask(cleaned, fix_prompt, SCRATCH)
             m2 = re.search(r"```python\s*(.*?)```", text2, re.S)
             code2 = (m2.group(1) if m2 else "").strip()
             fn2 = re.search(r"def (test_\w+)\s*\(", code2)
             if not fn2:
                 # arm 5: the reply carried no test function — ask once more for the function itself
-                p3 = subprocess.run(cleaned, input='Your previous answer had no test function. Reply with the COMPLETE pytest test function for clause ' + cid + ' of `' + modname + '` in one ```python block, nothing else.', capture_output=True, text=True, encoding='utf-8', errors='replace', shell=True, timeout=600, cwd=str(SCRATCH))
-                text3 = ''
-                for line in (p3.stdout or '').splitlines():
-                    if line.startswith('{'):
-                        try:
-                            ev = json.loads(line)
-                        except ValueError:
-                            continue
-                        if ev.get('type') == 'message_end' and (ev.get('message') or {}).get('role') == 'assistant':
-                            text3 = ''.join(b.get('text', '') for b in ev['message'].get('content') or [] if b.get('type') == 'text')
+                text3 = _ask(cleaned, 'Your previous answer had no test function. Reply with the COMPLETE pytest test function for clause ' + cid + ' of `' + modname + '` in one ```python block, nothing else.', SCRATCH)
                 m3 = re.search(r'```python\s*(.*?)```', text3, re.S)
                 code2 = (m3.group(1) if m3 else '').strip()
                 fn2 = re.search(r'def (test_\w+)\s*\(', code2)

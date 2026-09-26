@@ -215,8 +215,11 @@ rounds). The lever is the loop, not the prompt: the rate goes from 1 in 18 to 5 
 sees its own failure up to three times. What stops the rest is a repair reply without a test
 function; a round that re-asks for the function would be the next arm. The admission rule held:
 the two drafts that were green on the broken code were refused. The drafting tool ran pi in the
-repository root and the model left four test files there — the tool belongs in a worktree like
-every other executor (noted, not yet moved).
+repository root and the model left four test files there; it now runs pi in a scratch worktree and,
+when a repair reply carries no test function, asks once more for the function (arm 5). Arm 5's first
+run (27.09 00:00) judged 3 drafts, admitted 1, then died on a pi call that stalled for 20 minutes with
+the lane idle — the tool had no stall guard; every pi call is now bounded and a stall is a row, not a
+crash. The arm's number is the next run's (`/d/tmp/lanes/drafts_arm5b.log`).
 
 ## The ten gaps on 2026-09-27 00:10 — measured state
 
