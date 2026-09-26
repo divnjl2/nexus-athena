@@ -2509,7 +2509,7 @@ def cmd_dispatch(a) -> int:
                 # green checks is rolled back to the best one before the next starts
                 import subprocess as _sp
                 from lib.dispatch import regression
-                _sp.run(["git", "add", "-A"], cwd=str(workspace), capture_output=True)
+                _sp.run(["git", "add", "-A", "--ignore-errors"], cwd=str(workspace), capture_output=True)   # measured: an executor left a file named `nul`; the add must not stop there
                 _sp.run(["git", "commit", "-q", "--allow-empty", "-m", f"athena iteration {iteration} of {a.task}"],
                         cwd=str(workspace), capture_output=True)
                 _sha = _sp.run(["git", "rev-parse", "HEAD"], cwd=str(workspace), capture_output=True, text=True).stdout.strip()
