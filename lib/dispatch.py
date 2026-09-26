@@ -392,17 +392,20 @@ def unparsed_tool_call(claim: str) -> bool:
 
 
 def record(task_id: str, executor: str, result: dict, *, duration_ms: int, tokens: dict | None,
-           ts: str, workspace: str = "") -> dict:
+           ts: str, workspace: str = "", provenance: dict | None = None) -> dict:
     """PURE: one line of the dispatch record (C-4.1). The workspace is named so a merge offer
     is admitted on THIS worktree's last verdict, not on another executor's run of the same
     task elsewhere (C-2.1 of the refinery)."""
-    return {"schema": SCHEMA, "ts": ts, "task": task_id, "executor": executor,
-            "workspace": str(workspace).replace("\\", "/").rstrip("/"),
-            "landed": bool(result.get("landed")), "green": bool(result.get("green")),
-            "passed": bool(result.get("passed")), "duration_ms": int(duration_ms),
-            "tokens": {k: int(v) for k, v in (tokens or {}).items() if isinstance(v, int)},
-            "changed": len(result.get("changed_files", [])),
-            "review_flags": list(result.get("review_flags", []))}
+    rec = {"schema": SCHEMA, "ts": ts, "task": task_id, "executor": executor,
+           "workspace": str(workspace).replace("\\", "/").rstrip("/"),
+           "landed": bool(result.get("landed")), "green": bool(result.get("green")),
+           "passed": bool(result.get("passed")), "duration_ms": int(duration_ms),
+           "tokens": {k: int(v) for k, v in (tokens or {}).items() if isinstance(v, int)},
+           "changed": len(result.get("changed_files", [])),
+           "review_flags": list(result.get("review_flags", []))}
+    if provenance is not None:
+        rec["provenance"] = provenance
+    return rec
 
 
 # --- iterations with checkpoints: a small window is enough (C-5.*) --------------------
