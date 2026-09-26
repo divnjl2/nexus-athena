@@ -118,69 +118,27 @@ def decay(lessons, green_rides=None, limit=10):
 
 
 def packet_with_memory(pk, repo_map="", lessons=None):
-    """C-11.3 — WHEN a packet is packed, place the repository map and selected lessons
-    after the static prefix and before the requirement; add nothing when there is nothing.
-
-    Args:
-        pk: Packet dict with keys ``text``, ``chars``, ``budget_chars``, ``over_budget``.
-        repo_map: Repository map content to insert under "## Repository map".
-        lessons: List of lesson dicts with ``clause``, ``file``, ``rule`` keys.
-
-    Returns:
-        Packet dict with added ``text``, ``chars``, ``map_chars``, ``lesson_count``.
-        Returns the original ``pk`` unchanged when both repo_map and lessons are empty.
-    """
-    if lessons is None:
-        lessons = []
-
-    # Nothing to add — return the original packet object unchanged
-    if not repo_map and not lessons:
+    """C-11.3 — the packet with a repository map and the selected lessons after the static
+    prefix and before the requirement; nothing to add returns the packet itself. Review
+    (Claude, 26.09): every other key of the packet is kept — the first version returned a
+    dict of five keys and the dispatcher died on pk["checks"]."""
+    lessons = list(lessons or [])
+    if not (repo_map or "").strip() and not lessons:
         return pk
-
     text = pk["text"]
-
-    # Build the repository map section (only if non-empty)
-    map_section = ""
-    if repo_map:
-        map_section = f"## Repository map\n{repo_map}"
-
-    # Build the lessons section (only if non-empty)
-    lessons_section = ""
+    parts = []
+    if (repo_map or "").strip():
+        parts.append("## Repository map" + chr(10) + repo_map.strip() + chr(10))
     if lessons:
-        lesson_lines = []
-        for lesson in lessons:
-            formatted = (
-                f"{lesson.get('clause', '')}: "
-                f"{lesson.get('rule', '')} ({lesson.get('file', '')})"
-            )
-            lesson_lines.append(formatted)
-        lessons_section = f"## Lessons\n{chr(10).join(lesson_lines)}"
-
-    # Insert sections after the static prefix and before "## The requirement"
-    parts = text.split("\n")
-    requirement_idx = -1
-    for i, p in enumerate(parts):
-        if p.strip().lower() == "## the requirement".lower():
-            requirement_idx = i
-            break
-
-    if requirement_idx < 0:
-        # No requirement marker — append sections at the end
-        combined = "\n".join([map_section, lessons_section])
-        new_text = "\n".join(parts + [combined])
-    else:
-        combined = "\n".join([map_section, lessons_section])
-        new_text = "\n".join(parts[:requirement_idx] + [combined] + parts[requirement_idx:])
-
-    map_chars = len(repo_map) if repo_map else 0
-    lesson_count = len([l for l in lessons if l.get("clause")])
-
-    out = {
-        "text": new_text,
-        "chars": len(new_text),
-        "budget_chars": pk["budget_chars"],
-        "over_budget": pk["over_budget"],
-        "map_chars": map_chars,
-        "lesson_count": lesson_count,
-    }
+        lines = ["## Lessons"]
+        for les in lessons:
+            lines.append(f"- {les.get('clause', '?')}: {str(les.get('rule', '')).strip()} ({les.get('file', '?')})")
+        parts.append(chr(10).join(lines) + chr(10))
+    insert = chr(10).join(parts)
+    marker = "## The requirement"
+    k = text.find(marker)
+    new_text = (text[:k] + insert + chr(10) + text[k:]) if k >= 0 else (text.rstrip(chr(10)) + chr(10) + chr(10) + insert)
+    out = dict(pk)
+    out.update({"text": new_text, "chars": len(new_text), "map_chars": len((repo_map or "").strip()),
+                "lesson_count": len(lessons)})
     return out

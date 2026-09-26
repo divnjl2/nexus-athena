@@ -16,21 +16,24 @@ def importlinter_config(clauses: list, root_package: str) -> tuple[str, str]:
     # Add the main importlinter section
     config["importlinter"] = {}
     config["importlinter"]["root_package"] = root_package
+    config["importlinter"]["include_external_packages"] = "True"   # review: forbidden modules outside the root package need it
     
     for clause in clauses:
         cid = clause["id"]
         text = clause["text"]
         
         # C-9.1: "shall not import" constraint
-        if cid == "C-9.1":
+        # review (Claude): the shape is in the TEXT, never in the clause id (the lane keyed on "C-9.1")
+        if re.search(r"shall\s+not\s+import", text, re.IGNORECASE):
             # Extract "THE {pkg} package shall not import {forbidden}"
             # e.g., "THE lib.oracles package shall not import lib.daemon."
             forbidden_match = re.search(r"THE\s+(\S+)\s+package\s+shall\s+not\s+import\s+(\S+)", text, re.IGNORECASE)
             if forbidden_match:
                 config[f"importlinter:contract:{cid}"] = {}
                 config[f"importlinter:contract:{cid}"]["type"] = "forbidden"
+                config[f"importlinter:contract:{cid}"]["name"] = cid   # review: import-linter requires a name per contract
                 orig_mod = forbidden_match.group(1)
-                for_mod = forbidden_match.group(2)
+                for_mod = forbidden_match.group(2).rstrip(".,;:")   # review: the clause ends in a period
                 config[f"importlinter:contract:{cid}"]["source_modules"] = orig_mod
                 config[f"importlinter:contract:{cid}"]["forbidden_modules"] = for_mod
         
@@ -38,6 +41,7 @@ def importlinter_config(clauses: list, root_package: str) -> tuple[str, str]:
         elif cid == "C-9.2":
             config[f"importlinter:contract:{cid}"] = {}
             config[f"importlinter:contract:{cid}"]["type"] = "layers"
+            config[f"importlinter:contract:{cid}"]["name"] = cid
             
             # Extract layers: "athena, lib.refinery, lib.dispatch"
             layers_match = re.search(r"layers\s+(.+?)\s+in", text, re.IGNORECASE)

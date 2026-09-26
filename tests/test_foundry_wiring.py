@@ -67,6 +67,9 @@ def test_the_packet_carries_the_repo_map_and_the_lessons_after_the_prefix():
     assert t.index("STATIC") < t.index("## Repository map") < t.index("## Lessons") < t.index("## The requirement")
     assert "def f()" in t and "C-2.1: filter by task first (lib/a.py)" in t
     assert out["chars"] == len(t) and out["map_chars"] > 0 and out["lesson_count"] == 1
+    rich = {**pk, "task": {"id": "T1"}, "checks": ["python -m pytest t.py -q"], "specs": [1]}
+    kept = packet_with_memory(rich, repo_map="lib/a.py", lessons=[])
+    assert kept["task"] == {"id": "T1"} and kept["checks"] == rich["checks"] and kept["specs"] == [1]   # review: every other key of the packet survives
     assert packet_with_memory(pk, repo_map="", lessons=[]) is pk
 
 

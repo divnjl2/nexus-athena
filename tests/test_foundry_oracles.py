@@ -12,15 +12,18 @@ def test_an_import_clause_renders_an_import_linter_contract_and_its_run_command(
     one .importlinter with both, and the command that checks it."""
     from lib.oracles import importlinter_config
     clauses = [{"id": "C-9.1", "text": "THE lib.oracles package SHALL NOT import lib.daemon."},
+               {"id": "C-3.7", "text": "THE lib package SHALL NOT import athena."},   # review: any id, the shape is in the text
                {"id": "C-9.2", "text": "THE SYSTEM SHALL keep the layers athena, lib.refinery, lib.dispatch in that order."},
                {"id": "C-9.3", "text": "WHEN x THE SYSTEM SHALL do y."}]
     ini, cmd = importlinter_config(clauses, root_package="lib")
     assert "[importlinter]" in ini and "root_package = lib" in ini
     assert "[importlinter:contract:C-9.1]" in ini and "type = forbidden" in ini
+    assert "name = C-9.1" in ini   # review: lint-imports refuses a contract without a name
     assert "source_modules = lib.oracles" in ini and "forbidden_modules = lib.daemon" in ini
     assert "[importlinter:contract:C-9.2]" in ini and "type = layers" in ini
     assert "athena" in ini and "lib.refinery" in ini and "lib.dispatch" in ini
     assert "C-9.3" not in ini
+    assert "[importlinter:contract:C-3.7]" in ini and "forbidden_modules = athena" in ini
     assert cmd.startswith("lint-imports") and "--config" in cmd
 
 

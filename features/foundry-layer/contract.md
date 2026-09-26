@@ -198,6 +198,11 @@
   - source: design
   - note: golden files through syrupy invite "update the snapshot" as the fix.
 
+- **C-9.4** — THE lib package SHALL NOT import athena or tests.
+  - source: design
+  - note: the frame's own structure as an oracle of the second kind (gap 2, measured on
+    26.09): the clause renders to `features/foundry-layer/importlinter.ini` through C-9.1 and the
+    scenario runs `lint-imports` — no pytest, a command whose exit code is the verdict.
 ## C-10 — The sandbox
 
 - **C-10.1** — WHEN the sandbox flag is on THE SYSTEM SHALL wrap every executor command in

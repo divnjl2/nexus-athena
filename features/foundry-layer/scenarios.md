@@ -279,6 +279,13 @@
 - **When** the spec `test_a_command_that_would_update_a_snapshot_baseline_is_refused` is executed
 - **Then** the snapshot-update flags of the golden tools are refused with the reason; a plain test command passes.
 
+### S9.4 — the frame's own structure holds under import-linter
+- **verifies:** C-9.4
+- **pins:** f51ccfbb67c843bb
+- **run_cmd:** `lint-imports --config features/foundry-layer/importlinter.ini`
+- **Given** features/foundry-layer/importlinter.ini, rendered from the clause by lib.oracles.importlinter_config
+- **When** `lint-imports` runs the contracts in it
+- **Then** every contract is kept: no module under lib imports athena or tests; a broken contract exits non-zero and the clause is red.
 ## C-10 — the sandbox (lib/sandbox.py)
 
 ### S10.1 — the sandbox wraps a command with the worktree writable and the lane ports open

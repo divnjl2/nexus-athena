@@ -55,7 +55,17 @@ def cmd_compile(a) -> int:
     # v3.1 provenance edges materialise; it falls back to a flat parse otherwise.
     plan = parse_with_provenance(a.front, speckit=_speckit(a.speckit))
     res = compile(plan)
-    _emit({"epics": len(res.epic_keys), "issues": res.issue_count, "commands": len(res.commands)})
+    ran = False
+    if getattr(a, "run", False):
+        # the plan becomes beads: the daemon's ready queue (C-3.1) is `bd ready` over these
+        import subprocess
+        from lib.bd_client import execute
+
+        def run(argv):
+            return subprocess.run(argv, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
+        execute(res, run=run)
+        ran = True
+    _emit({"epics": len(res.epic_keys), "issues": res.issue_count, "commands": len(res.commands), "ran": ran})
     return 0
 
 
@@ -2858,7 +2868,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     v = sub.add_parser("validate"); v.add_argument("front"); v.set_defaults(fn=cmd_validate)
-    c = sub.add_parser("compile"); c.add_argument("front"); c.set_defaults(fn=cmd_compile)
+    c = sub.add_parser("compile"); c.add_argument("front"); c.add_argument("--run", action="store_true", help="execute the bd commands: the plan becomes the ready queue"); c.set_defaults(fn=cmd_compile)
     st = sub.add_parser("stats"); st.add_argument("front"); st.set_defaults(fn=cmd_stats)
     h = sub.add_parser("hermes-plan")
     h.add_argument("front", nargs="?", default=""); h.add_argument("-o", "--out", default="")
