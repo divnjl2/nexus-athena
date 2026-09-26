@@ -45,6 +45,7 @@ if not clause_text:
 
 tree = ast.parse(sources[module])
 rich = len(sys.argv) > 6 and sys.argv[6] == "rich"   # arm 2: docstrings and one example spec ride along
+rounds = int(sys.argv[7]) if len(sys.argv) > 7 else 1   # arm 4: repair rounds with the failure in hand (1 = arm 3)
 sigs = []
 for n in tree.body:
     if isinstance(n, ast.FunctionDef) and not n.name.startswith("_"):
@@ -127,7 +128,10 @@ for cid in sorted(by_clause):
             return r.returncode
         head_exit = run_pytest(ROOT)
         repaired = False
-        if head_exit != 0 and rich:
+        repairs = 0
+        for _round in range(rounds if rich else 0):
+            if head_exit == 0:
+                break
             # arm 3 (Otter++'s move): one repair round with the failure in hand, then re-run at HEAD
             r0 = subprocess.run([sys.executable, "-m", "pytest", node, "-q", "-p", "no:cacheprovider", "--rootdir", str(ROOT), "--tb=short"],
                                 cwd=str(ROOT), capture_output=True, text=True, timeout=300)
@@ -150,14 +154,17 @@ for cid in sorted(by_clause):
             m2 = re.search(r"```python\s*(.*?)```", text2, re.S)
             code2 = (m2.group(1) if m2 else "").strip()
             fn2 = re.search(r"def (test_\w+)\s*\(", code2)
-            if fn2:
-                code = code2
-                fn = fn2
-                test_path.write_text(header + code + "\n", encoding="utf-8")
-                node = f"{test_path.as_posix()}::{fn.group(1)}"
-                head_exit = run_pytest(ROOT)
-                repaired = True
+            if not fn2:
+                break
+            code = code2
+            fn = fn2
+            test_path.write_text(header + code + "\n", encoding="utf-8")
+            node = f"{test_path.as_posix()}::{fn.group(1)}"
+            head_exit = run_pytest(ROOT)
+            repaired = True
+            repairs += 1
         row["repaired"] = repaired
+        row["repairs"] = repairs
         with tempfile.TemporaryDirectory() as td:
             mirror = pathlib.Path(td) / "m"
             subprocess.run(["git", "worktree", "add", "--detach", str(mirror), "HEAD"], cwd=str(ROOT), capture_output=True)

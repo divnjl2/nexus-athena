@@ -205,6 +205,14 @@
     scenario runs `lint-imports` — no pytest, a command whose exit code is the verdict.
 ## C-10 — The sandbox
 
+- **C-9.5** — THE packing of a packet with memory (repository map and lessons, C-7.1, C-7.3)
+  for a 30k-character packet SHALL finish within 5 ms mean and allocate under 2 MB at peak,
+  measured by pytest-benchmark and tracemalloc.
+  - source: review
+  - note: gap 2 asked for time and memory limits as specs; this is the first, on the frame's own
+    hot path (measured 26.09: 0.05 ms mean, 64 KB peak — the budget is a hundredfold, so a lane
+    running beside the suite does not make it flap; a regression to quadratic packing would).
+
 - **C-10.1** — WHEN the sandbox flag is on THE SYSTEM SHALL wrap every executor command in
   the sandbox runtime with write access to the worktree only, read access to the toolchain,
   and network limited to the lane ports.

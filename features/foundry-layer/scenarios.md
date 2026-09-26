@@ -288,6 +288,13 @@
 - **Then** every contract is kept: no module under lib imports athena or tests; a broken contract exits non-zero and the clause is red.
 ## C-10 — the sandbox (lib/sandbox.py)
 
+### S9.5 — packing a packet with memory stays within its time and memory budget
+- **verifies:** C-9.5
+- **run_cmd:** `python -m pytest tests/test_foundry_perf.py::test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget -q`
+- **Given** tests/test_foundry_perf.py
+- **When** the spec `test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget` is executed
+- **Then** a 30k-character packet with a repository map and five lessons packs in under 5 ms mean over the benchmark rounds and under 2 MB peak allocation; a quadratic packing fails the spec.
+
 ### S10.1 — the sandbox wraps a command with the worktree writable and the lane ports open
 - **verifies:** C-10.1
 - **pins:** 0488ff516d9c047b

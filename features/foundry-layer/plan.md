@@ -148,5 +148,9 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_daemon.py::test_the_daemon_with_a_pool_routes_by_prefix_affinity_among_admitted_lanes -q`
   - files: `lib/lanes.py, athena.py`
   - verifies: S11.7
+- [ ] T6.7 A time and memory budget as a spec
+  - success_check: `python -m pytest tests/test_foundry_perf.py::test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget -q`
+  - files: `lib/memory.py, tests/test_foundry_perf.py`
+  - verifies: S9.5
 ### Manual Verification
 - `python athena.py daemon features/foundry-layer/contract.md --front features/foundry-layer/plan.md --dry-run --text` names the next task and the lane it would take.
