@@ -26,86 +26,37 @@ def regen_packet(module: str, clauses_text: str, specs_text: str, signatures: Li
     return packet
 
 
-def diff_report(
-    sigs: Dict[str, str],
-    old: str,
-    new: str,
-    runner: Callable[[List[str], str], Tuple[int, str]],
-    cwd: str,
-    timeout: float
-) -> List[Dict[str, Any]]:
-    """
-    C-8.2 — run the behaviour diff per public typed function.
-    Skip untyped or private functions.
-    Record counterexamples from the runner output.
-    """
+def diff_report(sigs, old: str, new: str, runner, cwd: str, timeout: int = 20):
+    """C-8.2 — one `crosshair diffbehavior` per public typed function through the injected
+    runner; counterexamples parsed out of its output; private (leading underscore) and
+    untyped (no annotations) functions are skipped. Finished by Claude after three lane
+    iterations (ADR-0007): the lane's argv put the timeout last and its parser expected
+    `name: returns` without the space crosshair prints."""
+    import re as _re
     reports = []
-    
-    for func_name, signature in sigs.items():
-        # Skip private functions (start with underscore)
-        if func_name.startswith("_"):
+    for name, signature in (sigs or {}).items():
+        if name.startswith("_") or ("->" not in signature and ":" not in signature.split("(", 1)[-1]):
             continue
-        
-        # Skip untyped signatures (no type hints - no -> in signature)
-        has_types = "->" in signature
-        if not has_types:
-            continue
-        
-        # Build command - use "old.func: new.func" format
-        cmd = ["crosshair", "diffbehavior", f"{old}.{func_name}: {new}.{func_name}"]
-        cmd.extend(["--per_condition_timeout", str(int(timeout * 1000))])
-        cmd.append("--timeout")
-        cmd.append(str(int(timeout * 1000)))
-        
-        # Execute in specified directory
-        exit_code, output = runner(cmd, cwd)
-        
-        # Parse counterexamples from output
+        argv = ["crosshair", "diffbehavior", "--per_condition_timeout", str(timeout), f"{old}.{name}", f"{new}.{name}"]
+        _code, output = runner(argv, cwd)
         counterexamples = []
-        lines = output.split("\n")
-        
-        given = ""
-        old_ret = ""
-        new_ret = ""
-        
-        for line in lines:
-            stripped_line = line.strip()
-            
-            # Line 1: "Given: (...)"
-            if stripped_line.startswith("Given:"):
-                parts = stripped_line.split("Given: ", 1)
-                if len(parts) >= 2:
-                    given = parts[1]
-            # Parse the return statements - look for lines with the function name
-            elif func_name.lower() in stripped_line and ": returns" in stripped_line:
-                parts = stripped_line.split(": returns", 1)
-                if len(parts) >= 2:
-                    prefix = parts[0].rstrip()
-                    # The prefix is like "old.func_name" or "new.func_name"
-                    # Remove the function name and check what remains
-                    prefix_lower = prefix.lower()
-                    func_lower = func_name.lower()
-                    if func_lower in prefix_lower:
-                        # Extract the part before the last occurrence of func_name
-                        idx = prefix_lower.rfind(func_lower)
-                        before_part = prefix_lower[:idx].strip()
-                        if before_part == "old":
-                            old_ret = parts[1].strip()
-                        elif before_part == "new":
-                            new_ret = parts[1].strip()
-        
-        if given and old_ret and new_ret:
-            counterexamples.append({
-                "given": given,
-                "old": f"returns {old_ret}",
-                "new": f"returns {new_ret}"
-            })
-        
-        reports.append({
-            "function": func_name,
-            "counterexamples": counterexamples
-        })
-    
+        given = old_ret = new_ret = None
+        for line in (output or "").splitlines():
+            s = line.strip()
+            if s.startswith("Given:"):
+                if given is not None and old_ret and new_ret:
+                    counterexamples.append({"given": given, "old": old_ret, "new": new_ret})
+                given, old_ret, new_ret = s[len("Given:"):].strip(), None, None
+                continue
+            m = _re.match(r"^(\S+)\.(\w+)\s*:\s*(.+)$", s)
+            if m and m.group(2) == name:
+                if m.group(1) == old:
+                    old_ret = m.group(3).strip()
+                elif m.group(1) == new:
+                    new_ret = m.group(3).strip()
+        if given is not None and old_ret and new_ret:
+            counterexamples.append({"given": given, "old": old_ret, "new": new_ret})
+        reports.append({"function": name, "counterexamples": counterexamples})
     return reports
 
 
