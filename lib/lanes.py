@@ -127,3 +127,59 @@ def admit(lane_state: Dict, limit: int, kv_ceiling: float) -> tuple:
         return (False, f"running {running} of limit {limit}, no headroom")
 
     return (True, "admitted")
+
+
+# ---------------------------------------------------------------------------
+# C-4.5: Speculation-decoding flag admission — paired verdicts & greedy outputs
+# ---------------------------------------------------------------------------
+
+
+def speculation_verdict(paired_runs: List) -> tuple:
+    """Admit a speculative-decoding flag only when every task lands the same verdict
+    with and without the flag AND temperature-zero greedy outputs are token-identical.
+
+    Each entry in ``paired_runs`` describes one task as a pair:
+        ``{"task": "T2.1", "plain": {"green": True, "tokens": [...]}, "spec": {...}}"``
+
+    Returns ``(True, "N tasks agree")`` when all tasks agree on verdicts and tokens.
+    Otherwise returns ``(False, reason)`` naming the task and the first divergence.
+
+    Clause C-4.5: the flag is admitted only after the same tasks land the same verdicts
+    with and without it and temperature-zero outputs are token-identical, and names the
+    first divergence otherwise.
+    """
+    if not paired_runs:
+        return (False, "no paired runs")
+
+    agree_count = 0
+    for entry in paired_runs:
+        task = entry["task"]
+        plain = entry["plain"]
+        spec = entry["spec"]
+
+        # --- Verdict comparison ---
+        if plain["green"] != spec["green"]:
+            if plain["green"]:
+                verdict_str = "green without, red with"
+            else:
+                verdict_str = "red without, green with"
+            return (False, f"{task}: verdict {verdict_str}")
+
+        # --- Token (greedy output) comparison ---
+        plain_tokens = plain["tokens"]
+        spec_tokens = spec["tokens"]
+        min_len = min(len(plain_tokens), len(spec_tokens))
+
+        # Scan common prefix for first token divergence (0-indexed position)
+        for i in range(min_len):
+            if plain_tokens[i] != spec_tokens[i]:
+                return (False, f"{task}: outputs diverge at token {i}")
+
+        # Length mismatch → divergence at the token position where the shorter
+        # sequence ends (1-indexed)
+        if len(plain_tokens) != len(spec_tokens):
+            return (False, f"{task}: outputs diverge at token {min_len}")
+
+        agree_count += 1
+
+    return (True, f"{agree_count} tasks agree")
