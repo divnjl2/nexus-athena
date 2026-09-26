@@ -255,6 +255,14 @@
 
 ## C-9 — oracles of the second kind (lib/oracles.py)
 
+### S8.4 — a task is judged by its own checks and regressions from a red base
+- **verifies:** C-8.4
+- **pins:** 9fb28d5e900d879b
+- **run_cmd:** `python -m pytest tests/test_foundry_gate.py::test_a_task_is_judged_by_its_own_checks_and_regressions_from_a_red_base -q`
+- **Given** tests/test_foundry_gate.py
+- **When** the spec `test_a_task_is_judged_by_its_own_checks_and_regressions_from_a_red_base` is executed
+- **Then** with a base that already fails a check outside the task, a verdict whose own checks are green and whose only reds are inherited is green and names them; a new red outside the base is a regression and red; an iteration that touched a spec file is restored to the best before it even when the green counts tie.
+
 ### S9.1 — an import clause renders an import linter contract and its run command
 - **verifies:** C-9.1
 - **pins:** 3941f21eba622b24

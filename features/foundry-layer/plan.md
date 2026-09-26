@@ -107,6 +107,10 @@ spec and judged equivalent.
 executor's commands can run fenced.
 **Depends on:** Phase 4
 ### Tasks
+- [ ] T4.4 The regeneration verdict: inherited reds and tainted iterations
+  - success_check: `python -m pytest tests/test_foundry_gate.py::test_a_task_is_judged_by_its_own_checks_and_regressions_from_a_red_base -q`
+  - files: `lib/dispatch.py, athena.py`
+  - verifies: S8.4
 - [ ] T5.1 Import-linter and benchmark commands from clauses; refused baseline updates
   - success_check: `python -m pytest tests/test_foundry_oracles.py::test_an_import_clause_renders_an_import_linter_contract_and_its_run_command tests/test_foundry_oracles.py::test_a_time_budget_clause_renders_a_benchmark_command_against_a_stored_baseline tests/test_foundry_oracles.py::test_a_command_that_would_update_a_snapshot_baseline_is_refused -q`
   - files: `lib/oracles.py`

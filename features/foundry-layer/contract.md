@@ -180,6 +180,16 @@
   counterexample and a per-clause mutation score not under the original module's.
   - source: design
 
+- **C-8.4** — WHEN a workspace's base already fails checks outside the task THE SYSTEM SHALL judge
+  the task by its own checks and by regressions from that base, record the inherited reds by
+  name, and never keep an iteration that edited a spec file, whatever its green count.
+  - source: review
+  - note: measured 26.09 on the decomposed regeneration of lib/refinery.py: with the module
+    stubbed, every task's verdict counted the eight other stubs' red specs and could not be green
+    however right its own function was; in T2.2 the executor gutted tests/test_refinery.py, the
+    verdict refused the iteration and keep-best kept it because the counts tied. Inherited reds
+    are the merge queue's business: its check stage runs everything on the rebased result.
+
 ## C-9 — Oracles of the second kind
 
 - **C-9.1** — WHEN a clause says a package shall not import another, or names layers, THE

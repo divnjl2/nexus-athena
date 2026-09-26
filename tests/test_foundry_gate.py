@@ -119,3 +119,33 @@ def test_acceptance_is_kept_per_drafting_model_and_rendered_as_a_rate():
     text = render_acceptance(table)
     assert "pi-9b" in text and "67%" in text and "33%" in text and "pi-3b" in text
     assert acceptance([]) == {}
+
+
+def test_a_task_is_judged_by_its_own_checks_and_regressions_from_a_red_base():
+    """C-8.4 — a red base is not the task's fault: its own checks and regressions decide; an
+    iteration that touched a spec file is never the one kept."""
+    from lib.dispatch import regression, verdict
+    own = "python -m pytest tests/t.py::own -q"
+    other = "python -m pytest tests/t.py::other -q"
+    third = "python -m pytest tests/t.py::third -q"
+    before, after = {"lib/m.py": (1, 1)}, {"lib/m.py": (2, 2)}
+    checks = [{"cmd": own, "exit": 0, "tail": "1 passed"}, {"cmd": other, "exit": 1, "tail": "1 failed"}]
+    plain = verdict(before, after, checks)
+    assert plain["green"] is False and other in plain["reason"]
+    inherited = verdict(before, after, checks, base_red=[other], own=[own])
+    assert inherited["green"] is True and inherited["inherited"] == [other]
+    assert other in inherited["reason"] and "inherited" in inherited["reason"]
+    # the task's own check is never inherited, even when it was red at the base
+    own_red = verdict(before, after, [{"cmd": own, "exit": 1, "tail": "1 failed"}], base_red=[own], own=[own])
+    assert own_red["green"] is False and own_red["inherited"] == []
+    # a red the base did not have is a regression
+    regressed = verdict(before, after, checks + [{"cmd": third, "exit": 1, "tail": "1 failed"}], base_red=[other], own=[own])
+    assert regressed["green"] is False and third in regressed["reason"] and regressed["inherited"] == [other]
+    # an iteration that edited a spec file is tainted: restored to the best before it though the counts tie
+    tainted = verdict(before, {**after, "tests/t.py": (9, 9)}, checks, spec_files=["tests/t.py"], base_red=[other], own=[own])
+    assert tainted["green"] is False and tainted["spec_touched"] == ["tests/t.py"]
+    its = [checks, checks]
+    assert regression(its) is None
+    assert regression(its, tainted_last=True) == {"restore": 1, "from": 2, "green_before": 1, "green_after": 1, "tainted": True}
+    assert regression([checks], tainted_last=True) is None   # nothing before it: the caller restores the base
+

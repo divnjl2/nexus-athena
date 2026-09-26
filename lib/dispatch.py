@@ -325,7 +325,7 @@ def skip_reason(check: dict) -> str:
 
 
 def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
-            spec_files=(), allowed=()) -> dict:
+            spec_files=(), allowed=(), base_red=(), own=()) -> dict:
     """PURE: the decision (C-2.1..C-2.4, C-2.7). `checks` is [{cmd, exit, tail}] from the
     spec commands run AFTER the executor. The claim is kept for the record and ignored.
     `spec_files` are the test modules the task's specs live in: a change there is not the
@@ -335,6 +335,12 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     touched = changed + deleted
     landed = bool(touched)
     red = [c for c in checks if c.get("exit", 1) != 0 or skip_reason(c)]
+    # C-8.4: a check that was red before the executor touched anything, and is not the task's own,
+    # is inherited — named in the record, never the task's fault; the merge queue re-runs it all
+    base_set = {str(x) for x in (base_red or ())}
+    own_set = {str(x) for x in (own or ())}
+    inherited = [c for c in red if str(c.get("cmd")) in base_set and str(c.get("cmd")) not in own_set]
+    red = [c for c in red if c not in inherited]
     spec_set = {str(s).replace("\\", "/") for s in spec_files}
     # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file
     spec_touched = [p for p in touched
@@ -365,6 +371,8 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
                        + (why if why else str(c.get('tail', ''))[-300:]))
     if flags:
         reasons.append("touched a derived or hand-written file: " + ", ".join(flags))
+    if inherited:
+        reasons.append("inherited from the base, not this task's: " + ", ".join(str(c.get("cmd")) for c in inherited))
     if unparsed_tool_call(claim):
         # C-2.5: the model answered the tool schema in a shape the server's parser did not
         # accept, so the call came back as prose and nothing ran. A known signature gets its name.
@@ -373,6 +381,7 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     return {
         "landed": landed, "green": green, "passed": landed and green,
         "changed_files": changed, "deleted_files": deleted, "review_flags": flags, "outside": outside,
+        "inherited": [str(c.get("cmd")) for c in inherited], "spec_touched": spec_touched,
         "red": [{"cmd": c.get("cmd"), "exit": c.get("exit")} for c in red],
         "red_full": [{"cmd": c.get("cmd"), "exit": c.get("exit"), "tail": str(c.get("tail", ""))[-300:]}
                      for c in red],
@@ -632,16 +641,20 @@ def green_count(checks) -> int:
     return sum(1 for c in (checks or []) if int((c or {}).get("exit", 1)) == 0)
 
 
-def regression(iterations) -> dict | None:
-    """PURE (C-11.6): when the last iteration holds fewer green checks than the best one before
-    it, name the iteration to restore (1-based) and both counts; None when the latest is as
-    good or better, or when it is the first."""
+def regression(iterations, *, tainted_last: bool = False) -> dict | None:
+    """PURE (C-11.6, C-8.4): when the last iteration holds fewer green checks than the best one
+    before it — or is tainted (it edited a spec file), whatever its count — name the iteration to
+    restore (1-based) and both counts; None when the latest is as good or better, or when it is
+    the first (a tainted first iteration is the caller's to restore to the base)."""
     its = list(iterations or [])
     if len(its) < 2:
         return None
     counts = [green_count(c) for c in its]
     best_before = max(counts[:-1])
-    if counts[-1] >= best_before:
+    if counts[-1] >= best_before and not tainted_last:
         return None
     restore = counts.index(best_before) + 1
-    return {"restore": restore, "from": len(its), "green_before": best_before, "green_after": counts[-1]}
+    out = {"restore": restore, "from": len(its), "green_before": best_before, "green_after": counts[-1]}
+    if tainted_last:
+        out["tainted"] = True
+    return out

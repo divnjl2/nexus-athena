@@ -2597,6 +2597,15 @@ def cmd_dispatch(a) -> int:
                   if s.id in pk["task"].get("verifies", ()) or s.run_cmd in pk["checks"]]
     spec_files = [f for f in spec_files if f]
 
+    if getattr(a, "inherit_red", False):
+        # C-8.4: the base's own reds, measured once before any executor touches the workspace
+        from lib.dispatch import skip_reason as _skip
+        state["base_red"] = [c["cmd"] for c in run_checks(workspace) if c.get("exit", 1) != 0 or _skip(c)]
+        if state["base_red"]:
+            print(f"# base: {len(state['base_red'])} red check(s) inherited, not this task's", flush=True)
+        import subprocess as _sp0
+        state["base_sha"] = _sp0.run(["git", "rev-parse", "HEAD"], cwd=str(workspace), capture_output=True, text=True).stdout.strip()
+
     def one_attempt(ws: pathlib.Path, before_ws: dict, current: dict) -> dict:
         """One executor process in one workspace, judged there: verdict, claim, checks."""
         t0 = time.perf_counter()
@@ -2614,7 +2623,8 @@ def cmd_dispatch(a) -> int:
             code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
             checks.append({"cmd": batch["cmd"], "exit": code, "tail": tail, "radius": True,
                            "members": batch["members"]})
-        v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files, allowed=list(task_files))
+        v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files, allowed=list(task_files),
+                    base_red=state.get("base_red") or (), own=list(pk.get("checks") or ()))   # C-8.4
         v["duration_ms"] = duration
         return {"v": v, "claim": claim, "tokens": tokens, "err": err, "checks": checks,
                 "duration": duration, "ws": ws}
@@ -2661,9 +2671,12 @@ def cmd_dispatch(a) -> int:
                 _sha = _sp.run(["git", "rev-parse", "HEAD"], cwd=str(workspace), capture_output=True, text=True).stdout.strip()
                 state.setdefault("its", []).append(list(r.get("checks") or []))
                 state.setdefault("commits", []).append(_sha)
-                _reg = regression(state["its"])
+                _tainted = bool(r["v"].get("spec_touched"))          # C-8.4: never kept
+                _reg = regression(state["its"], tainted_last=_tainted)
+                if _tainted and not _reg and state.get("base_sha"):
+                    _reg = {"restore": 0, "from": iteration, "green_before": 0, "green_after": 0, "tainted": True}
                 if _reg:
-                    _best = state["commits"][_reg["restore"] - 1]
+                    _best = state["commits"][_reg["restore"] - 1] if _reg["restore"] else state["base_sha"]
                     _sp.run(["git", "checkout", _best, "--", "."], cwd=str(workspace), capture_output=True)
                     _sp.run(["git", "commit", "-q", "--allow-empty", "-am", f"athena: iteration {iteration} regressed "
                             f"({_reg['green_before']} -> {_reg['green_after']} green); restored iteration {_reg['restore']}"],
@@ -3140,6 +3153,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
     dp.add_argument("--brief", default="", help="a senior's brief (athena brief) carried in the packet (C-8.4)")
     dp.add_argument("--map-tokens", dest="map_tokens", type=int, default=800, help="repo map budget in the packet, 0 = none (C-11.3)")
+    dp.add_argument("--inherit-red", dest="inherit_red", action="store_true",
+                    help="judge by the task's own checks and regressions from a base that is already red (C-8.4, regeneration)")
     dp.add_argument("--sandbox", choices=("off", "on", "required"), default="off",
                     help="run the pi worker inside sandbox-runtime: on = if available, required = refuse otherwise (C-10.1, C-10.2)")
     dp.add_argument("--sandbox-ports", dest="sandbox_ports", default="60081",
