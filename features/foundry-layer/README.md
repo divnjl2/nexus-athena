@@ -20,7 +20,7 @@ three lane iterations (ADR-0007), and the Opus token cost per landed clause is m
 | C-9 | import-linter and benchmark commands from clauses; refused baseline updates | import-linter (BSD-2), pytest-benchmark (BSD-2), syrupy (MIT) | `lib/oracles.py` |
 | C-10 | sandbox config, argv, decision | anthropics/sandbox-runtime (Apache-2.0, Windows alpha) | `lib/sandbox.py` |
 
-Research digest with sources: the session scratchpad `research_gaps_digest.md` (58 URLs);
+Research digest with sources: the session `docs/research/2026-09-25-ten-gaps-oss-first.md` (58 URLs);
 the decision: `docs/adr/0009-the-foundry-wraps-oss-and-runs-itself.md`.
 
 ## Order of work (by leverage, from the digest)
