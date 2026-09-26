@@ -1589,6 +1589,10 @@ def cmd_daemon(a) -> int:
         code = subprocess.run(argv).returncode
         running.discard(task)
         log(task, "verdict", f"dispatch exit {code}")
+        if code != 0:
+            # a red verdict releases the claim: the task is open again with the checkpoint in its notes
+            subprocess.run([_bd_bin(), "update", bd_id_for(ready_list(), slug, task), "--status", "open"], capture_output=True, timeout=60)
+            log(task, "release", "red verdict, claim released")
         if code != 0 and a.ladder:
             # C-11.4: the escalation rule, then the next rung with the handoff as its brief
             from lib.ladder import handoff, next_rung, should_escalate
