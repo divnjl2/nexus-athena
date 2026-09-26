@@ -65,7 +65,7 @@ def lane_state_from_metrics(metrics_text: str) -> Dict:
     if kv_usage is not None:
         state["kv_usage"] = kv_usage
     if prefix_queries is not None and prefix_hits is not None:
-        state["prefix_hit_rate"] = prefix_hits / prefix_queries
+        state["prefix_hit_rate"] = min(1.0, prefix_hits / prefix_queries)   # review: counters across label sets, clamp
 
     # If none of the expected metrics were found, return empty state
     if not state:
@@ -255,9 +255,13 @@ def lane_endpoint(executor, base_url):
         a tuple (endpoint_type, endpoint_url). Non-lane executors or empty base_url
         yield ("", "").
     """
-    if not base_url or executor not in LANE_ENDPOINT_MAP:
+    # review (Claude): any pi executor has a lane; llama.cpp lanes (lane3/lane4 providers) answer
+    # /slots, vLLM lanes answer /metrics — the rule is the runtime, not a list of names
+    from lib.executors import PI_PROVIDERS
+    if not base_url or executor not in PI_PROVIDERS:
         return ("", "")
-    endpoint_type = LANE_ENDPOINT_MAP[executor]
+    provider = PI_PROVIDERS[executor][0]
+    endpoint_type = LANE_ENDPOINT_MAP.get(executor) or ("slots" if provider.startswith(("lane3", "lane4")) else "metrics")
     # Strip trailing /v1 version suffix before appending the endpoint path
     base = base_url.rstrip("/")
     while base.endswith("/v1"):
