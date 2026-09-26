@@ -304,6 +304,14 @@
 - **When** the spec `test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget` is executed
 - **Then** a 30k-character packet with a repository map and five lessons packs in under 5 ms mean over the benchmark rounds and under 2 MB peak allocation; a quadratic packing fails the spec.
 
+### S9.6 — the merge metrics rendering matches its golden file and the golden is a spec artefact
+- **verifies:** C-9.6
+- **pins:** f77770e516674a9c
+- **run_cmd:** `python -m pytest tests/test_foundry_oracles.py::test_the_merge_metrics_rendering_matches_its_golden_file_and_the_golden_is_a_spec_artefact -q`
+- **Given** tests/test_foundry_oracles.py
+- **When** the spec `test_the_merge_metrics_rendering_matches_its_golden_file_and_the_golden_is_a_spec_artefact` is executed
+- **Then** the rendering of a fixed report equals the golden file byte for byte; a verdict whose changed files include a path under `golden/` has it in `spec_touched` and is not green; a command with `--snapshot-update` is refused by the forbidden-command rule.
+
 ### S10.1 — the sandbox wraps a command with the worktree writable and the lane ports open
 - **verifies:** C-10.1
 - **pins:** 0488ff516d9c047b

@@ -1,0 +1,3 @@
+# merge - per executor, from the merge record
+  pi-9b        green=1  merged=1  refused: none
+  pi-omni9     green=1  merged=0  refused: check=1

@@ -156,5 +156,9 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_perf.py::test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget -q`
   - files: `lib/memory.py, tests/test_foundry_perf.py`
   - verifies: S9.5
+- [ ] T6.8 A golden file as a spec
+  - success_check: `python -m pytest tests/test_foundry_oracles.py::test_the_merge_metrics_rendering_matches_its_golden_file_and_the_golden_is_a_spec_artefact -q`
+  - files: `lib/dispatch.py, features/foundry-layer/golden/merge_metrics.txt`
+  - verifies: S9.6
 ### Manual Verification
 - `python athena.py daemon features/foundry-layer/contract.md --front features/foundry-layer/plan.md --dry-run --text` names the next task and the lane it would take.

@@ -225,6 +225,15 @@
     hot path (measured 26.09: 0.05 ms mean, 64 KB peak — the budget is a hundredfold, so a lane
     running beside the suite does not make it flap; a regression to quadratic packing would).
 
+- **C-9.6** — THE rendering of the merge metrics report SHALL match its golden file
+  `features/foundry-layer/golden/merge_metrics.txt`; a golden file is a spec artefact — an
+  executor's edit to a path under `golden/` taints the verdict like an edit to the spec's own test
+  file, and the snapshot-update flags are refused (C-9.3).
+  - source: review
+  - note: gap 2 asked for snapshots as specs; this is the first, on a rendering the frame prints to
+    the operator. The golden file is written once by hand-reviewed output and changed by review,
+    never by the executor whose change it measures.
+
 - **C-10.1** — WHEN the sandbox flag is on THE SYSTEM SHALL wrap every executor command in
   the sandbox runtime with write access to the worktree only, read access to the toolchain,
   and network limited to the lane ports.

@@ -351,8 +351,11 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     red = [c for c in red if c not in inherited]
     spec_set = {str(s).replace("\\", "/") for s in spec_files}
     # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file
+    # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file;
+    # C-9.6 of the foundry: so does a golden file
     spec_touched = [p for p in touched
-                    if p.replace("\\", "/") in spec_set or "/sealed/" in ("/" + p.replace("\\", "/"))]
+                    if p.replace("\\", "/") in spec_set
+                    or "/sealed/" in ("/" + p.replace("\\", "/")) or "/golden/" in ("/" + p.replace("\\", "/"))]
     green = bool(checks) and not red and not spec_touched
     allowed_set = {str(x).replace("\\", "/") for x in (allowed or ())}
     # C-2.8: what landed outside the task's files is not the task — flagged, and named

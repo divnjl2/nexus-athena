@@ -120,3 +120,28 @@ def test_the_relay_fences_tool_calls_outside_the_worktree_or_on_the_deny_list():
     out, refused = fence_completion(mixed, worktree=wt)
     assert refused == 1 and [c["id"] for c in out["choices"][0]["message"]["tool_calls"]] == ["c1"]
     assert "REFUSED" in (out["choices"][0]["message"].get("content") or "")
+
+
+def test_the_merge_metrics_rendering_matches_its_golden_file_and_the_golden_is_a_spec_artefact():
+    """C-9.6 — a golden file is a spec: the rendering must match it, an executor cannot make the
+    spec pass by editing it, and the snapshot-update flags are refused."""
+    import pathlib
+    from lib.dispatch import verdict
+    from lib.oracles import forbidden_command
+    from lib.refinery import merge_metrics, render_merge_metrics
+    root = pathlib.Path(__file__).resolve().parents[1]
+    golden = root / "features" / "foundry-layer" / "golden" / "merge_metrics.txt"
+    dispatches = [{"task": "T1", "executor": "pi-9b", "green": True}, {"task": "T2", "executor": "pi-9b", "green": False},
+                  {"task": "T3", "executor": "pi-omni9", "green": True}]
+    merges = [{"task": "T1", "executor": "pi-9b", "stage": "fast-forward", "ok": True, "reason": ""},
+              {"task": "T3", "executor": "pi-omni9", "stage": "check", "ok": False, "reason": "spec red"}]
+    rendered = render_merge_metrics(merge_metrics(dispatches, merges))
+    assert rendered == golden.read_text(encoding="utf-8"), "the rendering drifted from its golden file: review, then change the golden by hand"
+    # an executor that edits the golden file has edited the spec
+    checks = [{"cmd": "python -m pytest tests/t.py::a -q", "exit": 0, "tail": "1 passed"}]
+    v = verdict({"lib/m.py": (1, 1), "features/foundry-layer/golden/merge_metrics.txt": (1, 1)},
+                {"lib/m.py": (2, 2), "features/foundry-layer/golden/merge_metrics.txt": (2, 2)}, checks)
+    assert v["green"] is False and v["spec_touched"] == ["features/foundry-layer/golden/merge_metrics.txt"]
+    # and the tooling's own way of moving the baseline is refused
+    assert forbidden_command(["python", "-m", "pytest", "--snapshot-update"])
+
