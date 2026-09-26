@@ -246,4 +246,10 @@
     functions and 5 of 11 specs green, iteration 3 rewrote the module down to one function.
     The checkpoint says 'continue from this state'; a small model does not always obey, so
     the frame keeps the best state itself.
+- **C-11.7** — WHEN the daemon is given several executors THE SYSTEM SHALL offer the task to the
+  lane that last served its packet prefix while warm, then to the others, taking the first one
+  its live state admits, and remember which lane served the prefix.
+  - source: review
+  - note: C-4.3 measured why (the pool evicts unrelated contexts); with one executor per daemon
+    the affinity had nowhere to act. The warmth table lives beside the daemon's ledger.
 

@@ -158,3 +158,31 @@ def test_a_speculation_flag_is_admitted_only_when_verdicts_and_temperature_zero_
     shorter = [{"task": "T2.5", "plain": {"green": True, "tokens": [1, 2, 3]}, "spec": {"green": True, "tokens": [1, 2]}}]
     assert speculation_verdict(shorter) == (False, "T2.5: outputs diverge at token 2")
     assert speculation_verdict([]) == (False, "no paired runs")
+
+
+def test_the_daemon_with_a_pool_routes_by_prefix_affinity_among_admitted_lanes():
+    """C-11.7 — the pure choice: the warm lane first, then the others in order, only among the
+    admitted; the dry run with --executors names the lane the pool would take."""
+    from lib.lanes import pick_admitted, prefix_key, served
+    key = prefix_key("STATIC " * 300 + "task A")
+    warm = served({}, key, "pi-omni9", now=100.0)
+    states = {"pi-3b": {"running": 0, "waiting": 0, "kv_usage": 0.1, "prefix_hit_rate": None},
+              "pi-omni9": {"running": 0, "waiting": 0, "kv_usage": 0.2, "prefix_hit_rate": 0.9}}
+    lane, why = pick_admitted(key, ["pi-3b", "pi-omni9"], warm, states, now=200.0, warm_s=600, limit=4, kv_ceiling=0.85)
+    assert lane == "pi-omni9" and "warm" in why
+    busy = {**states, "pi-omni9": {"running": 3, "waiting": 1, "kv_usage": 0.2, "prefix_hit_rate": 0.9}}
+    lane, why = pick_admitted(key, ["pi-3b", "pi-omni9"], warm, busy, now=200.0, warm_s=600, limit=4, kv_ceiling=0.85)
+    assert lane == "pi-3b"
+    none = {k: {"running": 3, "waiting": 2, "kv_usage": 0.9, "prefix_hit_rate": None} for k in states}
+    lane, why = pick_admitted(key, ["pi-3b", "pi-omni9"], warm, none, now=200.0, warm_s=600, limit=4, kv_ceiling=0.85)
+    assert lane == "" and "parked" in why
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        ready = pathlib.Path(td) / "ready.json"
+        ready.write_text(json.dumps(READY), encoding="utf-8")
+        argv = [sys.executable, str(ROOT / "athena.py"), "daemon", "features/refinery-layer/contract.md",
+                "--front", "features/refinery-layer/plan.md", "--slug", "demo", "--ready-json", str(ready),
+                "--executors", "pi-3b,pi-omni9", "--dry-run", "--text"]
+        p = subprocess.run(argv, cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
+        assert p.returncode == 0, p.stdout + p.stderr
+        assert "daemon: T2.1" in p.stdout and "pool" in p.stdout and ("pi-3b" in p.stdout or "pi-omni9" in p.stdout)

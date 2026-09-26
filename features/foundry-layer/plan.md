@@ -139,5 +139,9 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_wiring.py::test_an_iteration_that_lost_green_checks_is_rolled_back_to_the_better_one -q`
   - files: `lib/dispatch.py`
   - verifies: S11.6
+- [ ] T6.6 The daemon's pool: prefix affinity among admitted lanes
+  - success_check: `python -m pytest tests/test_foundry_daemon.py::test_the_daemon_with_a_pool_routes_by_prefix_affinity_among_admitted_lanes -q`
+  - files: `lib/lanes.py, athena.py`
+  - verifies: S11.7
 ### Manual Verification
 - `python athena.py daemon features/foundry-layer/contract.md --front features/foundry-layer/plan.md --dry-run --text` names the next task and the lane it would take.

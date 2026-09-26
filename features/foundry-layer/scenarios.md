@@ -354,3 +354,11 @@
 - **When** the spec `test_an_iteration_that_lost_green_checks_is_rolled_back_to_the_better_one` is executed
 - **Then** the green count per iteration is read from its checks; a drop names the better iteration to restore and the regression is recorded; equal or better counts restore nothing; the first iteration never rolls back.
 
+### S11.7 — the daemon with a pool routes by prefix affinity among admitted lanes
+- **verifies:** C-11.7
+- **pins:** 94301eac5ccdee9c
+- **run_cmd:** `python -m pytest tests/test_foundry_daemon.py::test_the_daemon_with_a_pool_routes_by_prefix_affinity_among_admitted_lanes -q`
+- **Given** tests/test_foundry_daemon.py
+- **When** the spec `test_the_daemon_with_a_pool_routes_by_prefix_affinity_among_admitted_lanes` is executed
+- **Then** with `--executors a,b` the dry run names the lane the pool would take; the pure choice takes the warm lane first, then the others in order, only among those admitted; serving a prefix warms that lane.
+

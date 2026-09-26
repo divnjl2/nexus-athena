@@ -302,3 +302,19 @@ def live_state(executor, base_url, fetch=None):
         return lane_state_from_slots(slots)
 
     return {}
+
+
+def pick_admitted(key, lanes, warm, states, *, now, warm_s=600.0, limit=4, kv_ceiling=0.85):
+    """PURE (C-11.7): the lane the pool offers a packet to — the warm lane for its prefix first,
+    then the others in order, the first whose state admits; ('', reason) when every lane parks."""
+    lanes = list(lanes or [])
+    first = choose_lane(key, lanes, warm or {}, now=now, warm_s=warm_s)
+    order = [first] + [x for x in lanes if x != first] if first else lanes
+    reasons = []
+    for lane in order:
+        ok, why = admit(dict((states or {}).get(lane) or {}), limit=limit, kv_ceiling=kv_ceiling)
+        if ok:
+            return lane, ("warm lane, " if lane == first and (warm or {}).get(key) else "") + why
+        reasons.append(f"{lane}: {why}")
+    return "", "parked: " + "; ".join(reasons)
+
