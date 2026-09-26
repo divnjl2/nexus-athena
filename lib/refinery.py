@@ -162,7 +162,7 @@ def fast_forward(run, workspace: str, target: str) -> dict:
             from lib.refinery import checked_out_at
             checked = checked_out_at(worktrees, target)
             if checked:
-                code, reset_out = run(["git", "-C", checked, "reset", "--keep", head], checked)
+                code, reset_out = run(["git", "-C", checked, "read-tree", "-m", "-u", old or head, head], checked)
                 if code != 0:
                     # Failed to reset, move ref back with both old and new commits
                     argv_back = ["git", "update-ref", f"refs/heads/{target}", old, head]

@@ -354,10 +354,10 @@ def test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back():
         return 0, ""
     r = fast_forward(run_ok, "D:/w/T1", "master")
     assert r["ok"] and r["synced"] == "C:/repo"
-    assert ["git", "-C", "C:/repo", "reset", "--keep", "2222"] in calls
+    assert ["git", "-C", "C:/repo", "read-tree", "-m", "-u", "1111", "2222"] in calls   # review 26.09: reset --keep keeps the STALE files as "local edits"; a two-tree read-tree moves exactly what the ref moved
 
     def run_dirty(argv, cwd):
-        if argv[:4] == ["git", "-C", "C:/repo", "reset"]:
+        if argv[:4] == ["git", "-C", "C:/repo", "read-tree"]:
             return 1, "error: Entry lib/x.py would be overwritten"
         return run_ok(argv, cwd)
     calls.clear()

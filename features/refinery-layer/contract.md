@@ -62,9 +62,12 @@
     spec stays in the packet, because it is what made a small model land; the sealed tier is
     the second reading, and only the queue takes it.
 - **C-2.9** — WHEN the fast-forward lands and the target is checked out in a worktree THE
-  SYSTEM SHALL bring that worktree's index and files to the new head with a keep-reset, and
+  SYSTEM SHALL bring that worktree's index and files from the old head to the new one with a two-tree
+  read-tree, and
   move the ref back and refuse when local changes there would be lost.
   - source: incident
   - note: 26.09: the compare-and-set moved `master` under the operator's checkout; the next
     commit made there, from the index the ref move had not touched, deleted every merged file
-    from the tree. A ref is not a checkout; the queue owns both when they are one branch.
+    from the tree. A ref is not a checkout; the queue owns both when they are one branch. Measured
+    26.09 again: `reset --keep` after the ref move kept the STALE files as if they were local edits;
+    only the two-tree read-tree (old head -> new head) moves exactly what the ref moved.

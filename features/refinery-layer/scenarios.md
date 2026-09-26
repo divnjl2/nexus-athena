@@ -99,7 +99,7 @@
 
 ### S2.9 — the fast-forward syncs a checked-out target or refuses
 - **verifies:** C-2.9
-- **pins:** 816c9377477cddf8
+- **pins:** f31fbbddb3f84d8d
 - **run_cmd:** `python -m pytest tests/test_refinery.py::test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back -q`
 - **Given** tests/test_refinery.py
 - **When** the spec `test_the_fast_forward_syncs_a_checked_out_target_or_moves_the_ref_back` is executed
