@@ -1307,6 +1307,7 @@ def _packet_for(a, workspace: pathlib.Path):
         task_files = next(tk for ph in plan.phases for tk in ph.tasks if tk.id == a.task).files
     except StopIteration:
         task_files = ()
+        task_clauses = []
     files = {}
     for rel in task_files:
         p = workspace / rel
@@ -1552,8 +1553,12 @@ def cmd_daemon(a) -> int:
                 return 1
             time.sleep(a.interval)
             continue
-        admitted, why = admit(dict(getattr(a, "_lane_state", {}) or {}), limit=a.lane_limit, kv_ceiling=a.kv_ceiling) \
-            if not a.dry_run else (True, "dry run, admission not asked")
+        if a.dry_run:
+            admitted, why = True, "dry run, admission not asked"
+        else:
+            from lib.lanes import live_state
+            _state = live_state(a.executor, _provider_base_url(a.executor), fetch=_http_get)   # C-11.5
+            admitted, why = admit(_state, limit=a.lane_limit, kv_ceiling=a.kv_ceiling)
         if a.dry_run:
             print(f"daemon: {task} -> {a.executor} ({slug}) [dry run] worktree {worktree_name(task, 'dry')} — {why}"
                   if a.text else json.dumps({"slug": slug, "task": task, "executor": a.executor, "dry_run": True}))
@@ -1573,6 +1578,36 @@ def cmd_daemon(a) -> int:
         code = subprocess.run(argv).returncode
         running.discard(task)
         log(task, "verdict", f"dispatch exit {code}")
+        if code != 0 and a.ladder:
+            # C-11.4: the escalation rule, then the next rung with the handoff as its brief
+            from lib.ladder import handoff, next_rung, should_escalate
+            dpath = here / "dispatch.jsonl"
+            recs = []
+            if dpath.exists():
+                for line in dpath.read_text(encoding="utf-8").splitlines():
+                    try:
+                        rr = json.loads(line)
+                    except ValueError:
+                        continue
+                    if rr.get("task") == task and str(rr.get("executor", "")).split("#")[0] == a.executor:
+                        recs.append({"green": bool(rr.get("green")), "rung": a.executor})
+            esc, why_esc = should_escalate(recs[-2:], signals={})
+            rungs = [x.strip() for x in a.ladder.split(",") if x.strip()]
+            nxt = next_rung(rungs, a.executor)
+            if esc and nxt:
+                cp = here / "checkpoints" / f"{task}.md"
+                hb = here / "briefs" / f"{task}.handoff.md"
+                hb.parent.mkdir(parents=True, exist_ok=True)
+                hb.write_text(handoff({"changed_files": [], "red": [], "rung": a.executor,
+                                       "last_words": cp.read_text(encoding="utf-8")[-2000:] if cp.exists() else ""}, cap=2000),
+                              encoding="utf-8")
+                log(task, "escalate", f"{a.executor} -> {nxt}: {why_esc}")
+                argv2 = [x for x in argv]
+                argv2[argv2.index("--executor") + 1] = nxt
+                argv2 += ["--brief", str(hb)]
+                print(f"# daemon tick {tick}: escalate {task} {a.executor} -> {nxt}", flush=True)
+                code = subprocess.run(argv2).returncode
+                log(task, "verdict", f"{nxt} dispatch exit {code}")
         if a.once:
             return code
 
@@ -1855,6 +1890,12 @@ def cmd_merge(a) -> int:
         if code != 0:
             return end("check", False, f"sealed acceptance: {cmdline} exit {code}: {tail[-300:]}")
 
+    if getattr(a, "mutation", True):
+        # C-11.2: the mutation stage — survivors on the offer's added lines refuse it
+        mstage = _mutation_stage_for(workspace, a.target, threshold=a.mutation_threshold,
+                                     max_mutants=a.mutation_max, timeout=a.check_timeout)
+        if mstage is not None and not mstage["ok"]:
+            return end("mutation", False, mstage["reason"])
     f = fast_forward(run, str(workspace), a.target)
     if not f.get("ok"):
         return end("fast-forward", False, f.get("reason", "not a fast-forward"))
@@ -2132,6 +2173,128 @@ def _run_openhands(cfg: dict) -> tuple[str, dict, str]:
         return "", {}, f"openhands run failed: {type(e).__name__}: {str(e)[:400]}"
 
 
+def _signature_index(root) -> dict:
+    """{relative path: [signatures]} over lib/*.py and athena.py — the index the repo map is
+    built from (C-7.1 / C-11.3); cheap enough to rebuild per dispatch."""
+    import ast
+    out = {}
+    root = pathlib.Path(root)
+    for p in sorted(list(root.glob("lib/*.py")) + [root / "athena.py"]):
+        if not p.is_file():
+            continue
+        try:
+            tree = ast.parse(p.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        sigs = []
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+                sigs.append(f"def {node.name}({ast.unparse(node.args)})")
+            elif isinstance(node, ast.ClassDef):
+                sigs.append(f"class {node.name}")
+        if sigs:
+            out[p.relative_to(root).as_posix()] = sigs
+    return out
+
+
+def _load_lessons(path) -> list:
+    path = pathlib.Path(path)
+    if not path.exists():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            out.append(json.loads(line))
+        except ValueError:
+            continue
+    return out
+
+
+def _provider_base_url(executor: str) -> str:
+    """The direct base url of a pi executor's lane out of ~/.pi/agent/models.json (C-11.5)."""
+    from lib.executors import PI_PROVIDERS
+    if executor not in PI_PROVIDERS:
+        return ""
+    provider = PI_PROVIDERS[executor][0]
+    mj = pathlib.Path.home() / ".pi" / "agent" / "models.json"
+    try:
+        d = json.loads(mj.read_text(encoding="utf-8"))
+        return str(((d.get("providers") or {}).get(provider) or {}).get("baseUrl") or "")
+    except (OSError, ValueError):
+        return ""
+
+
+def _http_get(url: str, timeout: float = 3.0) -> str:
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int):
+    """C-11.2: the merge queue's mutation stage — the offer's changed lines (unified diff against
+    the target) through every contract's clause map, the frame's own mutants on the owned lines,
+    each run against the owning specs in an isolated mirror; None when nothing is owned."""
+    import subprocess
+    import types
+    from lib.mutation import default_mirror, hunt, isolate
+    from lib.refinery import changed_lines_from_diff, mutation_stage
+    ws = pathlib.Path(workspace)
+    p = subprocess.run(["git", "diff", "--unified=0", f"{target}...HEAD"], cwd=str(ws), capture_output=True,
+                       text=True, encoding="utf-8", errors="replace")
+    changed = changed_lines_from_diff(p.stdout or "")
+    if not changed:
+        return None
+    mirror = isolate(str(ws), default_mirror(str(ws)))
+
+    def runner(cmd):
+        try:
+            return subprocess.run(cmd.split(), cwd=mirror, capture_output=True, text=True, timeout=timeout).returncode
+        except subprocess.TimeoutExpired:
+            return 124
+
+    def writer(path, text):
+        (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
+
+    worst = None
+    for cmap_path in sorted(ws.glob("features/*/clause_map.json")):
+        try:
+            cmap = json.loads(cmap_path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        contract_md = cmap_path.parent / "contract.md"
+        if not contract_md.exists():
+            continue
+        ns = types.SimpleNamespace(scenarios="", speckit="auto", contract=str(contract_md))
+        try:
+            scen = _load_scenarios(ns, anchor=str(contract_md))
+        except Exception:                                    # noqa: BLE001 — a contract without scenarios owns nothing here
+            continue
+        spec_cmds = _spec_cmds(scen)
+        owned = (cmap.get("clauses") or {})
+        lines_by_path = {}
+        for files in owned.values():
+            for path, lines in files.items():
+                hit = sorted(set(lines) & set(changed.get(path, [])))
+                if hit:
+                    lines_by_path.setdefault(path, set()).update(hit)
+        targets = {}
+        for path, lines in lines_by_path.items():
+            src = ws / path
+            if src.is_file() and path.endswith(".py") and not path.startswith("tests/"):
+                targets[path] = {"source": src.read_text(encoding="utf-8", errors="replace"), "lines": sorted(lines)}
+        if not targets:
+            continue
+        res = hunt(cmap, spec_cmds, targets, runner=runner, writer=writer, max_mutants=max_mutants)
+        v = mutation_stage(changed, cmap, [dict(r) for r in res], threshold=threshold)
+        v["contract"] = str(contract_md.parent.name)
+        if not v["ok"]:
+            s = v.get("survivor") or {}
+            v["reason"] = (f"{v.get('clause')}: survivor {s.get('path')}:{s.get('line')} ({s.get('kind')}) "
+                           f"on an added line, {v['contract']}")
+            return v
+        worst = v
+    return worst
+
 def cmd_dispatch(a) -> int:
     """Pour one plan task into an executor and judge it by the diff and the spec commands."""
     import datetime
@@ -2159,7 +2322,10 @@ def cmd_dispatch(a) -> int:
     # explorer instincts on a 30k window are the measured failure mode
     inline = (spec is not None and spec["kind"] in ("local", "openhands", "pi")) or a.inline
     try:
-        task_files = next(t for ph in plan.phases for t in ph.tasks if t.id == a.task).files
+        _tk = next(t for ph in plan.phases for t in ph.tasks if t.id == a.task)
+        task_files = _tk.files
+        _by_id = {s.id: s.requirement_key for s in scenarios}
+        task_clauses = [_by_id[v] for v in getattr(_tk, "verifies", ()) if v in _by_id]
     except StopIteration:
         task_files = ()
     if inline and getattr(a, "pi_hashline", False) and spec is not None and spec["kind"] == "pi":
@@ -2294,9 +2460,21 @@ def cmd_dispatch(a) -> int:
 
     def write_record(r: dict, iteration: int, *, attempt_no: int = 0, winner: bool = True) -> None:
         named = a.executor + (f"#{a.tag}" if getattr(a, "tag", "") else "")   # a setting under test
+        from lib.executors import PI_THINKING, PI_TOOLS
+        from lib.provenance import provenance_for
+        prov = provenance_for(a.executor, packet_text=pk["text"], thinking=(a.pi_thinking or PI_THINKING.get(a.executor, "")),
+                              tools=PI_TOOLS, athena_version=__version__)   # C-11.1
         rec = record(a.task, named, r["v"], duration_ms=r["duration"], tokens=r["tokens"],
                      ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-                     workspace=str(workspace))
+                     workspace=str(workspace), provenance=prov)
+        if not r["v"].get("green"):
+            from lib.memory import lesson_from
+            lesson = lesson_from({"id": f"{a.task}:{iteration}", "task": a.task, "clauses": list(task_clauses),
+                                  "green": False, "changed_files": r["v"].get("changed_files", []),
+                                  "checks": r["v"].get("red_full", [])})
+            if lesson:
+                with (here / ".athena" / "lessons.jsonl").open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(lesson, ensure_ascii=False) + chr(10))          # C-7.2
         rec["iteration"] = iteration
         if attempt_no:
             rec["attempt"] = attempt_no          # C-5.7: every fanned attempt is recorded
@@ -2310,6 +2488,26 @@ def cmd_dispatch(a) -> int:
         if a.fanout <= 1:
             r = one_attempt(workspace, before, current)
             write_record(r, iteration)
+            if getattr(a, "keep_best", True):
+                # C-11.6: every iteration is committed in the workspace; an iteration that lost
+                # green checks is rolled back to the best one before the next starts
+                import subprocess as _sp
+                from lib.dispatch import regression
+                _sp.run(["git", "add", "-A"], cwd=str(workspace), capture_output=True)
+                _sp.run(["git", "commit", "-q", "--allow-empty", "-m", f"athena iteration {iteration} of {a.task}"],
+                        cwd=str(workspace), capture_output=True)
+                _sha = _sp.run(["git", "rev-parse", "HEAD"], cwd=str(workspace), capture_output=True, text=True).stdout.strip()
+                state.setdefault("its", []).append(list(r.get("checks") or []))
+                state.setdefault("commits", []).append(_sha)
+                _reg = regression(state["its"])
+                if _reg:
+                    _best = state["commits"][_reg["restore"] - 1]
+                    _sp.run(["git", "checkout", _best, "--", "."], cwd=str(workspace), capture_output=True)
+                    _sp.run(["git", "commit", "-q", "--allow-empty", "-am", f"athena: iteration {iteration} regressed "
+                            f"({_reg['green_before']} -> {_reg['green_after']} green); restored iteration {_reg['restore']}"],
+                            cwd=str(workspace), capture_output=True)
+                    print(f"# iteration {iteration} regressed ({_reg['green_before']} -> {_reg['green_after']} green): "
+                          f"restored iteration {_reg['restore']}", flush=True)
         else:
             # C-5.6: the same packet into N copies of the workspace at once; the first green
             # verdict is the iteration's, else the least red landing is carried forward
@@ -2393,6 +2591,13 @@ def cmd_dispatch(a) -> int:
             pk = packet_with_brief(pk, bp.read_text(encoding="utf-8"))
     pk = packet_with_status(pk, run_checks(),
                             output_tokens=LOCAL_OUTPUT_TOKENS.get(a.executor, 0) if spec["kind"] == "local" else 0)
+    if getattr(a, "map_tokens", 0):
+        # C-11.3: the repository map and the lessons ride after the static prefix
+        from lib.memory import packet_with_memory, repo_map_for, select_lessons
+        _rm = repo_map_for(_signature_index(workspace), seeds=list(task_files), budget_tokens=a.map_tokens)
+        _ls = select_lessons(_load_lessons(here / ".athena" / "lessons.jsonl"), clause_ids=list(task_clauses),
+                             files=list(task_files), n=5, cap_chars=240)
+        pk = packet_with_memory(pk, repo_map=_rm, lessons=_ls)
     loop = run_iterations(pk, attempt, budget=a.iterations)
     v, checks, tokens, err, duration = loop["verdict"], state["checks"], state["tokens"], state["err"], state["duration"]
 
@@ -2767,6 +2972,8 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--base-url", dest="base_url", default=None,
                     help="openhands: OpenAI-compatible base url (default: the local gateway /v1)")
     dp.add_argument("--brief", default="", help="a senior's brief (athena brief) carried in the packet (C-8.4)")
+    dp.add_argument("--map-tokens", dest="map_tokens", type=int, default=800, help="repo map budget in the packet, 0 = none (C-11.3)")
+    dp.add_argument("--no-keep-best", dest="keep_best", action="store_false", help="do not commit per iteration nor roll back a regression (C-11.6)")
     dp.add_argument("--tag", default="", help="a label appended to the executor name in the record, e.g. low, strict")
     dp.add_argument("--pi-strict", dest="pi_strict", action="store_true",
                     help="pi executors: use the lane's strict relay provider (<provider>-strict), tool "
@@ -2914,6 +3121,7 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("--lane-limit", dest="lane_limit", type=int, default=4)
     dm.add_argument("--kv-ceiling", dest="kv_ceiling", type=float, default=0.85)
     dm.add_argument("--stop-file", dest="stop_file", default="")
+    dm.add_argument("--ladder", default="pi-3b,pi-omni9,claude", help="rungs in order for escalation (C-11.4); empty = none")
     dm.add_argument("--once", action="store_true")
     dm.add_argument("--dry-run", dest="dry_run", action="store_true")
     dm.add_argument("--speckit", default="auto")
@@ -2987,6 +3195,9 @@ def build_parser() -> argparse.ArgumentParser:
     mg.add_argument("--executor", default="", help="recorded executor (default: from the dispatch record)")
     mg.add_argument("--slug", default="", help="bd project slug (default: from the plan title)")
     mg.add_argument("--bd", action="store_true", help="on refusal, run the bd command that returns the task")
+    mg.add_argument("--no-mutation", dest="mutation", action="store_false", help="skip the mutation stage (C-11.2)")
+    mg.add_argument("--mutation-threshold", dest="mutation_threshold", type=float, default=0.7)
+    mg.add_argument("--mutation-max", dest="mutation_max", type=int, default=20)
     mg.add_argument("--depth", type=int, default=3, help="how deep to look for contract.md in the workspace")
     mg.add_argument("--timeout", type=int, default=600, help="seconds per git command")
     mg.add_argument("--text", action="store_true")
