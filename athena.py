@@ -2597,10 +2597,25 @@ def cmd_dispatch(a) -> int:
                   if s.id in pk["task"].get("verifies", ()) or s.run_cmd in pk["checks"]]
     spec_files = [f for f in spec_files if f]
 
+    def run_radius(ws: pathlib.Path, files) -> list:
+        """the specs of the clauses owning `files`, one pytest per module (C-2.7 of the core layer)"""
+        from lib.dispatch import batch_radius
+        extra = radius_checks(sorted(files), radius_maps, radius_scen, already=pk["checks"])
+        out = []
+        for batch in batch_radius(extra):          # one pytest per module, not per command
+            argv, why = _tokenize(batch["cmd"])
+            if argv and argv[0] in ("python", "python3") and a.check_python:
+                argv[0] = a.check_python
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+            out.append({"cmd": batch["cmd"], "exit": code, "tail": tail, "radius": True, "members": batch["members"]})
+        return out
+
     if getattr(a, "inherit_red", False):
-        # C-8.4: the base's own reds, measured once before any executor touches the workspace
+        # C-8.4: the base's reds, measured once before any executor touches the workspace — the task's
+        # own checks and the radius of the files it will change (what every attempt is judged on)
         from lib.dispatch import skip_reason as _skip
-        state["base_red"] = [c["cmd"] for c in run_checks(workspace) if c.get("exit", 1) != 0 or _skip(c)]
+        _base = run_checks(workspace) + run_radius(workspace, list(task_files))
+        state["base_red"] = [c["cmd"] for c in _base if c.get("exit", 1) != 0 or _skip(c)]
         if state["base_red"]:
             print(f"# base: {len(state['base_red'])} red check(s) inherited, not this task's", flush=True)
         import subprocess as _sp0
@@ -2613,16 +2628,7 @@ def cmd_dispatch(a) -> int:
         duration = int((time.perf_counter() - t0) * 1000)
         after = snapshot(ws)
         changed_now = sorted(p for p, sig in after.items() if before_ws.get(p) != sig)
-        extra = radius_checks(changed_now, radius_maps, radius_scen, already=pk["checks"])
-        checks = run_checks(ws)
-        from lib.dispatch import batch_radius
-        for batch in batch_radius(extra):          # one pytest per module, not per command
-            argv, why = _tokenize(batch["cmd"])
-            if argv and argv[0] in ("python", "python3") and a.check_python:
-                argv[0] = a.check_python
-            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
-            checks.append({"cmd": batch["cmd"], "exit": code, "tail": tail, "radius": True,
-                           "members": batch["members"]})
+        checks = run_checks(ws) + run_radius(ws, changed_now)
         v = verdict(before_ws, after, checks, claim=claim, spec_files=spec_files, allowed=list(task_files),
                     base_red=state.get("base_red") or (), own=list(pk.get("checks") or ()))   # C-8.4
         v["duration_ms"] = duration
