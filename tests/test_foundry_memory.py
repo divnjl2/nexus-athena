@@ -36,6 +36,8 @@ def test_a_red_verdict_becomes_a_lesson_with_a_failure_class_and_a_rule_never_th
     lesson = lesson_from(v)
     assert lesson["clause"] == "C-2.2" and lesson["file"] == "lib/refinery.py" and lesson["verdict"] == "v-17"
     assert lesson["failure"] == "import" and "rebase" in lesson["rule"] and chr(10) not in lesson["rule"]
+    multi = {**v, "checks": [{"cmd": "c", "exit": 1, "tail": "E   line one" + chr(10) + "E   line two" + chr(10) + "tests/t.py:12: AssertionError"}]}
+    assert chr(10) not in lesson_from(multi)["rule"] and len(lesson_from(multi)["rule"]) <= 200   # review: a real multi-line tail
     assert "+def" not in str(lesson)
     assert lesson_from({**v, "checks": [{"cmd": "c", "exit": 1, "tail": "E   assert 1 == 2"}]})["failure"] == "assertion"
     assert lesson_from({**v, "checks": [{"cmd": "c", "exit": 1, "tail": "SyntaxError: invalid syntax"}]})["failure"] == "syntax"

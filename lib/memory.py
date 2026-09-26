@@ -83,7 +83,7 @@ def lesson_from(verdict) -> Optional[dict]:
         failure = "assertion"
     
     # Create a one-line rule from tail (strip newlines)
-    rule = "" .join(tail.split("\\n"))
+    rule = " ".join(str(tail).split())[:200]   # review: one line, whatever newlines the tail had
     
     return {
         "clause": verdict["clauses"][0] if verdict["clauses"] else "",

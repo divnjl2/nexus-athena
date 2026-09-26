@@ -30,6 +30,9 @@ def test_a_dispatch_record_carries_provenance_built_from_the_executor_and_the_pa
     assert "provenance" not in record("T1.1", "pi-9b", {}, duration_ms=0, tokens={}, ts="t")
     assert provenance_for("pi-3b", packet_text="", thinking="", tools="", athena_version="3.17")["runtime"]["name"] == "llama.cpp"
     assert provenance_for("claude", packet_text="", thinking="", tools="", athena_version="3.17")["model"]["id"] == "claude"
+    p9 = provenance_for("pi-9b", packet_text="", thinking="low", tools="", athena_version="3.17")   # review: through the registry
+    assert p9["model"]["id"] == "qwen3.5-9b" and p9["runtime"] == {"name": "vllm", "version": None}
+    assert "runtime.version" in missing_provenance({"provenance": p9})
 
 
 def test_the_merge_queue_has_a_mutation_stage_between_check_and_fast_forward():

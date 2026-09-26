@@ -2245,6 +2245,22 @@ def _http_get(url: str, timeout: float = 3.0) -> str:
         return r.read().decode("utf-8", "replace")
 
 
+def _runtime_version(executor: str) -> str:
+    """The lane's own version for the provenance block: vLLM answers /version, llama.cpp /props."""
+    base = _provider_base_url(executor)
+    if not base:
+        return ""
+    root = base[:-3] if base.endswith("/v1") else base
+    try:
+        d = json.loads(_http_get(root + "/version", timeout=2))
+        return str(d.get("version") or "")
+    except Exception:                                    # noqa: BLE001 — llama.cpp has no /version
+        try:
+            d = json.loads(_http_get(root + "/props", timeout=2))
+            return str((d.get("build_info") or d.get("version") or ""))
+        except Exception:                                # noqa: BLE001
+            return ""
+
 def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int):
     """C-11.2: the merge queue's mutation stage — the offer's changed lines (unified diff against
     the target) through every contract's clause map, the frame's own mutants on the owned lines,
@@ -2483,7 +2499,8 @@ def cmd_dispatch(a) -> int:
         from lib.executors import PI_THINKING, PI_TOOLS
         from lib.provenance import provenance_for
         prov = provenance_for(a.executor, packet_text=pk["text"], thinking=(a.pi_thinking or PI_THINKING.get(a.executor, "")),
-                              tools=PI_TOOLS, athena_version=__version__)   # C-11.1
+                              tools=PI_TOOLS, athena_version=__version__,
+                              runtime_version=_runtime_version(a.executor))   # C-11.1
         rec = record(a.task, named, r["v"], duration_ms=r["duration"], tokens=r["tokens"],
                      ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
                      workspace=str(workspace), provenance=prov)

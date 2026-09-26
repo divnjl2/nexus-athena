@@ -1,46 +1,28 @@
 import hashlib
 
 
-def provenance_for(model_id: str, packet_text: str = "", thinking: str = "", tools: str = "",
-                   athena_version: str = "", runtime_version: str = "", seed=None):
-    """Build provenance from executor model and packet; renders the block the executor records."""
-    # Map model_id to model.id; omit weights when seed is missing
-    if model_id == "pi-omni9":
-        model_id_mapped = "omnicoder-9b"
-        weights = None
-    elif model_id == "pi-3b":
-        model_id_mapped = "pi-3b"
-        weights = None
-    elif model_id == "claude":
-        model_id_mapped = "claude"
-        weights = None
-    else:
-        model_id_mapped = model_id
-        weights = None
-    
-    # Infer runtime from model_id
-    if model_id == "pi-omni9":
+def provenance_for(model_id, packet_text="", thinking="", tools="", athena_version="", runtime_version=None, seed=None):
+    """C-11.1 — the provenance block a dispatch records: the model the executor resolves to (through
+    the registry, never a name list), the runtime by the lane's provider, the sampling as the thinking
+    level and the seed, the digests of the rendered packet and the tool set, the frame's version.
+    Fields the frame cannot know stay None and are named by missing_provenance."""
+    import hashlib
+    from lib.executors import PI_PROVIDERS
+    provider, resolved = PI_PROVIDERS.get(model_id, ("", model_id))
+    if provider.startswith(("lane3", "lane4")):
+        runtime = "llama.cpp"
+    elif provider:
         runtime = "vllm"
     else:
-        runtime = "llama.cpp"
-    
-    # Compute digests
-    packet_sha = hashlib.sha256(packet_text.encode("utf-8")).hexdigest() if packet_text else ""
-    tools_sha = hashlib.sha256(tools.encode("utf-8")).hexdigest() if tools else ""
-    
-    # Build sampling
-    sampling = {"thinking": thinking, "seed": seed}
-    
-    # Build provenance
+        runtime = "claude" if model_id == "claude" else "unknown"
     return {
-        "model": {"id": model_id_mapped, "weights": weights},
-        "runtime": {"name": runtime, "version": runtime_version if runtime_version else "1.0.0"},
-        "sampling": sampling,
-        "packet_sha256": packet_sha,
-        "tools_sha256": tools_sha,
-        "relay_version": athena_version
+        "model": {"id": resolved, "weights": None},
+        "runtime": {"name": runtime, "version": runtime_version if runtime_version else None},
+        "sampling": {"thinking": thinking or "", "seed": seed},
+        "packet_sha256": hashlib.sha256((packet_text or "").encode("utf-8")).hexdigest(),
+        "tools_sha256": hashlib.sha256((tools or "").encode("utf-8")).hexdigest(),
+        "relay_version": athena_version or "",
     }
-
 
 def provenance(model_id: str, weights_digest: str, runtime: str, runtime_version: str,
                sampling: dict, seed: int, packet_sha: str, tools_sha: str, relay_version: str) -> dict:
