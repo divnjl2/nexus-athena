@@ -136,7 +136,7 @@ signature's keyword-only marker and it invents the shape of a result it never sa
 admission rule caught every one of them, which is the point of C-2.1; the drafting rung is
 the frontier until a repair loop or a bigger local rung changes the number.
 
-**Opus tokens for the whole goal block** (25.09 19:27 -> now, transcript): 981,596 output
+**Opus tokens for the whole goal block** (25.09 19:27 -> 26.09 18:55, transcript): 1,053,837 output
 tokens for the research digest, 41 clauses with red specs, the review of six lane
 implementations, the wiring of `athena.py`, two merges through the refinery and the day's
 lane operations.
@@ -160,3 +160,13 @@ What stays open, in order: wire sandbox-runtime behind `--sandbox` (gap 9), a pe
 with pytest-benchmark (gap 2), and
 the two things the measurements say about the rungs: regeneration needs a bigger rung or the
 frontier's finish, and spec drafting stays the frontier's.
+
+## The ladder, live (26.09 18:09 -> 18:51)
+
+`athena daemon --once --executor pi-3b --ladder pi-3b,pi-omni9` on the same regeneration task:
+the 3B red three times without writing a file (234, 356, 170 s), the daemon released the claim,
+escalated with the handoff (`pi-3b -> pi-omni9: red twice on pi-3b` in `daemon.jsonl`), and
+OmniCoder ran its three iterations (250, 197, 108 s) to 7 of 13 specs green, every iteration
+committed in the worktree. The bead is open again with the checkpoints in its notes. The loop
+of gap 5, the ladder of gap 6, the provenance of gap 7, the admission of gap 8 and the memory
+of gap 10 all ran in this one tick without the operator or the frontier model in it.
