@@ -135,5 +135,9 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_wiring.py::test_the_daemon_climbs_the_ladder_on_the_escalation_rule_and_stops_at_its_top tests/test_foundry_wiring.py::test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_them -q`
   - files: `lib/ladder.py, lib/lanes.py`
   - verifies: S11.4, S11.5
+- [ ] T6.5 Iterations never regress: the better iteration is restored
+  - success_check: `python -m pytest tests/test_foundry_wiring.py::test_an_iteration_that_lost_green_checks_is_rolled_back_to_the_better_one -q`
+  - files: `lib/dispatch.py`
+  - verifies: S11.6
 ### Manual Verification
 - `python athena.py daemon features/foundry-layer/contract.md --front features/foundry-layer/plan.md --dry-run --text` names the next task and the lane it would take.

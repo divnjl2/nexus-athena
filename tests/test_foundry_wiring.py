@@ -102,3 +102,19 @@ def test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_th
     assert live_state("pi-3b", "http://127.0.0.1:8003/v1", fetch=fetch) == {"running": 0, "waiting": 0, "kv_usage": None, "prefix_hit_rate": None}
     assert live_state("pi-9b", "http://127.0.0.1:9999/v1", fetch=fetch) == {}
     assert live_state("claude", "", fetch=fetch) == {}
+
+
+def test_an_iteration_that_lost_green_checks_is_rolled_back_to_the_better_one():
+    """C-11.6 — green count per iteration from its checks; a drop names the better iteration
+    to restore and records the regression; equal or better restores nothing; the first
+    iteration never rolls back."""
+    from lib.dispatch import green_count, regression
+    it1 = [{"cmd": "a", "exit": 0}, {"cmd": "b", "exit": 1}, {"cmd": "c", "exit": 1}]
+    it2 = [{"cmd": "a", "exit": 0}, {"cmd": "b", "exit": 0}, {"cmd": "c", "exit": 1}]
+    it3 = [{"cmd": "a", "exit": 1}, {"cmd": "b", "exit": 1}, {"cmd": "c", "exit": 1}]
+    assert green_count(it1) == 1 and green_count(it2) == 2 and green_count(it3) == 0 and green_count([]) == 0
+    assert regression([it1]) is None
+    assert regression([it1, it2]) is None
+    assert regression([it1, it2, it3]) == {"restore": 2, "from": 3, "green_before": 2, "green_after": 0}
+    assert regression([it2, it1]) == {"restore": 1, "from": 2, "green_before": 2, "green_after": 1}
+    assert regression([it1, it1]) is None

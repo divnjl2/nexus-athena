@@ -338,3 +338,12 @@
 - **Given** tests/test_foundry_wiring.py
 - **When** the spec `test_lane_endpoints_are_derived_from_the_executor_and_the_admission_reads_them` is executed
 - **Then** a pi executor's lane has a metrics or slots endpoint beside its base url; the live state is read through an injected fetcher and is empty when the read fails.
+
+### S11.6 — an iteration that lost green checks is rolled back to the better one
+- **verifies:** C-11.6
+- **pins:** ed3172f4c3630679
+- **run_cmd:** `python -m pytest tests/test_foundry_wiring.py::test_an_iteration_that_lost_green_checks_is_rolled_back_to_the_better_one -q`
+- **Given** tests/test_foundry_wiring.py
+- **When** the spec `test_an_iteration_that_lost_green_checks_is_rolled_back_to_the_better_one` is executed
+- **Then** the green count per iteration is read from its checks; a drop names the better iteration to restore and the regression is recorded; equal or better counts restore nothing; the first iteration never rolls back.
+

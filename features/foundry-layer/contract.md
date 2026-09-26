@@ -233,3 +233,12 @@
   state from its metrics or slots endpoint, derived from the executor's base url, and fall back
   to an empty state when the read fails.
   - source: review
+- **C-11.6** — WHEN an iteration ends with fewer green checks than the iteration before it
+  THE SYSTEM SHALL restore the files of the better iteration before the next one starts,
+  and record the regression.
+  - source: incident
+  - note: 26.09, the regeneration of lib/refinery.py by the 9B rung: iteration 2 left 14
+    functions and 5 of 11 specs green, iteration 3 rewrote the module down to one function.
+    The checkpoint says 'continue from this state'; a small model does not always obey, so
+    the frame keeps the best state itself.
+
