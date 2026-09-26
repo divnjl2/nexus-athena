@@ -1,9 +1,10 @@
 import pathlib
 import json
 
+
 def admit(records: list, task: str, workspace: str = "") -> dict:
     """C-2.1: admit an offer only when the last record for the task is green. With a
-    workspace named, only the records written from that workspace count — a benchmark of
+    workspace named, only the records written from that workspace count - a benchmark of
     the same task on another executor elsewhere is not this offer's verdict."""
     ws = str(workspace).replace("\\", "/").rstrip("/") if workspace else ""
     mine = [r for r in records if r.get("task") == task
@@ -35,9 +36,8 @@ def first_failure(records: list[dict]) -> str:
     return ""
 
 
-# --- the record and the way back (C-2.5) -----------------------------------------------
-
 MERGE_SCHEMA = "athena.merge/1"
+
 TASK_KEY_PREFIX = "athena"
 
 
@@ -72,10 +72,8 @@ def bd_return_command(slug: str, task: str, stage: str, reason: str) -> list:
     return ["bd", "update", key, "--status", "open", "--append-notes", note]
 
 
-# --- what the refinery did with the green ones (C-2.6) ------------------------------------
-
 def merge_metrics(dispatches: list, merges: list) -> dict:
-    """PURE (C-2.6): per executor — the distinct tasks that went green in the dispatch
+    """PURE (C-2.6): per executor - the distinct tasks that went green in the dispatch
     record, how many of them the refinery merged, and the refusals by stage."""
     green_tasks: dict = {}
     for d in dispatches:
@@ -95,7 +93,7 @@ def merge_metrics(dispatches: list, merges: list) -> dict:
 
 
 def render_merge_metrics(rep: dict) -> str:
-    lines = ["# merge — per executor, from the merge record"]
+    lines = ["# merge - per executor, from the merge record"]
     if not rep:
         lines.append("  (no merge recorded yet)")
     for ex, row in rep.items():
@@ -103,8 +101,6 @@ def render_merge_metrics(rep: dict) -> str:
         lines.append(f"  {ex:12} green={row['green']}  merged={row['merged']}  refused: {refused}")
     return chr(10).join(lines)
 
-
-# --- rebase and fast-forward, through an injected runner (C-2.2, C-2.4) ------------------
 
 def conflicts_from(output: str) -> list:
     """PURE: the paths git names in CONFLICT lines, in order, once each."""
@@ -141,14 +137,16 @@ def rebase(run, workspace: str, target: str) -> dict:
 
 def fast_forward(run, workspace: str, target: str) -> dict:
     """EFFECTFUL through `run` (C-2.4): move the target ref to the workspace head when the
-    target is its ancestor — a compare-and-set on the ref, never a merge commit. When the
+    target is its ancestor - a compare-and-set on the ref, never a merge commit. When the
     target is checked out somewhere, that worktree's files stay where they were."""
     code, head = run(["git", "rev-parse", "HEAD"], workspace)
     head = head.strip()
     if code != 0 or not head:
         return {"ok": False, "head": "", "old": "", "reason": f"no head in {workspace}: {head[-200:]}"}
+
     code, old = run(["git", "rev-parse", "--verify", f"refs/heads/{target}"], workspace)
     old = old.strip() if code == 0 else ""
+
     if old:
         code, _ = run(["git", "merge-base", "--is-ancestor", old, head], workspace)
         if code != 0:
@@ -157,20 +155,92 @@ def fast_forward(run, workspace: str, target: str) -> dict:
                               f"(rebase first)"}
         if old == head:
             return {"ok": True, "head": head, "old": old, "reason": f"{target} already at {head[:12]}"}
+
+        # Get worktree list in simple format
+        code, worktrees = run(["git", "worktree", "list"], workspace)
+        if code == 0 and worktrees:
+            from lib.refinery import checked_out_at
+            checked = checked_out_at(worktrees, target)
+            if checked:
+                code, reset_out = run(["git", "-C", checked, "reset", "--keep", head], checked)
+                if code != 0:
+                    # Failed to reset, move ref back with both old and new commits
+                    argv_back = ["git", "update-ref", f"refs/heads/{target}", old, head]
+                    code2, out2 = run(argv_back, workspace)
+                    if code2 != 0:
+                        return {"ok": False, "head": head, "old": old,
+                                "reason": f"update-ref failed to move ref back: {out2.strip()[-200:] or 'unknown'}"}
+                    return {"ok": False, "head": head, "old": old, "synced": checked,
+                            "reason": f"failed to keep reset at {checked}: {reset_out and reset_out.strip()[-200:] or 'error'}; ref {checked} moved back"}
+                else:
+                    return {"ok": True, "head": head, "old": old, "reason": f"{target} -> {head[:12]}",
+                            "synced": checked}	
+        
+        # No worktree checked out at target, proceed with update-ref
+        pass
+
+    # Move the ref
     argv = ["git", "update-ref", f"refs/heads/{target}", head] + ([old] if old else [])
     code, out = run(argv, workspace)
     if code != 0:
         return {"ok": False, "head": head, "old": old, "reason": f"update-ref failed: {out.strip()[-200:]}"}
-    return {"ok": True, "head": head, "old": old, "reason": f"{target} {old[:12] or '(new)'} -> {head[:12]}"}
+    return {"ok": True, "head": head, "old": old, "reason": f"{target} {old[:12] or '(new)'} -> {head[:12]}",
+            "synced": ""}
 
 
-# --- a verdict for a workspace nobody dispatched (C-2.7) ------------------------------------
+def checked_out_at(text: str, branch: str) -> str:
+    """C-2.9: parse worktree list in simple format and find the worktree
+    checked out at the given branch. Returns the path or empty string."""
+    lines = (text or "").splitlines()
+    # Simple format:
+    # worktree <path>
+    # HEAD <commit>
+    # branch <ref>    or "detached"
+    # blank or "------" or other worktree entry
+    i = 0
+    while i < len(lines):
+        line = lines[i] if lines[i].strip() else ""
+        parts = line.split()
+        if not parts or parts[0] != "worktree":
+            i += 1
+            continue
+        path = parts[1] if len(parts) > 1 else ""
+        i += 1
+        if i >= len(lines):
+            continue
+        head_line = lines[i] if lines[i].strip() else ""
+        parts = head_line.split()
+        i += 1
+        if i >= len(lines):
+            continue
+        status_line = lines[i] if lines[i].strip() else ""
+        status_parts = status_line.split()
+        # Check for detached
+        is_detached = False
+        is_checked = False
+        if status_parts and status_parts[0] == "detached":
+            is_detached = True
+        elif status_parts and status_parts[0] == "branch":
+            branch_obj = status_parts[1] if len(status_parts) > 1 else ""
+            # Compare with full refnorm or short name
+            if branch_obj == branch or branch_obj.endswith(f"/{branch}"):
+                is_checked = True
+        if is_detached:
+            i += 1
+            continue
+        elif is_checked:
+            # Return just the path part from the worktree line
+            return path.split()[0] if path.split() else ""
+        # Not matched - finish this entry
+        i += 1
+    return ""
+
 
 VERIFY_EXECUTOR = "verify"
 
 
 def verify_verdict(changed_files: list, checks: list, *, spec_files=()) -> dict:
-    """PURE (C-2.7): the verdict of a workspace against its target — landed when the diff
+    """PURE (C-2.7): the verdict of a workspace against its target - landed when the diff
     against the target is not empty, green when every check is green and no spec file is in
     the diff; the same reading dispatch gives an executor's run."""
     from lib.dispatch import skip_reason
@@ -195,8 +265,6 @@ def verify_verdict(changed_files: list, checks: list, *, spec_files=()) -> dict:
             "reason": "; ".join(reasons)}
 
 
-# --- the sealed tier (C-2.8) -------------------------------------------------------------------
-
 SEALED_DIR = "sealed"
 
 
@@ -213,7 +281,7 @@ def sealed_dirs(root: str) -> list:
 
 
 def sealed_checks(dirs) -> list:
-    """PURE: one pytest per sealed directory — what the refinery runs and nothing else does."""
+    """PURE: one pytest per sealed directory - what the refinery runs and nothing else does."""
     return [f"python -m pytest {d} -q" for d in dirs]
 
 
