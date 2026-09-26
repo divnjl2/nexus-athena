@@ -11,7 +11,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-READY = [{"id": "athena:demo:T1.2", "priority": 2, "created_at": "2026-09-25T10:00:00Z"},
+READY = [{"id": "nexus-athena-2sh.1.4", "labels": ["athena", "athena:demo:T1.2"], "priority": 2, "created_at": "2026-09-25T10:00:00Z"},   # review: beads keeps the key as a LABEL, the id is a hash
          {"id": "athena:demo:T1.1", "priority": 1, "created_at": "2026-09-25T10:00:01Z"},
          {"id": "athena:demo:T2.1", "priority": 1, "created_at": "2026-09-25T09:00:00Z"},
          {"id": "athena:other:T9.9", "priority": 0, "created_at": "2026-09-25T08:00:00Z"}]
@@ -25,6 +25,8 @@ def test_a_tick_takes_the_highest_priority_ready_task_no_lane_runs_and_names_its
     assert next_task(READY, slug="demo", running={"T2.1"}) == "T1.1"
     assert next_task(READY, slug="demo", running={"T2.1", "T1.1", "T1.2"}) == ""
     assert next_task([], slug="demo", running=set()) == ""
+    from lib.daemon import bd_id_for
+    assert bd_id_for(READY, "demo", "T1.2") == "nexus-athena-2sh.1.4" and bd_id_for(READY, "demo", "T2.1") == "athena:demo:T2.1"
     name = worktree_name("T1.1", "a" * 40)
     assert name == worktree_name("T1.1", "a" * 40) and name.startswith("T1.1-") and len(name) <= 24
     assert worktree_name("T1.1", "b" * 40) != name and "/" not in name and "\\" not in name

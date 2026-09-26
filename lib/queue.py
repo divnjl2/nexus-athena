@@ -1,5 +1,7 @@
 import json
 
+from lib.daemon import task_key_of
+
 
 def ready_command(slug):
     """Command to prepare a slug's task list for readiness."""
@@ -38,18 +40,14 @@ def pick_ready(bd_json, slug):
         return ""
     
     # Filter: tasks in this slug
-    slug_tasks = [t for t in data if get_typed_slug(t.get("id")) == slug]
+    slug_tasks = [t for t in data if task_key_of(t)[0] == slug]   # review: the key is a label in beads
     if not slug_tasks:
         return ""
     
     # Sort by priority ascending, created_at ascending (string comparison)
     sorted_tasks = sorted(slug_tasks, key=lambda t: (t.get("priority", float('inf')), t.get("created_at", "")))
     first = sorted_tasks[0]
-    task_id = first.get("id", "")
-    if task_id:
-        parts = task_id.split(":")
-        return parts[-1] if len(parts) > 1 else ""  # Return the task suffix (e.g., "T1.1")
-    return ""
+    return task_key_of(first)[1]
 
 def claim_command(slug, task_id):
     """Generate command to claim a task."""

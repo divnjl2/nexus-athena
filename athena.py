@@ -1577,7 +1577,8 @@ def cmd_daemon(a) -> int:
             log(task, "park", why)
             time.sleep(a.interval)
             continue
-        subprocess.run(claim_command(slug, task), capture_output=True, timeout=60)
+        from lib.daemon import bd_id_for
+        subprocess.run(["bd", "update", bd_id_for(ready_list(), slug, task), "--claim"], capture_output=True, timeout=60)
         log(task, "dispatch", f"ready, {a.executor}: {why}")
         running.add(task)
         argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", a.front,

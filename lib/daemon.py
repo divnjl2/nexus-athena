@@ -1,3 +1,4 @@
+import re
 """C-3 — foundry daemon selects tasks and releases stale claims."""
 from datetime import datetime
 from collections import defaultdict
@@ -6,49 +7,20 @@ from collections import defaultdict
 READY = 100
 
 
-def next_task(priority, slug, running):
-    """C-3.1 — select the ready task of highest priority that no lane is running.
-    
-    Args:
-        priority: list of {"id": task_id, "priority": level, "created_at": ts}
-        slug: debugging slug to extract task IDs
-        running: set of task_ids currently running (just the short form T1.1, etc.)
-    
-    Returns:
-        task_id (short form like "T1.1") or "" if none
-    
-    Sorting order: priority ascending (lower number = higher level), then oldest created_at.
-    """
-    if not isinstance(priority, list) or len(priority) == 0:
+def next_task(ready, slug, running):
+    """C-3.1 — the ready task of highest priority (lowest number, then oldest) in this slug
+    that no lane is running; the key is read from the row's labels (beads) or its id.
+    Review 26.09: the first version keyed on the id alone."""
+    rows = []
+    for row in ready or []:
+        s, task = task_key_of(row)
+        if s != slug or not task or task in (running or set()):
+            continue
+        rows.append((row.get("priority", 10 ** 9), str(row.get("created_at") or ""), task))
+    if not rows:
         return ""
-    
-    # Filter matching tasks for this slug
-    matching_tasks = [t for t in priority if f":{slug}:" in t["id"]]
-    
-    # Build set of running full-format IDs (tasks are like "athena:{slug}:{id}")
-    running_ids = set()
-    for tid in running:
-        if ":" in tid:
-            running_ids.add(tid)
-        else:
-            # Short form "T1.1" -> full form "athena:{slug}:T1.1"
-            running_ids.add(f"athena:{slug}:{tid}")
-    
-    # Sort by: priority ascending (lower number wins), then created_at ascending
-    def key(item):
-        return (item["priority"], item["created_at"], item["id"])
-    
-    sorted_tasks = sorted(matching_tasks, key=key)
-    
-    # Filter out running candidates
-    candidates = [t for t in sorted_tasks if t["id"] not in running_ids]
-    
-    if not candidates:
-        return ""
-    
-    winner = candidates[0]["id"]
-    return winner.rsplit(":", 1)[-1]
-
+    rows.sort()
+    return rows[0][2]
 
 def worktree_name(task_id, packet_digest):
     """C-3.1 — name the worktree by task id and packet digest, stable across restarts.
@@ -198,3 +170,25 @@ def action_allowed(rows, task, now, cap_per_hour):
             recent_count += 1
     
     return recent_count < cap_per_hour
+
+
+_KEY = re.compile(r"^athena:(?P<slug>[^:]+):(?P<task>T\d+\.\d+)$")
+
+
+def task_key_of(row: dict) -> tuple:
+    """PURE (review 26.09): (slug, task) of a bd row — from a label `athena:<slug>:<task>` (how
+    plan2beads writes the key; the id is a hash), else from an id of that shape."""
+    for label in (row or {}).get("labels") or []:
+        m = _KEY.match(str(label))
+        if m:
+            return m.group("slug"), m.group("task")
+    m = _KEY.match(str((row or {}).get("id") or ""))
+    return (m.group("slug"), m.group("task")) if m else ("", "")
+
+
+def bd_id_for(ready, slug: str, task: str) -> str:
+    """PURE: the bd id (hash or key) of the row that carries (slug, task), for `bd update`."""
+    for row in ready or []:
+        if task_key_of(row) == (slug, task):
+            return str(row.get("id") or "")
+    return f"athena:{slug}:{task}"
