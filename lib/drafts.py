@@ -114,3 +114,58 @@ def admit_draft(
         return (False, "; ".join(reasons))
 
     return (True, "admitted")
+
+
+# ── C-2.3 acceptance per drafting model ────────────────────────────────────
+
+
+def acceptance(events):
+    """Compute acceptance statistics per drafting model.
+
+    Keeps, per drafting model, the counts of drafted, admitted and accepted-
+    without-edit, and renders the acceptance rates.
+
+    Args:
+        events: List of dicts with keys ``model``, ``admitted`` (bool), and
+                ``accepted`` (bool).
+
+    Returns:
+        Dict keyed by model name with:
+          drafted, admitted, accepted, admitted_rate, accepted_rate
+    """
+    table: dict[str, dict] = {}
+    for event in events:
+        model = event["model"]
+        admitted = event["admitted"]
+        accepted = event["accepted"]
+        if model not in table:
+            table[model] = {"drafted": 0, "admitted": 0, "accepted": 0}
+        table[model]["drafted"] += 1
+        if admitted:
+            table[model]["admitted"] += 1
+        if accepted:
+            table[model]["accepted"] += 1
+
+    for model in table:
+        d = table[model]
+        drafted = d["drafted"]
+        table[model]["admitted_rate"] = d["admitted"] / drafted if drafted else 0.0
+        table[model]["accepted_rate"] = d["accepted"] / drafted if drafted else 0.0
+
+    return table
+
+
+def render_acceptance(table):
+    """Render acceptance statistics per drafting model as human-readable text.
+
+    The rendered text names each model and both rates (admitted and accepted).
+    """
+    lines = []
+    for model in sorted(table.keys()):
+        stats = table[model]
+        lines.append(
+            f"{model}: drafted={stats['drafted']}, admitted={stats['admitted']}, "
+            f"accepted={stats['accepted']}, admitted_rate={stats['admitted_rate']:.0%}, "
+            f"accepted_rate={stats['accepted_rate']:.0%}"
+        )
+    return "\n".join(lines)
