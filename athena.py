@@ -1497,6 +1497,85 @@ def cmd_next(a) -> int:
     return subprocess.run(argv).returncode
 
 
+def cmd_daemon(a) -> int:
+    """C-3.5: the loop out of the operator's session. One tick = the ready task of highest
+    priority that no lane runs (C-3.1), the lane's admission (C-4.2), then dispatch, verdict,
+    offer; `--dry-run` reports the tick and dispatches nothing; `--once` runs one tick; the
+    loop stops when the stop file appears."""
+    import subprocess
+    import time
+    from lib.daemon import next_task, worktree_name, ledger_line
+    from lib.lanes import admit
+    from lib.queue import claim_command, ready_command
+    plan = _parse_front_auto(a.front, "auto")
+    slug = a.slug or _slugify(getattr(plan, "title", "") or pathlib.Path(a.contract).resolve().parent.name)
+    here = pathlib.Path(a.contract).resolve().parent / ".athena"
+    here.mkdir(parents=True, exist_ok=True)
+    ledger = here / "daemon.jsonl"
+    running: set = set()
+    tick = 0
+    stop_file = pathlib.Path(a.stop_file) if a.stop_file else None
+
+    def ready_list():
+        if a.ready_json:
+            try:
+                data = json.loads(pathlib.Path(a.ready_json).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                return []
+            return data if isinstance(data, list) else []
+        try:
+            listed = subprocess.run(ready_command(slug), capture_output=True, text=True, encoding="utf-8",
+                                    errors="replace", timeout=60)
+            data = json.loads(listed.stdout or "[]")
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return []
+        return data if isinstance(data, list) else []
+
+    def log(task, action, reason):
+        line = ledger_line(tick=tick, task=task, action=action, reason=reason,
+                           ts=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
+        with ledger.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(line, ensure_ascii=False) + chr(10))
+        return line
+
+    import datetime
+    while True:
+        tick += 1
+        if stop_file and stop_file.exists():
+            log("", "stop", f"stop file {stop_file}")
+            print(f"daemon: stopped by {stop_file}" if a.text else json.dumps({"slug": slug, "stopped": True}))
+            return 0
+        task = next_task(ready_list(), slug=slug, running=running)
+        if not task:
+            print(f"daemon: nothing ready for {slug}" if a.text else json.dumps({"slug": slug, "task": ""}))
+            if a.once or a.dry_run:
+                return 1
+            time.sleep(a.interval)
+            continue
+        admitted, why = admit(dict(getattr(a, "_lane_state", {}) or {}), limit=a.lane_limit, kv_ceiling=a.kv_ceiling) \
+            if not a.dry_run else (True, "dry run, admission not asked")
+        if a.dry_run:
+            print(f"daemon: {task} -> {a.executor} ({slug}) [dry run] worktree {worktree_name(task, 'dry')} — {why}"
+                  if a.text else json.dumps({"slug": slug, "task": task, "executor": a.executor, "dry_run": True}))
+            return 0
+        if not admitted:
+            log(task, "park", why)
+            time.sleep(a.interval)
+            continue
+        subprocess.run(claim_command(slug, task), capture_output=True, timeout=60)
+        log(task, "dispatch", f"ready, {a.executor}: {why}")
+        running.add(task)
+        argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", a.front,
+                "--task", task, "--executor", a.executor, "--workspace", a.workspace,
+                "--iterations", str(a.iterations), "--timeout", str(a.timeout), "--stall", str(a.stall),
+                "--slug", slug, "--bd"] + (["--text"] if a.text else [])
+        print(f"# daemon tick {tick}: {task} -> {a.executor}", flush=True)
+        code = subprocess.run(argv).returncode
+        running.discard(task)
+        log(task, "verdict", f"dispatch exit {code}")
+        if a.once:
+            return code
+
 def cmd_forge(a) -> int:
     """C-7.5: benchmark tasks the frame makes for itself — break lines a clause exclusively
     owns in a copy, confirm the clause's spec went red, dispatch the repair as a task, and
@@ -2819,6 +2898,27 @@ def build_parser() -> argparse.ArgumentParser:
     nx.add_argument("--text", action="store_true")
     nx.set_defaults(fn=cmd_next)
 
+    dm = sub.add_parser("daemon", help="the loop out of the session: ready task, lane admission, dispatch, "
+                                       "verdict, offer; stops on a stop file (C-3.5)")
+    dm.add_argument("contract")
+    dm.add_argument("--scenarios", default="")
+    dm.add_argument("--front", required=True)
+    dm.add_argument("--slug", default="")
+    dm.add_argument("--executor", default="pi-omni9")
+    dm.add_argument("--workspace", default=".")
+    dm.add_argument("--ready-json", dest="ready_json", default="", help="a file with bd ready --json output (a seam for specs)")
+    dm.add_argument("--iterations", type=int, default=3)
+    dm.add_argument("--timeout", type=int, default=900)
+    dm.add_argument("--stall", type=int, default=600)
+    dm.add_argument("--interval", type=int, default=30, help="seconds between ticks when nothing is ready or admitted")
+    dm.add_argument("--lane-limit", dest="lane_limit", type=int, default=4)
+    dm.add_argument("--kv-ceiling", dest="kv_ceiling", type=float, default=0.85)
+    dm.add_argument("--stop-file", dest="stop_file", default="")
+    dm.add_argument("--once", action="store_true")
+    dm.add_argument("--dry-run", dest="dry_run", action="store_true")
+    dm.add_argument("--speckit", default="auto")
+    dm.add_argument("--text", action="store_true")
+    dm.set_defaults(fn=cmd_daemon)
     fg = sub.add_parser("forge", help="repair tasks made from the clause map: break owned lines in a copy, "
                                       "confirm the spec went red, dispatch the repair (C-7.5)")
     fg.add_argument("contract")
