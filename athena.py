@@ -1563,7 +1563,28 @@ def cmd_daemon(a) -> int:
                 return 1
             time.sleep(a.interval)
             continue
-        if a.dry_run:
+        pool = [x.strip() for x in (a.executors or "").split(",") if x.strip()]
+        if pool:
+            # C-11.7: the lane by prefix affinity among the admitted; the warmth table beside the ledger
+            import time as _time
+            from lib.lanes import live_state, pick_admitted, prefix_key, served
+            warm_path = here / "daemon_warm.json"
+            try:
+                warm = {k: tuple(v) for k, v in json.loads(warm_path.read_text(encoding="utf-8")).items()}
+            except (OSError, ValueError):
+                warm = {}
+            key = prefix_key(a.contract + "|" + a.front)
+            states = {} if a.dry_run else {x: live_state(x, _provider_base_url(x), fetch=_http_get) for x in pool}
+            if a.dry_run:
+                states = {x: {"running": 0, "waiting": 0, "kv_usage": None, "prefix_hit_rate": None} for x in pool}
+            lane, why = pick_admitted(key, pool, warm, states, now=_time.time(), warm_s=600.0, limit=a.lane_limit, kv_ceiling=a.kv_ceiling)
+            admitted = bool(lane)
+            if lane:
+                a.executor = lane
+                warm = served(warm, key, lane, now=_time.time())
+                warm_path.write_text(json.dumps(warm), encoding="utf-8")
+            why = f"pool {','.join(pool)} -> {lane or 'none'}: {why}"
+        elif a.dry_run:
             admitted, why = True, "dry run, admission not asked"
         else:
             from lib.lanes import live_state
@@ -3149,6 +3170,7 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("--front", required=True)
     dm.add_argument("--slug", default="")
     dm.add_argument("--executor", default="pi-omni9")
+    dm.add_argument("--executors", default="", help="a pool: the lane is chosen by prefix affinity among the admitted (C-11.7)")
     dm.add_argument("--workspace", default=".")
     dm.add_argument("--ready-json", dest="ready_json", default="", help="a file with bd ready --json output (a seam for specs)")
     dm.add_argument("--iterations", type=int, default=3)
