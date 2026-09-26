@@ -138,3 +138,75 @@ def handoff(attempt, cap=2000):
         text = text[:cap]
 
     return text
+
+
+def rung_table(records):
+    """C-5.3 — build a per-(rung, clause class) table with attempts, greens,
+    win rate, and GPU minutes per green attempt. GPU minutes per green is None
+    when green == 0.
+
+    Parameters:
+        records: list of dicts with keys rung, cls, green, duration_ms.
+
+    Returns:
+        dict keyed by (rung, cls) with {"n": N, "green": G,
+        "win_rate": G/N, "gpu_min_per_green": total_gpu_min / G (or None)}.
+    """
+    table = {}
+    for rec_entry in records:
+        rung = rec_entry["rung"]
+        cls = rec_entry["cls"]
+        green = rec_entry.get("green", False)
+        duration_ms = rec_entry.get("duration_ms", 0)
+        key = (rung, cls)
+        if key not in table:
+            table[key] = {"n": 0, "green": 0, "total_gpu_min": 0.0}
+        table[key]["n"] += 1
+        if green:
+            table[key]["green"] += 1
+        table[key]["total_gpu_min"] += duration_ms / 60000.0
+
+    result = {}
+    for key, vals in table.items():
+        result[key] = {
+            "n": vals["n"],
+            "green": vals["green"],
+            "win_rate": vals["green"] / vals["n"] if vals["n"] > 0 else 0.0,
+            "gpu_min_per_green": (
+                vals["total_gpu_min"] / vals["green"]
+                if vals["green"] > 0
+                else None
+            ),
+        }
+    return result
+
+
+def enabled_rungs(rung_table, ladder, floor=0.0):
+    """C-5.3 — for each clause class, return the list of rungs still enabled
+    (win rate >= floor). A rung whose win rate for a class is under the floor
+    is disabled for that class only.
+
+    Parameters:
+        rung_table: dict from rung_table() keyed by (rung, cls).
+        ladder: iterable of rung identifiers to consider.
+        floor: minimum win rate threshold; rungs below it are disabled per class.
+
+    Returns:
+        dict keyed by clause class, value = list of enabled rung names.
+    """
+    # Extract unique clause classes from rung_table keys
+    classes = {cls for (_, cls) in rung_table.keys()}
+
+    result = {}
+    for cls in classes:
+        enabled = []
+        for rung in ladder:
+            key = (rung, cls)
+            if key not in rung_table:
+                enabled.append(rung)
+            else:
+                wr = rung_table[key]["win_rate"]
+                if wr >= floor:
+                    enabled.append(rung)
+        result[cls] = enabled
+    return result
