@@ -208,13 +208,16 @@ guard branches the mutation survivors named — code no spec asked for.
 | gate | original | pass 2 | pass 3 |
 |---|---|---|---|
 | specs (`tests/test_refinery.py`, 12) + sealed + foundry wiring | green | 20 green | 20 green |
-| `crosshair diffbehavior`, 15 functions | — | **0 counterexamples** | not rerun: the run was stopped by the host's memory guard; the pass changed only guards in `rebase` and `fast_forward` |
+| `crosshair diffbehavior`, 15 functions | — | **0 counterexamples** | **0 counterexamples** (rerun 03:40, 335 s, once the host had 16 GB free) |
 | mutation score, map recomputed, 60 mutants asked | 47 of 55, 0.85, 180 owned lines | 38 of 46, 0.83, 157 lines | **38 of 42, 0.90**, 156 lines; survivors: two `and` flips in `parse_merges`/`conflicts_from`, two in `verify_verdict`'s reasons |
 
-Verdict under C-8.3: the three legs hold, but not yet measured on one and the same state — the
-clean diff is pass 2's, the score above the original is pass 3's. One diff run on pass 3 settles it;
-it is queued for when the host has memory to spare (crosshair beside two vLLM lanes was what
-tripped the guard).
+**Verdict under C-8.3 on pass 3 (`regen-final-state` at 03f6bb6): equivalent.** The specs are green,
+the behaviour diff finds no input on which the module and the original differ, and the mutation
+score is above the original's on the same specs. The honest shape of the result: the 9B rung
+produced 7 of 9 tasks and 10 of 12 specs from clauses and specs alone; the frontier finished the
+rest under ADR-0007 from the clauses, with the diff report in hand; and what the visible specs had
+left free is now pinned in the sealed tier, so the next regeneration is judged against more than
+this one was. The spec is the source of what it pins; tonight it pins the whole module.
 What changes in the answer to gap 1: the spec is a source at the granularity the frame already
 works at — one task, one window — and not at the granularity of a module for a 9B rung. The
 decomposition is the packet's, not the operator's: the plan's tasks and their specs cut the module.
@@ -245,11 +248,11 @@ round happen (seven drafts used all three) and changes which drafts land, not ho
 of thirteen is the 9B rung's rate with a three-round loop. What now stops the rest splits evenly: drafts
 still red after three repairs, and drafts that pass on the broken code too (the admission rule's catch).
 
-## The ten gaps on 2026-09-27 03:25 — measured state
+## The ten gaps on 2026-09-27 03:45 — measured state
 
 | gap | state | evidence |
 |---|---|---|
-| 1 regeneration from the spec | measured three times, finished under ADR-0007 in three passes; equivalence gates: diff clean (pass 2), mutation 0.90 over the original's 0.85 (pass 3), one diff rerun outstanding on pass 3 | lane alone: whole module 6 specs at best, by task 7 of 9 tasks and 10 of 12 specs; frontier finish: 12 of 12 specs, 0 counterexamples in 15 functions, mutation 0.90; the unpinned behaviour the diff found is now pinned in the refinery's sealed tier |
+| 1 regeneration from the spec | **equivalent under C-8.3** on the finished module (specs green, 0 counterexamples in 15 functions, mutation 0.90 over 0.85, one state 03f6bb6); the lane's own share measured apart | lane alone: whole module 6 specs at best, by task 7 of 9 tasks and 10 of 12 specs; frontier finish in three passes under ADR-0007; the unpinned behaviour the diff found is pinned in the refinery's sealed tier |
 | 2 oracles of the second kind | three live | C-9.4 `lint-imports` on the frame's own structure; C-9.5 a time and memory budget as a spec (pytest-benchmark + tracemalloc, negative control); C-9.6 a golden file as a spec (the merge metrics rendering; a golden edit taints the verdict; snapshot-update flags refused) |
 | 3 mutation in the gate, sealed tier | live, and the sealed tier is the norm | `athena merge` runs the `mutation` stage on changed lines by default (`--no-mutation` is the exception, said on the command line); C-1.5: every feature with a contract carries a sealed second reading naming one of its clauses — six layers now, guarded by a spec that names a layer without one |
 | 4 authorship throughput | measured, the repair loop is the lever | 0 of 36 without repair, 1 of 18 with one round, 5 of 13 and 4 of 13 with up to three rounds (arms 4, 5); the admission rule caught every false draft; the frontier still edits what is admitted |
