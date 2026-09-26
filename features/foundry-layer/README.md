@@ -138,3 +138,23 @@ the frontier until a repair loop or a bigger local rung changes the number.
 tokens for the research digest, 41 clauses with red specs, the review of six lane
 implementations, the wiring of `athena.py`, two merges through the refinery and the day's
 lane operations.
+
+## The ten gaps on 2026-09-26 18:20 — measured state
+
+| gap | state | evidence |
+|---|---|---|
+| 1 regeneration from the spec | measured, not yet equivalent for a 9B rung | two runs; three gates (specs 6/13, diffbehavior 8/15 diverge, mutation on partial coverage); C-11.6 born from run 1 |
+| 2 oracles of the second kind | one live | C-9.4 `lint-imports` on the frame's own structure, 2 contracts kept; the binding guard binds through the config; perf and golden renderers exist, no clause yet |
+| 3 mutation in the gate, sealed tier | live | `athena merge` runs the `mutation` stage on changed lines (first merge through it: no survivor on an added line); `features/foundry-layer/sealed/` with three second readings |
+| 4 authorship throughput | measured, negative for the 9B | 0 of 36 drafts admitted in two arms; the admission rule caught every one; arm 3 (repair round) recorded below |
+| 5 the daemon | live | `athena daemon --once` on the real beads queue: claim by bd id, live admission, dispatch, rollback, provenance, release on red |
+| 6 the ladder | wired, escalation run in progress | `--ladder pi-3b,pi-omni9`: the 3B tick on T9.1 running, escalation with the handoff on red |
+| 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
+| 8 capacity-aware lanes | admission live, affinity not yet routed | the daemon admits by `/metrics` or `/slots`; `choose_lane` by prefix exists and is not in the daemon (one executor per daemon) |
+| 9 sandbox | pure only | config, argv and decision; sandbox-runtime not installed; measured need: an executor left `nul` and `a.txt` in the worktree |
+| 10 memory in the packet | live | repo map after the prefix, lessons appended on red (three from the regeneration run) and selected by clause and file |
+
+What stays open, in order: route lanes by prefix affinity inside the daemon (gap 8), wire
+sandbox-runtime behind `--sandbox` (gap 9), a perf clause with pytest-benchmark (gap 2), and
+the two things the measurements say about the rungs: regeneration needs a bigger rung or the
+frontier's finish, and spec drafting stays the frontier's.
