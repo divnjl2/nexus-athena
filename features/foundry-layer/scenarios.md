@@ -290,6 +290,7 @@
 
 ### S9.5 — packing a packet with memory stays within its time and memory budget
 - **verifies:** C-9.5
+- **pins:** ced7945f04959115
 - **run_cmd:** `python -m pytest tests/test_foundry_perf.py::test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget -q`
 - **Given** tests/test_foundry_perf.py
 - **When** the spec `test_packing_a_packet_with_memory_stays_within_its_time_and_memory_budget` is executed
