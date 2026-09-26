@@ -126,6 +126,38 @@ for cid in sorted(by_clause):
             r = subprocess.run([sys.executable, "-m", "pytest", node, "-q", "-p", "no:cacheprovider", "--rootdir", str(ROOT)], cwd=str(cwd), capture_output=True, text=True, timeout=300)
             return r.returncode
         head_exit = run_pytest(ROOT)
+        repaired = False
+        if head_exit != 0 and rich:
+            # arm 3 (Otter++'s move): one repair round with the failure in hand, then re-run at HEAD
+            r0 = subprocess.run([sys.executable, "-m", "pytest", node, "-q", "-p", "no:cacheprovider", "--rootdir", str(ROOT), "--tb=short"],
+                                cwd=str(ROOT), capture_output=True, text=True, timeout=300)
+            tail = (r0.stdout or "")[-1500:]
+            fix_prompt = "\n".join([f"# Repair this pytest test for clause {cid} of `{modname}`", "",
+                                    "It fails at HEAD with:", "```", tail, "```", "",
+                                    "The test, as written:", "```python", code, "```", "",
+                                    "Fix ONLY the test so it passes against the real module (keep the clause's intent, one function,",
+                                    "same name). Reply with the Python code of the test function ONLY, in one ```python block."])
+            p2 = subprocess.run(cleaned, input=fix_prompt, capture_output=True, text=True, encoding="utf-8", errors="replace", shell=True, timeout=600, cwd=str(ROOT))
+            text2 = ""
+            for line in (p2.stdout or "").splitlines():
+                if line.startswith("{"):
+                    try:
+                        ev = json.loads(line)
+                    except ValueError:
+                        continue
+                    if ev.get("type") == "message_end" and (ev.get("message") or {}).get("role") == "assistant":
+                        text2 = "".join(b.get("text", "") for b in ev["message"].get("content") or [] if b.get("type") == "text")
+            m2 = re.search(r"```python\s*(.*?)```", text2, re.S)
+            code2 = (m2.group(1) if m2 else "").strip()
+            fn2 = re.search(r"def (test_\w+)\s*\(", code2)
+            if fn2:
+                code = code2
+                fn = fn2
+                test_path.write_text(header + code + "\n", encoding="utf-8")
+                node = f"{test_path.as_posix()}::{fn.group(1)}"
+                head_exit = run_pytest(ROOT)
+                repaired = True
+        row["repaired"] = repaired
         with tempfile.TemporaryDirectory() as td:
             mirror = pathlib.Path(td) / "m"
             subprocess.run(["git", "worktree", "add", "--detach", str(mirror), "HEAD"], cwd=str(ROOT), capture_output=True)
