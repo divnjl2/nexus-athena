@@ -148,13 +148,13 @@ lane operations.
 | 3 mutation in the gate, sealed tier | live | `athena merge` runs the `mutation` stage on changed lines (first merge through it: no survivor on an added line); `features/foundry-layer/sealed/` with three second readings |
 | 4 authorship throughput | measured, negative for the 9B | 0 of 36 drafts admitted in two arms; the admission rule caught every one; arm 3 (repair round) recorded below |
 | 5 the daemon | live | `athena daemon --once` on the real beads queue: claim by bd id, live admission, dispatch, rollback, provenance, release on red |
-| 6 the ladder | wired, escalation run in progress | `--ladder pi-3b,pi-omni9`: the 3B tick on T9.1 running, escalation with the handoff on red |
+| 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |
 | 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
-| 8 capacity-aware lanes | admission live, affinity not yet routed | the daemon admits by `/metrics` or `/slots`; `choose_lane` by prefix exists and is not in the daemon (one executor per daemon) |
+| 8 capacity-aware lanes | live | the daemon admits by `/metrics` or `/slots`; with `--executors` it routes by prefix affinity among the admitted lanes (C-11.7), warmth table beside the ledger |
 | 9 sandbox | pure only | config, argv and decision; sandbox-runtime not installed; measured need: an executor left `nul` and `a.txt` in the worktree |
 | 10 memory in the packet | live | repo map after the prefix, lessons appended on red (three from the regeneration run) and selected by clause and file |
 
-What stays open, in order: route lanes by prefix affinity inside the daemon (gap 8), wire
-sandbox-runtime behind `--sandbox` (gap 9), a perf clause with pytest-benchmark (gap 2), and
+What stays open, in order: wire sandbox-runtime behind `--sandbox` (gap 9), a perf clause
+with pytest-benchmark (gap 2), and
 the two things the measurements say about the rungs: regeneration needs a bigger rung or the
 frontier's finish, and spec drafting stays the frontier's.
