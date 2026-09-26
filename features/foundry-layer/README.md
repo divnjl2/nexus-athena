@@ -127,9 +127,11 @@ covers an owned line. Nine clauses of the refinery layer, two drafts each:
 |---|---|---|---|---|
 | 1 | clause + signatures | 18 | 0 | 16 red at HEAD (invented result keys, keyword-only `ts` ignored), 2 no test function |
 | 2 | + docstrings + one existing spec as the example | 18 | 0 | 15 red at HEAD, 1 green on the broken code too, 2 no test function |
-| 3 | arm 2 + one repair round with the failure (Otter++) | recorded below when it lands | | |
+| 3 | arm 2 + one repair round with the failure (Otter++) | 18 | 1 (C-2.8, after repair) | 11 repaired, 10 of them still red at HEAD; 2 green on the broken code too; 1 no test function |
 
-The bottleneck of the factory does not move to the 9B by prompting: it does not read a
+The one admitted draft is a real test of `sealed_touched` and `verify_verdict` that a reviewer
+would keep with two lines cut (it documents a behaviour it observed rather than the clause).
+The bottleneck of the factory does not move to the 9B by prompting or one repair round: it does not read a
 signature's keyword-only marker and it invents the shape of a result it never saw. The
 admission rule caught every one of them, which is the point of C-2.1; the drafting rung is
 the frontier until a repair loop or a bigger local rung changes the number.
@@ -146,7 +148,7 @@ lane operations.
 | 1 regeneration from the spec | measured, not yet equivalent for a 9B rung | two runs; three gates (specs 6/13, diffbehavior 8/15 diverge, mutation on partial coverage); C-11.6 born from run 1 |
 | 2 oracles of the second kind | one live | C-9.4 `lint-imports` on the frame's own structure, 2 contracts kept; the binding guard binds through the config; perf and golden renderers exist, no clause yet |
 | 3 mutation in the gate, sealed tier | live | `athena merge` runs the `mutation` stage on changed lines (first merge through it: no survivor on an added line); `features/foundry-layer/sealed/` with three second readings |
-| 4 authorship throughput | measured, negative for the 9B | 0 of 36 drafts admitted in two arms; the admission rule caught every one; arm 3 (repair round) recorded below |
+| 4 authorship throughput | measured, negative for the 9B | 1 of 54 drafts admitted over three arms (signatures; + docstrings and an example; + one repair round); the admission rule caught the rest |
 | 5 the daemon | live | `athena daemon --once` on the real beads queue: claim by bd id, live admission, dispatch, rollback, provenance, release on red |
 | 6 the ladder | live | `--ladder pi-3b,pi-omni9` on T9.1: the 3B red three times, the daemon released the claim and escalated to OmniCoder with the handoff (`red twice on pi-3b`), recorded in the ledger |
 | 7 provenance | in every record | model through the registry, runtime and its version from the lane, packet and tool digests; `missing_provenance` names weights and seed |
