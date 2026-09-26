@@ -20,3 +20,20 @@ def test_sealed_exit_zero_is_not_proof_and_admission_reads_only_the_last_record(
     assert admit([], "T1")["ok"] is False
     elsewhere = [{"task": "T1", "passed": True, "green": True, "workspace": "D:/bench/T1"}]
     assert admit(elsewhere, "T1", workspace="D:/w/T1")["ok"] is False and admit(elsewhere, "T1")["ok"] is True
+
+
+def test_sealed_the_records_keep_their_shape_and_the_reasons_name_what_they_refuse():
+    """C-2.5, C-2.7, C-2.1 (sealed) — the merge record opens with its schema and carries its
+    timestamp; the bd note names the stage; a refusal for want of records names the task and the
+    workspace; the verify verdict has the dispatch verdict's shape and says why it is red; the
+    rendered metrics open with their header and say so when empty (the golden of foundry C-9.6)."""
+    from lib.refinery import MERGE_SCHEMA, admit, bd_return_command, merge_record, render_merge_metrics, verify_verdict
+    rec = merge_record("T1", "pi-9b", "check", False, "spec red", ts="2026-09-27T00:00:00")
+    assert list(rec) == ["schema", "ts", "task", "executor", "stage", "ok", "reason"] and rec["schema"] == MERGE_SCHEMA
+    assert bd_return_command("athena", "T1", "check", "spec red")[-1] == "refinery refused at check: spec red"
+    assert admit([], "T1", workspace="D:/w/T1")["reason"] == "no record for task T1 in D:/w/T1"
+    v = verify_verdict([], [], spec_files=())
+    assert set(v) == {"landed", "green", "passed", "changed_files", "deleted_files", "review_flags", "red", "reason"}
+    assert v["landed"] is False and v["green"] is False and "nothing to merge" in v["reason"] and "silence is not proof" in v["reason"]
+    assert render_merge_metrics({}) == "# merge - per executor, from the merge record" + chr(10) + "  (no merge recorded yet)"
+
