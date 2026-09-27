@@ -66,6 +66,14 @@ ones. Every strengthening was a change to the spec, never to the lane's code by 
 - The daemon read the bead's id from the ready list after the claim, where the task no longer was:
   green tasks stayed in progress, red ones never reopened, and a green task was re-dispatched forever.
 - The daemon reopened a bead the frontier had closed as finished while the lane's red attempt ran.
+- The daemon read "closed" as a substring of the bead's JSON, where a closed dependency also says so:
+  T3.1 was left in progress on a red verdict because T1.2 was closed under its dependencies.
+- An attempt whose worker died before any check ran (the 9B's window overflowed on the packet) has no
+  check row; the lesson writer indexed it and took the daemon down, and T3.1's first record was lost.
+- The GPU inventory found a real stranger among the desktop noise: the intender card evaluation
+  (`eval/card/run_per_field.py`) shares the 3090 with the lane; its bead stays open. The desktop shell
+  set was found on the 3090 too (Windows composes on both cards when a monitor hangs on each) and is
+  now allowed there; a Python process on the lane's card remains a stranger.
 
 ### The substrate switched on, first tick (27.09 23:36)
 
