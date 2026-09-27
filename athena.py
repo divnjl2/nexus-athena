@@ -1630,9 +1630,16 @@ def cmd_daemon(a) -> int:
                            capture_output=True, timeout=60)
             log(task, "close", "green verdict, bead closed until the merge queue")
         if code != 0:
-            # a red verdict releases the claim: the task is open again with the checkpoint in its notes
-            subprocess.run([_bd_bin(), "update", bead_id, "--status", "open"], capture_output=True, timeout=60)
-            log(task, "release", "red verdict, claim released")
+            # a red verdict releases the claim: the task is open again with the checkpoint in its notes —
+            # unless someone closed the bead while the lane ran (the frontier took it, ADR-0007): a closed
+            # bead stays closed (measured 27.09: the daemon reopened a task the frontier had finished, twice)
+            _show = subprocess.run([_bd_bin(), "show", bead_id, "--json"], capture_output=True, text=True, timeout=60)
+            _closed = '"status": "closed"' in (_show.stdout or "") or '"status":"closed"' in (_show.stdout or "")
+            if _closed:
+                log(task, "release", "red verdict, but the bead was closed meanwhile: left closed")
+            else:
+                subprocess.run([_bd_bin(), "update", bead_id, "--status", "open"], capture_output=True, timeout=60)
+                log(task, "release", "red verdict, claim released")
         if code != 0 and a.ladder:
             # C-11.4: the escalation rule, then the next rung with the handoff as its brief
             from lib.ladder import handoff, next_rung, should_escalate
