@@ -1509,6 +1509,145 @@ def cmd_next(a) -> int:
     return subprocess.run(argv).returncode
 
 
+def _read_mem_real() -> dict:
+    """the host's memory through psutil: free (available) and total bytes"""
+    import psutil
+    vm = psutil.virtual_memory()
+    return {"free": int(vm.available), "total": int(vm.total)}
+
+
+def _read_gpus_real() -> list:
+    """every GPU through NVML: index, name, free and total bytes"""
+    import pynvml
+    pynvml.nvmlInit()
+    out = []
+    try:
+        for i in range(pynvml.nvmlDeviceGetCount()):
+            h = pynvml.nvmlDeviceGetHandleByIndex(i)
+            m = pynvml.nvmlDeviceGetMemoryInfo(h)
+            name = pynvml.nvmlDeviceGetName(h)
+            out.append({"index": i, "name": name.decode() if isinstance(name, bytes) else str(name), "free": int(m.free), "total": int(m.total)})
+    finally:
+        pynvml.nvmlShutdown()
+    return out
+
+
+def _host_state_from(a):
+    """C-5.1: the host state — from --host-json when given (tests, dry runs), else the real readers"""
+    from lib.host import host_state
+    path = getattr(a, "host_json", "")
+    if path:
+        data = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
+        return host_state(read_mem=lambda: {"free": int(data.get("ram_free", 0)), "total": int(data.get("ram_total", 0))},
+                          read_gpus=lambda: list(data.get("gpus") or []))
+    return host_state(read_mem=_read_mem_real, read_gpus=_read_gpus_real)
+
+
+def _host_floors_verdict(a, st) -> dict:
+    """C-5.1: RAM, then every GPU the state knows; the first floor missed is the verdict"""
+    from lib.host import host_admit, parse_floors
+    floors = parse_floors(a.host_floors)
+    v = host_admit(st, floors)
+    if not v.get("ok"):
+        return v
+    try:
+        gpus = list(st.gpus or [])
+    except Exception:  # noqa: BLE001 — a failing reader is the unknown case host_admit names
+        gpus = None
+    if gpus is None:
+        return host_admit(st, floors, gpu=0)
+    for g in gpus:
+        v = host_admit(st, floors, gpu=g.get("index"))
+        if not v.get("ok"):
+            return v
+    return {"ok": True, "reason": "admitted"}
+
+
+def _gpu_processes() -> list:
+    """C-5.3: compute processes per GPU through NVML, the executable through psutil where the account allows"""
+    import psutil
+    import pynvml
+    pynvml.nvmlInit()
+    out = []
+    try:
+        for i in range(pynvml.nvmlDeviceGetCount()):
+            h = pynvml.nvmlDeviceGetHandleByIndex(i)
+            try:
+                procs = pynvml.nvmlDeviceGetComputeRunningProcesses(h)
+            except pynvml.NVMLError:
+                procs = []
+            for p in procs:
+                try:
+                    exe = psutil.Process(int(p.pid)).exe()
+                except (psutil.Error, OSError):
+                    exe = ""
+                out.append({"gpu": i, "pid": int(p.pid), "exe": exe})
+    finally:
+        pynvml.nvmlShutdown()
+    return out
+
+
+def _inventory_tick(a, here, slug, log) -> int:
+    """C-5.3: strangers against the allow-list, one bead each, once per pid; the seen set beside the ledger"""
+    from lib.host import strangers, strangers_once
+    inv_path = pathlib.Path(a.gpu_allowlist)
+    if not inv_path.exists():
+        return 0
+    inventory = json.loads(inv_path.read_text(encoding="utf-8"))
+    seen_path = here / "strangers_seen.json"
+    try:
+        seen = set(json.loads(seen_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError):
+        seen = set()
+    try:
+        procs = _gpu_processes()
+    except Exception as e:  # noqa: BLE001 — NVML absent is reported, never fatal
+        log("", "inventory", f"unreadable: {e}")
+        return 0
+    found = strangers(procs, inventory)
+    commands = strangers_once(found, seen, slug=slug)
+    for cmd in commands:
+        subprocess.run([_bd_bin()] + [str(x) for x in cmd[1:]], capture_output=True, timeout=60)
+        log("", "stranger", " ".join(str(x) for x in cmd[2:3]))
+    seen_path.write_text(json.dumps(sorted(str(x) for x in seen)), encoding="utf-8")
+    return len(commands)
+
+
+def _wake_lane(a, log) -> bool:
+    """C-5.2: one minimal request through the router, then the lane's health up to the timeout"""
+    import time as _time
+    import urllib.request
+    from lib.host import wake_request, wake_wait
+    from lib.lanes import lane_endpoint
+    req = wake_request(_lane_model(a.executor), router=a.router)
+    try:
+        body = json.dumps(req["body"]).encode("utf-8")
+        r = urllib.request.Request(req["url"], data=body, headers={"content-type": "application/json"})
+        try:
+            urllib.request.urlopen(r, timeout=a.wake_timeout).read()
+        except Exception:  # noqa: BLE001 — a 503 while starting is the expected first answer
+            pass
+        base = _provider_base_url(a.executor)
+        health = (base[:-3] if base.endswith("/v1") else base) + "/health"
+
+        def check():
+            code, _ = _http_get(health, timeout=5)
+            return code
+        v = wake_wait(check, timeout_s=float(a.wake_timeout), now=_time.time, sleep=_time.sleep)
+        log("", "wake", f"{a.executor}: {'woken' if v.get('woken') else 'not woken'} after {v.get('waited_s')}s")
+        return bool(v.get("woken"))
+    except Exception as e:  # noqa: BLE001
+        log("", "wake", f"{a.executor}: failed: {e}")
+        return False
+
+
+def _lane_model(executor: str) -> str:
+    """the model name the router knows the lane by"""
+    from lib.executors import PI_PROVIDERS
+    spec = PI_PROVIDERS.get(executor) or {}
+    return spec.get("model") or {"pi-omni9": "omnicoder-9b", "pi-9b": "qwen3.5-9b", "pi-3b": "nanbeige-3b"}.get(executor, executor)
+
+
 def cmd_daemon(a) -> int:
     """C-3.5: the loop out of the operator's session. One tick = the ready task of highest
     priority that no lane runs (C-3.1), the lane's admission (C-4.2), then dispatch, verdict,
@@ -1557,6 +1696,8 @@ def cmd_daemon(a) -> int:
             log("", "stop", f"stop file {stop_file}")
             print(f"daemon: stopped by {stop_file}" if a.text else json.dumps({"slug": slug, "stopped": True}))
             return 0
+        if getattr(a, "gpu_allowlist", "") and not a.dry_run:
+            _inventory_tick(a, here, slug, log)                                   # C-5.3
         task = next_task(ready_list(), slug=slug, running=running)
         if not task:
             print(f"daemon: nothing ready for {slug}" if a.text else json.dumps({"slug": slug, "task": ""}))
@@ -1564,6 +1705,17 @@ def cmd_daemon(a) -> int:
                 return 1
             time.sleep(a.interval)
             continue
+        if getattr(a, "host_floors", ""):
+            # C-5.1: the host's floors before any lane is asked
+            _hv = _host_floors_verdict(a, _host_state_from(a))
+            if not _hv.get("ok"):
+                log(task, "park", "host: " + str(_hv.get("reason")))
+                print(f"daemon: park {task}: host {_hv.get('reason')}" if a.text
+                      else json.dumps({"slug": slug, "task": task, "park": _hv.get("reason")}), flush=True)
+                if a.dry_run or a.once:
+                    return 0
+                time.sleep(a.interval)
+                continue
         pool = [x.strip() for x in (a.executors or "").split(",") if x.strip()]
         if pool:
             # C-11.7: the lane by prefix affinity among the admitted; the warmth table beside the ledger
@@ -1591,6 +1743,11 @@ def cmd_daemon(a) -> int:
             from lib.lanes import live_state
             _state = live_state(a.executor, _provider_base_url(a.executor), fetch=_http_get)   # C-11.5
             admitted, why = admit(_state, limit=a.lane_limit, kv_ceiling=a.kv_ceiling)
+            if not admitted and not _state and getattr(a, "wake", False):
+                # C-5.2: no state at all — wake the lane through the router before parking
+                if _wake_lane(a, log):
+                    _state = live_state(a.executor, _provider_base_url(a.executor), fetch=_http_get)
+                    admitted, why = admit(_state, limit=a.lane_limit, kv_ceiling=a.kv_ceiling)
         if a.dry_run:
             print(f"daemon: {task} -> {a.executor} ({slug}) [dry run] worktree {worktree_name(task, 'dry')} — {why}"
                   if a.text else json.dumps({"slug": slug, "task": task, "executor": a.executor, "dry_run": True}))
@@ -1824,7 +1981,7 @@ def cmd_drift(a) -> int:
                              "ref": drop.get("ref"), "level": drop.get("level"), "start": start, "start_ts": start_ts})
     commands = drift_once(findings, seen, slug=slug)
     here.mkdir(parents=True, exist_ok=True)
-    seen_path.write_text(json.dumps(sorted((list(x) if isinstance(x, tuple) else x) for x in seen), key=str), encoding="utf-8")
+    seen_path.write_text(json.dumps(sorted(((list(x) if isinstance(x, tuple) else x) for x in seen), key=str)), encoding="utf-8")
     if a.text:
         for ex, v in sorted(verdicts.items()):
             extra = ""
@@ -2049,7 +2206,8 @@ def cmd_merge(a) -> int:
     if getattr(a, "mutation", True):
         # C-11.2: the mutation stage — survivors on the offer's added lines refuse it
         mstage = _mutation_stage_for(workspace, a.target, threshold=a.mutation_threshold,
-                                     max_mutants=a.mutation_max, timeout=a.check_timeout)
+                                     max_mutants=a.mutation_max, timeout=a.check_timeout,
+                                     governor_gb=getattr(a, "governor_gb", 0))
         if mstage is not None and not mstage["ok"]:
             return end("mutation", False, mstage["reason"])
     f = fast_forward(run, str(workspace), a.target)
@@ -2494,7 +2652,7 @@ def _sandbox_wrap(cmd: dict, workspace, *, lane_ports) -> dict:
     return {**cmd, "argv": argv}
 
 
-def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int):
+def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int, governor_gb: int = 0):
     """C-11.2: the merge queue's mutation stage — the offer's changed lines (unified diff against
     the target) through every contract's clause map, the frame's own mutants on the owned lines,
     each run against the owning specs in an isolated mirror; None when nothing is owned."""
@@ -2511,8 +2669,14 @@ def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants
     mirror = isolate(str(ws), default_mirror(str(ws)))
 
     def runner(cmd):
+        argv = cmd.split()
+        if governor_gb:
+            # C-5.4: the heavy gate under the process governor, when the host has it
+            import shutil as _sh
+            from lib.host import governed_argv
+            argv = governed_argv(argv, ceiling_gb=int(governor_gb), which=_sh.which)["argv"]
         try:
-            return subprocess.run(cmd.split(), cwd=mirror, capture_output=True, text=True, timeout=timeout).returncode
+            return subprocess.run(argv, cwd=mirror, capture_output=True, text=True, timeout=timeout).returncode
         except subprocess.TimeoutExpired:
             return 124
 
@@ -3446,6 +3610,12 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("--stop-file", dest="stop_file", default="")
     dm.add_argument("--ladder", default="pi-3b,pi-omni9,claude", help="rungs in order for escalation (C-11.4); empty = none")
     dm.add_argument("--once", action="store_true")
+    dm.add_argument("--host-floors", dest="host_floors", default="", help="C-5.1: park under these floors, e.g. ram=8G,vram=2G")
+    dm.add_argument("--host-json", dest="host_json", default="", help="C-5.1: read the host state from this JSON instead of the host (tests, dry runs)")
+    dm.add_argument("--wake", action="store_true", help="C-5.2: wake a lane that answers no state through the router before parking")
+    dm.add_argument("--router", default="http://127.0.0.1:8420", help="the router (llama-swap) the wake goes through")
+    dm.add_argument("--wake-timeout", dest="wake_timeout", type=int, default=300, help="seconds to wait for the woken lane's health")
+    dm.add_argument("--gpu-allowlist", dest="gpu_allowlist", default="", help="C-5.3: gpus.json; every tick, strangers on a GPU become one bead each")
     dm.add_argument("--pi-strict", dest="pi_strict", action="store_true", help="forwarded to dispatch")
     dm.add_argument("--sandbox", choices=("off", "on", "required"), default="off", help="forwarded to dispatch (C-10.1)")
     dm.add_argument("--sandbox-ports", dest="sandbox_ports", default="60081", help="forwarded to dispatch")
@@ -3530,6 +3700,7 @@ def build_parser() -> argparse.ArgumentParser:
     mg.add_argument("--executor", default="", help="recorded executor (default: from the dispatch record)")
     mg.add_argument("--slug", default="", help="bd project slug (default: from the plan title)")
     mg.add_argument("--bd", action="store_true", help="on refusal, run the bd command that returns the task")
+    mg.add_argument("--governor-gb", dest="governor_gb", type=int, default=12, help="C-5.4: commit ceiling in GB for the mutation stage under procgov; 0 = ungoverned")
     mg.add_argument("--no-mutation", dest="mutation", action="store_false", help="skip the mutation stage (C-11.2)")
     mg.add_argument("--mutation-threshold", dest="mutation_threshold", type=float, default=0.7)
     mg.add_argument("--mutation-max", dest="mutation_max", type=int, default=20)
