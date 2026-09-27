@@ -47,8 +47,11 @@ worse, the plan by leverage).
 | T4.1 series rows, set digest | green, then red on review | 1 | the digest was bytes, unserialisable into the JSON row; and the series verdict's drop was a bare `True` where the wiring needs the CUSUM's record: S4.1 and S4.4 tightened |
 | T4.2 the CUSUM | green, then red on review | 1 | the sealed second reading caught it: it fired on one bad night and on a recovered dip, a threshold not a CUSUM; S4.2 gained the three cases |
 | T4.3 `athena drift`, `bench --series` | red x3, finished by the frontier | 3 + finish | the lane's window overflowed on athena.py every time; the frontier wired it |
+| T2.2 the embedded postgres stand | red x3, finished by the frontier | 3 + finish | the lane's stand used the package's wrapper, which picks a random port outside the sandbox's range, and left a `NameError`; worse, its attempts inside the sandbox started clusters it never stopped: twenty orphaned `postgres.exe` under the sandbox account, killable only with elevation. The finish drives the binaries from an ASCII copy under ProgramData (initdb dies on the cp1251 profile path), on a port in 60084-60089, and keeps postgres as its own child in a kill-on-close job object |
 | T5.1 host state and floors | green | 2 | |
 | T5.2 wake through the router | green | 1 | |
+| T5.3 the inventory and its strangers | red x3, finished by the frontier | 3 + finish | the lane read the inventory at the wrong level and matched patterns as path suffixes where the inventory promises substrings, so every process was a stranger |
+| T5.4 the governor around a heavy gate | green | 1 | |
 
 Pattern of the evening: the visible spec alone is a grader a 9B learns to satisfy; the sealed second
 reading and the reviewer's strengthened cases are what turned three spec-fitting landings into real
