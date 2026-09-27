@@ -65,6 +65,17 @@ ones. Every strengthening was a change to the spec, never to the lane's code by 
   green tasks stayed in progress, red ones never reopened, and a green task was re-dispatched forever.
 - The daemon reopened a bead the frontier had closed as finished while the lane's red attempt ran.
 
+### The substrate switched on, first tick (27.09 23:36)
+
+The daemon ran from the work tree with `--host-floors ram=6G,vram=1G --wake --gpu-allowlist gpus.json`.
+Two design faults showed in the first minute, both mine: the floors were checked on every GPU, and the
+display card next to the lane's is always full, so the lane's tasks parked forever with the right
+reason and the wrong scope; and the inventory read the display card too, where every desktop app
+holds a graphics context, so it opened 25 beads for Task Manager, Docker Desktop and a VPN client.
+Fixed as: the VRAM floor applies to the lane's GPU (`--lane-gpu`), a GPU marked `watch: false` in the
+inventory is not read. The floor's message itself was exact: `vram on RTX 3060 floor 1.0G, available
+0.3G`.
+
 ### The proof by class (`tools/chaos_probe.py`, `.athena/chaos.jsonl`)
 
 | probe | what used to happen | now |
