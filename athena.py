@@ -1544,23 +1544,14 @@ def _host_state_from(a):
 
 
 def _host_floors_verdict(a, st) -> dict:
-    """C-5.1: RAM, then every GPU the state knows; the first floor missed is the verdict"""
+    """C-5.1: RAM, then the lane's own GPU (--lane-gpu); measured 27.09: a check over every GPU parked the
+    3090's lane forever because the display card next to it is always full"""
     from lib.host import host_admit, parse_floors
     floors = parse_floors(a.host_floors)
-    v = host_admit(st, floors)
-    if not v.get("ok"):
-        return v
-    try:
-        gpus = list(st.gpus or [])
-    except Exception:  # noqa: BLE001 — a failing reader is the unknown case host_admit names
-        gpus = None
-    if gpus is None:
-        return host_admit(st, floors, gpu=0)
-    for g in gpus:
-        v = host_admit(st, floors, gpu=g.get("index"))
-        if not v.get("ok"):
-            return v
-    return {"ok": True, "reason": "admitted"}
+    gpu = getattr(a, "lane_gpu", -1)
+    if gpu is None or int(gpu) < 0:
+        return host_admit(st, floors)
+    return host_admit(st, floors, gpu=int(gpu))
 
 
 def _gpu_processes() -> list:
@@ -3613,6 +3604,7 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("--once", action="store_true")
     dm.add_argument("--host-floors", dest="host_floors", default="", help="C-5.1: park under these floors, e.g. ram=8G,vram=2G")
     dm.add_argument("--host-json", dest="host_json", default="", help="C-5.1: read the host state from this JSON instead of the host (tests, dry runs)")
+    dm.add_argument("--lane-gpu", dest="lane_gpu", type=int, default=1, help="C-5.1: the GPU the executor lane lives on; the VRAM floor applies there (-1 = RAM only)")
     dm.add_argument("--wake", action="store_true", help="C-5.2: wake a lane that answers no state through the router before parking")
     dm.add_argument("--router", default="http://127.0.0.1:8420", help="the router (llama-swap) the wake goes through")
     dm.add_argument("--wake-timeout", dest="wake_timeout", type=int, default=300, help="seconds to wait for the woken lane's health")
