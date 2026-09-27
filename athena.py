@@ -1963,7 +1963,8 @@ def cmd_drift(a) -> int:
                 continue
     slug = a.slug or _slugify(contract.parent.name)
     verdicts = series_verdicts(rows, min_points=a.min_points)
-    seen_path = here / "drift_seen.json"
+    # the seen set belongs to the series it judges: beside an explicit series file, else beside the ledger
+    seen_path = (series.parent / (series.stem + ".seen.json")) if a.series else (here / "drift_seen.json")
     try:
         # the keys drift_once stores may be tuples; JSON hands them back as lists
         seen = set(tuple(x) if isinstance(x, list) else x for x in json.loads(seen_path.read_text(encoding="utf-8")))
