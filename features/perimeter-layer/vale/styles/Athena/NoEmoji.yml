@@ -1,0 +1,9 @@
+# C-1.4 — no emoji in the frame's documents (the operator's rule since 14.09.2026)
+extends: existence
+message: "no emoji in the frame's documents: '%s'"
+level: error
+nonword: true
+tokens:
+  - '[\x{1F300}-\x{1FAFF}]'
+  - '[\x{2600}-\x{27BF}]\x{FE0F}?'
+  - '[\x{1F900}-\x{1F9FF}]'

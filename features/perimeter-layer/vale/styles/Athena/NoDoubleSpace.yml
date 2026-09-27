@@ -1,0 +1,7 @@
+# C-1.4 — two spaces inside a sentence are an editing scar; code blocks and indentation are not prose
+extends: existence
+message: "double space inside a sentence: '%s'"
+level: error
+nonword: true
+tokens:
+  - '[^\s|]  +[^\s|]'

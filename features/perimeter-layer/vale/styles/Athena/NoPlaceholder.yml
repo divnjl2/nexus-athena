@@ -1,0 +1,9 @@
+# C-1.4 — a placeholder is a promise nobody measured
+extends: existence
+message: "placeholder in a shipped document: '%s'"
+level: error
+ignorecase: false
+tokens:
+  - TBD
+  - TODO
+  - FIXME
