@@ -1808,8 +1808,9 @@ def cmd_drift(a) -> int:
     verdicts = series_verdicts(rows, min_points=a.min_points)
     seen_path = here / "drift_seen.json"
     try:
-        seen = set(json.loads(seen_path.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
+        # the keys drift_once stores may be tuples; JSON hands them back as lists
+        seen = set(tuple(x) if isinstance(x, list) else x for x in json.loads(seen_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError):
         seen = set()
     findings = []
     for ex, v in sorted(verdicts.items()):
@@ -1823,7 +1824,7 @@ def cmd_drift(a) -> int:
                              "ref": drop.get("ref"), "level": drop.get("level"), "start": start, "start_ts": start_ts})
     commands = drift_once(findings, seen, slug=slug)
     here.mkdir(parents=True, exist_ok=True)
-    seen_path.write_text(json.dumps(sorted(seen)), encoding="utf-8")
+    seen_path.write_text(json.dumps(sorted((list(x) if isinstance(x, tuple) else x) for x in seen), key=str), encoding="utf-8")
     if a.text:
         for ex, v in sorted(verdicts.items()):
             extra = ""
