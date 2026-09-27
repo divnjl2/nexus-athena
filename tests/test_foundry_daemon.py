@@ -105,14 +105,10 @@ def test_vllm_metrics_and_llama_cpp_slots_parse_into_one_lane_state():
     assert lane_state_from_slots(slots) == {"running": 1, "waiting": 0, "kv_usage": None, "prefix_hit_rate": None}
     assert lane_state_from_metrics("not metrics") == {}
     # review 27.09: a lane fresh from a restart, zero queries served — the rate is None, never a crash
-    fresh = lane_state_from_metrics('vllm:num_requests_running{model_name="m"} 0.0
-vllm:num_requests_waiting{model_name="m"} 0.0
-'
-                                    'vllm:kv_cache_usage_perc{model_name="m"} 0.0
-vllm:prefix_cache_queries_total{model_name="m"} 0.0
-'
-                                    'vllm:prefix_cache_hits_total{model_name="m"} 0.0
-')
+    fresh = lane_state_from_metrics(chr(10).join([
+        'vllm:num_requests_running{model_name="m"} 0.0', 'vllm:num_requests_waiting{model_name="m"} 0.0',
+        'vllm:kv_cache_usage_perc{model_name="m"} 0.0', 'vllm:prefix_cache_queries_total{model_name="m"} 0.0',
+        'vllm:prefix_cache_hits_total{model_name="m"} 0.0']))
     assert fresh["running"] == 0 and fresh["prefix_hit_rate"] is None
 
 
