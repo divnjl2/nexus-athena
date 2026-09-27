@@ -1543,15 +1543,28 @@ def _host_state_from(a):
     return host_state(read_mem=_read_mem_real, read_gpus=_read_gpus_real)
 
 
-def _host_floors_verdict(a, st) -> dict:
-    """C-5.1: RAM, then the lane's own GPU (--lane-gpu); measured 27.09: a check over every GPU parked the
-    3090's lane forever because the display card next to it is always full"""
+def _host_floors_verdict(a, st, lane_up: bool = False) -> dict:
+    """C-5.1: RAM always; the VRAM floor on the lane's own GPU (--lane-gpu) only while the lane is down,
+    i.e. before a wake. Measured 27.09: a check over every GPU parked the 3090's lane forever because the
+    display card next to it is always full; measured 28.09: the lane's own card is always full too while
+    the lane is up (vLLM holds its KV pool), so the floor there guards the start, not the dispatch"""
     from lib.host import host_admit, parse_floors
     floors = parse_floors(a.host_floors)
     gpu = getattr(a, "lane_gpu", -1)
-    if gpu is None or int(gpu) < 0:
+    if lane_up or gpu is None or int(gpu) < 0:
         return host_admit(st, floors)
     return host_admit(st, floors, gpu=int(gpu))
+
+
+def _lane_up(a) -> bool:
+    """does the executor lane answer health right now (cheap, five seconds)"""
+    try:
+        base = _provider_base_url(a.executor)
+        health = (base[:-3] if base.endswith("/v1") else base) + "/health"
+        _http_get(health, timeout=5)      # raises on anything but 200
+        return True
+    except Exception:  # noqa: BLE001 — no answer is down
+        return False
 
 
 def _gpu_processes() -> list:
@@ -1622,8 +1635,11 @@ def _wake_lane(a, log) -> bool:
         health = (base[:-3] if base.endswith("/v1") else base) + "/health"
 
         def check():
-            code, _ = _http_get(health, timeout=5)
-            return code
+            try:
+                _http_get(health, timeout=5)      # raises on anything but 200
+                return 200
+            except Exception:  # noqa: BLE001 — not up yet
+                return 0
         v = wake_wait(check, timeout_s=float(a.wake_timeout), now=_time.time, sleep=_time.sleep)
         log("", "wake", f"{a.executor}: {'woken' if v.get('woken') else 'not woken'} after {v.get('waited_s')}s")
         return bool(v.get("woken"))
@@ -1698,7 +1714,7 @@ def cmd_daemon(a) -> int:
             continue
         if getattr(a, "host_floors", ""):
             # C-5.1: the host's floors before any lane is asked
-            _hv = _host_floors_verdict(a, _host_state_from(a))
+            _hv = _host_floors_verdict(a, _host_state_from(a), lane_up=(not a.dry_run and not getattr(a, "host_json", "") and _lane_up(a)))
             if not _hv.get("ok"):
                 log(task, "park", "host: " + str(_hv.get("reason")))
                 print(f"daemon: park {task}: host {_hv.get('reason')}" if a.text
@@ -1988,6 +2004,69 @@ def cmd_drift(a) -> int:
     else:
         _emit({"slug": slug, "series": str(series), "verdicts": verdicts, "commands": commands})
     return 0
+
+
+def cmd_repro(a) -> int:
+    """C-2.6: the reproduction loop — a red dispatch record packed as a reproduction (C-2.4), dispatched to
+    the executor named, judged by the AssertFlip rule (C-2.5)."""
+    from lib.stands import repro_admit, repro_packet
+    contract = pathlib.Path(a.contract).resolve()
+    here = contract.parent / ".athena"
+    dpath = here / "dispatch.jsonl"
+    # read the ledger raw: a hand-written record without `landed` is still a red record here
+    records = []
+    for line in (dpath.read_text(encoding="utf-8") if dpath.exists() else "").splitlines():
+        try:
+            rec = json.loads(line) if line.strip() else None
+        except json.JSONDecodeError:
+            rec = None
+        if isinstance(rec, dict) and rec.get("task"):
+            records.append(rec)
+    reds = [r for r in records if r.get("task") == a.task and not r.get("green")]
+    if not reds:
+        print(f"repro: no red record for {a.task} in {dpath}" if a.text else json.dumps({"task": a.task, "error": "no red record"}))
+        return 2
+    try:
+        rec = reds[int(a.record)]
+    except (IndexError, ValueError):
+        print(f"repro: no record {a.record} among {len(reds)} red record(s) of {a.task}")
+        return 2
+    safe = a.task.replace(".", "_")
+    test_path = f"tests/test_repro_{safe}.py"
+    inverted_path = f"tests/test_repro_{safe}_inverted.py"
+    packet = repro_packet(rec, task=a.task, test_path=test_path)
+    packet += ("\n\nWrite the inverted twin to " + inverted_path + ": the same test with every assertion negated, "
+               "so it fails on the present behaviour and will pass once the behaviour is fixed.\n")
+    if a.judge_exits:
+        parts = [int(x) for x in str(a.judge_exits).split(",") if x.strip().lstrip("-").isdigit()]
+        if len(parts) != 2:
+            print("repro: --judge-exits wants two exits, e.g. 0,1")
+            return 2
+        v = repro_admit(parts[0], parts[1])
+        print(("repro: admitted" if v["ok"] else "repro: refused") + f" — exits as written {parts[0]}, inverted {parts[1]}: {v['reason']}"
+              if a.text else json.dumps({"task": a.task, **v}))
+        return 0 if v["ok"] else 1
+    if a.executor == "none":
+        print(packet if a.text else json.dumps({"task": a.task, "packet": packet, "test_path": test_path, "inverted_path": inverted_path}))
+        return 0
+    # the executor path: the packet through the pi harness in the workspace, then both halves run
+    from lib.executors import EXECUTORS, pi_binary, pi_command
+    from lib.spec_runner import _spawn
+    spec = EXECUTORS.get(a.executor)
+    if not spec or spec.get("kind") != "pi":
+        print(f"repro: executor {a.executor} is not a pi lane")
+        return 2
+    ws = pathlib.Path(a.workspace).resolve()
+    cmd = pi_command(a.executor, "Write both test files named in the packet. Answer DONE.", pi_bin=pi_binary(), thinking="", hashline="",
+                     files=[], require_hashline=False, strict=True)
+    cmd["stdin"] = packet
+    claim, tokens, err = _run_command_executor(cmd, cwd=ws, timeout=a.timeout, stall=0)
+    code_a, _ = _spawn([sys.executable, "-m", "pytest", test_path, "-q", "-p", "no:cacheprovider"], cwd=str(ws), timeout=a.timeout)
+    code_b, _ = _spawn([sys.executable, "-m", "pytest", inverted_path, "-q", "-p", "no:cacheprovider"], cwd=str(ws), timeout=a.timeout)
+    v = repro_admit(code_a, code_b)
+    print(("repro: admitted" if v["ok"] else "repro: refused") + f" — exits as written {code_a}, inverted {code_b}: {v['reason']}"
+          + (f"  (worker: {err[:120]})" if err else "") if a.text else json.dumps({"task": a.task, **v, "worker_error": err, "tokens": tokens}))
+    return 0 if v["ok"] else 1
 
 
 def cmd_bench(a) -> int:
@@ -3661,6 +3740,17 @@ def build_parser() -> argparse.ArgumentParser:
     bn.add_argument("--dry-run", dest="dry_run", action="store_true")
     bn.add_argument("--text", action="store_true")
     bn.set_defaults(fn=cmd_bench)
+    rp = sub.add_parser("repro", help="a red dispatch record becomes a reproduction packet, dispatched and admitted by the AssertFlip rule (C-2.4, C-2.5, C-2.6)")
+    rp.add_argument("contract")
+    rp.add_argument("--front", required=True)
+    rp.add_argument("--task", required=True)
+    rp.add_argument("--record", default="-1", help="index among the task's red records (default: the last)")
+    rp.add_argument("--executor", default="none", help="a pi lane, or none to print the packet")
+    rp.add_argument("--workspace", default=".", help="where the executor writes the two test files")
+    rp.add_argument("--judge-exits", dest="judge_exits", default="", help="judge exits already in hand, e.g. 0,1")
+    rp.add_argument("--timeout", type=int, default=900)
+    rp.add_argument("--text", action="store_true")
+    rp.set_defaults(fn=cmd_repro)
     dr = sub.add_parser("drift", help="the rungs watched: judge the bench series per executor with a one-sided CUSUM and emit the bd command for a drop (C-4.2, C-4.3, C-4.4, C-4.5)")
     dr.add_argument("contract")
     dr.add_argument("--series", default="", help="series file (default: <feature>/.athena/bench_series.jsonl)")
