@@ -1,5 +1,5 @@
 {
- "note": "C-5.3 \u2014 who may hold compute on each GPU of win-desktop; a GPU with watch=false (the display card: every desktop app renders there) is not inventoried; anything else on a watched GPU is a stranger, reported once per pid, never killed",
+ "note": "C-5.3 — who may hold compute on each GPU of win-desktop; a GPU with watch=false (the display card: every desktop app renders there) is not inventoried; anything else on a watched GPU is a stranger, reported once per pid, never killed Measured 28.09: Windows composes the desktop on BOTH cards when a monitor hangs on each, so the shell set (explorer, the *ExperienceHost family, WebView2) is allowed on the 3090 too; a Python hog stays a stranger.",
  "gpus": {
   "0": {
    "name": "RTX 3060",
@@ -20,7 +20,17 @@
     "vllm-win-021",
     "Python312\\python.exe",
     "llama-b11165-cuda\\llama-server.exe",
-    "dwm.exe"
+    "dwm.exe",
+    "explorer.exe",
+    "StartMenuExperienceHost.exe",
+    "ShellExperienceHost.exe",
+    "PhoneExperienceHost.exe",
+    "SearchHost.exe",
+    "TextInputHost.exe",
+    "ApplicationFrameHost.exe",
+    "ShellHost.exe",
+    "msedgewebview2.exe",
+    "CrossDeviceResume.exe"
    ],
    "watch": true
   }

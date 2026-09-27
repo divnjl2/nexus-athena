@@ -42,6 +42,9 @@ def test_a_red_verdict_becomes_a_lesson_with_a_failure_class_and_a_rule_never_th
     assert lesson_from({**v, "checks": [{"cmd": "c", "exit": 1, "tail": "E   assert 1 == 2"}]})["failure"] == "assertion"
     assert lesson_from({**v, "checks": [{"cmd": "c", "exit": 1, "tail": "SyntaxError: invalid syntax"}]})["failure"] == "syntax"
     assert lesson_from({**v, "checks": [{"cmd": "c", "exit": 124, "tail": ""}]})["failure"] == "timeout"
+    # measured 28.09: a worker that died before any check ran has no check row; the lesson still forms
+    none_ran = lesson_from({**v, "checks": [], "worker_error": "400 maximum context length is 30720 tokens"})
+    assert none_ran is not None and "30720" in none_ran["rule"]
     assert lesson_from({**v, "green": True}) is None
 
 

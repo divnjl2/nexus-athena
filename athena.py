@@ -1591,6 +1591,18 @@ def _gpu_processes() -> list:
     return out
 
 
+def _bead_status(show_json: str) -> str:
+    """PURE: the top-level status out of `bd show --json` (a list or one object); a substring search
+    over the JSON reads a closed dependency as the bead's own closure"""
+    try:
+        data = json.loads(show_json or "")
+    except ValueError:
+        return ""
+    if isinstance(data, list):
+        data = data[0] if data else {}
+    return str((data or {}).get("status") or "") if isinstance(data, dict) else ""
+
+
 def _inventory_tick(a, here, slug, log) -> int:
     """C-5.3: strangers against the allow-list, one bead each, once per pid; the seen set beside the ledger"""
     from lib.host import strangers, strangers_once
@@ -1798,7 +1810,7 @@ def cmd_daemon(a) -> int:
             # unless someone closed the bead while the lane ran (the frontier took it, ADR-0007): a closed
             # bead stays closed (measured 27.09: the daemon reopened a task the frontier had finished, twice)
             _show = subprocess.run([_bd_bin(), "show", bead_id, "--json"], capture_output=True, text=True, timeout=60)
-            _closed = '"status": "closed"' in (_show.stdout or "") or '"status":"closed"' in (_show.stdout or "")
+            _closed = _bead_status(_show.stdout) == "closed"   # the bead's own status: a closed dependency inside the JSON is not it (measured 28.09: T3.1 left in_progress on a red verdict because T1.2 was closed under its dependencies)
             if _closed:
                 log(task, "release", "red verdict, but the bead was closed meanwhile: left closed")
             else:

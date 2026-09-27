@@ -65,8 +65,12 @@ def lesson_from(verdict) -> Optional[dict]:
     if verdict.get("green", True):
         return None
     
-    tail = verdict["checks"][0].get("tail", "")
-    exit_code = verdict["checks"][0].get("exit", 0)
+    checks = list(verdict.get("checks") or [])
+    # an attempt whose worker died before any check ran leaves no check row (measured 28.09: T3.1,
+    # the daemon died on the index and lost the record); the lesson is then the worker's error
+    first = checks[0] if checks else {"tail": str(verdict.get("worker_error") or verdict.get("reason") or ""), "exit": 1}
+    tail = first.get("tail", "")
+    exit_code = first.get("exit", 0)
     
     # Determine failure type from tail and exit code
     if exit_code == 124 or (len(tail) == 0 and exit_code == 124):
