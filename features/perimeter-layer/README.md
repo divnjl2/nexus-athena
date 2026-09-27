@@ -52,6 +52,8 @@ worse, the plan by leverage).
 | T5.2 wake through the router | green | 1 | |
 | T5.3 the inventory and its strangers | red x3, finished by the frontier | 3 + finish | the lane read the inventory at the wrong level and matched patterns as path suffixes where the inventory promises substrings, so every process was a stranger |
 | T5.4 the governor around a heavy gate | green | 1 | |
+| T2.3 the reproduction packet and the AssertFlip admission | green | 1 | |
+| T2.4 `athena repro` | red x3, finished by the frontier | 3 + finish | athena.py again: the window overflowed (30,465 of 30,720 tokens) and the landing keyed on the spec's sample name (`if "test_demo.py::test_a" in tail`); the frontier wired the command, and found on the way that both health probes of T5.5 unpacked a string (never exercised while the lane was up) |
 
 Pattern of the evening: the visible spec alone is a grader a 9B learns to satisfy; the sealed second
 reading and the reviewer's strengthened cases are what turned three spec-fitting landings into real
@@ -75,6 +77,12 @@ holds a graphics context, so it opened 25 beads for Task Manager, Docker Desktop
 Fixed as: the VRAM floor applies to the lane's GPU (`--lane-gpu`), a GPU marked `watch: false` in the
 inventory is not read. The floor's message itself was exact: `vram on RTX 3060 floor 1.0G, available
 0.3G`.
+
+A third fault the next tick after T2.4 (28.09 00:05): `vram on RTX 3090 floor 1.0G, available 0.9G` parked
+T3.1 on the lane's own card. The lane holds that card by design (vLLM claims its KV pool at start), so
+free VRAM there is near zero whenever the lane is up. Fixed as: the VRAM floor guards the wake (the lane
+must fit before it is started), the RAM floor guards every dispatch; when the lane answers health, its
+card is spoken for and the floor is not applied.
 
 ### The proof by class (`tools/chaos_probe.py`, `.athena/chaos.jsonl`)
 
