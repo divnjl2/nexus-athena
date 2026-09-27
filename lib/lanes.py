@@ -65,7 +65,9 @@ def lane_state_from_metrics(metrics_text: str) -> Dict:
     if kv_usage is not None:
         state["kv_usage"] = kv_usage
     if prefix_queries is not None and prefix_hits is not None:
-        state["prefix_hit_rate"] = min(1.0, prefix_hits / prefix_queries)   # review: counters across label sets, clamp
+        # review 27.09: a lane fresh from a restart has served no query yet; a rate over nothing is None,
+        # not a crash of the daemon (measured: ZeroDivisionError took the loop down while it parked)
+        state["prefix_hit_rate"] = min(1.0, prefix_hits / prefix_queries) if prefix_queries else None
 
     # If none of the expected metrics were found, return empty state
     if not state:

@@ -104,6 +104,17 @@ def test_vllm_metrics_and_llama_cpp_slots_parse_into_one_lane_state():
     slots = [{"id": 0, "is_processing": True}, {"id": 1, "is_processing": False}]
     assert lane_state_from_slots(slots) == {"running": 1, "waiting": 0, "kv_usage": None, "prefix_hit_rate": None}
     assert lane_state_from_metrics("not metrics") == {}
+    # review 27.09: a lane fresh from a restart, zero queries served — the rate is None, never a crash
+    fresh = lane_state_from_metrics('vllm:num_requests_running{model_name="m"} 0.0
+vllm:num_requests_waiting{model_name="m"} 0.0
+'
+                                    'vllm:kv_cache_usage_perc{model_name="m"} 0.0
+vllm:prefix_cache_queries_total{model_name="m"} 0.0
+'
+                                    'vllm:prefix_cache_hits_total{model_name="m"} 0.0
+')
+    assert fresh["running"] == 0 and fresh["prefix_hit_rate"] is None
+
 
 
 def test_a_lane_admits_only_with_nothing_waiting_kv_under_the_ceiling_and_headroom():
