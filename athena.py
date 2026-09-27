@@ -1750,6 +1750,89 @@ def cmd_forge(a) -> int:
 ROOT_DIR = pathlib.Path(__file__).resolve().parent
 
 
+def _series_rows_from_records(records, *, ts: str) -> list:
+    """C-4.1 through the dispatch record: per executor the distinct tasks run and the tasks with a green
+    record, the model and runtime from the latest record's provenance, the set digest over the tasks and
+    the packet digests seen."""
+    from lib.drift import series_rows, set_digest
+    per: dict = {}
+    prov: dict = {}
+    packets: dict = {}
+    for r in records:
+        ex = str(r.get("executor", "?")).split("#")[0]
+        row = per.setdefault(ex, {"tasks": set(), "green": set()})
+        row["tasks"].add(r.get("task"))
+        if r.get("green"):
+            row["green"].add(r.get("task"))
+        p = r.get("provenance") or {}
+        if p:
+            model = (p.get("model") or {}).get("id", "") if isinstance(p.get("model"), dict) else str(p.get("model", ""))
+            rt = p.get("runtime") or {}
+            runtime = f"{rt.get('name', '')} {rt.get('version', '')}".strip() if isinstance(rt, dict) else str(rt)
+            prov[ex] = {"model": model, "runtime": runtime}
+            if p.get("packet_sha256"):
+                packets.setdefault(ex, set()).add(p["packet_sha256"])
+    table = {ex: {"tasks": len(v["tasks"]), "green": len(v["green"])} for ex, v in per.items()}
+    out = []
+    for ex in sorted(table):
+        digest = set_digest(sorted(x for x in per[ex]["tasks"] if x), sorted(packets.get(ex, ())))
+        out += series_rows({ex: table[ex]}, {ex: prov.get(ex, {"model": "", "runtime": ""})}, ts=ts, set_digest=digest)
+    return out
+
+
+def cmd_drift(a) -> int:
+    """C-4.5: the series per executor judged by the one-sided CUSUM (C-4.2), set changes told apart
+    (C-4.4), one bd command per drop (C-4.3)."""
+    from lib.drift import drift_once, series_verdicts
+    contract = pathlib.Path(a.contract).resolve()
+    here = contract.parent / ".athena"
+    series = pathlib.Path(a.series) if a.series else here / "bench_series.jsonl"
+    rows = []
+    if series.exists():
+        for line in series.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except ValueError:
+                continue
+    slug = a.slug or _slugify(contract.parent.name)
+    verdicts = series_verdicts(rows, min_points=a.min_points)
+    seen_path = here / "drift_seen.json"
+    try:
+        seen = set(json.loads(seen_path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        seen = set()
+    findings = []
+    for ex, v in sorted(verdicts.items()):
+        drop = v.get("drop")
+        if drop:
+            mine = [r for r in rows if r.get("executor") == ex]
+            start = int(drop.get("start", 0))
+            start_ts = mine[start]["ts"] if 0 <= start < len(mine) else ""
+            last = mine[-1] if mine else {}
+            findings.append({"executor": ex, "model": last.get("model", ""), "runtime": last.get("runtime", ""),
+                             "ref": drop.get("ref"), "level": drop.get("level"), "start": start, "start_ts": start_ts})
+    commands = drift_once(findings, seen, slug=slug)
+    here.mkdir(parents=True, exist_ok=True)
+    seen_path.write_text(json.dumps(sorted(seen)), encoding="utf-8")
+    if a.text:
+        for ex, v in sorted(verdicts.items()):
+            extra = ""
+            if v.get("drop"):
+                d = v["drop"]
+                extra = f"  ref={d.get('ref')} level={d.get('level')} since index {d.get('start')}"
+            if v.get("set_changes"):
+                extra += f"  set changed x{len(v['set_changes'])}"
+            print(f"drift: {ex:12} {v.get('verdict', '?')}{extra}")
+        for cmd in commands:
+            print("  " + " ".join(str(x) for x in cmd))
+    else:
+        _emit({"slug": slug, "series": str(series), "verdicts": verdicts, "commands": commands})
+    return 0
+
+
 def cmd_bench(a) -> int:
     """Run the matrix: each run is `athena dispatch` in its executor's workspace, a worktree
     created from the current HEAD when it does not exist; then the table from the record."""
@@ -1792,6 +1875,16 @@ def cmd_bench(a) -> int:
     tasks = list(dict.fromkeys(tasks))
     executors = list(dict.fromkeys(r["executor"] + (f"#{a.tag}" if a.tag else "") for r in plan["runs"]))
     table = matrix_table(records, tasks, executors)
+    if getattr(a, "series", False):
+        # C-4.1 / C-4.5: one row per executor into the series, judged later by `athena drift`
+        import datetime as _dt
+        mine = [r for r in records if r.get("task") in tasks]
+        rows = _series_rows_from_records(mine, ts=_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"))
+        spath = here / "bench_series.jsonl"
+        with spath.open("a", encoding="utf-8") as fh:
+            for row in rows:
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+        print(f"# series: {len(rows)} row(s) appended to {spath}", flush=True)
     if a.text:
         print(render_matrix(table, tasks, executors))
     else:
@@ -3393,9 +3486,17 @@ def build_parser() -> argparse.ArgumentParser:
     bn.add_argument("--pi-strict", dest="pi_strict", action="store_true")
     bn.add_argument("--pi-hashline", dest="pi_hashline", action="store_true")
     bn.add_argument("--tag", default="", help="label for the record's executor name, e.g. low")
+    bn.add_argument("--series", action="store_true", help="append one row per executor to .athena/bench_series.jsonl (C-4.1)")
     bn.add_argument("--dry-run", dest="dry_run", action="store_true")
     bn.add_argument("--text", action="store_true")
     bn.set_defaults(fn=cmd_bench)
+    dr = sub.add_parser("drift", help="the rungs watched: judge the bench series per executor with a one-sided CUSUM and emit the bd command for a drop (C-4.2, C-4.3, C-4.4, C-4.5)")
+    dr.add_argument("contract")
+    dr.add_argument("--series", default="", help="series file (default: <feature>/.athena/bench_series.jsonl)")
+    dr.add_argument("--slug", default="")
+    dr.add_argument("--min-points", dest="min_points", type=int, default=6)
+    dr.add_argument("--text", action="store_true")
+    dr.set_defaults(fn=cmd_drift)
 
     vf = sub.add_parser("verify", help="a workspace nobody dispatched earns its record: diff against "
                                        "the target + the task's specs, run now (C-2.7)")
