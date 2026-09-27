@@ -131,29 +131,60 @@ def probe_zombie(gpu: int, port: int, lane: str, router: str) -> dict:
 
 
 def probe_neighbour(gpu: int, port: int, lane: str, router: str) -> dict:
-    hold = subprocess.Popen([str(VLLM_PY), "-c", f"import torch, time; x = torch.empty(int(6e9), dtype=torch.uint8, device='cuda:{gpu}'); print('holding', flush=True); time.sleep(900)"],
+    """6 GB held by a stranger while the lane restarts: the start must succeed with a lower util and a KV
+    that fits. Honest since 28.09 01:05: the holder must say `holding`, a NEW start banner must appear,
+    the util/KV lines are read after it, and the API pids must have changed."""
+    log_path = pathlib.Path(r"D:\tmp\lanes\lane-omni.log")
+
+    def banners() -> int:
+        try:
+            return log_path.read_text(encoding="utf-8", errors="replace").count("===== start ")
+        except OSError:
+            return 0
+    pids_before = _vllm_pids("omnicoder")
+    if not pids_before:
+        return {"ok": False, "reason": "no vllm process for the lane found"}
+    n0 = banners()
+    # the neighbour is started once the lane's API is down, so the VRAM it takes is the restart's budget
+    for pid in pids_before:
+        subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+    time.sleep(6)
+    hold = subprocess.Popen([str(VLLM_PY), "-c", f"import torch, time; x = torch.empty(int(6e9), dtype=torch.uint8, device='cuda:{gpu}'); print('holding', flush=True); time.sleep(1500)"],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
-        time.sleep(15)
+        held = ""
+        t_hold = time.time()
+        while time.time() - t_hold < 60:
+            line = hold.stdout.readline()
+            if line:
+                held = line.strip()
+                break
+            if hold.poll() is not None:
+                break
+            time.sleep(0.5)
+        if held != "holding":
+            err = hold.stderr.read()[-300:] if hold.poll() is not None else ""
+            return {"ok": False, "reason": "the neighbour could not take 6 GB: " + (err or "no `holding` within 60 s"),
+                    "gpu_free_mb_at_attempt": _gpu_free_mb(gpu)}
         free_with = _gpu_free_mb(gpu)
-        pids = _vllm_pids("omnicoder")
-        for pid in pids:
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
-        time.sleep(10)
         t0 = time.time()
-        _post(f"{router}/v1/chat/completions", {"model": lane, "max_tokens": 1, "messages": [{"role": "user", "content": "ok"}]}, timeout=900)
+        _post(f"{router}/v1/chat/completions", {"model": lane, "max_tokens": 1, "messages": [{"role": "user", "content": "ok"}]}, timeout=1200)
         back = None
-        for i in range(120):
+        for i in range(180):
             if _health(port) == 200:
                 back = round(time.time() - t0)
                 break
             time.sleep(5)
-        log = pathlib.Path(r"D:\tmp\lanes\lane-omni.log").read_text(encoding="utf-8", errors="replace")
-        tail = log[-20000:]
-        util = next((ln for ln in reversed(tail.splitlines()) if "[omni-3090] free=" in ln), "")
-        kv = next((ln for ln in reversed(tail.splitlines()) if "GPU KV cache size" in ln), "")
-        return {"ok": back is not None and "455,680" in kv, "gpu_free_mb_with_neighbour": free_with, "lane_back_after_s": back,
-                "util_line": util[-120:], "kv_line": kv[-80:]}
+        n1 = banners()
+        text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+        after = text.rsplit("===== start ", 1)[-1] if n1 > n0 else ""
+        util = next((ln for ln in after.splitlines() if "[omni-3090] free=" in ln), "")
+        kv = next((ln for ln in after.splitlines() if "GPU KV cache size" in ln), "")
+        pids_after = _vllm_pids("omnicoder")
+        restarted = n1 > n0 and bool(pids_after) and not (set(pids_after) & set(pids_before))
+        return {"ok": bool(restarted and back is not None and kv), "restarted": restarted, "new_starts": n1 - n0,
+                "gpu_free_mb_with_neighbour": free_with, "lane_back_after_s": back,
+                "pids_before": pids_before, "pids_after": pids_after, "util_line": util[-140:], "kv_line": kv[-80:]}
     finally:
         hold.kill()
 
