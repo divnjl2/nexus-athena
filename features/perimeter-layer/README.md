@@ -24,8 +24,17 @@ worse, the plan by leverage).
 - `C:\ProgramData\athena\bin`: Vale 3.23, conftest 0.70, gitleaks, osv-scanner, procgov 4.1, WinSW 2.12;
   pi machine-wide under `C:\ProgramData\athena\npm`. Readable to the sandbox account.
 - Our two lanes (`omni_3090.bat`, `nb3b_3060.bat`) run under procgov: a commit ceiling per process
-  tree (32 GB, 8 GB) and kill-on-close, so a lane's children die with it. llama-swap still owns the
-  launch and the port; the operator's 9B lane and llama-swap's config are untouched.
+  tree (32 GB, 8 GB), recursive. llama-swap still owns the launch and the port; the operator's 9B lane
+  and llama-swap's config are untouched. **Correction 28.09 00:40:** the 27.09 edit had left only the
+  comment line in both launchers; no procgov process existed on the box all evening, and the claim above
+  was written from the intent, not from `Get-Process procgov`. Found by the zombie probe. Two more facts
+  on the way to the real thing: procgov re-quotes its command line and breaks an inline
+  `bash -lc "... \"...\" ..."` (bash: `unexpected end of file`, llama-swap: `upstream command exited
+  prematurely`), so the launchers now pass one file, `omni_entry.sh` / `nb3b_entry.sh`; and procgov's
+  recursive wait does not end a job whose leader died, so `serve_omni_3090.sh` is now the lane's own
+  supervisor: the API server runs in bash's foreground and, when it exits, bash sweeps vLLM engine
+  processes whose parent is gone (the 9B lane's engine, whose parent lives, is never matched) and exits,
+  which ends procgov, closes the job and lets llama-swap relaunch on the next request.
 - The OmniCoder launcher claims its KV pool in bytes (9.255 GB, what vLLM logged at a clean start,
   455,680 tokens) and derives the fraction from the memory free at launch minus the driver's reserve,
   capped at 0.70: a neighbour on the card lowers the claim instead of making the start impossible.
@@ -98,9 +107,9 @@ card is spoken for and the floor is not applied.
 |---|---|---|
 | `seed` past int32 | the V2 runner crashed | 200 in 0.4 s |
 | `hog`, 8 GB under a 4 GB procgov ceiling beside the lane | the lane died of the host's malloc (20:02 the same day) | the hog dies with MemoryError in 0.6 s, the lane answers health and generation |
-| `zombie`, the lane's API process killed hard | a child held 8 GB of VRAM for five hours | pending: runs when the queue is empty |
+| `zombie`, the lane's API process killed hard | a child held 8 GB of VRAM for five hours | first run 00:23: **failed, and taught the most** — the EngineCore (a `multiprocessing.spawn` child, whose command line never says `vllm.entrypoints`) lived on with 21.7 GB of commit and the 3090; the relaunch died of `ERROR_COMMITMENT_LIMIT` (1455) with 4.9 GB of commit free on a 141.8 GB limit (the operator's vault build, card evaluation, WSL and the 3B lane held the rest); and there was no procgov to close the job (see the correction above). Rerun after the supervisor: see below |
 | `neighbour`, 6 GB held on the card during a restart | the restart was refused (fixed fraction) | pending |
-| `load429`, concurrency above the router's limit | the lane crashed on KV overflow (June) | pending |
+| `load429`, concurrency above the router's limit | the lane crashed on KV overflow (June) | 24 concurrent: 12 x 200, 12 x 429, health 200 after (28.09 00:23) |
 
 ### Tokens
 
