@@ -1607,6 +1607,14 @@ def cmd_daemon(a) -> int:
                 "--task", task, "--executor", a.executor, "--workspace", a.workspace,
                 "--iterations", str(a.iterations), "--timeout", str(a.timeout), "--stall", str(a.stall),
                 "--slug", slug, "--bd"] + (["--text"] if a.text else [])
+        # the executor's harness flags travel with the tick: strict tool calling, the OS sandbox (C-10.1),
+        # the base-relative verdict (C-8.4) — the daemon decides nothing about them, it forwards
+        if getattr(a, "pi_strict", False):
+            argv.append("--pi-strict")
+        if getattr(a, "sandbox", "off") != "off":
+            argv += ["--sandbox", a.sandbox, "--sandbox-ports", str(getattr(a, "sandbox_ports", "60081"))]
+        if getattr(a, "inherit_red", False):
+            argv.append("--inherit-red")
         print(f"# daemon tick {tick}: {task} -> {a.executor}", flush=True)
         code = subprocess.run(argv).returncode
         running.discard(task)
@@ -3327,6 +3335,10 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("--stop-file", dest="stop_file", default="")
     dm.add_argument("--ladder", default="pi-3b,pi-omni9,claude", help="rungs in order for escalation (C-11.4); empty = none")
     dm.add_argument("--once", action="store_true")
+    dm.add_argument("--pi-strict", dest="pi_strict", action="store_true", help="forwarded to dispatch")
+    dm.add_argument("--sandbox", choices=("off", "on", "required"), default="off", help="forwarded to dispatch (C-10.1)")
+    dm.add_argument("--sandbox-ports", dest="sandbox_ports", default="60081", help="forwarded to dispatch")
+    dm.add_argument("--inherit-red", dest="inherit_red", action="store_true", help="forwarded to dispatch (C-8.4)")
     dm.add_argument("--dry-run", dest="dry_run", action="store_true")
     dm.add_argument("--speckit", default="auto")
     dm.add_argument("--text", action="store_true")
