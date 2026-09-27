@@ -61,3 +61,30 @@ def test_bench_series_and_athena_drift_print_the_drops_with_their_commands():
         assert "bd create" in p.stdout and "omnicoder-9b" in p.stdout
     h = _athena("bench", "-h")
     assert "--series" in h.stdout
+
+
+def test_the_daemon_applies_the_floors_and_the_wake_and_the_merge_governs_the_mutation_stage():
+    """C-5.5 — the dry daemon with floors and an injected host state parks with the resource when under
+    a floor and ticks when above; the flags for the wake, the inventory and the governor exist."""
+    import json
+    import tempfile
+    GB = 1024 ** 3
+    with tempfile.TemporaryDirectory() as td:
+        low = pathlib.Path(td) / "low.json"
+        low.write_text(json.dumps({"ram_free": 3 * GB, "ram_total": 64 * GB, "gpus": [{"index": 1, "name": "RTX 3090", "free": 12 * GB, "total": 24 * GB}]}), encoding="utf-8")
+        high = pathlib.Path(td) / "high.json"
+        high.write_text(json.dumps({"ram_free": 30 * GB, "ram_total": 64 * GB, "gpus": [{"index": 1, "name": "RTX 3090", "free": 12 * GB, "total": 24 * GB}]}), encoding="utf-8")
+        ready = pathlib.Path(td) / "ready.json"
+        ready.write_text(json.dumps([{"id": "athena:demo:T2.1", "priority": 1, "created_at": "2026-09-27T10:00:00Z"}]), encoding="utf-8")
+        base = ["daemon", str(ROOT / "features" / "refinery-layer" / "contract.md"), "--front", str(ROOT / "features" / "refinery-layer" / "plan.md"),
+                "--slug", "demo", "--ready-json", str(ready), "--dry-run", "--text", "--host-floors", "ram=8G,vram=2G"]
+        p = _athena(*base, "--host-json", str(low))
+        assert p.returncode == 0, p.stdout + p.stderr
+        assert "park" in p.stdout.lower() and "ram" in p.stdout.lower() and "3.0" in p.stdout
+        q = _athena(*base, "--host-json", str(high))
+        assert q.returncode == 0 and "daemon: T2.1" in q.stdout
+    h = _athena("daemon", "-h")
+    assert "--wake" in h.stdout and "--gpu-allowlist" in h.stdout and "--host-floors" in h.stdout
+    m = _athena("merge", "-h")
+    assert "--governor-gb" in m.stdout
+

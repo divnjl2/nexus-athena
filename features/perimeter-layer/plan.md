@@ -99,6 +99,32 @@ it; a drop opens a bead once; a change of the task set is told apart from a chan
   - files: `athena.py`
   - verifies: S4.5
 
+## Phase 5: The substrate
+**Goal:** host floors before a dispatch or a heavy gate, a lane woken through the router, strangers on a
+GPU named once, heavy gates under the process governor, all wired into the daemon and the queue.
+**Depends on:** none
+### Tasks
+- [ ] T5.1 Host state and the floors
+  - success_check: `python -m pytest tests/test_perimeter_host.py::test_the_host_floors_park_a_dispatch_and_name_the_resource -q`
+  - files: `lib/host.py`
+  - verifies: S5.1
+- [ ] T5.2 Waking a lane through the router
+  - success_check: `python -m pytest tests/test_perimeter_host.py::test_a_lane_with_no_state_is_woken_through_the_router_before_it_is_parked -q`
+  - files: `lib/host.py`
+  - verifies: S5.2
+- [ ] T5.3 The GPU inventory and its strangers
+  - success_check: `python -m pytest tests/test_perimeter_host.py::test_strangers_on_a_gpu_are_named_against_its_allow_list_and_reported_once -q`
+  - files: `lib/host.py, features/perimeter-layer/gpus.json`
+  - verifies: S5.3
+- [ ] T5.4 The governor around a heavy gate
+  - success_check: `python -m pytest tests/test_perimeter_host.py::test_a_heavy_gate_runs_under_the_governor_when_present_and_says_so -q`
+  - files: `lib/host.py`
+  - verifies: S5.4
+- [ ] T5.5 Floors, wake, inventory and governor wired
+  - success_check: `python -m pytest tests/test_perimeter_wiring.py::test_the_daemon_applies_the_floors_and_the_wake_and_the_merge_governs_the_mutation_stage -q`
+  - files: `athena.py`
+  - verifies: S5.5
+
 ### Manual Verification
 - `athena check features/perimeter-layer/contract.md --front features/perimeter-layer/plan.md --run --text` green on every spec.
 - One real merge through `athena merge` with the scan and policy stages on, refused once by a planted secret in the diff and once by a missing mutation stage.

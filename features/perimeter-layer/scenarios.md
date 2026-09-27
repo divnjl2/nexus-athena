@@ -172,3 +172,46 @@
 - **Given** tests/test_perimeter_wiring.py
 - **When** the spec `test_bench_series_and_athena_drift_print_the_drops_with_their_commands` is executed
 - **Then** `athena drift` over a prepared series file prints one line per executor with the verdict and, for a drop, the bd command; `athena bench --help` names `--series`.
+
+## C-5 — the substrate (lib/host.py)
+
+### S5.1 — the host floors park a dispatch and name the resource
+- **verifies:** C-5.1
+- **pins:** e02f0e00311ad772
+- **run_cmd:** `python -m pytest tests/test_perimeter_host.py::test_the_host_floors_park_a_dispatch_and_name_the_resource -q`
+- **Given** tests/test_perimeter_host.py
+- **When** the spec `test_the_host_floors_park_a_dispatch_and_name_the_resource` is executed
+- **Then** with injected readers a host under the RAM floor or a GPU under the VRAM floor is parked with the resource and both numbers in the reason; above both floors it is admitted; a reader that fails leaves the resource unknown and parks, saying so.
+
+### S5.2 — a lane with no state is woken through the router before it is parked
+- **verifies:** C-5.2
+- **pins:** 1836929d85ea7e94
+- **run_cmd:** `python -m pytest tests/test_perimeter_host.py::test_a_lane_with_no_state_is_woken_through_the_router_before_it_is_parked -q`
+- **Given** tests/test_perimeter_host.py
+- **When** the spec `test_a_lane_with_no_state_is_woken_through_the_router_before_it_is_parked` is executed
+- **Then** the wake request targets the router with the lane's model and a one-token body; a health that turns 200 within the timeout ends the wait as woken; one that never does ends as parked with the seconds waited.
+
+### S5.3 — strangers on a gpu are named against its allow list and reported once
+- **verifies:** C-5.3
+- **pins:** 449d5f5968786fba
+- **run_cmd:** `python -m pytest tests/test_perimeter_host.py::test_strangers_on_a_gpu_are_named_against_its_allow_list_and_reported_once -q`
+- **Given** tests/test_perimeter_host.py
+- **When** the spec `test_strangers_on_a_gpu_are_named_against_its_allow_list_and_reported_once` is executed
+- **Then** processes whose executable path matches no allow pattern of that GPU are strangers; the bd command names the GPU, pid and executable; the same pid on the next read yields no second command.
+
+### S5.4 — a heavy gate runs under the governor when present and says so
+- **verifies:** C-5.4
+- **pins:** 9a77eca56058efd7
+- **run_cmd:** `python -m pytest tests/test_perimeter_host.py::test_a_heavy_gate_runs_under_the_governor_when_present_and_says_so -q`
+- **Given** tests/test_perimeter_host.py
+- **When** the spec `test_a_heavy_gate_runs_under_the_governor_when_present_and_says_so` is executed
+- **Then** with the governor found the argv is prefixed by it with the commit ceiling and kill-on-close; without it the argv is unchanged and the note says ungoverned.
+
+### S5.5 — the daemon applies the floors and the wake and the merge governs the mutation stage
+- **verifies:** C-5.5
+- **pins:** dc586cf079c2fd82
+- **run_cmd:** `python -m pytest tests/test_perimeter_wiring.py::test_the_daemon_applies_the_floors_and_the_wake_and_the_merge_governs_the_mutation_stage -q`
+- **Given** tests/test_perimeter_wiring.py
+- **When** the spec `test_the_daemon_applies_the_floors_and_the_wake_and_the_merge_governs_the_mutation_stage` is executed
+- **Then** `athena daemon --dry-run --host-floors ram=8G,vram=2G --host-json <file>` prints the park with the resource when the file is under a floor and the dry tick when above; `athena daemon -h` names `--wake` and `--gpu-allowlist`; `athena merge -h` names `--governor-gb`.
+

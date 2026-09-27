@@ -115,3 +115,34 @@
   SHALL append the rows, evaluate the series per executor and print the drops with their bd
   commands.
   - source: design
+
+## C-5 — The substrate: the scheduler the box does not have (lib/host.py)
+
+- **C-5.1** — WHEN a dispatch or a heavy gate is about to start THE SYSTEM SHALL read the host's free
+  RAM and each GPU's free VRAM and park when either is under the floor named, naming the resource
+  and both numbers.
+  - source: incident
+  - note: 27.09 20:02 — vLLM died of a host malloc while crosshair, cosmic-ray, pytest and two foreign
+    GPU jobs ran beside two lanes. Windows has no OOM killer and no scheduler that knows a card's
+    free memory; every tool places by static config. The floors are this frame's scheduler.
+- **C-5.2** — WHEN a lane answers no state THE SYSTEM SHALL wake it through the router with one
+  minimal request and wait up to the timeout named for its health before parking with the reason.
+  - source: incident
+  - note: llama-swap relaunches a dead upstream only on the next request; the daemon parked for
+    twenty minutes on 27.09 waiting for a request nobody sent.
+- **C-5.3** — WHEN a GPU's compute processes are read THE SYSTEM SHALL name every process whose
+  executable is not in that GPU's allow-list and emit one bd command per stranger, once per pid.
+  - source: incident
+  - note: a foreign llama-server on :8091 held the 3090 for five hours on 27.09 and once before on
+    23.09; NVML on WDDM shows presence, not size, so the inventory reports and never kills.
+- **C-5.4** — WHEN a heavy gate is spawned THE SYSTEM SHALL wrap its command in the process governor
+  with the commit ceiling named when the governor is on the host, and run without it otherwise,
+  saying which.
+  - source: design
+  - note: procgov (MIT) turns the tree into a job object with a commit ceiling and kill-on-close;
+    a runaway gate then hits its own cap instead of the lane's malloc.
+- **C-5.5** — WHEN `athena daemon` runs with host floors THE SYSTEM SHALL apply C-5.1 before every
+  dispatch and C-5.2 and C-5.3 on every tick, and `athena merge` SHALL run the mutation stage under
+  C-5.4.
+  - source: design
+

@@ -1,0 +1,7 @@
+{
+ "note": "C-5.3 — who may hold compute on each GPU of win-desktop; anything else is a stranger, reported once per pid, never killed",
+ "gpus": {
+  "0": {"name": "RTX 3060", "allow": ["vllm-win-021", "Python312\\python.exe", "llama-server.exe", "dwm.exe", "explorer.exe", "msedgewebview2.exe", "ShellHost.exe"]},
+  "1": {"name": "RTX 3090", "allow": ["vllm-win-021", "Python312\\python.exe", "llama-b11165-cuda\\llama-server.exe", "dwm.exe"]}
+ }
+}
