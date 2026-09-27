@@ -95,11 +95,25 @@ def test_the_frames_documents_pass_the_prose_style_at_severity_error():
     vale = _vale_binary()
     if not vale:
         pytest.skip("vale is not installed: winget install vale.vale (or set ATHENA_VALE)")
+    import tempfile
+    # review 27.09: the first landing was an invalid config that vale rejected with an empty output, and an
+    # empty output read as "no findings"; the control document must trip all three rules first
+    with tempfile.TemporaryDirectory() as td:
+        control = pathlib.Path(td) / "control.md"
+        control.write_text("# Control" + chr(10) + chr(10) + "A line with an emoji 😀 here." + chr(10)
+                           + "This is TBD and a TODO." + chr(10) + "Two  spaces here." + chr(10), encoding="utf-8")
+        c = subprocess.run([vale, "--config", str(cfg), "--output=JSON", "--minAlertLevel=suggestion", str(control)],
+                           cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+        assert c.stdout.strip().startswith("{"), "vale did not run the config: " + (c.stderr or c.stdout)[-300:]
+        tripped = {f["rule"] for f in findings_from("vale", c.stdout)}
+        assert {"Athena.NoEmoji", "Athena.NoPlaceholder", "Athena.NoDoubleSpace"} <= tripped, tripped
+        assert all(f["severity"] == "error" for f in findings_from("vale", c.stdout) if f["rule"].startswith("Athena.")), "the frame's rules are errors"
     targets = [str(p) for p in sorted(ROOT.glob("features/*/README.md"))] + [str(p) for p in sorted((ROOT / "docs" / "research").glob("*.md"))]
     assert targets
     p = subprocess.run([vale, "--config", str(cfg), "--output=JSON", "--minAlertLevel=suggestion", *targets],
                        cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
-    fs = findings_from("vale", p.stdout or "{}")
+    assert p.stdout.strip().startswith("{"), "vale did not run the config on the documents: " + (p.stderr or p.stdout)[-300:]
+    fs = findings_from("vale", p.stdout)
     v = findings_verdict(fs, "error")
     assert v["ok"] is True, v["reason"]
 
