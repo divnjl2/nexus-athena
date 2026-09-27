@@ -48,6 +48,7 @@ def test_an_embedded_postgres_serves_a_spec_and_leaves_nothing_behind(tmp_path):
     with postgres_stand(base_dir=tmp_path) as pg:
         assert pg.uri.startswith("postgresql://") and ("127.0.0.1" in pg.uri or "localhost" in pg.uri)
         assert pathlib.Path(pg.pgdata).is_dir()
+        assert 60084 <= pg.port <= 60089, "the stand listens inside the sandbox's loopback permit range (ATHENA_STAND_PORTS)"
         pg.sql("create table t(x int); insert into t values (41), (1);")
         out = pg.sql("select sum(x) from t;")
         assert "42" in out

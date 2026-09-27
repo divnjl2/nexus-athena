@@ -54,7 +54,8 @@
   directory when the spec ends, leaving no process behind.
   - source: design
   - note: `embedded-postgres` (Apache-2.0, pip wheel with PostgreSQL 18 for win_amd64) — no Docker
-    on this host. The port stays inside loopback; the sandbox's fence permits nothing else.
+    on this host. The port is taken from ATHENA_STAND_PORTS (default 60084-60089): loopback inside
+    the range the sandbox's fence permits, so a spec inside the sandbox can reach its own stand.
 - **C-2.4** — WHEN a red verdict is turned into a reproduction THE SYSTEM SHALL pack the failing
   command, its tail and the changed files into a packet that asks for a test passing on the
   present behaviour first and its inversion second, never for the fix.
