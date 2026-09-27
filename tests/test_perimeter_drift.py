@@ -15,11 +15,15 @@ def test_a_bench_run_appends_one_row_per_executor_with_the_sets_digest():
     prov = {"pi-omni9": {"model": "omnicoder-9b", "runtime": "vllm 0.21.0"}, "pi-3b": {"model": "nanbeige-3b", "runtime": "llama.cpp b9180"}}
     d1 = set_digest(["T2.1", "T2.2"], ["aaa", "bbb"])
     assert d1 == set_digest(["T2.2", "T2.1"], ["bbb", "aaa"]) and d1 != set_digest(["T2.1"], ["aaa"]) and len(d1) >= 12
+    # review 27.09: the digest rides in a JSON row, so it is text, not bytes
+    import json
+    assert isinstance(d1, str) and json.dumps({"set_digest": d1})
     rows = series_rows(table, prov, ts="2026-09-27T01:00:00", set_digest=d1)
     assert [r["executor"] for r in rows] == ["pi-3b", "pi-omni9"]
     r = next(x for x in rows if x["executor"] == "pi-omni9")
     assert r == {"ts": "2026-09-27T01:00:00", "executor": "pi-omni9", "model": "omnicoder-9b", "runtime": "vllm 0.21.0",
                  "set_digest": d1, "tasks": 10, "green": 8, "rate": 0.8}
+    assert json.dumps(rows)   # every row is a JSON line of the series
     assert series_rows({"x": {"tasks": 0, "green": 0}}, {}, ts="t", set_digest=d1)[0]["rate"] == 0.0
 
 
@@ -35,6 +39,13 @@ def test_a_drop_in_the_pass_rate_is_found_by_a_one_sided_cusum_and_dated():
     assert cusum_drop([0.8, 0.4, 0.4], min_points=6) is None
     # a rise is not a drop
     assert cusum_drop([0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.9, 0.9, 0.9, 0.9], min_points=6) is None
+    # review 27.09: a CUSUM accumulates — one bad night is not a drop, a recovered dip is not a drop,
+    # the same low level held for several points is (the first landing fired on any point below the reference)
+    steady = [0.8] * 8
+    assert cusum_drop(steady + [0.2] + [0.8] * 3, min_points=6) is None
+    assert cusum_drop(steady + [0.5, 0.5] + [0.8] * 6, min_points=6) is None
+    held = cusum_drop(steady + [0.3] * 4, min_points=6)
+    assert held is not None and 8 <= held["start"] <= 10
 
 
 def test_a_drop_emits_the_bd_command_that_opens_a_bead_once():
