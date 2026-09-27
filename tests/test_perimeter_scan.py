@@ -46,7 +46,9 @@ def test_the_scan_stage_is_planned_from_the_changed_files_and_refuses_on_a_findi
 def test_the_policy_input_is_rendered_and_conftest_evaluates_the_rego_policies():
     """C-3.2 — the input carries the record, the changed paths and the stages seen; conftest over the
     layer's policies (which name this clause) passes a complete input and denies the three
-    incomplete ones by message; without conftest the spec is skipped."""
+    incomplete ones by message; without conftest the spec is skipped. conftest 0.70 runs OPA 1.x, so
+    the policy is Rego v1: `package main`, `deny contains msg if { ... }`, helper rules with `if`;
+    the v0 form `deny[msg] { ... }` is a parse error there."""
     from lib.scan import conftest_command, policy_input
     policy_dir = ROOT / "features" / "perimeter-layer" / "policy"
     rego = policy_dir / "merge.rego"
