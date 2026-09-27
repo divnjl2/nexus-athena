@@ -1619,6 +1619,13 @@ def cmd_daemon(a) -> int:
         code = subprocess.run(argv).returncode
         running.discard(task)
         log(task, "verdict", f"dispatch exit {code}")
+        if code == 0:
+            # a green verdict closes the bead: the task leaves the ready list and waits for the merge queue,
+            # which reopens it with the reason if a stage refuses (measured 27.09: without this the daemon
+            # re-dispatched a green task forever)
+            subprocess.run([_bd_bin(), "close", bd_id_for(ready_list(), slug, task), "--reason", f"green in {a.workspace}; awaiting merge"],
+                           capture_output=True, timeout=60)
+            log(task, "close", "green verdict, bead closed until the merge queue")
         if code != 0:
             # a red verdict releases the claim: the task is open again with the checkpoint in its notes
             subprocess.run([_bd_bin(), "update", bd_id_for(ready_list(), slug, task), "--status", "open"], capture_output=True, timeout=60)
