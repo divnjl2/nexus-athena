@@ -76,5 +76,7 @@ def test_a_change_of_the_set_is_reported_apart_from_a_change_of_the_rung():
     real = _rows([0.8] * 6 + [0.4] * 4)
     w = series_verdicts(real, min_points=6)["pi-omni9"]
     assert w["drop"] is not None and w["verdict"] == "drop" and w["set_changes"] == []
+    # review 27.09: the drop is the CUSUM's own record, not a flag — the wiring prints where it began
+    assert isinstance(w["drop"], dict) and {"start", "ref", "level"} <= set(w["drop"]) and 5 <= w["drop"]["start"] <= 7
     two = series_verdicts(real + _rows([0.9] * 8, executor="pi-3b"), min_points=6)
     assert set(two) == {"pi-omni9", "pi-3b"} and two["pi-3b"]["verdict"] == "ok"
