@@ -1600,7 +1600,10 @@ def cmd_daemon(a) -> int:
             time.sleep(a.interval)
             continue
         from lib.daemon import bd_id_for
-        subprocess.run([_bd_bin(), "update", bd_id_for(ready_list(), slug, task), "--claim"], capture_output=True, timeout=60)
+        # the bead's id is read once, before the claim: a claimed task leaves the ready list, and every later
+        # lookup there returned nothing (measured 27.09: green tasks stayed in_progress, reds never reopened)
+        bead_id = bd_id_for(ready_list(), slug, task)
+        subprocess.run([_bd_bin(), "update", bead_id, "--claim"], capture_output=True, timeout=60)
         log(task, "dispatch", f"ready, {a.executor}: {why}")
         running.add(task)
         argv = [sys.executable, str(pathlib.Path(__file__).resolve()), "dispatch", a.contract, "--front", a.front,
@@ -1623,12 +1626,12 @@ def cmd_daemon(a) -> int:
             # a green verdict closes the bead: the task leaves the ready list and waits for the merge queue,
             # which reopens it with the reason if a stage refuses (measured 27.09: without this the daemon
             # re-dispatched a green task forever)
-            subprocess.run([_bd_bin(), "close", bd_id_for(ready_list(), slug, task), "--reason", f"green in {a.workspace}; awaiting merge"],
+            subprocess.run([_bd_bin(), "close", bead_id, "--reason", f"green in {a.workspace}; awaiting merge"],
                            capture_output=True, timeout=60)
             log(task, "close", "green verdict, bead closed until the merge queue")
         if code != 0:
             # a red verdict releases the claim: the task is open again with the checkpoint in its notes
-            subprocess.run([_bd_bin(), "update", bd_id_for(ready_list(), slug, task), "--status", "open"], capture_output=True, timeout=60)
+            subprocess.run([_bd_bin(), "update", bead_id, "--status", "open"], capture_output=True, timeout=60)
             log(task, "release", "red verdict, claim released")
         if code != 0 and a.ladder:
             # C-11.4: the escalation rule, then the next rung with the handoff as its brief
