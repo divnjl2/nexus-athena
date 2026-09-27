@@ -16,6 +16,9 @@ VALE = json.dumps({"features/x/README.md": [
     {"Check": "Athena.NoEmoji", "Line": 3, "Message": "no emoji in the frame's documents", "Severity": "error", "Span": [1, 2], "Match": "x"},
     {"Check": "Athena.NoDoubleSpace", "Line": 9, "Message": "double space", "Severity": "warning", "Span": [4, 5], "Match": "  "},
     {"Check": "Vale.Spelling", "Line": 11, "Message": "spelling", "Severity": "suggestion", "Span": [1, 3], "Match": "teh"}]})
+# review 27.09: the first landing keyed on the sample's file name; a second file with another name is the cure
+VALE_TWO = json.dumps({"docs/research/a.md": [{"Check": "Athena.NoPlaceholder", "Line": 2, "Message": "TBD", "Severity": "error", "Span": [1, 3], "Match": "TBD"}],
+                       "notes/b.md": [{"Check": "Athena.NoDoubleSpace", "Line": 5, "Message": "double space", "Severity": "warning", "Span": [1, 2], "Match": "  "}]})
 BANDIT = json.dumps({"results": [
     {"filename": "lib/a.py", "line_number": 10, "issue_severity": "HIGH", "test_id": "B602", "issue_text": "subprocess call with shell=True"},
     {"filename": "lib/b.py", "line_number": 2, "issue_severity": "LOW", "test_id": "B404", "issue_text": "import subprocess"}]})
@@ -46,6 +49,8 @@ def test_findings_from_four_tools_are_read_into_one_shape():
     assert g == [{"tool": "gitleaks", "path": "cfg.py", "line": 4, "severity": "error", "rule": "generic-api-key", "message": "Generic API Key"}]
     s = findings_from("semgrep", SEMGREP)
     assert s[0]["severity"] == "warning" and s[0]["line"] == 7 and s[0]["rule"].endswith("eval") and "eval" in s[0]["message"]
+    two = findings_from("vale", VALE_TWO)
+    assert sorted((f["path"], f["line"], f["severity"]) for f in two) == [("docs/research/a.md", 2, "error"), ("notes/b.md", 5, "warning")]
     assert findings_from("vale", "not json") == [] and findings_from("bandit", "") == [] and findings_from("unknown", VALE) == []
     # a finding the reader cannot place gets line 0
     assert findings_from("semgrep", json.dumps({"results": [{"check_id": "x", "path": "p", "extra": {"severity": "ERROR", "message": "m"}}]}))[0]["line"] == 0
