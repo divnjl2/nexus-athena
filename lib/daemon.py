@@ -192,3 +192,16 @@ def bd_id_for(ready, slug: str, task: str) -> str:
         if task_key_of(row) == (slug, task):
             return str(row.get("id") or "")
     return f"athena:{slug}:{task}"
+
+
+def unrecorded_failure(errors: dict, task: str, *, recorded: bool, code: int, limit: int = 3) -> tuple:
+    """PURE (29.09): a dispatch that exits non-zero WITHOUT appending a record is an error before any attempt
+    (unknown executor, missing binary, bad flag) — not a red verdict. `errors` counts them per task; the
+    count resets on any recorded outcome. Returns (errors, action): action is "block" when the count reaches
+    `limit` in a row, "retry" while under it, "" when the dispatch was recorded."""
+    errors = dict(errors or {})
+    if recorded or code == 0:
+        errors.pop(task, None)
+        return errors, ""
+    errors[task] = errors.get(task, 0) + 1
+    return errors, ("block" if errors[task] >= limit else "retry")

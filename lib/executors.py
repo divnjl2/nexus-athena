@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pathlib
 
-EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b")
+EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b", "pi-k3s9")
 LANE_MODELS = {"local-27b": "qwopus-27b", "local-9b": "qwable-9b"}
 LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"

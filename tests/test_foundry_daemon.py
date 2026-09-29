@@ -208,3 +208,19 @@ def test_a_llama_cpp_lane_reports_its_state_through_its_own_metrics_dialect():
     st = lane_state_from_metrics(chr(10).join(lines) + chr(10))
     assert st["running"] == 2 and st["waiting"] == 1 and abs(st["kv_usage"] - 0.37) < 1e-9
     assert "prefix_hit_rate" not in st
+
+
+def test_three_unrecorded_dispatch_failures_block_the_task_and_a_recorded_one_resets():
+    """29.09 — a dispatch that exits non-zero without writing a record is an error before any attempt, not a
+    red verdict: retried twice, blocked on the third; any recorded outcome resets the count."""
+    from lib.daemon import unrecorded_failure
+    e, act = unrecorded_failure({}, "T1", recorded=False, code=2)
+    assert act == "retry" and e == {"T1": 1}
+    e, act = unrecorded_failure(e, "T1", recorded=False, code=2)
+    assert act == "retry" and e["T1"] == 2
+    e, act = unrecorded_failure(e, "T1", recorded=False, code=2)
+    assert act == "block" and e["T1"] == 3
+    e, act = unrecorded_failure(e, "T1", recorded=True, code=1)
+    assert act == "" and "T1" not in e
+    e, act = unrecorded_failure({"T1": 2}, "T2", recorded=False, code=1)
+    assert act == "retry" and e == {"T1": 2, "T2": 1}

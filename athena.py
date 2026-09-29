@@ -1710,6 +1710,7 @@ def cmd_daemon(a) -> int:
     here.mkdir(parents=True, exist_ok=True)
     ledger = here / "daemon.jsonl"
     running: set = set()
+    dispatch_errors: dict = {}   # per task, unrecorded dispatch failures in a row (lib.daemon.unrecorded_failure)
     tick = 0
     stop_file = pathlib.Path(a.stop_file) if a.stop_file else None
 
@@ -1822,9 +1823,27 @@ def cmd_daemon(a) -> int:
         if getattr(a, "inherit_red", False):
             argv.append("--inherit-red")
         print(f"# daemon tick {tick}: {task} -> {a.executor}", flush=True)
+        _dp = here / "dispatch.jsonl"
+        _n0 = sum(1 for _l in _dp.read_text(encoding="utf-8").splitlines() if _l.strip()) if _dp.exists() else 0
         code = subprocess.run(argv).returncode
         running.discard(task)
         log(task, "verdict", f"dispatch exit {code}")
+        _n1 = sum(1 for _l in _dp.read_text(encoding="utf-8").splitlines() if _l.strip()) if _dp.exists() else 0
+        from lib.daemon import unrecorded_failure
+        dispatch_errors, _act = unrecorded_failure(dispatch_errors, task, recorded=_n1 > _n0, code=code)
+        if _act == "block":
+            # three errors before any attempt in a row (measured 29.09: an unregistered executor re-offered
+            # every 20 s for 16 ticks): the bead is blocked with the reason and leaves the ready list
+            subprocess.run([_bd_bin(), "update", bead_id, "--status", "blocked"], capture_output=True, timeout=60)
+            subprocess.run([_bd_bin(), "update", bead_id, "--append-notes", f"blocked by the daemon: 3 dispatches of {task} to {a.executor} ended (exit {code}) without a record — an error before any attempt; see the daemon log"], capture_output=True, timeout=60)
+            log(task, "escalate", f"blocked: 3 unrecorded dispatch failures on {a.executor} (exit {code})")
+            print(f"daemon: {task} blocked after 3 unrecorded dispatch failures on {a.executor}", flush=True)
+            time.sleep(a.interval)
+            continue
+        if _act == "retry":
+            log(task, "park", f"dispatch ended without a record (exit {code}), {dispatch_errors.get(task)} of 3")
+            time.sleep(a.interval)
+            continue
         if code == 0:
             # a green verdict closes the bead: the task leaves the ready list and waits for the merge queue,
             # which reopens it with the reason if a stage refuses (measured 27.09: without this the daemon
