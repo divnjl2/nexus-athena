@@ -12,7 +12,8 @@ from lib.executors import (EDIT_TOOLS, EXECUTORS, LOCAL_GATEWAY, availability, c
 
 def test_the_registry_resolves_known_executors_and_refuses_unknown():
     """C-3.1 — four names, no guessing: an unknown executor is refused with the list."""
-    assert set(EXECUTORS) == {"local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b"}
+    assert set(EXECUTORS) == {"local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b",
+                              "pi-k3s9"}   # 29.09: the first lane off this box (ai-server, k3s)
     assert resolve("local-27b") == {"name": "local-27b", "kind": "local", "model": "qwopus-27b"}
     assert resolve("openhands")["kind"] == "openhands" and resolve("claude")["kind"] == "claude"
     with pytest.raises(ValueError) as e:
