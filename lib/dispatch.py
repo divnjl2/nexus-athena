@@ -353,15 +353,15 @@ def verdict(before: dict, after: dict, checks: list, *, claim: str = "",
     # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file
     # C-2.8 of the refinery: anything under a sealed acceptance directory counts as a spec file;
     # C-9.6 of the foundry: so does a golden file
-    spec_touched = [p for p in touched
-                    if p.replace("\\", "/") in spec_set
-                    or "/sealed/" in ("/" + p.replace("\\", "/")) or "/golden/" in ("/" + p.replace("\\", "/"))]
+    # C-2.1: anything under a cassettes/ directory is a spec artefact
+    spec_touched = [p for p in touched if p.replace("\\", "/") in spec_set
+                    or "/sealed/" in ("/" + p.replace("\\", "/")) or "/golden/" in ("/" + p.replace("\\", "/"))
+                    or "/cassettes/" in ("/" + p.replace("\\", "/"))]
     green = bool(checks) and not red and not spec_touched
     allowed_set = {str(x).replace("\\", "/") for x in (allowed or ())}
     # C-2.8: what landed outside the task's files is not the task — flagged, and named
     outside = [p for p in touched if allowed_set and p.replace("\\", "/") not in allowed_set]
-    flags = [p for p in touched
-             if is_derived(p) or p.rsplit("/", 1)[-1] in HAND_WRITTEN or "/docs/adr/" in f"/{p}"
+    flags = [p for p in touched if is_derived(p) or p.rsplit("/", 1)[-1] in HAND_WRITTEN or "/docs/adr/" in f"/{p}"
              or p in spec_touched or p in outside]
     reasons: list[str] = []
     if outside:
