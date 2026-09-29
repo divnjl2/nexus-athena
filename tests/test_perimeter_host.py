@@ -89,7 +89,14 @@ def test_a_heavy_gate_runs_under_the_governor_when_present_and_says_so():
     argv unchanged and the note says ungoverned."""
     from lib.host import governed_argv
     argv = ["python", "-m", "cosmic_ray", "exec", "s.toml"]
-    g = governed_argv(argv, ceiling_gb=12, which=lambda name: r"C:\ProgramData\athena\bin\procgov.exe")
+    asked = []
+
+    def which(name):
+        asked.append(name)
+        return r"C:\ProgramData\athena\bin\procgov.exe"
+    g = governed_argv(argv, ceiling_gb=12, which=which)
+    # review 29.09: the first landing passed its own result dict to `which` — the lookup is by the governor's name
+    assert asked and all(isinstance(n, str) and n.startswith("procgov") for n in asked)
     assert g["argv"][0].endswith("procgov.exe") and g["argv"][-5:] == argv and g["governed"] is True
     joined = " ".join(g["argv"])
     assert "--maxjobmem" in joined and "12G" in joined and "--terminate-job-on-exit" in joined and "-r" in g["argv"]
