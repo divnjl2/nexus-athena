@@ -6,14 +6,14 @@ import os
 import shutil
 import pathlib
 from typing import Mapping, Any
-import subprocess
+import shutil
 
 
 def find_which(name: str) -> str | None:
     """Try to find a binary with the given name."""
     path = None
     try:
-        path = subprocess.which(name)
+        path = shutil.which(name)
     except Exception:
         pass
     if path is not None:

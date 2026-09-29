@@ -24,6 +24,7 @@ EFFECT_ALLOWED = frozenset({
     "lib/clause_map.py",    # runs each spec under coverage
     "lib/adapters.py",      # reads the HEAD sha of a repository
     "lib/bd_client.py",     # the only subprocess boundary to `bd`
+    "lib/stands.py",        # the PostgreSQL stand (perimeter C-2.3): initdb/postgres/psql as children, a loopback port probe
 })
 
 
