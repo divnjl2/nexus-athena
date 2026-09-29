@@ -213,7 +213,7 @@ def strangers_once(strangers_found, seen: set, *, slug: str = "perimeter-layer")
     """PURE (C-5.3): one command per stranger not seen before (keyed by GPU and pid); `seen` is updated."""
     commands = []
     for s in strangers_found or []:
-        key = f"{s.get('')}:{s.get('pid')}"
+        key = f"{s.get('gpu')}:{s.get('pid')}"
         if key in seen:
             continue
         seen.add(key)
@@ -238,17 +238,23 @@ def governed_argv(argv: list[str], ceiling_gb: int, which: callable) -> dict:
         "note": ""
     }
     
-    governor = which(result) if which is not None else None
+    # review 29.09: the lane asked `which` for the result dict itself (the spec's fake accepted anything);
+    # the governor is looked up by name, procgov.exe on this host
+    governor = None
+    if which is not None:
+        for name in ("procgov", "procgov.exe"):
+            governor = which(name)
+            if governor:
+                break
     
     if governor is not None:
         result["governed"] = True
         result["note"] = ""
         result["argv"] = [
-            governor,
-            "--maxjobmem",
-            f"{ceiling_gb}G",
+            str(governor),
+            f"--maxjobmem={ceiling_gb}G",
             "--terminate-job-on-exit",
-            "-r",
+            "-r", "-q", "--nogui", "--",
             *result["argv"]
         ]
     else:
