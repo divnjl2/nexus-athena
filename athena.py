@@ -1684,8 +1684,14 @@ def _wake_lane(a, log) -> bool:
 def _lane_model(executor: str) -> str:
     """the model name the router knows the lane by"""
     from lib.executors import PI_PROVIDERS
-    spec = PI_PROVIDERS.get(executor) or {}
-    return spec.get("model") or {"pi-omni9": "omnicoder-9b", "pi-9b": "qwen3.5-9b", "pi-3b": "nanbeige-3b"}.get(executor, executor)
+    spec = PI_PROVIDERS.get(executor)
+    # PI_PROVIDERS maps a lane to (provider, model) — measured 29.09: the first real wake crashed the daemon on
+    # `.get` over that tuple; the path had never run while the lane was up
+    if isinstance(spec, (tuple, list)) and len(spec) >= 2:
+        return str(spec[1])
+    if isinstance(spec, dict) and spec.get("model"):
+        return str(spec["model"])
+    return {"pi-omni9": "omnicoder-9b", "pi-9b": "qwen3.5-9b", "pi-3b": "nanbeige-3b"}.get(executor, executor)
 
 
 def cmd_daemon(a) -> int:

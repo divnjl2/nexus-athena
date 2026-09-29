@@ -63,6 +63,18 @@ def test_bench_series_and_athena_drift_print_the_drops_with_their_commands():
     assert "--series" in h.stdout
 
 
+def test_the_wake_names_the_lane_by_the_model_the_router_knows():
+    """C-5.2 — the wake request carries the router's model name for the executor lane; PI_PROVIDERS holds
+    (provider, model) tuples, and the first real wake (29.09) crashed on treating one as a dict."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("athena_cli", ROOT / "athena.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod._lane_model("pi-omni9") == "omnicoder-9b"
+    assert mod._lane_model("pi-9b") == "qwen3.5-9b"
+    assert mod._lane_model("no-such-lane") == "no-such-lane"
+
+
 def test_the_daemon_applies_the_floors_and_the_wake_and_the_merge_governs_the_mutation_stage():
     """C-5.5 — the dry daemon with floors and an injected host state parks with the resource when under
     a floor and ticks when above; the flags for the wake, the inventory and the governor exist."""
