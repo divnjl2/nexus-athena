@@ -101,6 +101,21 @@ free VRAM there is near zero whenever the lane is up. Fixed as: the VRAM floor g
 must fit before it is started), the RAM floor guards every dispatch; when the lane answers health, its
 card is spoken for and the floor is not applied.
 
+### The second node (29.09): ai-server as the executor lane
+
+The 3090 went back to the operator's 27B, and the queue moved to ai-server (k3s, RTX 3060 Ti, llama.cpp,
+Qwopus3.5-9B-v3, 6 x 28k) as executor `pi-k3s9`. Four seams broke on the way, each now a fix with a spec or
+a note: the OS sandbox reads its own pi seed (`~/.athena/sandbox/pi-agent/models.json`), not the operator's;
+node's fetch cannot reach the LAN past the outbound proxy env, so the only door is the loopback fence relay
+(60085 -> 192.168.1.136:8024, `NO_PROXY` set), and the relays now come back at logon (`AthenaRelays`); the
+lane-state reader learned llama.cpp's metrics dialect; the executor registry (`EXECUTORS`) is separate from
+`PI_PROVIDERS`, and a dispatch that dies before any attempt was re-offered every 20 s — three unrecorded
+failures now block the bead, and a spent ladder hands the task to the frontier instead of looping. The first
+remote landing (T3.1, 411 s, 15k in / 14k out) was green on S3.1 and a grader fit in five places; S3.1 grew
+five lines and the task went back to the same lane. The host floors gained `commit=` after the night of
+28.09 (the lane died of ERROR_COMMITMENT_LIMIT with RAM to spare); the omni lane runs on vLLM 0.29 since the
+same day (A/B: parity, V2 runner +3 percent at 6 concurrent).
+
 ### The proof by class (`tools/chaos_probe.py`, `.athena/chaos.jsonl`)
 
 | probe | what used to happen | now |
