@@ -1455,7 +1455,7 @@ def cmd_testwrite(a) -> int:
             run = {"exit": 126, "tail": "no test function added"}
             if name:
                 argv = [sys.executable, "-m", "pytest", f"{module}::{name}", "-q"]
-                code, tail = _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+                code, tail = _spawn(argv, cwd=str(ws), timeout=getattr(a, "check_timeout", a.timeout))
                 run = {"exit": code, "tail": tail}
             candidates.append({"source": added.strip("\n") + "\n" if added.strip() else "", "run": run,
                                "sample": k, "error": err})
@@ -1943,7 +1943,7 @@ def cmd_forge(a) -> int:
         argv, why = _tokenize(cmd)
         if argv and argv[0] in ("python", "python3"):
             argv[0] = sys.executable
-        return (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+        return (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=getattr(a, "check_timeout", a.timeout))
 
     for task in tasks:
         reset()
@@ -2229,7 +2229,7 @@ def cmd_verify(a) -> int:
         argv, why = _tokenize(cmdline)
         if argv and argv[0] in ("python", "python3") and a.check_python:
             argv[0] = a.check_python
-        code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=a.check_timeout)
+        code, tail = (126, why) if not argv else _spawn(argv, cwd=str(workspace), timeout=getattr(a, "check_timeout", a.timeout))
         checks.append({"cmd": cmdline, "exit": code, "tail": tail})
     v = verify_verdict(changed, checks, spec_files=[f for f in spec_files if f])
     here = pathlib.Path(a.contract).resolve().parent / ".athena"
@@ -2354,7 +2354,7 @@ def cmd_merge(a) -> int:
     if getattr(a, "mutation", True):
         # C-11.2: the mutation stage — survivors on the offer's added lines refuse it
         mstage = _mutation_stage_for(workspace, a.target, threshold=a.mutation_threshold,
-                                     max_mutants=a.mutation_max, timeout=a.check_timeout,
+                                     max_mutants=a.mutation_max, timeout=getattr(a, "check_timeout", a.timeout),
                                      governor_gb=getattr(a, "governor_gb", 0))
         stages_seen.append("mutation")
         if mstage is not None and not mstage["ok"]:
@@ -3048,7 +3048,7 @@ def cmd_dispatch(a) -> int:
                 # when dispatch itself runs from a venv, Windows resolves `python` from the
                 # parent's image directory. The check runs with the interpreter the caller named.
                 argv[0] = a.check_python
-            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=getattr(a, "check_timeout", a.timeout))
             rows.append({"cmd": cmdline, "exit": code, "tail": tail})
         return rows
 
@@ -3081,7 +3081,7 @@ def cmd_dispatch(a) -> int:
             argv, why = _tokenize(batch["cmd"])
             if argv and argv[0] in ("python", "python3") and a.check_python:
                 argv[0] = a.check_python
-            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=a.check_timeout)
+            code, tail = (126, why) if not argv else _spawn(argv, cwd=str(ws), timeout=getattr(a, "check_timeout", a.timeout))
             out.append({"cmd": batch["cmd"], "exit": code, "tail": tail, "radius": True, "members": batch["members"]})
         return out
 
