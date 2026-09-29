@@ -292,7 +292,7 @@ def sealed_touched(changed) -> list:
 
 # --- C-11.2: the mutation stage of the merge queue ------------------------------------------
 
-STAGES = ("admit", "rebase", "check", "mutation", "fast-forward")
+STAGES = ("admit", "rebase", "check", "scan", "mutation", "policy", "fast-forward")   # C-3.3
 
 
 def changed_lines_from_diff(diff_text: str) -> dict:

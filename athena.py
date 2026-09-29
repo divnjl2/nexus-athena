@@ -2342,13 +2342,29 @@ def cmd_merge(a) -> int:
         if code != 0:
             return end("check", False, f"sealed acceptance: {cmdline} exit {code}: {tail[-300:]}")
 
+    stages_seen = ["admit", "rebase", "check"]
+    changed_paths = _changed_paths(workspace, a.target)
+    if getattr(a, "scan", True):
+        # C-3.1, C-3.3: the scanners planned from the changed files, after check, before mutation
+        from lib.scan import scan_stage
+        sstage = scan_stage(changed_paths, lambda argv: run(argv, str(workspace)), threshold=a.scan_threshold, diff_ref=f"{a.target}...HEAD")
+        stages_seen.append("scan")
+        if not sstage.get("ok", True):
+            return end("scan", False, sstage.get("reason", "scan refused"))
     if getattr(a, "mutation", True):
         # C-11.2: the mutation stage — survivors on the offer's added lines refuse it
         mstage = _mutation_stage_for(workspace, a.target, threshold=a.mutation_threshold,
                                      max_mutants=a.mutation_max, timeout=a.check_timeout,
                                      governor_gb=getattr(a, "governor_gb", 0))
+        stages_seen.append("mutation")
         if mstage is not None and not mstage["ok"]:
             return end("mutation", False, mstage["reason"])
+    if getattr(a, "policy", True):
+        # C-3.2, C-3.3: the Rego policies over the record about to be written, before fast-forward
+        pstage = _policy_stage_for(a, workspace, executor, changed_paths, stages_seen, records, ts)
+        stages_seen.append("policy")
+        if pstage is not None and not pstage.get("ok", True):
+            return end("policy", False, pstage.get("reason", "policy denied"))
     f = fast_forward(run, str(workspace), a.target)
     if not f.get("ok"):
         return end("fast-forward", False, f.get("reason", "not a fast-forward"))
@@ -2789,6 +2805,43 @@ def _sandbox_wrap(cmd: dict, workspace, *, lane_ports) -> dict:
     srt_argv = _node_cli(pathlib.Path(_srt_binary() or "srt.cmd"), "@anthropic-ai/sandbox-runtime")
     argv = srt_argv + ["--settings", str(cfg_path), "-c", line]
     return {**cmd, "argv": argv}
+
+
+def _changed_paths(ws, target: str) -> list:
+    """the offer's changed paths against the target (git diff --name-only), the input of scan and policy"""
+    p = subprocess.run(["git", "diff", "--name-only", f"{target}...HEAD"], cwd=str(ws), capture_output=True,
+                       text=True, encoding="utf-8", errors="replace")
+    return [x.strip().replace("\\", "/") for x in (p.stdout or "").splitlines() if x.strip()]
+
+
+def _policy_stage_for(a, ws, executor: str, changed: list, stages: list, records: list, ts: str):
+    """C-3.2: the policy input rendered from the record about to be written, the changed paths and the
+    stages seen; conftest over the policy directory; no conftest on the host is unrun, not a denial"""
+    import shutil as _sh
+    import tempfile as _tf
+    from lib.refinery import merge_record
+    from lib.scan import conftest_command, policy_input
+    policy_dir = pathlib.Path(a.policy_dir) if getattr(a, "policy_dir", "") else pathlib.Path(a.contract).resolve().parent / "policy"
+    if not policy_dir.is_dir():
+        return {"ok": True, "stage": "policy", "reason": f"unrun: no policy directory at {policy_dir}"}
+    conftest = _sh.which("conftest")
+    if not conftest:
+        return {"ok": True, "stage": "policy", "reason": "unrun: conftest is not installed"}
+    last = None
+    for rec in records:
+        if rec.get("task") == a.task:
+            last = rec
+    inp = policy_input(merge_record(a.task, executor, "policy", True, "", ts=ts), changed=changed, stages=stages, last_dispatch=last)
+    with _tf.TemporaryDirectory() as td:
+        path = pathlib.Path(td) / "input.json"
+        path.write_text(json.dumps(inp), encoding="utf-8")
+        argv = conftest_command(str(path), str(policy_dir), conftest=conftest)
+        p = subprocess.run(argv, cwd=str(ws), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    out = (p.stdout or "") + (p.stderr or "")
+    if p.returncode == 0:
+        return {"ok": True, "stage": "policy", "reason": "policies passed"}
+    denials = [ln.strip() for ln in out.splitlines() if "FAIL" in ln or "deny" in ln.lower()]
+    return {"ok": False, "stage": "policy", "reason": "; ".join(denials)[:600] or out[-400:]}
 
 
 def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants: int, timeout: int, governor_gb: int = 0):
@@ -3868,6 +3921,10 @@ def build_parser() -> argparse.ArgumentParser:
     mg.add_argument("--slug", default="", help="bd project slug (default: from the plan title)")
     mg.add_argument("--bd", action="store_true", help="on refusal, run the bd command that returns the task")
     mg.add_argument("--governor-gb", dest="governor_gb", type=int, default=12, help="C-5.4: commit ceiling in GB for the mutation stage under procgov; 0 = ungoverned")
+    mg.add_argument("--no-scan", dest="scan", action="store_false", help="C-3.3: skip the scan stage (explicit, recorded)")
+    mg.add_argument("--scan-threshold", dest="scan_threshold", default="warning", help="C-3.1: refuse at or above this severity (info|warning|error)")
+    mg.add_argument("--no-policy", dest="policy", action="store_false", help="C-3.3: skip the policy stage (explicit, recorded)")
+    mg.add_argument("--policy-dir", dest="policy_dir", default="", help="C-3.2: the Rego policies (default: <feature>/policy)")
     mg.add_argument("--no-mutation", dest="mutation", action="store_false", help="skip the mutation stage (C-11.2)")
     mg.add_argument("--mutation-threshold", dest="mutation_threshold", type=float, default=0.7)
     mg.add_argument("--mutation-max", dest="mutation_max", type=int, default=20)
