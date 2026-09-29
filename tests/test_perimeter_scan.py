@@ -26,6 +26,16 @@ def test_the_scan_stage_is_planned_from_the_changed_files_and_refuses_on_a_findi
     assert "master...HEAD" in " ".join(next(p for p in plan if p["tool"] == "gitleaks")["argv"])
     assert "requirements.txt" in next(p for p in plan if p["tool"] == "pip-audit")["argv"]
     assert scan_plan([]) == [] and [p["tool"] for p in scan_plan(["docs/x.md"])] == ["gitleaks"]
+    # review 29.09 (the first landing planned gitleaks only for Markdown, bandit with `-o json` and a 2,000-entry
+    # `-t` list, pip-audit as `pip audit`): the argv must be the tool's own grammar, and gitleaks runs for ANY change
+    assert [p["tool"] for p in scan_plan(["lib/a.py"])] == ["bandit", "gitleaks"]
+    assert bandit["argv"][0] == "bandit" and "-f" in bandit["argv"] and "json" in bandit["argv"] and len(bandit["argv"]) <= 12
+    assert "-t" not in bandit["argv"] and "-o" not in bandit["argv"]
+    leaks = next(p for p in scan_plan(["lib/a.py"], diff_ref="master...HEAD") if p["tool"] == "gitleaks")
+    assert leaks["argv"][0] == "gitleaks" and "json" in " ".join(leaks["argv"]) and len(leaks["argv"]) <= 12
+    assert any(a.startswith("--log-opts") for a in leaks["argv"]) or leaks["argv"][1] == "git"
+    audit = next(p for p in scan_plan(["requirements.txt"]) if p["tool"] == "pip-audit")
+    assert audit["argv"][0] == "pip-audit" and "-r" in audit["argv"] and "json" in " ".join(audit["argv"])
     high = json.dumps({"results": [{"filename": "lib/a.py", "line_number": 3, "issue_severity": "HIGH", "test_id": "B602", "issue_text": "shell=True"}]})
     low = json.dumps({"results": [{"filename": "lib/a.py", "line_number": 3, "issue_severity": "LOW", "test_id": "B404", "issue_text": "import subprocess"}]})
 
@@ -41,6 +51,20 @@ def test_the_scan_stage_is_planned_from_the_changed_files_and_refuses_on_a_findi
     # a scanner that is missing is not a finding: the stage says so and does not refuse on silence
     missing = scan_stage(["lib/a.py"], lambda argv: (127, "not found"), threshold="warning")
     assert missing["ok"] is True and "unrun" in missing["reason"]
+    # review 29.09: the stage runs the plan it was given the diff ref for, and a gitleaks finding is a leak
+    # whatever the threshold — the first landing re-planned without the ref and never read gitleaks' output
+    seen = []
+
+    def run_leak(argv):
+        seen.append(argv[0])
+        if argv[0] == "gitleaks":
+            return (1, json.dumps([{"RuleID": "generic-api-key", "File": "lib/a.py", "StartLine": 7, "Secret": "sk-…"}]))
+        return (0, json.dumps({"results": []}))
+    leaked = scan_stage(["lib/a.py"], run_leak, threshold="error", diff_ref="master...HEAD")
+    assert leaked["ok"] is False and leaked["stage"] == "scan" and "generic-api-key" in leaked["reason"] and "lib/a.py:7" in leaked["reason"]
+    assert "gitleaks" in seen and "bandit" in seen
+    clean = scan_stage(["lib/a.py"], lambda argv: (0, "[]" if argv[0] == "gitleaks" else json.dumps({"results": []})), threshold="warning", diff_ref="master...HEAD")
+    assert clean["ok"] is True and clean["stage"] == "scan" and clean.get("findings") == []
 
 
 def test_the_policy_input_is_rendered_and_conftest_evaluates_the_rego_policies():
