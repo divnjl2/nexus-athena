@@ -3090,6 +3090,9 @@ def cmd_dispatch(a) -> int:
         if a.fanout <= 1:
             r = one_attempt(workspace, before, current)
             write_record(r, iteration)
+            # the union of what the executor touched, for the narrow restore below (C-8.4)
+            _rv = (r.get("v") or {}) if isinstance(r, dict) else {}
+            state.setdefault("touched_by_executor", set()).update(list(_rv.get("changed_files") or []) + list(_rv.get("deleted_files") or []))
             if getattr(a, "keep_best", True):
                 # C-11.6: every iteration is committed in the workspace; an iteration that lost
                 # green checks is rolled back to the best one before the next starts
@@ -3209,7 +3212,20 @@ def cmd_dispatch(a) -> int:
         # C-8.4: a task that ends red leaves the workspace as it found it — the iterations stay in
         # the history for the record, the next task starts from the base, not from this one's debris
         import subprocess as _sp1
-        _sp1.run(["git", "checkout", state["base_sha"], "--", "."], cwd=str(workspace), capture_output=True)
+        # only the executor's paths go back to the base: a whole-tree checkout reverted the frontier's own
+        # commits made during the dispatch (measured 29.09: a daemon fix and a strengthened spec vanished
+        # from the work tree while their commits stayed in history)
+        _touched = sorted(p for p in state.get("touched_by_executor", set()) if p)
+        for _rel in _touched:
+            _in_base = _sp1.run(["git", "cat-file", "-e", f"{state['base_sha']}:{_rel}"], cwd=str(workspace), capture_output=True).returncode == 0
+            if _in_base:
+                _sp1.run(["git", "checkout", state["base_sha"], "--", _rel], cwd=str(workspace), capture_output=True)
+            else:
+                try:
+                    (workspace / _rel).unlink()
+                except OSError:
+                    pass
+                _sp1.run(["git", "rm", "-q", "--cached", "--ignore-unmatch", "--", _rel], cwd=str(workspace), capture_output=True)
         _sp1.run(["git", "commit", "-q", "--allow-empty", "-am", f"athena: {a.task} red after {loop['iterations']} iteration(s); workspace restored to the base"],
                  cwd=str(workspace), capture_output=True)
         print(f"# {a.task} red: workspace restored to the base {state['base_sha'][:7]} (C-8.4)", flush=True)
