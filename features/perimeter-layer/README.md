@@ -62,6 +62,10 @@ worse, the plan by leverage).
 | T5.3 the inventory and its strangers | red x3, finished by the frontier | 3 + finish | the lane read the inventory at the wrong level and matched patterns as path suffixes where the inventory promises substrings, so every process was a stranger |
 | T5.4 the governor around a heavy gate | green | 1 | |
 | T2.3 the reproduction packet and the AssertFlip admission | green | 1 | |
+| T3.1 the scan stage | green on ai-server (first landing off this box), red on review, red x3 on rework, finished by the frontier | 1 + 3 + finish | the landing was green on S3.1 and a grader fit in five places (gitleaks only for Markdown, bandit `-o json` with a 2,000-entry `-t` list, `pip audit`, the stage re-planned without the diff ref, gitleaks unread); S3.1 grew five lines; the rework hit the lane's 8,192-token answer cap (`unterminated string`). The frontier wrote the stage |
+| T3.2 policy input, Rego under conftest | red x3 on ai-server, finished by the frontier | 3 + finish | the lane edited the spec's own test file, which the frame refuses as a landing; the policy is the Rego v1 draft probed under conftest 0.70 |
+| T3.3 scan and policy in the queue | finished by the frontier | finish | the athena.py wiring class; no larger rung on the ladder yet |
+| T3.4 a model's review in the record | green on ai-server, red on review, green on rework | 1 + 1 | the first landing returned a fresh dict (stage `merge`, empty reason); S3.4 now says every field of the record survives; the rework copied the record and added `review` — 44 s, 5k in / 1.4k out |
 | T2.4 `athena repro` | red x3, finished by the frontier | 3 + finish | athena.py again: the window overflowed (30,465 of 30,720 tokens) and the landing keyed on the spec's sample name (`if "test_demo.py::test_a" in tail`); the frontier wired the command, and found on the way that both health probes of T5.5 unpacked a string (never exercised while the lane was up) |
 
 Pattern of the evening: the visible spec alone is a grader a 9B learns to satisfy; the sealed second
@@ -123,10 +127,29 @@ same day (A/B: parity, V2 runner +3 percent at 6 concurrent).
 | `seed` past int32 | the V2 runner crashed | 200 in 0.4 s |
 | `hog`, 8 GB under a 4 GB procgov ceiling beside the lane | the lane died of the host's malloc (20:02 the same day) | the hog dies with MemoryError in 0.6 s, the lane answers health and generation |
 | `zombie`, the lane's API process killed hard | a child held 8 GB of VRAM for five hours | first run 00:23: **failed, and taught the most** — the EngineCore (a `multiprocessing.spawn` child, whose command line never says `vllm.entrypoints`) lived on with 21.7 GB of commit and the 3090; the relaunch died of `ERROR_COMMITMENT_LIMIT` (1455) with 4.9 GB of commit free on a 141.8 GB limit (the operator's vault build, card evaluation, WSL and the 3B lane held the rest); and there was no procgov to close the job (see the correction above). **Rerun 00:55 under the supervisor: passed** — API killed, engine gone in 1.2 s (`api_server exited rc=1 ... sweeping orphaned engine pid 45596`), GPU free 4.9 -> 22.4 GB, lane back through llama-swap in ~100 s (weights in the page cache; a cold start from disk is ~590 s). Also measured on the way: killing procgov itself does not end its job (`--terminate-job-on-exit` is the Ctrl-C path), so the supervisor, not procgov, is what closes this class |
-| `neighbour`, 6 GB held on the card during a restart | the restart was refused (fixed fraction) | pending |
+| `neighbour`, 6 GB held on the card during a restart | the restart was refused (fixed fraction) | the first run (00:58) passed vacuously — same API pids before and after, util/KV lines read from the previous start; the probe was rewritten to demand a hold, a new start banner and changed pids, and the serve script now derives the KV pool from the budget too (a neighbour shrinks the KV instead of refusing the start: 0.61 util -> 376k tokens, 0.5 -> 237k). **The honest rerun has not happened**: the 3090 went back to the operator's 27B before it could |
 | `load429`, concurrency above the router's limit | the lane crashed on KV overflow (June) | 24 concurrent: 12 x 200, 12 x 429, health 200 after (28.09 00:23) |
+
+### Merged (29.09 14:10)
+
+`athena merge` from the work tree's own `athena.py` (the layer that adds the scan and policy stages passes
+through them): admit on T3.4's green record from `pi-k3s9`, rebase, check of 7 contracts, scan (bandit,
+gitleaks over `master...HEAD`, pip-audit from its own venv), mutation under procgov 12 GB, policy under
+conftest, fast-forward `master 31d9af1 -> fe8cb41`. Six refusals on the way, each a real finding: the
+executor registry spec pinned the exact set (pi-k3s9 added), the foundry queue spec pinned the exact stage
+tuple (now an order), the architecture lint saw `subprocess` in `findings.py` (a `subprocess.which` that does
+not exist) and in `stands.py` (now a named seam), the mutation stage crashed on `check_timeout` (never in the
+merge's namespace: the stage had never run for real), then caught T5.4 passing its own result dict to
+`which`, then a survivor on a line the lane had merely reformatted. The queue is the reviewer of last resort.
 
 ### Tokens
 
-Filled when the layer merges: the lane's input and output through the 9B per task, and the frontier's
-share (clauses, specs, reviews, two finishes).
+| executor | dispatches | input | output | lane time | tasks it landed alone |
+|---|---|---|---|---|---|
+| `pi-omni9` (OmniCoder-9B, win-desktop 3090, vLLM) | 39 | 15,042,895 | 380,209 | 2.7 h | T1.1, T1.2, T1.4, T2.1, T2.3, T4.1, T4.2, T5.1, T5.2, T5.4 |
+| `pi-k3s9` (Qwopus-9B, ai-server 3060 Ti, llama.cpp) | 18 | 96,804 (under-counted through the relay) | 120,150 | 0.9 h | T3.4 |
+
+Finished by the frontier after the ladder was spent: T1.3, T2.2, T2.4, T3.1, T3.2, T3.3, T4.2 (rework), T4.3,
+T5.3, T5.5 — ten of twenty-five, seven of them the `athena.py` wiring class or a spec the 9B cannot fit in
+its window. The frontier's own tokens are not in any ledger yet; the economy layer will add that ledger, and
+the ladder's missing rung (the 27B) is where most of those ten would have gone first.
