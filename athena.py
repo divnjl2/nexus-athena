@@ -1510,10 +1510,30 @@ def cmd_next(a) -> int:
 
 
 def _read_mem_real() -> dict:
-    """the host's memory through psutil: free (available) and total bytes"""
+    """the host's memory through psutil: free (available) and total bytes; on Windows also the commit
+    headroom (GlobalMemoryStatusEx.ullAvailPageFile), the limit the box hits first (measured 28.09)"""
     import psutil
     vm = psutil.virtual_memory()
-    return {"free": int(vm.available), "total": int(vm.total)}
+    out = {"free": int(vm.available), "total": int(vm.total)}
+    if os.name == "nt":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class _MemStatus(ctypes.Structure):
+                _fields_ = [("dwLength", wintypes.DWORD), ("dwMemoryLoad", wintypes.DWORD),
+                            ("ullTotalPhys", ctypes.c_uint64), ("ullAvailPhys", ctypes.c_uint64),
+                            ("ullTotalPageFile", ctypes.c_uint64), ("ullAvailPageFile", ctypes.c_uint64),
+                            ("ullTotalVirtual", ctypes.c_uint64), ("ullAvailVirtual", ctypes.c_uint64),
+                            ("ullAvailExtendedVirtual", ctypes.c_uint64)]
+            ms = _MemStatus()
+            ms.dwLength = ctypes.sizeof(ms)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(ms)):
+                out["commit_free"] = int(ms.ullAvailPageFile)
+                out["commit_limit"] = int(ms.ullTotalPageFile)
+        except Exception:  # noqa: BLE001 — no commit figure is reported as unknown by the floor
+            pass
+    return out
 
 
 def _read_gpus_real() -> list:
@@ -1538,7 +1558,8 @@ def _host_state_from(a):
     path = getattr(a, "host_json", "")
     if path:
         data = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
-        return host_state(read_mem=lambda: {"free": int(data.get("ram_free", 0)), "total": int(data.get("ram_total", 0))},
+        return host_state(read_mem=lambda: {"free": int(data.get("ram_free", 0)), "total": int(data.get("ram_total", 0)),
+                                            **({"commit_free": int(data["commit_free"])} if "commit_free" in data else {})},
                           read_gpus=lambda: list(data.get("gpus") or []))
     return host_state(read_mem=_read_mem_real, read_gpus=_read_gpus_real)
 
@@ -3693,7 +3714,7 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("--stop-file", dest="stop_file", default="")
     dm.add_argument("--ladder", default="pi-3b,pi-omni9,claude", help="rungs in order for escalation (C-11.4); empty = none")
     dm.add_argument("--once", action="store_true")
-    dm.add_argument("--host-floors", dest="host_floors", default="", help="C-5.1: park under these floors, e.g. ram=8G,vram=2G")
+    dm.add_argument("--host-floors", dest="host_floors", default="", help="C-5.1: park under these floors, e.g. ram=8G,vram=2G,commit=30G (commit = Windows commit-charge headroom, the limit this box hits first)")
     dm.add_argument("--host-json", dest="host_json", default="", help="C-5.1: read the host state from this JSON instead of the host (tests, dry runs)")
     dm.add_argument("--lane-gpu", dest="lane_gpu", type=int, default=1, help="C-5.1: the GPU the executor lane lives on; the VRAM floor applies there (-1 = RAM only)")
     dm.add_argument("--wake", action="store_true", help="C-5.2: wake a lane that answers no state through the router before parking")

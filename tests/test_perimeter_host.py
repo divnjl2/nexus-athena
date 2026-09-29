@@ -30,6 +30,16 @@ def test_the_host_floors_park_a_dispatch_and_name_the_resource():
     unknown = host_state(read_mem=lambda: {"free": 20 * GB, "total": 64 * GB}, read_gpus=boom)
     u = host_admit(unknown, floors={"ram": 8 * GB, "vram": 2 * GB}, gpu=1)
     assert u["ok"] is False and "unknown" in u["reason"].lower() and "nvml" in u["reason"].lower()
+    # measured 28.09: the lane died of ERROR_COMMITMENT_LIMIT with RAM to spare — the commit floor is its own resource
+    low = host_state(read_mem=lambda: {"free": 30 * GB, "total": 64 * GB, "commit_free": 5 * GB},
+                     read_gpus=lambda: [{"index": 1, "name": "RTX 3090", "free": 10 * GB, "total": 24 * GB}])
+    c = host_admit(low, floors={"ram": 8 * GB, "vram": 2 * GB, "commit": 30 * GB}, gpu=1)
+    assert c["ok"] is False and "commit" in c["reason"].lower() and "5.0" in c["reason"] and "30.0" in c["reason"]
+    assert host_admit(low, floors={"ram": 8 * GB, "vram": 2 * GB}, gpu=1)["ok"] is True   # no commit floor asked: not applied
+    blind = host_state(read_mem=lambda: {"free": 30 * GB, "total": 64 * GB},
+                       read_gpus=lambda: [{"index": 1, "name": "RTX 3090", "free": 10 * GB, "total": 24 * GB}])
+    b = host_admit(blind, floors={"commit": 30 * GB}, gpu=1)
+    assert b["ok"] is False and "unknown" in b["reason"].lower() and "commit" in b["reason"].lower()
     from lib.host import parse_floors
     assert parse_floors("ram=8G,vram=2G") == {"ram": 8 * GB, "vram": 2 * GB}
     assert parse_floors("ram=512M") == {"ram": 512 * 1024 ** 2}
