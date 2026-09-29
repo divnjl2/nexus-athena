@@ -193,3 +193,18 @@ def test_the_daemon_with_a_pool_routes_by_prefix_affinity_among_admitted_lanes()
         p = subprocess.run(argv, cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert p.returncode == 0, p.stdout + p.stderr
         assert "daemon: T2.1" in p.stdout and "pool" in p.stdout and ("pi-3b" in p.stdout or "pi-omni9" in p.stdout)
+
+
+def test_a_llama_cpp_lane_reports_its_state_through_its_own_metrics_dialect():
+    """C-11.5 — a llama.cpp lane (ai-server, 29.09) exposes llamacpp:requests_processing / requests_deferred /
+    kv_cache_usage_ratio without labels; the state reader maps them to running / waiting / kv_usage, and a
+    vLLM lane's text still reads as before."""
+    from lib.lanes import lane_state_from_metrics
+    lines = ["# HELP llamacpp:requests_processing Number of requests processing.",
+             "llamacpp:requests_processing 2",
+             "llamacpp:requests_deferred 1",
+             "llamacpp:kv_cache_usage_ratio 0.37",
+             "llamacpp:prompt_tokens_total 12345"]
+    st = lane_state_from_metrics(chr(10).join(lines) + chr(10))
+    assert st["running"] == 2 and st["waiting"] == 1 and abs(st["kv_usage"] - 0.37) < 1e-9
+    assert "prefix_hit_rate" not in st
