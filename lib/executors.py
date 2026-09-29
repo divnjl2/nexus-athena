@@ -45,12 +45,16 @@ PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5
                 # the floor experiment: Ternary Bonsai 4B (prism-ml, Q2_0_g64, 1.1 GB) on the 3090 behind
                 # mainline llama.cpp b11165 at :8003; measured before it: Nanbeige4.2-3B Q4_K_M landed
                 # 6/9 refinery tasks on the same GPU. The providers are registered in models.json
-                "pi-4b": ("lane4", "bonsai-4b"), "pi-3b": ("lane3", "nanbeige-3b"), "pi-2b": ("lane2", "qwen3.5-2b")}
+                "pi-4b": ("lane4", "bonsai-4b"), "pi-3b": ("lane3", "nanbeige-3b"), "pi-2b": ("lane2", "qwen3.5-2b"),
+                # 29.09: the first lane off this box — ai-server lane a (RTX 3060 Ti, llama.cpp in k3s, 6 x 28k,
+                # Qwopus3.5-9B-v3 Q4_K_M) at 192.168.1.136:8024; the strict variant goes through the loopback fence
+                # relay on 60085, since the OS sandbox permits loopback only
+                "pi-k3s9": ("k3s9", "qwopus35-9b-v3")}
 PI_TOOLS = "read,bash,edit,write"
 #: reasoning effort per lane. Measured on the vanilla 27B, one coding prompt: its default
 #: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,
 #: medium in 46 s; "high" the lane rejects with a 400.
-PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-omni9": "low", "pi-4b": "low", "pi-3b": "low", "pi-2b": "low"}
+PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-omni9": "low", "pi-4b": "low", "pi-3b": "low", "pi-2b": "low", "pi-k3s9": "low"}
 #: hashline (C-3.7): the pi-hashline-edit-pro extension registers read / replace / insert /
 #: anchor_grep / undo_last_change and disables the string-replace edit. Lines come back as
 #: `Dafo│content`; an edit names anchors; a stale anchor is refused ([E_RANGE_STALE]) instead
@@ -60,7 +64,8 @@ PI_HASHLINE_PACKAGE = "pi-hashline-edit-pro"
 #: strict tool calling (C-6.7): a relay per lane with --strict, registered in pi's models.json
 #: as provider "<lane>-strict" (lane27-strict -> :8416 -> :8000, lane9-strict -> :8417 -> :8001)
 PI_STRICT_SUFFIX = "-strict"
-PI_STRICT_RELAYS = {"lane27": ("8416", "http://127.0.0.1:8000"), "lane9": ("8417", "http://127.0.0.1:8001")}
+PI_STRICT_RELAYS = {"lane27": ("8416", "http://127.0.0.1:8000"), "lane9": ("8417", "http://127.0.0.1:8001"),
+                    "k3s9": ("60085", "http://192.168.1.136:8024")}
 PI_ORDER = ("The task is the text above. There is no user here and no question will be "
             "answered: make the edit with the edit or write tool. Do not read files that are already "
             "in this message; when you must read, read a slice (offset and limit, at most 120 lines), "
