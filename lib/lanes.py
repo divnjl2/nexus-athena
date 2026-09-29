@@ -57,6 +57,18 @@ def lane_state_from_metrics(metrics_text: str) -> Dict:
         if m_ph:
             prefix_hits = float(m_ph.group(1))
 
+        # --- llama.cpp lanes (29.09: the first lane off this box, ai-server, answers /metrics in this dialect;
+        # its /slots endpoint is not enabled, and the relay passes /metrics through) ---
+        m_lp = re.match(r"llamacpp:requests_processing\s+(\d+(?:\.\d+)?)", line)
+        if m_lp:
+            running = float(m_lp.group(1))
+        m_ld = re.match(r"llamacpp:requests_deferred\s+(\d+(?:\.\d+)?)", line)
+        if m_ld:
+            waiting = float(m_ld.group(1))
+        m_lk = re.match(r"llamacpp:kv_cache_usage_ratio\s+(\d+(?:\.\d+)?)", line)
+        if m_lk:
+            kv_usage = float(m_lk.group(1))
+
     state: Dict = {}
     if running is not None:
         state["running"] = running
