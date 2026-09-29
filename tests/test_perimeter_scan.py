@@ -119,6 +119,9 @@ def test_a_models_review_rides_in_the_merge_record_and_never_refuses():
     prov = {"model": {"id": "omnicoder-9b"}, "runtime": {"name": "vllm", "version": "0.21.0"}}
     out = attach_review(rec, "the reason string is long; consider a constant", prov)
     assert out["ok"] is True and out["review"]["text"].startswith("the reason") and out["review"]["provenance"] == prov and out["review"]["advisory"] is True
+    # review 29.09 (the first landing returned a fresh dict with stage "merge" and an empty reason): the review
+    # RIDES IN the record — every field of the record survives, only `review` is added
+    assert all(out.get(k) == v for k, v in rec.items()) and set(out) == set(rec) | {"review"}
     refused = attach_review({**rec, "ok": False, "reason": "check red"}, "looks fine to me", prov)
     assert refused["ok"] is False and refused["reason"] == "check red"
     assert rec.get("review") is None   # the input is not mutated
