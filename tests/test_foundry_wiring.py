@@ -41,7 +41,10 @@ def test_the_merge_queue_has_a_mutation_stage_between_check_and_fast_forward():
     on an added line refuses at `mutation` with the clause named; and the changed lines are
     read out of a unified diff."""
     from lib.refinery import STAGES, changed_lines_from_diff, mutation_stage
-    assert STAGES == ("admit", "rebase", "check", "mutation", "fast-forward")
+    # 29.09: the perimeter layer put scan and policy into the queue (C-3.3); this clause is about the order —
+    # mutation sits after check and before fast-forward — not about the queue having no other stages
+    assert STAGES.index("check") < STAGES.index("mutation") < STAGES.index("fast-forward")
+    assert STAGES[:3] == ("admit", "rebase", "check") and STAGES[-1] == "fast-forward"
     diff = ("diff --git a/lib/x.py b/lib/x.py\n--- a/lib/x.py\n+++ b/lib/x.py\n"
             "@@ -10,0 +11,2 @@\n+    a = 1\n+    b = 2\n@@ -30 +32 @@\n-    old\n+    new\n"
             "diff --git a/lib/new.py b/lib/new.py\nnew file mode 100644\n--- /dev/null\n+++ b/lib/new.py\n@@ -0,0 +1,2 @@\n+x = 1\n+y = 2\n")
