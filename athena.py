@@ -1878,6 +1878,16 @@ def cmd_daemon(a) -> int:
             esc, why_esc = should_escalate(recs[-2:], signals={})
             rungs = [x.strip() for x in a.ladder.split(",") if x.strip()]
             nxt = next_rung(rungs, a.executor)
+            if esc and not nxt:
+                # ADR-0007: the ladder is spent — the frontier's turn. The bead is blocked with the reason and
+                # leaves the ready list (measured 29.09: a released bead was re-offered the next tick and the
+                # lane burned three red iterations per cycle, forever)
+                subprocess.run([_bd_bin(), "update", bead_id, "--status", "blocked"], capture_output=True, timeout=60)
+                subprocess.run([_bd_bin(), "update", bead_id, "--append-notes",
+                                f"escalated to the frontier (ADR-0007): the ladder {a.ladder} is spent on {task} — {why_esc}; see checkpoints/{task}.md"],
+                               capture_output=True, timeout=60)
+                log(task, "escalate", f"{a.executor} -> frontier: ladder spent ({why_esc}); bead blocked")
+                print(f"# daemon tick {tick}: escalate {task} {a.executor} -> frontier (ladder spent)", flush=True)
             if esc and nxt:
                 cp = here / "checkpoints" / f"{task}.md"
                 hb = here / "briefs" / f"{task}.handoff.md"
