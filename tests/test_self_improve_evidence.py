@@ -313,14 +313,14 @@ def test_report_prices_ungated_attempts_only_from_complete_candidate_evidence(tm
 
     task = manifest["tasks"][0]
     attempt_dir = (tmp_path / "artifacts" / task["split"] / task["id"] / "codex" / "2")
-    (attempt_dir / "gate").mkdir()
+    (attempt_dir / "gate_started.json").write_text('{"started":true}')
     report = summarize(manifest, [first], tmp_path / "artifacts", stage="baseline")
     arm = report["arms"]["codex"]
     assert arm["total_cost_usd"] == 3.0
     assert arm["time_complete"] is False
     assert arm["total_wall_seconds"] is None
     assert arm["wall_lower_bound_seconds"] == 140
-    (attempt_dir / "gate").rmdir()
+    (attempt_dir / "gate_started.json").unlink()
     (attempt_dir / "stderr.txt").unlink()
     report = summarize(manifest, [first], tmp_path / "artifacts", stage="baseline")
     arm = report["arms"]["codex"]

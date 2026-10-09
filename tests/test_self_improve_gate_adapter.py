@@ -83,7 +83,9 @@ def test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report(tmp_path, 
         report_dir = workdir / "logs" / "evaluation" / run_id / "codex" / row["instance_id"]
         report_dir.mkdir(parents=True)
         (report_dir / "report.json").write_text(json.dumps({row["instance_id"]: {"resolved": True}}))
-        return subprocess.CompletedProcess(command, 0, stdout="done", stderr="")
+        kwargs["stdout"].write(b"done\n")
+        kwargs["stderr"].write(b"diagnostic\n")
+        return subprocess.CompletedProcess(command, 0)
 
     monkeypatch.setattr(adapter.subprocess, "run", fake_run)
     result = run_harness(task_id=row["instance_id"], arm="codex", attempt=1,
@@ -96,6 +98,7 @@ def test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report(tmp_path, 
         "gate_wall_seconds"] == result["gate_wall_seconds"]
     assert result["dataset_sha256"] == hashlib.sha256(
         (workdir / f"{result['run_id']}.dataset.json").read_bytes()).hexdigest()
+    assert (workdir / f"{result['run_id']}.stdout.txt").read_bytes() == b"done\n"
 
 
 def test_empty_patch_is_bound_to_official_v5_results(tmp_path, monkeypatch):
@@ -116,7 +119,8 @@ def test_empty_patch_is_bound_to_official_v5_results(tmp_path, monkeypatch):
                                     "empty_patch_ids": [row["instance_id"]],
                                     "submitted_ids": [row["instance_id"]],
                                     "resolved_instances": 0, "error_instances": 0}))
-        return subprocess.CompletedProcess(command, 0, stdout="done", stderr="")
+        kwargs["stdout"].write(b"done\n")
+        return subprocess.CompletedProcess(command, 0)
 
     monkeypatch.setattr(adapter.subprocess, "run", fake_run)
     result = run_harness(task_id=row["instance_id"], arm="codex", attempt=1,
@@ -124,3 +128,32 @@ def test_empty_patch_is_bound_to_official_v5_results(tmp_path, monkeypatch):
                          gate_dir=tmp_path / "gate", harness_python="python")
     assert result["resolved"] is False
     assert json.loads((tmp_path / "gate" / "official_report.json").read_text())["empty_patch_ids"] == [row["instance_id"]]
+
+
+def test_harness_timeout_retains_streamed_diagnostics_without_verdict(tmp_path, monkeypatch):
+    """A killed official gate leaves partial output and no accepted envelope."""
+    import evals.self_improve.gate_adapter as adapter
+    task_id = "repo__task-1"
+    row = {"instance_id": task_id, "base_commit": "a" * 40,
+           "problem_statement": "fix it", "FAIL_TO_PASS": ["test_fix"]}
+    patch = b"diff --git a/x b/x\n"
+    run_id = run_id_for(task_id, "codex", 1, patch)
+
+    def fake_run(command, **kwargs):
+        if "-c" in command:
+            return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n", stderr="")
+        kwargs["stdout"].write(b"partial official output\n")
+        kwargs["stderr"].write(b"container timed out\n")
+        raise subprocess.TimeoutExpired(command, 1)
+
+    monkeypatch.setattr(adapter.subprocess, "run", fake_run)
+    workdir = tmp_path / "harness"
+    gate_dir = tmp_path / "gate"
+    with pytest.raises(subprocess.TimeoutExpired):
+        run_harness(task_id=task_id, arm="codex", attempt=1,
+                    model_name="codex", patch=patch, row=row,
+                    workdir=workdir, gate_dir=gate_dir, harness_python="python")
+    assert (workdir / f"{run_id}.stdout.txt").read_bytes() == b"partial official output\n"
+    assert (workdir / f"{run_id}.stderr.txt").read_bytes() == b"container timed out\n"
+    assert not gate_dir.exists()
+    assert json.loads((tmp_path / "gate_started.json").read_text())["run_id"] == run_id

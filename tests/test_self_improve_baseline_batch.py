@@ -28,6 +28,10 @@ def test_resume_skips_proved_cells_and_never_overwrites_partial_attempts(tmp_pat
     with pytest.raises(RuntimeError, match="unfinished gate"):
         cell_action(cell, set(), tmp_path)
     (candidate / "gate").rmdir()
+    (candidate / "gate_started.json").write_text("started")
+    with pytest.raises(RuntimeError, match="unfinished gate"):
+        cell_action(cell, set(), tmp_path)
+    (candidate / "gate_started.json").unlink()
     (candidate / "candidate.json").write_text(
         '{"candidate_status":"executor_error","executor_failure":"process_exit_124"}')
     with pytest.raises(RuntimeError, match="executor error"):

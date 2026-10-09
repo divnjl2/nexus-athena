@@ -259,7 +259,8 @@ def _ungraded_candidate_cost(attempt_dir: Path, task: dict, manifest: dict,
         raise ValueError("ungraded candidate usage or cost changed")
     return {"status": expected_status, "observed_cost_usd": cost,
             "candidate_wall_seconds": wall,
-            "observed_wall_seconds": None if (attempt_dir / "gate").exists() else wall,
+            "observed_wall_seconds": None if (attempt_dir / "gate").exists() or
+            (attempt_dir / "gate_started.json").exists() else wall,
             "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"]}
 
 

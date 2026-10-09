@@ -119,6 +119,12 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     if gate_dir.exists():
         raise FileExistsError(gate_dir)
     run_id = run_id_for(task_id, arm, attempt, patch)
+    started_path = gate_dir.parent / "gate_started.json"
+    with started_path.open("x", encoding="utf-8") as stream:
+        json.dump({"schema": "athena.self-improve.gate-start/1",
+                   "task_id": task_id, "arm": arm, "attempt": attempt,
+                   "run_id": run_id}, stream)
+        stream.write("\n")
     prediction_bytes = prediction(task_id, model_name, patch)
     workdir.mkdir(parents=True, exist_ok=True)
     dataset_path = workdir / f"{run_id}.dataset.json"
@@ -153,10 +159,11 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
                "--timeout", str(timeout), "--run_id", run_id]
     (workdir / f"{run_id}.command.json").write_text(json.dumps(command, indent=2) + "\n",
                                                     encoding="utf-8")
-    proc = subprocess.run(command, cwd=cwd, text=True, capture_output=True,
-                          timeout=timeout + 1800)
-    (workdir / f"{run_id}.stdout.txt").write_text(proc.stdout, encoding="utf-8")
-    (workdir / f"{run_id}.stderr.txt").write_text(proc.stderr, encoding="utf-8")
+    stdout_path = workdir / f"{run_id}.stdout.txt"
+    stderr_path = workdir / f"{run_id}.stderr.txt"
+    with stdout_path.open("xb") as stdout_file, stderr_path.open("xb") as stderr_file:
+        proc = subprocess.run(command, cwd=cwd, stdout=stdout_file,
+                              stderr=stderr_file, timeout=timeout + 1800)
     report_path = workdir / "logs" / "evaluation" / run_id / model_name / task_id / "report.json"
     if not patch and not report_path.is_file():
         report_path = workdir / "logs" / "evaluation" / run_id / "results.json"
@@ -167,8 +174,8 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     envelope["dataset_sha256"] = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
     for name, path in (("command", workdir / f"{run_id}.command.json"),
                        ("prediction", prediction_path),
-                       ("stdout", workdir / f"{run_id}.stdout.txt"),
-                       ("stderr", workdir / f"{run_id}.stderr.txt")):
+                       ("stdout", stdout_path),
+                       ("stderr", stderr_path)):
         envelope[f"{name}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
     envelope["gate_wall_seconds"] = time.monotonic() - gate_start
     (gate_dir / "gate.json").write_text(json.dumps(envelope, indent=2) + "\n",

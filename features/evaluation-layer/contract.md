@@ -162,6 +162,14 @@
   SHALL bind the exact command, prediction and process output files to the
   gate envelope and reject changed bytes or a prediction for another patch.
   - source: audit
+- **C-4.10** — WHEN the official harness runs THE SYSTEM SHALL write stdout
+  and stderr into artifact files as the process executes, retaining partial
+  diagnostics after timeout without creating an accepted gate verdict.
+  - source: incident
+- **C-4.11** — WHEN an official gate starts THE SYSTEM SHALL persist an
+  attempt-bound start marker before harness execution so a failed gate cannot
+  be mistaken for an ungated candidate or silently retried.
+  - source: audit
 
 ## C-5 — Cluster inference qualification
 

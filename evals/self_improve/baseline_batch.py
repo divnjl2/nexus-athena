@@ -28,7 +28,7 @@ def cell_action(cell: dict, known: set[tuple[str, str]], root: Path) -> str:
     required = ("candidate.json", "candidate.patch", "attempt.json", "input.json",
                 "prompt.txt", "invocation.json", "trace.jsonl", "stderr.txt")
     if all((candidate / name).is_file() for name in required):
-        if (candidate / "gate").exists():
+        if (candidate / "gate").exists() or (candidate / "gate_started.json").exists():
             raise RuntimeError(f"unfinished gate requires review: {cell['task_id']} {cell['arm']}")
         saved = json.loads((candidate / "candidate.json").read_text(encoding="utf-8"))
         if saved.get("candidate_status") not in ("empty_patch", "unverified_candidate") or \

@@ -396,3 +396,19 @@
 - **Given** a candidate and an official gate report
 - **When** the saved command, prediction, stdout or stderr changes
 - **Then** attempt validation rejects the changed harness evidence.
+
+### S4.11 — streamed harness diagnostics survive timeout
+- **verifies:** C-4.10
+- **pins:** c5317348006e5f7d
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_harness_timeout_retains_streamed_diagnostics_without_verdict -q`
+- **Given** an official harness that emits output before timing out
+- **When** the process is stopped
+- **Then** partial stdout and stderr remain on disk without an accepted gate.
+
+### S4.12 — failed gate remains visible
+- **verifies:** C-4.11
+- **pins:** ad7d51a2d90d8c18
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_harness_timeout_retains_streamed_diagnostics_without_verdict tests/test_self_improve_baseline_batch.py::test_resume_skips_proved_cells_and_never_overwrites_partial_attempts tests/test_self_improve_cluster_batch.py::test_cluster_batch_resume_requires_a_complete_candidate -q`
+- **Given** a candidate whose official gate has started
+- **When** the harness times out or the batch resumes
+- **Then** a start marker remains and the candidate cannot be silently gated again.

@@ -38,7 +38,7 @@ def cell_action(task: dict, arm: str, known: set[tuple[str, str]], root: Path) -
     attempt_dir = existing[0]
     if not all((attempt_dir / name).is_file() for name in REQUIRED_CANDIDATE):
         raise RuntimeError(f"partial candidate artifacts require review: {task['id']} {arm}")
-    if (attempt_dir / "gate").exists():
+    if (attempt_dir / "gate").exists() or (attempt_dir / "gate_started.json").exists():
         raise RuntimeError(f"unfinished gate requires review: {task['id']} {arm}")
     candidate = json.loads((attempt_dir / "candidate.json").read_text(encoding="utf-8"))
     if candidate.get("candidate_status") not in ("empty_patch", "unverified_candidate") or \

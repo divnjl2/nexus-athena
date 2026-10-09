@@ -23,6 +23,10 @@ def test_cluster_batch_resume_requires_a_complete_candidate(tmp_path):
     with pytest.raises(RuntimeError, match="unfinished gate"):
         cluster_batch.cell_action(task, "codex", set(), tmp_path)
     (attempt / "gate").rmdir()
+    (attempt / "gate_started.json").write_text("started")
+    with pytest.raises(RuntimeError, match="unfinished gate"):
+        cluster_batch.cell_action(task, "codex", set(), tmp_path)
+    (attempt / "gate_started.json").unlink()
     (attempt / "candidate.json").write_text(json.dumps({
         "candidate_status": "executor_error", "executor_failure": "process_exit_124"}))
     with pytest.raises(RuntimeError, match="executor error"):
