@@ -167,7 +167,8 @@ instruction text and the hashes of complete baseline and development reports.
 `baseline_batch.py` resumes the two-arm matrix one task at a time. It validates
 all existing independent records before skipping them, gates a complete
 ungraded candidate, and stops for review on partial candidate or gate data.
-It never retries an executor error automatically. Pin `--athena-root` and
+It also checks for extra ungraded attempts beside already graded cells before
+skipping a pair. It never retries an executor error automatically. Pin `--athena-root` and
 `--athena-commit` to one clean framework checkout for the whole batch; pass
 `--max-pairs 1` for a bounded continuation. Its exit code is 2 while the
 40-task baseline is incomplete, and its partial report is written under

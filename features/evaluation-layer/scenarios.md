@@ -331,7 +331,8 @@
 - **Given** a partial baseline batch
 - **When** the batch resumes
 - **Then** proved cells are skipped, complete candidates proceed to the gate,
-  and incomplete candidates or gates require review.
+  and incomplete candidates, gates or extra attempts require review, including
+  when the original task pair was already graded.
 
 ### S4.2 — unique prediction and run id
 - **verifies:** C-4.2

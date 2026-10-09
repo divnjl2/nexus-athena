@@ -37,6 +37,11 @@ def test_resume_skips_proved_cells_and_never_overwrites_partial_attempts(tmp_pat
     with pytest.raises(RuntimeError, match="executor error"):
         cell_action(cell, set(), tmp_path)
     assert cell_action(cell, {(cell["task_id"], cell["arm"])}, tmp_path) == "skip"
+    (candidate.parent / "2").mkdir()
+    with pytest.raises(RuntimeError, match="ungraded extra attempt"):
+        cell_action(cell, {(cell["task_id"], cell["arm"])}, tmp_path)
+    with pytest.raises(RuntimeError, match="multiple or renumbered attempts"):
+        cell_action(cell, set(), tmp_path)
 
 
 def test_partial_baseline_artifacts_are_reported_before_resume_stops(tmp_path, monkeypatch):
@@ -58,3 +63,27 @@ def test_partial_baseline_artifacts_are_reported_before_resume_stops(tmp_path, m
     assert report["complete"] is False
     assert report["ungraded_attempts"][0]["status"] == "incomplete_or_invalid_artifacts"
     assert report["arms"]["codex"]["total_cost_usd"] is None
+
+
+def test_batch_checks_extra_attempts_even_when_pair_was_already_graded(tmp_path, monkeypatch):
+    """A complete pair cannot hide a later unfinished attempt during resume."""
+    task_id = "owner__demo-1"
+    pair = [{"task_id": task_id, "arm": arm, "split": "development"}
+            for arm in ("codex", "codex_athena")]
+    extra = tmp_path / "artifacts" / "development" / task_id / "codex" / "2"
+    extra.mkdir(parents=True)
+    records = [{"task_id": task_id, "arm": arm, "model": "fixed",
+                "athena_commit": "a" * 40}
+               for arm in ("codex", "codex_athena")]
+    monkeypatch.setattr(baseline_batch, "verify", lambda *_: None)
+    monkeypatch.setattr(baseline_batch, "frozen_commit", lambda *_: None)
+    monkeypatch.setattr(baseline_batch, "load_attempts", lambda *_: records)
+    monkeypatch.setattr(baseline_batch, "write_report", lambda *_: {"complete": False})
+    monkeypatch.setattr(baseline_batch, "cells", lambda *_args, **_kwargs: pair)
+    (tmp_path / "records").mkdir()
+    with pytest.raises(RuntimeError, match="ungraded extra attempt"):
+        baseline_batch.run_batch(
+            manifest={"tasks": []}, rows=[], root=tmp_path, athena_root=tmp_path,
+            athena_commit="a" * 40, model="fixed", rates={},
+            candidate_timeout=1, gate_timeout=1, wsl_distro="Ubuntu",
+            harness_python="python", max_pairs=1)

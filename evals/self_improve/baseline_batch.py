@@ -19,12 +19,18 @@ from .workspaces import cells
 
 def cell_action(cell: dict, known: set[tuple[str, str]], root: Path) -> str:
     key = (cell["task_id"], cell["arm"])
+    parent = root / "artifacts" / cell["split"] / cell["task_id"] / cell["arm"]
+    existing = [path for path in parent.iterdir() if path.is_dir() and
+                path.name.isdecimal()] if parent.is_dir() else []
     if key in known:
+        if any(path.name != "1" for path in existing):
+            raise RuntimeError(f"ungraded extra attempt requires review: {cell['task_id']} {cell['arm']}")
         return "skip"
-    candidate = (root / "artifacts" / cell["split"] / cell["task_id"] /
-                 cell["arm"] / "1")
-    if not candidate.exists():
+    if not existing:
         return "candidate"
+    if len(existing) != 1 or existing[0].name != "1":
+        raise RuntimeError(f"multiple or renumbered attempts require review: {cell['task_id']} {cell['arm']}")
+    candidate = existing[0]
     required = ("candidate.json", "candidate.patch", "attempt.json", "input.json",
                 "prompt.txt", "invocation.json", "trace.jsonl", "stderr.txt")
     if all((candidate / name).is_file() for name in required):
@@ -79,6 +85,8 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
     for task_id in task_ids:
         pair = [cell for cell in planned if cell["task_id"] == task_id]
         if all((task_id, cell["arm"]) in known for cell in pair):
+            for cell in pair:
+                cell_action(cell, known, root)
             continue
         if max_pairs is not None and started_pairs >= max_pairs:
             break
