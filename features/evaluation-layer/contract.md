@@ -127,3 +127,10 @@
   SYSTEM SHALL preserve non-ASCII path components in UTF-8 so the harness reads
   the same local files that were fingerprinted.
   - source: incident
+
+## C-5 — Cluster inference qualification
+
+- **C-5.1** — WHEN a cluster inference route is probed THE SYSTEM SHALL verify
+  authenticated Responses SSE completion, a function call and a successful
+  follow-up using its result without placing credentials in probe outputs.
+  - source: design

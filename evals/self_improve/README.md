@@ -1,5 +1,25 @@
 # Self-improvement pilot: frozen corpus
 
+## Owner cluster inference
+
+The existing `gpt-6.1-sol` Codex baseline and its API-equivalent price card do
+not measure the owner's local inference cluster. A cluster experiment needs a
+separate provider lane and must keep its run records separate from the frozen
+three-arm Codex matrix. Before using a selected cluster role, probe its real
+Responses API stream and function-call continuation with a scoped client key:
+
+```text
+python -m evals.self_improve.cluster_probe --base-url http://192.168.1.136:30400/v1 --model agent --key-env ATHENA_CLUSTER_KEY
+```
+
+The key is read from an environment variable or `--key-file`; neither form puts
+its value on the command line. The probe bypasses the workstation HTTP proxy
+and sends synthetic text only. It does not mark a task accepted or establish
+which upstream lane served the request. A gateway administrator must verify
+actual role routing separately. On 2026-10-09, direct gateway readiness was
+HTTP 200, but the workstation's existing `LITELLM_KEY` received HTTP 401; no
+cluster agent result has been recorded.
+
 `manifest.json` freezes 40 real SWE-bench Verified issues from revision
 `78f471bf655a3137b2e8a75af1501690ec009ec3`: four per eligible repository,
 with three development tasks and one holdout task per repository. Selection is

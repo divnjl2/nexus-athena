@@ -45,3 +45,12 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
   - success_check: `python -m pytest tests/test_self_improve_gate_adapter.py tests/test_self_improve_pilot.py tests/test_self_improve_evidence.py -q`
   - files: `evals/self_improve/gate_adapter.py, evals/self_improve/evidence.py, evals/self_improve/pilot.py, tests/test_self_improve_gate_adapter.py, tests/test_self_improve_evidence.py, tests/test_self_improve_pilot.py`
   - verifies: S4.2, S4.3, S4.4, S4.5, S4.6, S4.7, S4.8, S4.9
+
+## Phase 5: Qualify the owner's cluster route
+**Goal:** prove that the selected route supports the agent tool loop before a separate cluster lane is run.
+**Depends on:** Phase 3
+### Tasks
+- [ ] T5.1 Probe streamed Responses and function result continuation
+  - success_check: `python -m pytest tests/test_self_improve_cluster_probe.py -q`
+  - files: `evals/self_improve/cluster_probe.py, tests/test_self_improve_cluster_probe.py`
+  - verifies: S5.1

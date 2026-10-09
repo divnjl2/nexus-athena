@@ -1,5 +1,14 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.1 — cluster route requires a complete tool loop
+- **verifies:** C-5.1
+- **pins:** 5279fec8b3cf482d
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_probe.py -q`
+- **Given** a cluster gateway URL and a credential supplied outside the repository
+- **When** the route is probed for an agent benchmark
+- **Then** only a completed SSE exchange, a function call and its successful
+  follow-up qualify the route, without exposing the credential.
+
 ### S1.4 — stable Verified selection
 - **verifies:** C-1.4
 - **pins:** 45cd81e0c8b0cfd0
