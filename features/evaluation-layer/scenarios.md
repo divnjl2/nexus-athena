@@ -1,5 +1,23 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.2 — authenticated loopback stream
+- **verifies:** C-5.2
+- **pins:** bec492b8fbfe8b17
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_bridge.py::test_bridge_authenticates_and_preserves_sse_bytes -q`
+- **Given** separate local client and upstream credentials
+- **When** a streamed Codex request crosses the bridge
+- **Then** unauthenticated callers are refused and the authenticated SSE bytes
+  reach the client using only the upstream credential on the gateway request.
+
+### S5.3 — safe developer role adaptation
+- **verifies:** C-5.3
+- **pins:** 541aceb5d3ee3b09
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_bridge.py::test_bridge_keeps_instruction_text_and_rejects_late_developer -q`
+- **Given** a streamed Responses request with developer instructions
+- **When** the bridge adapts it for the selected Qwen route
+- **Then** all leading text is preserved, while late or non-text developer
+  content is rejected.
+
 ### S5.1 — cluster route requires a complete tool loop
 - **verifies:** C-5.1
 - **pins:** 5279fec8b3cf482d

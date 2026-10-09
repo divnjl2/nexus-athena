@@ -138,3 +138,11 @@
   authenticated Responses SSE completion, a function call and a successful
   follow-up using its result without placing credentials in probe outputs.
   - source: design
+- **C-5.2** — WHEN Codex sends a streamed Responses request through the local
+  bridge THE SYSTEM SHALL require a client credential and forward the SSE stream
+  using a separately supplied upstream credential without logging either key.
+  - source: design
+- **C-5.3** — WHEN a streamed Responses request begins with developer text THE
+  SYSTEM SHALL preserve that text in the upstream instructions and reject a
+  developer message that follows conversation input or contains non-text content.
+  - source: design

@@ -25,6 +25,21 @@ For vLLM reasoning lanes, `--reasoning-effort none` requests that setting on
 all three synthetic exchanges; the result records it. Keep the actual candidate
 driver's setting identical to the qualified setting.
 
+For a Codex route whose Qwen template rejects the `developer` role, a small
+loopback bridge adapts only leading developer text into Responses `instructions`:
+
+```text
+python -m evals.self_improve.cluster_bridge --upstream http://192.168.1.136:30400/v1 --upstream-key-env ATHENA_CLUSTER_KEY --client-key-env ATHENA_BRIDGE_CLIENT_KEY --port 8777
+```
+
+Supply both secrets through the named environment variables, and point the
+Codex custom provider at `http://127.0.0.1:8777/v1` with the bridge client key.
+The bridge binds only to loopback, forwards streamed `/v1/responses`, rejects
+late or non-text developer content, and never prints keys or response bodies.
+Its role adaptation changes request shape but does not change task acceptance.
+Run a real Codex tool-loop smoke through the bridge before using it for the
+cluster benchmark; a local unit test alone does not qualify the gateway.
+
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.
 This is a local lane check, not a cluster gateway check. A separate Codex CLI

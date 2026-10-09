@@ -54,3 +54,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
   - success_check: `python -m pytest tests/test_self_improve_cluster_probe.py -q`
   - files: `evals/self_improve/cluster_probe.py, tests/test_self_improve_cluster_probe.py`
   - verifies: S5.1
+- [ ] T5.2 Bridge the Codex developer role to the cluster Responses route
+  - success_check: `python -m pytest tests/test_self_improve_cluster_bridge.py -q`
+  - files: `evals/self_improve/cluster_bridge.py, tests/test_self_improve_cluster_bridge.py`
+  - verifies: S5.2, S5.3
