@@ -9,18 +9,18 @@ three-arm Codex matrix. Before using a selected cluster role, probe its real
 Responses API stream and function-call continuation with a scoped client key:
 
 ```text
-python -m evals.self_improve.cluster_probe --base-url http://192.168.1.136:30400/v1 --model agent --key-env ATHENA_CLUSTER_KEY
+python -m evals.self_improve.cluster_probe --base-url http://192.168.1.136:30400/v1 --model agent --key-file <private-key-file> --max-output-tokens 8192
 ```
 
 The key is read from an environment variable or `--key-file`; neither form puts
 its value on the command line. The probe bypasses the workstation HTTP proxy
-and sends synthetic text only. Its 2,048-token output budget allows reasoning
-models to complete the short probes; `--max-output-tokens` can change it after
-checking the selected lane's limits. It does not mark a task accepted or establish
-which upstream lane served the request. A gateway administrator must verify
-actual role routing separately. On 2026-10-09, direct gateway readiness was
-HTTP 200, but the workstation's existing `LITELLM_KEY` received HTTP 401; no
-cluster agent result has been recorded.
+and sends synthetic text only. The `agent` route needed an 8,192-token output
+budget in the live check; a 2,048-token request once completed without visible
+text. The probe does not mark a task accepted. On 2026-10-09, a separately
+issued virtual key restricted to `agent` passed SSE completion, function call
+and replayed function result. The response reported `qwopus3.5-9b-v3`; a
+separate direct request exposed the gateway route `agent@ai-server-quadro`.
+The workstation's old `LITELLM_KEY` still received HTTP 401.
 For vLLM reasoning lanes, `--reasoning-effort none` requests that setting on
 all three synthetic exchanges; the result records it. Keep the actual candidate
 driver's setting identical to the qualified setting.
@@ -37,28 +37,29 @@ Codex custom provider at `http://127.0.0.1:8777/v1` with the bridge client key.
 The bridge binds only to loopback, forwards streamed `/v1/responses`, rejects
 late or non-text developer content, and never prints keys or response bodies.
 Its role adaptation changes request shape but does not change task acceptance.
-Run a real Codex tool-loop smoke through the bridge before using it for the
-cluster benchmark; a local unit test alone does not qualify the gateway.
+Official Codex custom provider settings use `model_provider`,
+`model_providers.<id>.base_url` and `env_key`; see the
+[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+Codex CLI 0.161.0 completed a live two-command tool loop through the bridge,
+with a 65,536-token context setting and `workspace-write` sandbox. This was a
+synthetic transport smoke, not a benchmark candidate or acceptance result.
 
-The same bridge can run as a small private Kubernetes Pod without building an
-image. `cluster_bridge_pod` renders a ConfigMap with the two Python modules
-and a Pod that reads two keys from an existing Secret. It creates no Service.
-With a working kubeconfig and namespace, the operator can render and apply it:
+The deployed bridge is managed by GitOps in `homelab-infra/apps/athena-bridge`
+at revision `516cb24987114253ac2766bf680495b9453e4345`. It runs one Pod,
+mounts the Python source from a ConfigMap, reads the two keys from a SOPS
+Secret, and has no Service. From the Windows workstation, access it through
+an SSH tunnel and a pod port-forward:
 
 ```text
-python -m evals.self_improve.cluster_bridge_pod --namespace agents --secret-name athena-bridge-keys --upstream http://192.168.1.136:30400/v1 > cluster-bridge.json
-kubectl apply -f cluster-bridge.json
-kubectl -n agents port-forward pod/athena-cluster-bridge 8777:8777
+ssh -o IdentityAgent=none -L 127.0.0.1:8777:127.0.0.1:8777 ai-server 'kubectl -n athena-eval port-forward deploy/athena-cluster-bridge 8777:8777'
 ```
 
-The Secret must contain `upstream-key` and `client-key`; create it from private
-files using `kubectl create secret generic ... --from-file` and keep those files
-outside Git. Point Codex at the forwarded `http://127.0.0.1:8777/v1` endpoint.
-The Pod uses a stock Python image, a read-only filesystem and no service account
-token. After source changes, regenerate the manifest, delete that one Pod and
-reapply it so the Python process loads the new code. Deployment is
-pending a valid gateway key and kubeconfig; rendering the manifest is not a
-live cluster check.
+Point Codex at `http://127.0.0.1:8777/v1` with the bridge client key from a
+private file outside Git. The Pod has a read-only filesystem, no service
+account token, and egress only to DNS and the gateway. The optional
+`cluster_bridge_pod.py` renders a standalone manifest for local inspection;
+the live cluster uses the GitOps resources. A Codex CLI smoke through the Pod
+also completed two command executions and read back the expected file token.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.
@@ -67,8 +68,8 @@ This is a local lane check, not a cluster gateway check. A separate Codex CLI
 role that its Qwen chat template rejected. A local diagnostic adapter moved
 that content into the request instructions, after which the lane rejected the
 request against its 30,720-token context limit. Neither attempt generated a
-benchmark candidate. The cluster's 64k `agent` role and its gateway still need
-a scoped key and an end-to-end Codex tool-loop smoke before benchmark use.
+benchmark candidate. The cluster route has since passed those transport checks,
+but has not yet produced a graded task in a separate cluster evaluation lane.
 
 `manifest.json` freezes 40 real SWE-bench Verified issues from revision
 `78f471bf655a3137b2e8a75af1501690ec009ec3`: four per eligible repository,

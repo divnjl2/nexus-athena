@@ -62,3 +62,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
   - success_check: `python -m pytest tests/test_self_improve_cluster_bridge.py::test_pod_manifest_uses_secret_refs_and_no_service_exposure -q`
   - files: `evals/self_improve/cluster_bridge_pod.py, tests/test_self_improve_cluster_bridge.py`
   - verifies: S5.4
+- [ ] T5.4 Preserve string Responses inputs through the bridge
+  - success_check: `python -m pytest tests/test_self_improve_cluster_bridge.py::test_bridge_passes_plain_text_responses_input -q`
+  - files: `evals/self_improve/cluster_bridge.py, tests/test_self_improve_cluster_bridge.py`
+  - verifies: S5.5

@@ -1,5 +1,13 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.5 — plain text Responses input
+- **verifies:** C-5.5
+- **pins:** 114d139c0004633d
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_bridge.py::test_bridge_passes_plain_text_responses_input -q`
+- **Given** a streamed Responses request with string input
+- **When** it crosses the bridge
+- **Then** the text and all other fields remain unchanged.
+
 ### S5.4 — private bridge pod
 - **verifies:** C-5.4
 - **pins:** 9d472fb9d496bc92

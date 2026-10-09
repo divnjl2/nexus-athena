@@ -35,12 +35,14 @@ def _text_content(content) -> str:
 
 def normalize_request(body: dict) -> dict:
     """Preserve request fields and all instruction text while removing late roles."""
-    if not isinstance(body, dict) or not isinstance(body.get("input"), list) or \
+    if not isinstance(body, dict) or not isinstance(body.get("input"), (str, list)) or \
             not isinstance(body.get("model"), str) or body.get("stream") is not True:
         raise ValueError("streamed Responses input and model are required")
     instruction = body.get("instructions")
     if instruction is not None and not isinstance(instruction, str):
         raise ValueError("instructions must be text")
+    if isinstance(body["input"], str):
+        return body
     input_items = body["input"]
     leading = []
     index = 0

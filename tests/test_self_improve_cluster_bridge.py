@@ -28,6 +28,15 @@ def test_bridge_keeps_instruction_text_and_rejects_late_developer():
                                                   "content": [{"type": "input_image"}]}]})
 
 
+def test_bridge_passes_plain_text_responses_input():
+    """C-5.5: Responses text input remains valid through the bridge."""
+    body = {"model": "agent", "stream": True, "input": "Reply briefly.",
+            "max_output_tokens": 8192}
+    assert normalize_request(body) == body
+    with pytest.raises(ValueError, match="streamed Responses"):
+        normalize_request({**body, "input": 17})
+
+
 def test_bridge_authenticates_and_preserves_sse_bytes():
     """C-5.2: loopback auth and streamed upstream bytes survive the bridge."""
     seen = []

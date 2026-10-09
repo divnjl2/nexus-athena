@@ -150,3 +150,6 @@
   source in a ConfigMap, refer to separate Kubernetes Secret keys for the two
   credentials, and expose access only through pod port-forwarding.
   - source: design
+- **C-5.5** — WHEN a streamed Responses request uses plain text input THE
+  SYSTEM SHALL forward that input unchanged through the bridge.
+  - source: incident
