@@ -1,5 +1,14 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.8 — honest cluster report
+- **verifies:** C-5.8
+- **pins:** 5faf7d8590a9ccff
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** one graded cluster attempt and one interrupted attempt
+- **When** the separate cluster report is built
+- **Then** it revalidates the official record, lists the missing and ungraded
+  cells, withholds paired inference, and leaves USD cost unknown.
+
 ### S5.6 — isolated and unpriced cluster candidate
 - **verifies:** C-5.6
 - **pins:** 1167f673e3b2da65

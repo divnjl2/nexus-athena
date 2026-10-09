@@ -70,3 +70,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
   - files: `evals/self_improve/cluster_pilot.py, tests/test_self_improve_cluster_pilot.py`
   - verifies: S5.6, S5.7
+- [ ] T5.6 Summarize only revalidated cluster attempts
+  - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
+  - files: `evals/self_improve/cluster_report.py, tests/test_self_improve_cluster_pilot.py`
+  - verifies: S5.8

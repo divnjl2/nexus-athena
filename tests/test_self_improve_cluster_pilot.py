@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from evals.self_improve import cluster_pilot
+from evals.self_improve import cluster_pilot, cluster_report
 from evals.self_improve.corpus import acceptance, fingerprint, inputs
 from evals.self_improve.gate_adapter import attest
 
@@ -49,6 +49,7 @@ def test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it(tmp_pat
         "split": "development", "input_sha256": fingerprint(inputs(row)),
         "acceptance_sha256": fingerprint(acceptance(row))}]}
     monkeypatch.setattr(cluster_pilot, "verify", lambda *_: None)
+    monkeypatch.setattr(cluster_report, "validate_manifest_shape", lambda *_: None)
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     subprocess.run(["git", "init", "-q", str(workspace)], check=True)
@@ -120,9 +121,19 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert record["schema"] == cluster_pilot.CLUSTER_SCHEMA
     assert record["gate"]["passed"] is True and record["cost_usd"] is None
     assert (root / "records" / "cluster-demo-1.json").is_file()
+    report = cluster_report.summarize_cluster(
+        manifest, cluster_report.load_records(root, manifest), root)
+    assert report["complete"] is False and report["paired_comparison"] is None
+    assert report["missing"] == [{"task_id": row["instance_id"],
+                                   "arm": "codex_athena"}]
+    assert report["total_cost_usd"] is None
+    assert report["arms"]["codex"]["verified_successes"] == 1
+    assert report["arms"]["codex"]["cost_per_verified_success_usd"] is None
     (artifact_dir / "gate" / "official_report.json").write_text("{}")
     with pytest.raises(ValueError, match="official cluster report"):
         cluster_pilot.validate_cluster_attempt(record, manifest, root)
+    with pytest.raises(ValueError, match="invalid cluster record"):
+        cluster_report.load_records(root, manifest)
     (artifact_dir / "gate" / "official_report.json").write_text(
         json.dumps({row["instance_id"]: {"resolved": True}}))
 
@@ -160,3 +171,9 @@ time.sleep(60)
     assert timed_out["candidate_status"] == "executor_error"
     assert "turn.started" in (timed_out_dir / "trace.jsonl").read_text()
     assert "executor reached model" in (timed_out_dir / "stderr.txt").read_text()
+    report = cluster_report.summarize_cluster(
+        manifest, cluster_report.load_records(root, manifest), root)
+    assert report["arms"]["codex"]["attempts"] == 1
+    assert report["ungraded_attempts"] == [{"task_id": row["instance_id"],
+                                             "arm": "codex", "attempt": 2,
+                                             "status": "executor_error"}]

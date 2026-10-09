@@ -162,3 +162,7 @@
   preserved inputs and patch, use the pinned official SWE-bench harness, and
   write a separate cluster attempt record bound to that gate report.
   - source: design
+- **C-5.8** — WHEN cluster results are summarized THE SYSTEM SHALL revalidate
+  every independent record, list missing and ungraded attempts, and leave USD
+  cost unknown until measured.
+  - source: design
