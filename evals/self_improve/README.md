@@ -37,9 +37,11 @@ unverified. Its price card computes an API-equivalent token estimate, which must
 be labeled separately from actual subscription billing. The committed
 `price_card_gpt-6.1-sol_2026-10-09.json` uses the standard text-token rates
 published on the [official GPT-6.1 Sol model page](https://developers.openai.com/api/docs/models/gpt-6.1-sol):
-$2 input, $0.10 cached input and $10 output per million tokens. Cache-write
-tokens and long-context requests are not priced by this simple card; the runner
-leaves such an attempt unpriced rather than claiming a precise cost.
+$2 input, $0.10 cached input, $2.50 cache writes and $10 output per million
+tokens. Every arm pins a 272,000-token context window and a 240,000-token
+compaction threshold to stay within the model's standard-rate range. Codex's
+JSONL trace aggregates usage by turn, not by individual model request, so these
+figures remain an API-equivalent estimate rather than a billing statement.
 
 `pilot.py plan --stage baseline` lists the 80 baseline cells. `pilot.py candidate`
 runs exactly one Codex task-arm attempt after fetching and verifying the pinned
@@ -59,9 +61,10 @@ implementation. The runner now pins `windows.sandbox=elevated` explicitly while
 keeping `workspace-write`. A scratch Codex run produced a 155-byte patch, and a
 direct sandbox check allowed writing inside that workspace but denied writing to
 its sibling. See the [official Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
-for the supported setting. The runner now
-classifies failed turns, process exits and tool-policy blocks as executor errors;
-such attempts cannot be sent to the acceptance matrix. A completed run that
+for the supported setting. The runner now classifies failed turns, process exits
+and tool-policy blocks without a patch as executor errors; such attempts cannot
+be sent to the acceptance matrix. A completed run with a patch and one denied
+tool call retains that warning and remains eligible for the independent gate. A run that
 chooses to make no change remains a measurable empty patch. Task attempts retain
 the issue input, timestamps, source revision, and Athena commit when used.
 
@@ -95,6 +98,15 @@ harness checks, not benchmark results. The earlier 36-task Lite manifest and
 its selection code remain in `manifest_lite_v1.json` and `corpus_lite_v1.py`.
 No agent result from it was accepted. The Verified v2 manifest was frozen before
 any agent comparison; successor clauses C-1.4, C-1.5 and C-2.7 record the change.
+
+The first real `astropy__astropy-13579` Codex attempt under the pre-cap runner
+passed the official harness. Its paired Athena attempt produced source and
+contract changes, but also generated `.athena` caches and cumulative turn usage
+above 272,000 tokens. These attempts are retained as protocol calibration, not
+included in the baseline comparison. The next run uses the same frozen corpus,
+model and acceptance tests, with one common context limit and a candidate patch
+rule that excludes generated `.athena` caches for every arm. The original
+calibration records remain in the local `pilot-v2` artifact directory.
 
 To extend the benchmark to 50 or more tasks, publish a new manifest version with a
 new selection seed before running candidates. Retain each older manifest

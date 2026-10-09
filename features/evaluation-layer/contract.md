@@ -75,13 +75,25 @@
 - **C-3.7** — BEFORE an optimizer candidate is run on holdout THE SYSTEM SHALL require
   a frozen instruction fingerprint bound to complete baseline and development reports.
   - source: design
-- **C-3.8** — WHEN the Codex process, tool policy or turn fails THE SYSTEM SHALL mark
+- **C-3.8** *(superseded-by C-3.12)* — WHEN the Codex process, tool policy or turn fails THE SYSTEM SHALL mark
   the candidate as an executor error and refuse to score its empty patch as a task
   failure in the official acceptance matrix.
   - source: audit
 - **C-3.9** — WHEN a candidate runs natively on Windows with user configuration
   ignored THE SYSTEM SHALL pin the elevated native sandbox and workspace-write
   permission in the recorded Codex invocation.
+  - source: audit
+- **C-3.10** — WHEN a candidate uses the dated API-equivalent price card THE
+  SYSTEM SHALL pin its context window to the standard-rate range, price cache
+  writes separately and reject a rate card with a different context limit.
+  - source: audit
+- **C-3.11** — WHEN a candidate patch is captured THE SYSTEM SHALL omit generated
+  `.athena` caches at any depth while retaining source and contract changes.
+  - source: audit
+- **C-3.12** *(supersedes C-3.8)* — WHEN the Codex process or turn fails, or a
+  tool-policy block leaves no patch, THE SYSTEM SHALL mark an executor error;
+  an isolated tool denial after a completed turn with a patch SHALL remain
+  eligible for independent grading.
   - source: audit
 
 ## C-4 — Independent acceptance

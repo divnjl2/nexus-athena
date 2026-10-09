@@ -1,5 +1,7 @@
 {
   "input_per_million": 2.0,
   "cached_input_per_million": 0.1,
-  "output_per_million": 10.0
+  "cache_write_input_per_million": 2.5,
+  "output_per_million": 10.0,
+  "max_request_context_tokens": 272000
 }

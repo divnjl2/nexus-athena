@@ -17,6 +17,9 @@ from pathlib import Path
 
 from .corpus import fingerprint
 
+MODEL_CONTEXT_WINDOW = 272_000
+AUTO_COMPACT_LIMIT = 240_000
+
 
 def usage_from_trace(trace: str) -> dict[str, int]:
     """Sum Codex turn.completed usage without counting partial item events."""
@@ -50,11 +53,12 @@ def usage_from_trace(trace: str) -> dict[str, int]:
     return totals
 
 
-def executor_failure(trace: str, stderr: str, exit_code: int) -> str | None:
+def executor_failure(trace: str, stderr: str, exit_code: int,
+                     patch_bytes: int = 0) -> str | None:
     """Keep transport and tool-policy failures out of task quality scores."""
     if exit_code:
         return f"process_exit_{exit_code}"
-    if "blocked by policy" in stderr.lower():
+    if "blocked by policy" in stderr.lower() and not patch_bytes:
         return "tool_blocked_by_policy"
     try:
         events = [json.loads(line) for line in trace.splitlines() if line.strip()]
@@ -69,19 +73,22 @@ def executor_failure(trace: str, stderr: str, exit_code: int) -> str | None:
 
 def price_usd(usage: dict[str, int], rates: dict[str, float]) -> float:
     """Estimate API-equivalent token cost with a versioned rate card."""
-    required = ("input_per_million", "cached_input_per_million", "output_per_million")
+    required = ("input_per_million", "cached_input_per_million",
+                "cache_write_input_per_million", "output_per_million",
+                "max_request_context_tokens")
     if set(rates) != set(required) or any(isinstance(rates[k], bool) or
                                          not isinstance(rates[k], (int, float)) or
                                          not math.isfinite(rates[k]) or rates[k] < 0
                                          for k in required):
         raise ValueError("a nonnegative three-rate price card is required")
-    if usage["cache_write_input_tokens"]:
-        raise ValueError("cache-write tokens need an explicit price rule")
-    if usage.get("max_turn_input_tokens", usage["input_tokens"]) > 272_000:
-        raise ValueError("long-context usage needs a per-request price rule")
-    fresh = usage["input_tokens"] - usage["cached_input_tokens"]
+    if rates["max_request_context_tokens"] != MODEL_CONTEXT_WINDOW:
+        raise ValueError("price card must match the pinned model context window")
+    fresh = usage["input_tokens"] - usage["cached_input_tokens"] - usage["cache_write_input_tokens"]
+    if fresh < 0:
+        raise ValueError("cache tokens exceed total input tokens")
     return (fresh * rates["input_per_million"] +
             usage["cached_input_tokens"] * rates["cached_input_per_million"] +
+            usage["cache_write_input_tokens"] * rates["cache_write_input_per_million"] +
             usage["output_tokens"] * rates["output_per_million"]) / 1_000_000
 
 
@@ -91,7 +98,8 @@ def candidate_patch(workspace: Path) -> bytes:
                             capture_output=True, text=True)
     if staged.returncode:
         raise RuntimeError(f"cannot enumerate candidate changes: {staged.stderr}")
-    diff = subprocess.run(["git", "diff", "--binary", "HEAD"], cwd=workspace,
+    diff = subprocess.run(["git", "diff", "--binary", "HEAD", "--", ".",
+                           ":(exclude).athena/**", ":(exclude)**/.athena/**"], cwd=workspace,
                           capture_output=True)
     if diff.returncode:
         raise RuntimeError("cannot capture candidate patch")
@@ -104,7 +112,9 @@ def codex_argv(codex_bin: str, workspace: Path, model: str, *, platform: str | N
     command = [codex_bin, "exec", "--json", "--ephemeral", "--ignore-user-config"]
     if platform == "nt":
         command.extend(["-c", "windows.sandbox=elevated"])
-    command.extend(["--sandbox", "workspace-write", "--model", model,
+    command.extend(["-c", f"model_context_window={MODEL_CONTEXT_WINDOW}",
+                    "-c", f"model_auto_compact_token_limit={AUTO_COMPACT_LIMIT}",
+                    "--sandbox", "workspace-write", "--model", model,
                     "--cd", str(workspace), "-"])
     return command
 
@@ -153,7 +163,7 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
         estimated_cost = price_usd(usage, rates) if "error" not in usage else None
     except ValueError:
         estimated_cost = None
-    failure = executor_failure(stdout, stderr, exit_code)
+    failure = executor_failure(stdout, stderr, exit_code, len(patch))
     result = {"exit_code": exit_code, "wall_seconds": elapsed,
               "started_at": started_at, "ended_at": ended_at,
               "model": model, "codex_cli_version": codex_cli_version,
@@ -163,6 +173,8 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
               "usage": usage, "cost_basis": "API-equivalent estimate; subscription billing may differ",
               "cost_usd": estimated_cost,
               "executor_failure": failure,
+              "executor_warning": ("tool_blocked_by_policy" if
+                                   "blocked by policy" in stderr.lower() and patch else None),
               "candidate_status": ("executor_error" if failure else
                                    "empty_patch" if not patch else "unverified_candidate"),
               "verified": False}

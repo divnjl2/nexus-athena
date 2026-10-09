@@ -128,14 +128,6 @@
 - **When** a holdout run is requested
 - **Then** matching complete baseline and development reports are required.
 
-### S3.8 — executor errors stay out of task quality scores
-- **verifies:** C-3.8
-- **pins:** 433a01132aabd821
-- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_executor_failures_cannot_be_scored_as_empty_agent_patches tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q`
-- **Given** a Codex trace with a tool policy, process or turn failure
-- **When** a candidate is classified and submitted for grading
-- **Then** the attempt is marked as an executor error and cannot enter the official task matrix.
-
 ### S3.9 — native Windows sandbox pinned
 - **verifies:** C-3.9
 - **pins:** 4380d6880bf6a226
@@ -143,6 +135,30 @@
 - **Given** a Windows Codex invocation with user configuration ignored
 - **When** the task command is built
 - **Then** it explicitly pins the elevated native sandbox with workspace-write.
+
+### S3.10 — bounded context and cache-write price
+- **verifies:** C-3.10
+- **pins:** 316d3e2e8430bb00
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_completed_codex_turns_account_for_cached_and_output_tokens tests/test_self_improve_codex_driver.py::test_windows_candidate_pins_the_native_elevated_workspace_sandbox -q`
+- **Given** a dated price card and completed Codex usage
+- **When** a request is configured and priced
+- **Then** the context limit and cache-write rate are bound to the estimate.
+
+### S3.11 — generated caches excluded
+- **verifies:** C-3.11
+- **pins:** 88eed663dadf9010
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_candidate_patch_contains_untracked_files_without_a_gate_verdict -q`
+- **Given** source edits and nested generated caches
+- **When** a patch is captured
+- **Then** source edits remain and generated `.athena` caches are omitted.
+
+### S3.12 — recoverable tool denial
+- **verifies:** C-3.12
+- **pins:** 9dfb6d99410c7f88
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_executor_failures_cannot_be_scored_as_empty_agent_patches tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q`
+- **Given** a completed turn with a patch and one denied tool call
+- **When** the candidate is classified
+- **Then** the gate may judge it while fatal executor errors remain excluded.
 
 ### S4.2 — unique prediction and run id
 - **verifies:** C-4.2
