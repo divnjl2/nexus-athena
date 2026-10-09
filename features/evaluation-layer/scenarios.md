@@ -1,5 +1,23 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.6 — isolated and unpriced cluster candidate
+- **verifies:** C-5.6
+- **pins:** 1167f673e3b2da65
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_provider_is_loopback_and_key_stays_out_of_argv tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a recent passed tool-loop probe and a private bridge key
+- **When** a cluster candidate runs in its own worktree
+- **Then** its invocation uses only the loopback provider and preserves inputs,
+  trace and patch as unverified evidence with no invented dollar price.
+
+### S5.7 — independent cluster gate
+- **verifies:** C-5.7
+- **pins:** bf140793a31c3d5c
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a preserved cluster candidate
+- **When** its independent gate is run
+- **Then** changed prompt or patch bytes are refused and the official report
+  is bound to a cluster-specific record.
+
 ### S5.5 — plain text Responses input
 - **verifies:** C-5.5
 - **pins:** 114d139c0004633d

@@ -153,3 +153,12 @@
 - **C-5.5** — WHEN a streamed Responses request uses plain text input THE
   SYSTEM SHALL forward that input unchanged through the bridge.
   - source: incident
+- **C-5.6** — BEFORE a cluster candidate starts THE SYSTEM SHALL require a
+  recent matching tool-loop probe and a loopback custom provider, then preserve
+  its input, prompt, invocation, trace and patch without assigning a verdict or
+  an invented USD cost.
+  - source: design
+- **C-5.7** — WHEN a cluster candidate is graded THE SYSTEM SHALL verify its
+  preserved inputs and patch, use the pinned official SWE-bench harness, and
+  write a separate cluster attempt record bound to that gate report.
+  - source: design

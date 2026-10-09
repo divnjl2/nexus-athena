@@ -45,7 +45,7 @@ with a 65,536-token context setting and `workspace-write` sandbox. This was a
 synthetic transport smoke, not a benchmark candidate or acceptance result.
 
 The deployed bridge is managed by GitOps in `homelab-infra/apps/athena-bridge`
-at revision `516cb24987114253ac2766bf680495b9453e4345`. It runs one Pod,
+at revision `90f9d7e5994994fe4d18582cc73903cf7c2ccd66`. It runs one Pod,
 mounts the Python source from a ConfigMap, reads the two keys from a SOPS
 Secret, and has no Service. From the Windows workstation, access it through
 an SSH tunnel and a pod port-forward:
@@ -60,6 +60,23 @@ account token, and egress only to DNS and the gateway. The optional
 `cluster_bridge_pod.py` renders a standalone manifest for local inspection;
 the live cluster uses the GitOps resources. A Codex CLI smoke through the Pod
 also completed two command executions and read back the expected file token.
+After its source update, the full streamed text/function/replay probe also
+passed through the Pod's forwarded endpoint.
+
+`cluster_pilot.py` records real cluster candidates under a **different root and
+schema** from the priced Codex baseline. It requires a route probe from the
+last 24 hours, keeps the bridge key outside artifacts, and sets `cost_usd` to
+`null` until owner-cluster cost is measured. Run one development candidate and
+then submit its saved patch to the same pinned SWE-bench harness:
+
+```text
+python -m evals.self_improve.cluster_pilot candidate --task psf__requests-5414 --arm codex --root <cluster-run-root> --client-key-file <private-bridge-key> --probe-report <passed-pod-probe.json>
+python -m evals.self_improve.cluster_pilot gate --task psf__requests-5414 --arm codex --root <cluster-run-root> --wsl-distro Ubuntu --harness-python <linux-swebench-python>
+```
+
+A candidate patch and completed Codex turn are still unverified until `gate`
+preserves the official report. This separate lane is not a cell in the frozen
+three-arm `gpt-6.1-sol` comparison, and it cannot make a USD cost claim yet.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.

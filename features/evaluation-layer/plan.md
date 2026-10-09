@@ -66,3 +66,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
   - success_check: `python -m pytest tests/test_self_improve_cluster_bridge.py::test_bridge_passes_plain_text_responses_input -q`
   - files: `evals/self_improve/cluster_bridge.py, tests/test_self_improve_cluster_bridge.py`
   - verifies: S5.5
+- [ ] T5.5 Capture and independently gate a separate cluster candidate
+  - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
+  - files: `evals/self_improve/cluster_pilot.py, tests/test_self_improve_cluster_pilot.py`
+  - verifies: S5.6, S5.7
