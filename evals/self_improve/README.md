@@ -34,7 +34,12 @@ smaller replacement corpus.
 Git worktrees at the exact issue base commits. `codex_driver.py` records the
 Codex JSONL trace, prompt, invocation and candidate diff; the candidate is still
 unverified. Its price card computes an API-equivalent token estimate, which must
-be labeled separately from actual subscription billing.
+be labeled separately from actual subscription billing. The committed
+`price_card_gpt-6.1-sol_2026-10-09.json` uses the standard text-token rates
+published on the [official GPT-6.1 Sol model page](https://developers.openai.com/api/docs/models/gpt-6.1-sol):
+$2 input, $0.10 cached input and $10 output per million tokens. Cache-write
+tokens and long-context requests are not priced by this simple card; the runner
+leaves such an attempt unpriced rather than claiming a precise cost.
 
 `pilot.py plan --stage baseline` lists the 80 baseline cells. `pilot.py candidate`
 runs exactly one Codex task-arm attempt after fetching and verifying the pinned
@@ -48,7 +53,13 @@ reported that nested filesystem tool calls were blocked by the current host
 policy. A separate scratch run with `danger-full-access` created the requested
 file, but that mode grants too much host access for untrusted benchmark tasks.
 Codex CLI 0.161.0 under WSL `workspace-write` reached HTTP 403 from the model
-service. These are environment findings, not benchmark results. The runner now
+service. These are environment findings, not benchmark results. The Windows
+failure came from `--ignore-user-config` dropping the configured native sandbox
+implementation. The runner now pins `windows.sandbox=elevated` explicitly while
+keeping `workspace-write`. A scratch Codex run produced a 155-byte patch, and a
+direct sandbox check allowed writing inside that workspace but denied writing to
+its sibling. See the [official Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+for the supported setting. The runner now
 classifies failed turns, process exits and tool-policy blocks as executor errors;
 such attempts cannot be sent to the acceptance matrix. A completed run that
 chooses to make no change remains a measurable empty patch. Task attempts retain

@@ -1,10 +1,10 @@
 {
-  "contract_version": "cd6c12d0e9209249",
+  "contract_version": "abf76e6d4b026823",
   "results": [
     {
       "clause": "C-1.4",
       "clause_version": "45cd81e0c8b0cfd0",
-      "duration_ms": 110,
+      "duration_ms": 112,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-1.2",
       "clause_version": "ec00ab0724938b98",
-      "duration_ms": 7,
+      "duration_ms": 8,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "7e00d7d4c26e89cd",
-      "duration_ms": 12,
+      "duration_ms": 11,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -54,7 +54,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "a75910948b86c287",
-      "duration_ms": 263,
+      "duration_ms": 379,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -64,7 +64,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "8d8a52abf9251a2c",
-      "duration_ms": 273,
+      "duration_ms": 324,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -84,7 +84,7 @@
     {
       "clause": "C-2.7",
       "clause_version": "7988f7797b48a34c",
-      "duration_ms": 108,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -94,7 +94,7 @@
     {
       "clause": "C-3.1",
       "clause_version": "4958de38b73df3b3",
-      "duration_ms": 1,
+      "duration_ms": 109,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-3.2",
       "clause_version": "c5f6c954fd07503d",
-      "duration_ms": 1281,
+      "duration_ms": 1435,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -134,7 +134,7 @@
     {
       "clause": "C-3.5",
       "clause_version": "beb162706c41ab87",
-      "duration_ms": 933,
+      "duration_ms": 775,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -164,7 +164,7 @@
     {
       "clause": "C-3.8",
       "clause_version": "433a01132aabd821",
-      "duration_ms": 123,
+      "duration_ms": 15,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -172,9 +172,19 @@
       "scenario": "S3.8"
     },
     {
+      "clause": "C-3.9",
+      "clause_version": "4380d6880bf6a226",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_windows_candidate_pins_the_native_elevated_workspace_sandbox -q",
+      "scenario": "S3.9"
+    },
+    {
       "clause": "C-4.2",
       "clause_version": "c1b0f1a81cea3f71",
-      "duration_ms": 1,
+      "duration_ms": 111,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -184,7 +194,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "031ca1911ac30a2e",
-      "duration_ms": 4,
+      "duration_ms": 6,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,7 +214,7 @@
     {
       "clause": "C-4.5",
       "clause_version": "128ac47a3504b741",
-      "duration_ms": 15,
+      "duration_ms": 13,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -214,7 +224,7 @@
     {
       "clause": "C-4.6",
       "clause_version": "68160e61f974a4d3",
-      "duration_ms": 9,
+      "duration_ms": 8,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -234,7 +244,7 @@
     {
       "clause": "C-4.7",
       "clause_version": "94199369ad4d69c9",
-      "duration_ms": 9,
+      "duration_ms": 8,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -242,13 +252,13 @@
       "scenario": "S4.8"
     }
   ],
-  "scenario_version": "c1c49d4415d8d17a",
+  "scenario_version": "bdaf2e8905816509",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 3403,
+    "duration_ms": 3571,
     "failed": 0,
-    "passed": 24,
-    "total": 24
+    "passed": 25,
+    "total": 25
   },
-  "ts": "2026-10-09T18:18:05+00:00"
+  "ts": "2026-10-09T18:26:29+00:00"
 }

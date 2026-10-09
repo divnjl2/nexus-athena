@@ -136,6 +136,14 @@
 - **When** a candidate is classified and submitted for grading
 - **Then** the attempt is marked as an executor error and cannot enter the official task matrix.
 
+### S3.9 — native Windows sandbox pinned
+- **verifies:** C-3.9
+- **pins:** 4380d6880bf6a226
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_windows_candidate_pins_the_native_elevated_workspace_sandbox -q`
+- **Given** a Windows Codex invocation with user configuration ignored
+- **When** the task command is built
+- **Then** it explicitly pins the elevated native sandbox with workspace-write.
+
 ### S4.2 — unique prediction and run id
 - **verifies:** C-4.2
 - **pins:** c1b0f1a81cea3f71

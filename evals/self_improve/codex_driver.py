@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import shutil
 import subprocess
 import time
@@ -23,6 +24,7 @@ def usage_from_trace(trace: str) -> dict[str, int]:
                                    "cache_write_input_tokens", "output_tokens",
                                    "reasoning_output_tokens")}
     turns = 0
+    max_turn_input_tokens = 0
     for line in trace.splitlines():
         if not line.strip():
             continue
@@ -37,12 +39,14 @@ def usage_from_trace(trace: str) -> dict[str, int]:
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"invalid Codex usage: {key}")
             totals[key] += value
+        max_turn_input_tokens = max(max_turn_input_tokens, usage.get("input_tokens", 0))
         turns += 1
     if not turns:
         raise ValueError("Codex trace contains no completed turn")
     if totals["cached_input_tokens"] > totals["input_tokens"]:
         raise ValueError("cached input exceeds total input")
     totals["turns"] = turns
+    totals["max_turn_input_tokens"] = max_turn_input_tokens
     return totals
 
 
@@ -73,6 +77,8 @@ def price_usd(usage: dict[str, int], rates: dict[str, float]) -> float:
         raise ValueError("a nonnegative three-rate price card is required")
     if usage["cache_write_input_tokens"]:
         raise ValueError("cache-write tokens need an explicit price rule")
+    if usage.get("max_turn_input_tokens", usage["input_tokens"]) > 272_000:
+        raise ValueError("long-context usage needs a per-request price rule")
     fresh = usage["input_tokens"] - usage["cached_input_tokens"]
     return (fresh * rates["input_per_million"] +
             usage["cached_input_tokens"] * rates["cached_input_per_million"] +
@@ -92,6 +98,17 @@ def candidate_patch(workspace: Path) -> bytes:
     return diff.stdout
 
 
+def codex_argv(codex_bin: str, workspace: Path, model: str, *, platform: str | None = None) -> list[str]:
+    """Pin the same restricted workspace policy on every task attempt."""
+    platform = platform or os.name
+    command = [codex_bin, "exec", "--json", "--ephemeral", "--ignore-user-config"]
+    if platform == "nt":
+        command.extend(["-c", "windows.sandbox=elevated"])
+    command.extend(["--sandbox", "workspace-write", "--model", model,
+                    "--cd", str(workspace), "-"])
+    return command
+
+
 def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
               artifacts: Path, rates: dict[str, float], codex_bin: str = "codex") -> dict:
     """Preserve exact prompt/config/trace/diff; return only an unverified candidate."""
@@ -106,8 +123,7 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
         codex_cli_version = version_proc.stdout.strip() if version_proc.returncode == 0 else "unavailable"
     except OSError:
         codex_cli_version = "unavailable"
-    cmd = [resolved_bin, "exec", "--json", "--ephemeral", "--ignore-user-config",
-           "--sandbox", "workspace-write", "--model", model, "--cd", str(workspace), "-"]
+    cmd = codex_argv(resolved_bin, workspace, model)
     (artifacts / "invocation.json").write_text(json.dumps(
         {"argv": cmd, "cwd": str(workspace), "timeout_seconds": timeout,
          "rates_usd_per_million": rates}, indent=2) + "\n", encoding="utf-8")

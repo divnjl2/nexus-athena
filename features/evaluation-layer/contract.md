@@ -79,6 +79,10 @@
   the candidate as an executor error and refuse to score its empty patch as a task
   failure in the official acceptance matrix.
   - source: audit
+- **C-3.9** — WHEN a candidate runs natively on Windows with user configuration
+  ignored THE SYSTEM SHALL pin the elevated native sandbox and workspace-write
+  permission in the recorded Codex invocation.
+  - source: audit
 
 ## C-4 — Independent acceptance
 
