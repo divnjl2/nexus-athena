@@ -44,7 +44,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T4.1 Run SWE-bench against a pinned local task snapshot and bind its report
   - success_check: `python -m pytest tests/test_self_improve_gate_adapter.py tests/test_self_improve_pilot.py tests/test_self_improve_evidence.py -q`
   - files: `evals/self_improve/gate_adapter.py, evals/self_improve/evidence.py, evals/self_improve/pilot.py, tests/test_self_improve_gate_adapter.py, tests/test_self_improve_evidence.py, tests/test_self_improve_pilot.py`
-  - verifies: S4.2, S4.3, S4.4, S4.5, S4.6, S4.7, S4.8, S4.9
+  - verifies: S4.2, S4.3, S4.4, S4.5, S4.6, S4.7, S4.8, S4.9, S4.10
 
 ## Phase 5: Qualify the owner's cluster route
 **Goal:** prove that the selected route supports the agent tool loop before a separate cluster lane is run.
@@ -69,7 +69,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T5.5 Capture and independently gate a separate cluster candidate
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
   - files: `evals/self_improve/cluster_pilot.py, tests/test_self_improve_cluster_pilot.py`
-  - verifies: S5.6, S5.7, S5.10, S5.11
+  - verifies: S5.6, S5.7, S5.10, S5.11, S5.12
 - [ ] T5.6 Summarize only revalidated cluster attempts
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
   - files: `evals/self_improve/cluster_report.py, tests/test_self_improve_cluster_pilot.py`

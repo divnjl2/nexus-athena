@@ -17,6 +17,14 @@
 - **Then** gate time is bound to the record and partial attempts leave total
   time unknown with only a measured lower bound.
 
+### S5.12 — cluster harness inputs and logs bound
+- **verifies:** C-5.12
+- **pins:** 7e50390de27768ab
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a cluster attempt with an official SWE-bench report
+- **When** its saved harness command changes after grading
+- **Then** report validation rejects the attempt.
+
 ### S5.9 — fail-closed cluster continuation
 - **verifies:** C-5.9
 - **pins:** 503941c35a58bafa
@@ -380,3 +388,11 @@
 - **Given** a Windows task path with Cyrillic components
 - **When** the path is mapped into Ubuntu WSL
 - **Then** the Linux process can access that exact directory.
+
+### S4.10 — harness invocation and logs bound
+- **verifies:** C-4.9
+- **pins:** d275f72ebed0b076
+- **run_cmd:** `python -m pytest tests/test_self_improve_evidence.py::test_attempt_rejects_changed_official_harness_io tests/test_self_improve_evidence.py::test_attempt_rejects_rehashed_harness_command_for_another_task tests/test_self_improve_gate_adapter.py::test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report -q`
+- **Given** a candidate and an official gate report
+- **When** the saved command, prediction, stdout or stderr changes
+- **Then** attempt validation rejects the changed harness evidence.

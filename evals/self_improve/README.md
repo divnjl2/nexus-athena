@@ -196,7 +196,9 @@ Each harness run id includes the task, arm, attempt and patch hash to prevent
 reuse of a cached verdict for another patch. The resulting record points to an
 unchanged official `report.json` and its SHA-256. An absent report leaves the
 task unproved. The adapter pins `swebench==5.0.2`, whose Verified rows include
-the image and evaluation script. Its per-instance reports are under
+the image and evaluation script. It also binds the exact harness command,
+prediction, stdout and stderr files to the gate envelope so later report
+validation detects changes to those artifacts. Its per-instance reports are under
 `logs/evaluation/`. It uses a one-task local JSON snapshot so
 the harness cannot silently fetch changed acceptance data. On Windows, pass
 `--wsl-distro Ubuntu --harness-python /path/to/venv/bin/python` to `pilot.py gate`;

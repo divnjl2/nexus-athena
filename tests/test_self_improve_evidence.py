@@ -7,7 +7,7 @@ import pytest
 from evals.self_improve.codex_driver import usage_from_trace
 from evals.self_improve.corpus import fingerprint, inputs, select
 from evals.self_improve.evidence import SCHEMA, load_attempts, summarize
-from evals.self_improve.gate_adapter import HARNESS_VERSION, run_id_for
+from evals.self_improve.gate_adapter import HARNESS_VERSION, prediction, run_id_for
 
 
 def _rows():
@@ -76,11 +76,28 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
     dataset = tmp_path / "harness" / f"{run_id}.dataset.json"
     dataset.parent.mkdir(parents=True, exist_ok=True)
     dataset.write_text(json.dumps([row]))
+    prediction_path = tmp_path / "harness" / f"{run_id}.jsonl"
+    prediction_path.write_bytes(prediction(task["id"], f"{arm}_{attempt}", patch))
+    command_path = tmp_path / "harness" / f"{run_id}.command.json"
+    command_path.write_text(json.dumps([
+        "python", "-m", "swebench.harness.run_evaluation",
+        "--dataset_name", str(dataset), "--split", "test",
+        "--predictions_path", str(prediction_path),
+        "--instance_ids", task["id"], "--max_workers", "1",
+        "--timeout", "600", "--run_id", run_id]))
+    stdout_path = tmp_path / "harness" / f"{run_id}.stdout.txt"
+    stderr_path = tmp_path / "harness" / f"{run_id}.stderr.txt"
+    stdout_path.write_bytes(b"official harness output\n")
+    stderr_path.write_bytes(b"")
     report = {"schema": "athena.self-improve.gate/1", "runner": "swebench-harness",
               "instance_id": task["id"], "patch_sha256": patch_hash,
               "run_id": run_id, "harness_version": HARNESS_VERSION,
               "resolved": passed, "official_report": official_name,
               "gate_wall_seconds": 20,
+              "command_sha256": hashlib.sha256(command_path.read_bytes()).hexdigest(),
+              "prediction_sha256": hashlib.sha256(prediction_path.read_bytes()).hexdigest(),
+              "stdout_sha256": hashlib.sha256(stdout_path.read_bytes()).hexdigest(),
+              "stderr_sha256": hashlib.sha256(stderr_path.read_bytes()).hexdigest(),
               "official_report_sha256": hashlib.sha256(official_data).hexdigest(),
               "dataset_sha256": hashlib.sha256(dataset.read_bytes()).hexdigest()}
     data = json.dumps(report).encode()
@@ -179,6 +196,40 @@ def test_attempt_rejects_gate_time_omitted_from_total(tmp_path):
     record["total_wall_seconds"] = record["wall_seconds"]
     path.write_text(json.dumps(record) + "\n")
     with pytest.raises(ValueError, match="gate duration or total attempt time"):
+        load_attempts(path, manifest, tmp_path / "artifacts")
+
+
+@pytest.mark.parametrize("suffix,name", [
+    ("command.json", "command"), ("jsonl", "prediction"),
+    ("stdout.txt", "stdout"), ("stderr.txt", "stderr"),
+])
+def test_attempt_rejects_changed_official_harness_io(tmp_path, suffix, name):
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    path = tmp_path / "attempts.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    assert load_attempts(path, manifest, tmp_path / "artifacts") == [record]
+    saved = tmp_path / "harness" / f"{record['run_id']}.{suffix}"
+    saved.write_bytes(saved.read_bytes() + b"changed\n")
+    with pytest.raises(ValueError, match=f"official harness {name} evidence"):
+        load_attempts(path, manifest, tmp_path / "artifacts")
+
+
+def test_attempt_rejects_rehashed_harness_command_for_another_task(tmp_path):
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    command_path = tmp_path / "harness" / f"{record['run_id']}.command.json"
+    command = json.loads(command_path.read_text())
+    command[command.index("--instance_ids") + 1] = "other__task-1"
+    command_path.write_text(json.dumps(command))
+    gate_path = tmp_path / "artifacts" / record["gate"]["artifact"]
+    envelope = json.loads(gate_path.read_text())
+    envelope["command_sha256"] = hashlib.sha256(command_path.read_bytes()).hexdigest()
+    gate_path.write_text(json.dumps(envelope))
+    record["gate"]["sha256"] = hashlib.sha256(gate_path.read_bytes()).hexdigest()
+    path = tmp_path / "attempts.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    with pytest.raises(ValueError, match="official harness command has wrong --instance_ids"):
         load_attempts(path, manifest, tmp_path / "artifacts")
 
 

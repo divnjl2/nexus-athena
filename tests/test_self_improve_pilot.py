@@ -6,7 +6,7 @@ import json
 
 from evals.self_improve.corpus import acceptance, fingerprint, inputs
 from evals.self_improve.codex_driver import usage_from_trace
-from evals.self_improve.gate_adapter import HARNESS_VERSION, attest, run_id_for
+from evals.self_improve.gate_adapter import HARNESS_VERSION, attest, prediction, run_id_for
 from evals.self_improve.pilot import authorize_split, gate_one, prompt_for
 
 
@@ -121,11 +121,27 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
         kwargs["workdir"].mkdir(parents=True, exist_ok=True)
         dataset = kwargs["workdir"] / f"{run_id}.dataset.json"
         dataset.write_text(json.dumps([row]))
+        prediction_path = kwargs["workdir"] / f"{run_id}.jsonl"
+        prediction_path.write_bytes(prediction(task["id"], kwargs["model_name"], patch))
+        command_path = kwargs["workdir"] / f"{run_id}.command.json"
+        command_path.write_text(json.dumps([
+            "python", "-m", "swebench.harness.run_evaluation",
+            "--dataset_name", str(dataset), "--split", "test",
+            "--predictions_path", str(prediction_path),
+            "--instance_ids", task["id"], "--max_workers", "1",
+            "--timeout", "600", "--run_id", run_id]))
+        stdout_path = kwargs["workdir"] / f"{run_id}.stdout.txt"
+        stderr_path = kwargs["workdir"] / f"{run_id}.stderr.txt"
+        stdout_path.write_bytes(b"official harness output\n")
+        stderr_path.write_bytes(b"")
         envelope = attest(task_id=task["id"], patch=patch, official_report=official,
                           gate_dir=kwargs["gate_dir"], run_id=run_id,
                           harness_version=HARNESS_VERSION)
         envelope["dataset_sha256"] = hashlib.sha256(dataset.read_bytes()).hexdigest()
         envelope["gate_wall_seconds"] = 20
+        for name, path in (("command", command_path), ("prediction", prediction_path),
+                           ("stdout", stdout_path), ("stderr", stderr_path)):
+            envelope[f"{name}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         (kwargs["gate_dir"] / "gate.json").write_text(json.dumps(envelope))
         return envelope
 

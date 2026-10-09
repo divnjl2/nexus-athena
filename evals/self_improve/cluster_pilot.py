@@ -21,7 +21,7 @@ from pathlib import Path
 from .codex_driver import candidate_patch, executor_failure, usage_from_trace
 from .corpus import acceptance, fingerprint, inputs, load_pinned, verify
 from .evidence import file_sha256
-from .gate_adapter import official_verdict, run_harness
+from .gate_adapter import official_verdict, run_harness, validate_harness_io
 from .pilot import prompt_for
 from .workspaces import prepare
 
@@ -441,6 +441,8 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
             fingerprint(inputs(snapshot[0])) != task["input_sha256"] or \
             fingerprint(acceptance(snapshot[0])) != task["acceptance_sha256"]:
         raise ValueError("cluster gate used a different frozen task row")
+    validate_harness_io(root / "harness", envelope, task_id=task_id,
+                        model_name=f"cluster_{arm}_{attempt}", patch=patch)
 
 
 def main() -> int:

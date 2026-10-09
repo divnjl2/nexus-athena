@@ -52,6 +52,44 @@ def run_id_for(task_id: str, arm: str, attempt: int, patch: bytes) -> str:
     return f"athena-{task_id}-{arm}-{attempt}-{digest}"
 
 
+def validate_harness_io(workdir: Path, envelope: dict, *, task_id: str,
+                        model_name: str, patch: bytes) -> None:
+    """Bind the official gate's saved invocation, prediction and process output."""
+    run_id = envelope["run_id"]
+    files = {name: workdir / f"{run_id}.{suffix}" for name, suffix in (
+        ("command", "command.json"), ("prediction", "jsonl"),
+        ("stdout", "stdout.txt"), ("stderr", "stderr.txt"))}
+    for name, path in files.items():
+        if not path.is_file() or \
+                hashlib.sha256(path.read_bytes()).hexdigest() != envelope.get(f"{name}_sha256"):
+            raise ValueError(f"official harness {name} evidence changed")
+    if files["prediction"].read_bytes() != prediction(task_id, model_name, patch):
+        raise ValueError("official harness prediction differs from candidate")
+    command = json.loads(files["command"].read_text(encoding="utf-8"))
+    if not isinstance(command, list) or not all(isinstance(arg, str) for arg in command):
+        raise ValueError("official harness command is invalid")
+    def argument(flag: str) -> str:
+        if command.count(flag) != 1:
+            raise ValueError(f"official harness command has wrong {flag}")
+        index = command.index(flag) + 1
+        if index >= len(command):
+            raise ValueError(f"official harness command has no value for {flag}")
+        return command[index]
+    expected = {"-m": "swebench.harness.run_evaluation",
+                "--instance_ids": task_id, "--run_id": run_id,
+                "--split": "test", "--max_workers": "1"}
+    for flag, value in expected.items():
+        if argument(flag) != value:
+            raise ValueError(f"official harness command has wrong {flag}")
+    for flag, suffix in (("--dataset_name", ".dataset.json"),
+                         ("--predictions_path", ".jsonl")):
+        if not argument(flag).endswith(run_id + suffix):
+            raise ValueError(f"official harness command has wrong {flag}")
+    timeout_arg = argument("--timeout")
+    if not timeout_arg.isdecimal() or int(timeout_arg) < 1:
+        raise ValueError("official harness command has wrong timeout")
+
+
 def attest(*, task_id: str, patch: bytes, official_report: Path,
            gate_dir: Path, run_id: str, harness_version: str) -> dict:
     """Copy the official report unchanged and hash it into a separate gate envelope."""
@@ -127,6 +165,11 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     envelope = attest(task_id=task_id, patch=patch, official_report=report_path,
                       gate_dir=gate_dir, run_id=run_id, harness_version=installed_version)
     envelope["dataset_sha256"] = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
+    for name, path in (("command", workdir / f"{run_id}.command.json"),
+                       ("prediction", prediction_path),
+                       ("stdout", workdir / f"{run_id}.stdout.txt"),
+                       ("stderr", workdir / f"{run_id}.stderr.txt")):
+        envelope[f"{name}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
     envelope["gate_wall_seconds"] = time.monotonic() - gate_start
     (gate_dir / "gate.json").write_text(json.dumps(envelope, indent=2) + "\n",
                                          encoding="utf-8")

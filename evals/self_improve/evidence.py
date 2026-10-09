@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .codex_driver import executor_failure, price_usd, usage_from_trace
 from .corpus import ARMS, acceptance, fingerprint, inputs, validate_manifest_shape
-from .gate_adapter import HARNESS_VERSION, run_id_for
+from .gate_adapter import HARNESS_VERSION, run_id_for, validate_harness_io
 
 SCHEMA = "athena.self-improve.attempt/1"
 STAGES = {"baseline": ARMS[:2], "final": ARMS}
@@ -171,6 +171,9 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
             fingerprint(inputs(snapshot[0])) != task["input_sha256"] or \
             fingerprint(acceptance(snapshot[0])) != task["acceptance_sha256"]:
         raise ValueError("official gate used a different task row")
+    validate_harness_io(artifacts.parent / "harness", envelope,
+                        task_id=record["task_id"],
+                        model_name=f"{record['arm']}_{record['attempt']}", patch=patch)
     official_relative = Path(envelope.get("official_report", ""))
     official_path = (path.parent / official_relative).resolve()
     if not official_relative.parts or official_relative.is_absolute() or \

@@ -158,6 +158,10 @@
   SYSTEM SHALL preserve non-ASCII path components in UTF-8 so the harness reads
   the same local files that were fingerprinted.
   - source: incident
+- **C-4.9** — WHEN an official SWE-bench gate result is accepted THE SYSTEM
+  SHALL bind the exact command, prediction and process output files to the
+  gate envelope and reject changed bytes or a prediction for another patch.
+  - source: audit
 
 ## C-5 — Cluster inference qualification
 
@@ -205,4 +209,8 @@
 - **C-5.11** — WHEN a cluster attempt is graded THE SYSTEM SHALL bind official
   gate wall time to its record and include it with candidate time, withholding
   complete time metrics whenever an ungraded attempt remains.
+  - source: audit
+- **C-5.12** — WHEN a cluster gate result is reported THE SYSTEM SHALL
+  revalidate the saved harness command, prediction and process output bytes
+  against its gate envelope before counting the attempt.
   - source: audit

@@ -10,7 +10,7 @@ import pytest
 
 from evals.self_improve import cluster_pilot, cluster_report
 from evals.self_improve.corpus import acceptance, fingerprint, inputs
-from evals.self_improve.gate_adapter import attest
+from evals.self_improve.gate_adapter import attest, prediction
 
 
 def test_cluster_provider_is_loopback_and_key_stays_out_of_argv(tmp_path):
@@ -128,6 +128,20 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
         kwargs["workdir"].mkdir(parents=True, exist_ok=True)
         dataset = kwargs["workdir"] / f"{run_id}.dataset.json"
         dataset.write_text(json.dumps([row]) + "\n")
+        prediction_path = kwargs["workdir"] / f"{run_id}.jsonl"
+        prediction_path.write_bytes(prediction(row["instance_id"],
+                                               kwargs["model_name"], kwargs["patch"]))
+        command_path = kwargs["workdir"] / f"{run_id}.command.json"
+        command_path.write_text(json.dumps([
+            "python", "-m", "swebench.harness.run_evaluation",
+            "--dataset_name", str(dataset), "--split", "test",
+            "--predictions_path", str(prediction_path),
+            "--instance_ids", row["instance_id"], "--max_workers", "1",
+            "--timeout", "600", "--run_id", run_id]))
+        stdout_path = kwargs["workdir"] / f"{run_id}.stdout.txt"
+        stderr_path = kwargs["workdir"] / f"{run_id}.stderr.txt"
+        stdout_path.write_bytes(b"official harness output\n")
+        stderr_path.write_bytes(b"")
         report = tmp_path / "official.json"
         report.write_text(json.dumps({row["instance_id"]: {"resolved": True}}))
         envelope = attest(task_id=row["instance_id"], patch=kwargs["patch"],
@@ -135,6 +149,9 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
                           run_id=run_id, harness_version="5.0.2")
         envelope["dataset_sha256"] = hashlib.sha256(dataset.read_bytes()).hexdigest()
         envelope["gate_wall_seconds"] = 20
+        for name, path in (("command", command_path), ("prediction", prediction_path),
+                           ("stdout", stdout_path), ("stderr", stderr_path)):
+            envelope[f"{name}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         (kwargs["gate_dir"] / "gate.json").write_text(json.dumps(envelope))
         return envelope
 
@@ -171,6 +188,12 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     altered_record = {**record, "total_wall_seconds": record["wall_seconds"]}
     with pytest.raises(ValueError, match="gate duration or total attempt time"):
         cluster_pilot.validate_cluster_attempt(altered_record, manifest, root)
+    command_path = root / "harness" / f"{record['run_id']}.command.json"
+    original_command = command_path.read_bytes()
+    command_path.write_bytes(original_command + b"changed\n")
+    with pytest.raises(ValueError, match="official harness command evidence"):
+        cluster_pilot.validate_cluster_attempt(record, manifest, root)
+    command_path.write_bytes(original_command)
     (artifact_dir / "gate" / "official_report.json").write_text("{}")
     with pytest.raises(ValueError, match="official cluster report"):
         cluster_pilot.validate_cluster_attempt(record, manifest, root)
