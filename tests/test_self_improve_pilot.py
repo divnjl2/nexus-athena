@@ -80,6 +80,7 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
     (attempt_dir / "candidate.patch").write_bytes(patch)
     (attempt_dir / "candidate.json").write_text(json.dumps({
         "patch_sha256": hashlib.sha256(patch).hexdigest(), "model": "snapshot",
+        "candidate_status": "unverified_candidate",
         "codex_cli_version": "codex-cli test", "cost_basis": "API-equivalent estimate",
         "prompt_sha256": "d" * 64, "config_sha256": "e" * 64,
         "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",

@@ -155,8 +155,11 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
     candidate = json.loads((attempt_dir / "candidate.json").read_text(encoding="utf-8"))
     metadata = json.loads((attempt_dir / "attempt.json").read_text(encoding="utf-8"))
     patch = (attempt_dir / "candidate.patch").read_bytes()
-    if not patch or candidate["patch_sha256"] != hashlib.sha256(patch).hexdigest():
-        raise ValueError("candidate patch is empty or altered")
+    if candidate["patch_sha256"] != hashlib.sha256(patch).hexdigest():
+        raise ValueError("candidate patch is altered")
+    allowed_status = ("unverified_candidate", "codex_error") if patch else ("empty_patch", "codex_error")
+    if candidate.get("candidate_status") not in allowed_status:
+        raise ValueError("candidate status disagrees with patch")
     if metadata["manifest_sha256"] != fingerprint(manifest) or \
             metadata["task_id"] != task_id or metadata["arm"] != arm:
         raise ValueError("candidate metadata is for another task or corpus")
@@ -189,7 +192,8 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
               "wall_seconds": candidate["wall_seconds"],
               "cost_usd": candidate["cost_usd"],
               "patch_sha256": candidate["patch_sha256"],
-              "failure_reason": None if envelope["resolved"] else "official harness unresolved",
+              "failure_reason": None if envelope["resolved"] else
+                                ("empty patch" if not patch else "official harness unresolved"),
               "gate": {"runner": "swebench-harness",
                        "artifact": str(gate_path.relative_to(artifacts_root)).replace("\\", "/"),
                        "sha256": file_sha256(gate_path),

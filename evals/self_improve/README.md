@@ -61,6 +61,12 @@ the harness cannot silently fetch changed acceptance data. On Windows, pass
 `--wsl-distro Ubuntu --harness-python /path/to/venv/bin/python` to `pilot.py gate`;
 the Ubuntu WSL Docker daemon is available on the development host.
 
+The official v5 harness skips execution for an empty patch and lists it in
+`results.json`. Such a task-arm cell is unresolved only when its one-task summary
+names that task as the sole submitted empty patch and reports no harness error.
+The summary is preserved and hashed just like a per-instance report; infrastructure
+errors remain unproved.
+
 Infrastructure calibration on 2026-10-09 used official gold patches, never agent
 outputs. Version 5.0.2 refused the Lite row `psf__requests-1963`
 (`KeyError: image`). Version 4.1.0 reached its test container, but

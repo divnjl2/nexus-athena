@@ -128,14 +128,6 @@
 - **When** a holdout run is requested
 - **Then** matching complete baseline and development reports are required.
 
-### S4.1 — official task-keyed verdict
-- **verifies:** C-4.1
-- **pins:** 535917bcb7e30330
-- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_official_report_shape_is_required -q`
-- **Given** an official per-instance report
-- **When** its verdict is read
-- **Then** only a boolean under the task id is accepted.
-
 ### S4.2 — unique prediction and run id
 - **verifies:** C-4.2
 - **pins:** c1b0f1a81cea3f71
@@ -175,3 +167,19 @@
 - **Given** a pinned task row and the compatible harness
 - **When** the independent gate is invoked
 - **Then** it reads a local snapshot and the expected version's per-instance report.
+
+### S4.7 — official verdict shapes
+- **verifies:** C-4.7
+- **pins:** 94199369ad4d69c9
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_official_report_shape_is_required -q`
+- **Given** an official per-instance report or single-task empty-patch summary
+- **When** its verdict is read
+- **Then** a task-bound boolean is returned only for a supported shape.
+
+### S4.8 — empty patch is measured
+- **verifies:** C-4.7
+- **pins:** 94199369ad4d69c9
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_empty_patch_is_bound_to_official_v5_results -q`
+- **Given** an agent attempt with no patch
+- **When** the official v5 harness reports it as empty
+- **Then** the task is recorded as unresolved with that report preserved.

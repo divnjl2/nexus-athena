@@ -20,19 +20,25 @@ def _wsl_path(path: Path, distro: str) -> str:
     return proc.stdout.strip()
 
 def official_verdict(report: dict, task_id: str) -> bool:
-    """Read the real per-instance report shape: {instance_id: {resolved: bool}}."""
+    """Read a per-instance verdict or v5's single-task empty-patch result."""
     entry = report.get(task_id)
-    if not isinstance(entry, dict) or not isinstance(entry.get("resolved"), bool):
-        raise ValueError("official report has no boolean verdict for this task")
-    return entry["resolved"]
+    if isinstance(entry, dict) and isinstance(entry.get("resolved"), bool):
+        return entry["resolved"]
+    if report.get("schema_version") == 2 and report.get("total_instances") == 1 and \
+            report.get("submitted_instances") == 1 and \
+            report.get("empty_patch_instances") == 1 and \
+            report.get("empty_patch_ids") == [task_id] and \
+            report.get("submitted_ids") == [task_id] and \
+            report.get("resolved_instances") == 0 and \
+            report.get("error_instances") == 0:
+        return False
+    raise ValueError("official report has no task verdict or verified empty patch")
 
 
 def prediction(task_id: str, model_name: str, patch: bytes) -> bytes:
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", task_id) or \
             not re.fullmatch(r"[A-Za-z0-9_.-]+", model_name):
         raise ValueError("unsafe task or model name")
-    if not patch:
-        raise ValueError("empty patch has no acceptance verdict")
     return (json.dumps({"instance_id": task_id, "model_name_or_path": model_name,
                         "model_patch": patch.decode("utf-8")}, ensure_ascii=False) + "\n").encode("utf-8")
 
@@ -111,6 +117,8 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     (workdir / f"{run_id}.stdout.txt").write_text(proc.stdout, encoding="utf-8")
     (workdir / f"{run_id}.stderr.txt").write_text(proc.stderr, encoding="utf-8")
     report_path = workdir / "logs" / "evaluation" / run_id / model_name / task_id / "report.json"
+    if not patch and not report_path.is_file():
+        report_path = workdir / "logs" / "evaluation" / run_id / "results.json"
     if not report_path.is_file():
         raise RuntimeError(f"official harness produced no per-instance report (exit {proc.returncode})")
     envelope = attest(task_id=task_id, patch=patch, official_report=report_path,

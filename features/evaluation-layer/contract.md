@@ -78,7 +78,7 @@
 
 ## C-4 — Independent acceptance
 
-- **C-4.1** — WHEN an official SWE-bench report is read THE SYSTEM SHALL obtain the
+- **C-4.1** *(superseded-by C-4.7)* — WHEN an official SWE-bench report is read THE SYSTEM SHALL obtain the
   boolean verdict from the entry keyed by the task instance id.
   - source: review
 - **C-4.2** — WHEN a candidate is submitted to SWE-bench THE SYSTEM SHALL bind its
@@ -97,4 +97,9 @@
 - **C-4.6** — WHEN the official harness runs THE SYSTEM SHALL use a pinned local
   task snapshot and the compatible pinned harness version, then read the resulting
   per-instance report from that harness's output path.
+  - source: audit
+- **C-4.7** *(supersedes C-4.1)* — WHEN an official SWE-bench result is read THE
+  SYSTEM SHALL use the task-keyed boolean in a per-instance report, or classify an
+  empty patch as unresolved only when the pinned v5 harness's single-task summary
+  names that task as its sole submitted empty patch without an error.
   - source: audit
