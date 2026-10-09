@@ -134,6 +134,7 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
                           official_report=report, gate_dir=kwargs["gate_dir"],
                           run_id=run_id, harness_version="5.0.2")
         envelope["dataset_sha256"] = hashlib.sha256(dataset.read_bytes()).hexdigest()
+        envelope["gate_wall_seconds"] = 20
         (kwargs["gate_dir"] / "gate.json").write_text(json.dumps(envelope))
         return envelope
 
@@ -142,6 +143,7 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
                                     arm="codex", attempt=1, root=root)
     assert record["schema"] == cluster_pilot.CLUSTER_SCHEMA
     assert record["gate"]["passed"] is True and record["cost_usd"] is None
+    assert record["total_wall_seconds"] == pytest.approx(record["wall_seconds"] + 20)
     assert record["probe_reported_models"] == ["cluster-model-v1"] * 3
     assert (root / "records" / "cluster-demo-1.json").is_file()
     trace_path.write_bytes(altered_trace)
@@ -160,8 +162,14 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert report["model_identity_basis"] == "synthetic preflight probe only"
     assert report["arms"]["codex"]["verified_successes"] == 1
     assert report["arms"]["codex"]["cost_per_verified_success_usd"] is None
+    assert report["arms"]["codex"]["gate_wall_seconds"] == 20
+    assert report["arms"]["codex"]["total_wall_seconds"] == \
+        pytest.approx(record["total_wall_seconds"])
     altered_record = {**record, "probe_reported_models": ["invented"]}
     with pytest.raises(ValueError, match="probe model observation"):
+        cluster_pilot.validate_cluster_attempt(altered_record, manifest, root)
+    altered_record = {**record, "total_wall_seconds": record["wall_seconds"]}
+    with pytest.raises(ValueError, match="gate duration or total attempt time"):
         cluster_pilot.validate_cluster_attempt(altered_record, manifest, root)
     (artifact_dir / "gate" / "official_report.json").write_text("{}")
     with pytest.raises(ValueError, match="official cluster report"):
@@ -208,6 +216,9 @@ time.sleep(60)
     report = cluster_report.summarize_cluster(
         manifest, cluster_report.load_records(root, manifest), root)
     assert report["arms"]["codex"]["attempts"] == 1
+    assert report["arms"]["codex"]["total_wall_seconds"] is None
+    assert report["arms"]["codex"]["wall_lower_bound_seconds"] == \
+        pytest.approx(record["total_wall_seconds"])
     assert report["ungraded_attempts"] == [{"task_id": row["instance_id"],
                                              "arm": "codex", "attempt": 2,
                                              "status": "executor_error"}]

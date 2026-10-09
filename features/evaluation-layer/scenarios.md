@@ -8,6 +8,15 @@
 - **When** line endings or diagnostic bytes change without changing parsed events
 - **Then** the candidate fails provenance checks before its independent gate.
 
+### S5.11 — cluster time includes official gate
+- **verifies:** C-5.11
+- **pins:** 644d6dff9f6ca694
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a cluster candidate and an official gate verdict
+- **When** a graded or partial cluster report is built
+- **Then** gate time is bound to the record and partial attempts leave total
+  time unknown with only a measured lower bound.
+
 ### S5.9 — fail-closed cluster continuation
 - **verifies:** C-5.9
 - **pins:** 503941c35a58bafa
@@ -168,6 +177,15 @@
 - **When** the baseline report is produced or a batch resumes
 - **Then** validated usage is charged, incomplete cost is unknown, and the
   attempt remains visible without completing the comparison.
+
+### S2.10 — time includes the independent gate
+- **verifies:** C-2.10
+- **pins:** 0de767d8110aaa1f
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report tests/test_self_improve_evidence.py::test_attempt_rejects_gate_time_omitted_from_total tests/test_self_improve_evidence.py::test_report_prices_ungated_attempts_only_from_complete_candidate_evidence -q`
+- **Given** a candidate and an official SWE-bench gate
+- **When** their times are reported
+- **Then** gate duration is bound to the envelope and included in total time,
+  while an unfinished gate leaves total time unknown.
 
 ### S2.8 — revalidate every baseline evidence leg
 - **verifies:** C-2.8

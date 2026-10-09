@@ -278,6 +278,8 @@ def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
               "input_tokens": candidate["usage"]["input_tokens"],
               "output_tokens": candidate["usage"]["output_tokens"],
               "wall_seconds": candidate["wall_seconds"],
+              "gate_wall_seconds": envelope["gate_wall_seconds"],
+              "total_wall_seconds": candidate["wall_seconds"] + envelope["gate_wall_seconds"],
               "cost_usd": None, "cost_basis": candidate["cost_basis"],
               "started_at": candidate["started_at"], "ended_at": candidate["ended_at"],
               "seed": metadata["seed"],
@@ -315,7 +317,8 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
             raise ValueError(f"cluster record has wrong {field}")
     if record.get("cost_usd", "missing") is not None:
         raise ValueError("cluster record cannot invent a USD cost")
-    for field in ("input_tokens", "output_tokens", "wall_seconds"):
+    for field in ("input_tokens", "output_tokens", "wall_seconds",
+                  "gate_wall_seconds", "total_wall_seconds"):
         value = record.get(field)
         if isinstance(value, bool) or not isinstance(value, (int, float)) or \
                 not math.isfinite(value) or value < 0:
@@ -413,6 +416,15 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
             envelope.get("run_id") != record.get("run_id") or \
             envelope.get("harness_version") != "5.0.2":
         raise ValueError("cluster gate does not bind task, patch and harness")
+    gate_seconds = envelope.get("gate_wall_seconds")
+    if isinstance(gate_seconds, bool) or not isinstance(gate_seconds, (int, float)) or \
+            not math.isfinite(gate_seconds) or gate_seconds < 0 or \
+            not math.isclose(record["gate_wall_seconds"], gate_seconds,
+                             rel_tol=0, abs_tol=1e-9) or \
+            not math.isclose(record["total_wall_seconds"],
+                             record["wall_seconds"] + gate_seconds,
+                             rel_tol=0, abs_tol=1e-9):
+        raise ValueError("cluster gate duration or total attempt time changed")
     official = _contained_file(gate_path.parent, envelope.get("official_report", ""))
     if file_sha256(official) != envelope.get("official_report_sha256"):
         raise ValueError("official cluster report changed")

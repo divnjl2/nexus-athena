@@ -91,6 +91,9 @@ def test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report(tmp_path, 
                          workdir=workdir, gate_dir=tmp_path / "gate",
                          harness_python="python")
     assert result["resolved"] is True and result["harness_version"] == "5.0.2"
+    assert result["gate_wall_seconds"] >= 0
+    assert json.loads((tmp_path / "gate" / "gate.json").read_text())[
+        "gate_wall_seconds"] == result["gate_wall_seconds"]
     assert result["dataset_sha256"] == hashlib.sha256(
         (workdir / f"{result['run_id']}.dataset.json").read_bytes()).hexdigest()
 

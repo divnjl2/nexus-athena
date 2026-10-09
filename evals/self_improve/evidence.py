@@ -124,7 +124,8 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
         raise ValueError("model resolution claim is unsupported")
     if "seed" not in record or "failure_reason" not in record:
         raise ValueError("seed and failure_reason must be recorded, even if null")
-    for key in ("input_tokens", "output_tokens", "wall_seconds", "cost_usd"):
+    for key in ("input_tokens", "output_tokens", "wall_seconds",
+                "gate_wall_seconds", "total_wall_seconds", "cost_usd"):
         value = record.get(key)
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
             raise ValueError(f"invalid {key}")
@@ -149,6 +150,15 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
             envelope.get("run_id") != record["run_id"] or \
             envelope.get("harness_version") != HARNESS_VERSION:
         raise ValueError("gate envelope does not bind this task and patch")
+    gate_seconds = envelope.get("gate_wall_seconds")
+    if isinstance(gate_seconds, bool) or not isinstance(gate_seconds, (int, float)) or \
+            not math.isfinite(gate_seconds) or gate_seconds < 0 or \
+            not math.isclose(record["gate_wall_seconds"], gate_seconds,
+                             rel_tol=0, abs_tol=1e-9) or \
+            not math.isclose(record["total_wall_seconds"],
+                             record["wall_seconds"] + gate_seconds,
+                             rel_tol=0, abs_tol=1e-9):
+        raise ValueError("gate duration or total attempt time changed")
     dataset_path = (artifacts.parent / "harness" /
                     f"{record['run_id']}.dataset.json").resolve()
     if not dataset_path.is_relative_to(artifacts.parent.resolve()) or \
@@ -245,7 +255,8 @@ def _ungraded_candidate_cost(attempt_dir: Path, task: dict, manifest: dict,
             not math.isclose(candidate["cost_usd"], cost, rel_tol=0, abs_tol=1e-9):
         raise ValueError("ungraded candidate usage or cost changed")
     return {"status": expected_status, "observed_cost_usd": cost,
-            "observed_wall_seconds": wall,
+            "candidate_wall_seconds": wall,
+            "observed_wall_seconds": None if (attempt_dir / "gate").exists() else wall,
             "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"]}
 
 
@@ -269,6 +280,7 @@ def ungraded_attempts(manifest: dict, records: list[dict], artifacts: Path,
                 except (ValueError, KeyError, TypeError, OSError, json.JSONDecodeError):
                     observed = {"status": "incomplete_or_invalid_artifacts",
                                 "observed_cost_usd": None,
+                                "candidate_wall_seconds": None,
                                 "observed_wall_seconds": None,
                                 "input_tokens": None, "output_tokens": None}
                 found.append({"task_id": task["id"], "arm": arm,
@@ -346,7 +358,13 @@ def summarize(manifest: dict, records: list[dict], artifacts: Path,
                             if item["observed_cost_usd"] is not None)
         cost_complete = all(item["observed_cost_usd"] is not None for item in arm_ungraded)
         spent = graded_cost + observed_cost if cost_complete else None
-        graded_wall = sum(r["wall_seconds"] for attempts in arm_cells for r in attempts)
+        graded_wall = sum(r["total_wall_seconds"] for attempts in arm_cells for r in attempts)
+        graded_candidate_wall = sum(r["wall_seconds"] for attempts in arm_cells
+                                    for r in attempts)
+        graded_gate_wall = sum(r["gate_wall_seconds"] for attempts in arm_cells
+                               for r in attempts)
+        observed_candidate_wall = sum(item["candidate_wall_seconds"] for item in arm_ungraded
+                                       if item["candidate_wall_seconds"] is not None)
         observed_wall = sum(item["observed_wall_seconds"] for item in arm_ungraded
                             if item["observed_wall_seconds"] is not None)
         time_complete = all(item["observed_wall_seconds"] is not None for item in arm_ungraded)
@@ -366,6 +384,9 @@ def summarize(manifest: dict, records: list[dict], artifacts: Path,
             "evaluated_tasks": len(arm_cells), "verified_successes": completed,
             "attempts": sum(len(attempts) for attempts in arm_cells) + len(arm_ungraded),
             "total_cost_usd": spent, "total_wall_seconds": elapsed,
+            "candidate_wall_seconds": graded_candidate_wall + observed_candidate_wall,
+            "gate_wall_seconds": graded_gate_wall,
+            "wall_lower_bound_seconds": graded_wall + observed_candidate_wall,
             "cost_lower_bound_usd": graded_cost + observed_cost,
             "cost_complete": cost_complete, "time_complete": time_complete,
             "input_tokens": graded_input + observed_input if tokens_complete else None,

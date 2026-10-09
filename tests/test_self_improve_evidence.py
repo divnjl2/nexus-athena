@@ -80,6 +80,7 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
               "instance_id": task["id"], "patch_sha256": patch_hash,
               "run_id": run_id, "harness_version": HARNESS_VERSION,
               "resolved": passed, "official_report": official_name,
+              "gate_wall_seconds": 20,
               "official_report_sha256": hashlib.sha256(official_data).hexdigest(),
               "dataset_sha256": hashlib.sha256(dataset.read_bytes()).hexdigest()}
     data = json.dumps(report).encode()
@@ -97,6 +98,7 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
             "athena_commit": athena_commit,
             "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
             "input_tokens": 100, "output_tokens": 50, "wall_seconds": 60, "cost_usd": 1.5,
+            "gate_wall_seconds": 20, "total_wall_seconds": 80,
             "patch_sha256": patch_hash, "failure_reason": None if passed else "tests failed",
             "gate": {"runner": "swebench-harness", "artifact": artifact,
                      "sha256": hashlib.sha256(data).hexdigest(), "passed": passed}}
@@ -170,6 +172,16 @@ def test_attempt_rejects_semantically_identical_trace_with_changed_bytes(tmp_pat
         load_attempts(path, manifest, tmp_path / "artifacts")
 
 
+def test_attempt_rejects_gate_time_omitted_from_total(tmp_path):
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    path = tmp_path / "attempts.jsonl"
+    record["total_wall_seconds"] = record["wall_seconds"]
+    path.write_text(json.dumps(record) + "\n")
+    with pytest.raises(ValueError, match="gate duration or total attempt time"):
+        load_attempts(path, manifest, tmp_path / "artifacts")
+
+
 @pytest.mark.parametrize("changed,reason", [
     ("input", "candidate input"),
     ("patch", "candidate patch"),
@@ -225,7 +237,9 @@ def test_report_refuses_missing_arms_and_charges_failed_attempts(tmp_path):
     assert report["arms"]["codex"]["total_cost_usd"] == 3.0
     assert report["arms"]["codex"]["cost_per_verified_success_usd"] == 3.0
     assert report["arms"]["codex"]["attempts"] == 2
-    assert report["arms"]["codex"]["seconds_per_verified_success"] == 120
+    assert report["arms"]["codex"]["seconds_per_verified_success"] == 160
+    assert report["arms"]["codex"]["candidate_wall_seconds"] == 120
+    assert report["arms"]["codex"]["gate_wall_seconds"] == 40
     assert report["arms"]["codex"]["input_tokens"] == 200
 
 
@@ -243,9 +257,19 @@ def test_report_prices_ungated_attempts_only_from_complete_candidate_evidence(tm
     assert arm["cost_per_verified_success_usd"] == 3.0
     assert arm["cost_complete"] is True
     assert arm["input_tokens"] == 200 and arm["output_tokens"] == 100
+    assert arm["total_wall_seconds"] == 140
+    assert arm["gate_wall_seconds"] == 20
 
     task = manifest["tasks"][0]
     attempt_dir = (tmp_path / "artifacts" / task["split"] / task["id"] / "codex" / "2")
+    (attempt_dir / "gate").mkdir()
+    report = summarize(manifest, [first], tmp_path / "artifacts", stage="baseline")
+    arm = report["arms"]["codex"]
+    assert arm["total_cost_usd"] == 3.0
+    assert arm["time_complete"] is False
+    assert arm["total_wall_seconds"] is None
+    assert arm["wall_lower_bound_seconds"] == 140
+    (attempt_dir / "gate").rmdir()
     (attempt_dir / "stderr.txt").unlink()
     report = summarize(manifest, [first], tmp_path / "artifacts", stage="baseline")
     arm = report["arms"]["codex"]

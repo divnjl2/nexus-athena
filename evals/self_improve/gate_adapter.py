@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HARNESS_VERSION = "5.0.2"
@@ -76,6 +77,7 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
                 timeout: int = 1800, wsl_distro: str | None = None,
                 harness_python: str | None = None) -> dict:
     """Run the official harness once; an absent report stays unproved."""
+    gate_start = time.monotonic()
     if gate_dir.exists():
         raise FileExistsError(gate_dir)
     run_id = run_id_for(task_id, arm, attempt, patch)
@@ -125,6 +127,7 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     envelope = attest(task_id=task_id, patch=patch, official_report=report_path,
                       gate_dir=gate_dir, run_id=run_id, harness_version=installed_version)
     envelope["dataset_sha256"] = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
+    envelope["gate_wall_seconds"] = time.monotonic() - gate_start
     (gate_dir / "gate.json").write_text(json.dumps(envelope, indent=2) + "\n",
                                          encoding="utf-8")
     return envelope

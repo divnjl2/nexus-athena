@@ -61,6 +61,11 @@
   candidate evidence validates, and report unknown totals instead of omitting
   unmeasured usage; an ungraded attempt SHALL prevent a complete comparison.
   - source: audit
+- **C-2.10** — WHEN a priced attempt receives an independent gate verdict THE
+  SYSTEM SHALL measure gate wall time, bind it to the gate envelope, and include
+  it with candidate time in the verified-success time metric; unfinished gates
+  SHALL leave total time unknown.
+  - source: audit
 
 ## C-3 — Isolated candidates
 
@@ -196,4 +201,8 @@
 - **C-5.10** — WHEN a cluster candidate records or validates its trace and
   stderr THE SYSTEM SHALL fingerprint their exact file bytes, and reject any
   changed bytes before independent grading or report acceptance.
+  - source: audit
+- **C-5.11** — WHEN a cluster attempt is graded THE SYSTEM SHALL bind official
+  gate wall time to its record and include it with candidate time, withholding
+  complete time metrics whenever an ungraded attempt remains.
   - source: audit

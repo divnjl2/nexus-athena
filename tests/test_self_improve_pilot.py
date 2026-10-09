@@ -125,6 +125,7 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
                           gate_dir=kwargs["gate_dir"], run_id=run_id,
                           harness_version=HARNESS_VERSION)
         envelope["dataset_sha256"] = hashlib.sha256(dataset.read_bytes()).hexdigest()
+        envelope["gate_wall_seconds"] = 20
         (kwargs["gate_dir"] / "gate.json").write_text(json.dumps(envelope))
         return envelope
 

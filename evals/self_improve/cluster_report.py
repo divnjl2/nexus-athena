@@ -96,9 +96,15 @@ def summarize_cluster(manifest: dict, records: list[dict], root: Path,
               "total_cost_usd": None, "arms": {}}
     for arm in ARMS:
         arm_cells = [attempts for (task_id, name), attempts in cells.items() if name == arm]
+        arm_ungraded = [item for item in ungraded if item["arm"] == arm]
         successes = sum(any(record["gate"]["passed"] for record in attempts)
                         for attempts in arm_cells)
-        elapsed = sum(record["wall_seconds"] for attempts in arm_cells for record in attempts)
+        elapsed = sum(record["total_wall_seconds"] for attempts in arm_cells
+                      for record in attempts)
+        candidate_elapsed = sum(record["wall_seconds"] for attempts in arm_cells
+                                for record in attempts)
+        gate_elapsed = sum(record["gate_wall_seconds"] for attempts in arm_cells
+                           for record in attempts)
         failures = Counter(record["failure_reason"] for attempts in arm_cells
                            for record in attempts if record["failure_reason"])
         result["arms"][arm] = {
@@ -108,11 +114,16 @@ def summarize_cluster(manifest: dict, records: list[dict], root: Path,
                                 for record in attempts),
             "output_tokens": sum(record["output_tokens"] for attempts in arm_cells
                                  for record in attempts),
-            "total_wall_seconds": elapsed,
+            "total_wall_seconds": elapsed if not arm_ungraded else None,
+            "candidate_wall_seconds": candidate_elapsed,
+            "gate_wall_seconds": gate_elapsed,
+            "wall_lower_bound_seconds": elapsed,
+            "time_complete": not arm_ungraded,
             "verified_success_rate": successes / len(arm_cells) if arm_cells else None,
             "success_rate_95pct_wilson": wilson(successes, len(arm_cells))
             if arm_cells else None,
-            "seconds_per_verified_success": elapsed / successes if successes else None,
+            "seconds_per_verified_success": elapsed / successes
+            if successes and not arm_ungraded else None,
             "total_cost_usd": None, "cost_per_verified_success_usd": None,
             "failure_reasons": dict(sorted(failures.items())),
         }

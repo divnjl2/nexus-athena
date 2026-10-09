@@ -23,7 +23,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T2.1 Validate attempt provenance and calculate the pilot matrix
   - success_check: `python -m pytest tests/test_self_improve_evidence.py -q`
   - files: `evals/self_improve/evidence.py, tests/test_self_improve_evidence.py`
-  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.7, S2.8, S2.9
+  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.7, S2.8, S2.9, S2.10
 
 ### Manual Verification
 - `python -m evals.self_improve.evidence --attempts <runs.jsonl> --artifacts <dir>` exits 2 when any task-arm cell is missing.
@@ -69,7 +69,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T5.5 Capture and independently gate a separate cluster candidate
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
   - files: `evals/self_improve/cluster_pilot.py, tests/test_self_improve_cluster_pilot.py`
-  - verifies: S5.6, S5.7, S5.10
+  - verifies: S5.6, S5.7, S5.10, S5.11
 - [ ] T5.6 Summarize only revalidated cluster attempts
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
   - files: `evals/self_improve/cluster_report.py, tests/test_self_improve_cluster_pilot.py`

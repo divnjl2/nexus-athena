@@ -198,6 +198,8 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
               "input_tokens": candidate["usage"]["input_tokens"],
               "output_tokens": candidate["usage"]["output_tokens"],
               "wall_seconds": candidate["wall_seconds"],
+              "gate_wall_seconds": envelope["gate_wall_seconds"],
+              "total_wall_seconds": candidate["wall_seconds"] + envelope["gate_wall_seconds"],
               "cost_usd": candidate["cost_usd"],
               "patch_sha256": candidate["patch_sha256"],
               "failure_reason": None if envelope["resolved"] else

@@ -105,6 +105,8 @@ benchmark candidate. The cluster route has since passed those transport checks,
 but has not yet produced a graded task in a separate cluster evaluation lane.
 Cluster candidate provenance fingerprints the raw trace and stderr files; even
 a line-ending change invalidates the candidate before official grading.
+Cluster graded-attempt time includes the independent gate. If an ungraded
+attempt remains, total time is unknown and only graded time is a lower bound.
 
 `manifest.json` freezes 40 real SWE-bench Verified issues from revision
 `78f471bf655a3137b2e8a75af1501690ec009ec3`: four per eligible repository,
@@ -132,6 +134,8 @@ It lists candidates that never reached an independent gate and charges their
 cost and tokens when their saved evidence validates. If usage cannot be proven,
 the total is unknown and a verified lower bound is shown; these attempts keep
 the comparison incomplete. It reports Wilson intervals for success rates.
+Verified-success time includes the candidate and the official SWE-bench gate;
+an unfinished gate leaves total time unknown and reports a measured lower bound.
 A string naming the official
 gate does not authenticate a report by itself; the eventual runner must capture
 the independent harness output and preserve its execution logs.
