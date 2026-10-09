@@ -221,6 +221,18 @@ model and acceptance tests, with one common context limit and a candidate patch
 rule that excludes generated `.athena` caches for every arm. The original
 calibration records remain in the local `pilot-v2` artifact directory.
 
+Interim baseline status on 2026-10-10: `pilot-v3` contains four revalidated
+official harness records, forming two complete pairs from the same Astropy
+repository (`astropy__astropy-13579` and `astropy__astropy-8872`). All four
+patches resolved. Across these two tasks, the API-equivalent cost estimate is
+$0.1466868 for Codex and $0.37549 for Codex + Athena; executor wall time is
+219.375 and 611.907 seconds respectively. The remaining 76 baseline cells are
+absent. Two tasks from one repository cannot establish a general quality or
+cost advantage. The raw run artifacts are still local under ignored
+`.athena/pilot-v3`, so these figures are an interim observation rather than a
+published reproducible benchmark result. Under the current sandbox, WSL and
+Docker access are denied, preventing another official gate run.
+
 To extend the benchmark to 50 or more tasks, publish a new manifest version with a
 new selection seed before running candidates. Retain each older manifest
 and all run records for comparison. Keep the same per-repository split rule where
