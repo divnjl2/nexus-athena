@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-HARNESS_VERSION = "4.1.0"
+HARNESS_VERSION = "5.0.2"
 
 
 def _wsl_path(path: Path, distro: str) -> str:
@@ -110,7 +110,7 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
                           timeout=timeout + 1800)
     (workdir / f"{run_id}.stdout.txt").write_text(proc.stdout, encoding="utf-8")
     (workdir / f"{run_id}.stderr.txt").write_text(proc.stderr, encoding="utf-8")
-    report_path = workdir / "logs" / "run_evaluation" / run_id / model_name / task_id / "report.json"
+    report_path = workdir / "logs" / "evaluation" / run_id / model_name / task_id / "report.json"
     if not report_path.is_file():
         raise RuntimeError(f"official harness produced no per-instance report (exit {proc.returncode})")
     envelope = attest(task_id=task_id, patch=patch, official_report=report_path,

@@ -65,7 +65,10 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
     from evals.self_improve.evidence import load_attempts
     row = {"instance_id": "org__repo-1", "repo": "org/repo",
            "base_commit": "a" * 40, "problem_statement": "fix it", "hints_text": "",
-           "FAIL_TO_PASS": ["test_fix"], "PASS_TO_PASS": [], "test_patch": "test diff"}
+           "FAIL_TO_PASS": ["test_fix"], "PASS_TO_PASS": [], "test_patch": "test diff",
+           "image": "test-image", "eval_script": "pytest test_fix",
+           "environment_setup_commit": "env", "eval_type": "pytest",
+           "log_parser": "pytest"}
     task = {"id": row["instance_id"], "repo": row["repo"],
             "base_commit": row["base_commit"], "split": "development",
             "input_sha256": fingerprint(inputs(row)),

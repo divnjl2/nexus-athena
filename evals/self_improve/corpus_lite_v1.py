@@ -1,4 +1,4 @@
-"""Freeze and verify a stratified, revision-pinned SWE-bench Verified task set.
+"""Freeze and verify a stratified, revision-pinned SWE-bench Lite task set.
 
 The manifest carries fingerprints rather than the hidden acceptance material. A
 runner must fetch the pinned revision and verify both fingerprints before a run.
@@ -10,9 +10,9 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-DATASET = "SWE-bench/SWE-bench_Verified"
-REVISION = "78f471bf655a3137b2e8a75af1501690ec009ec3"
-SELECTION_SEED = "nexus-athena-vnext-verified-v2-2026-10-09"
+DATASET = "princeton-nlp/SWE-bench_Lite"
+REVISION = "6ec7bb89b9342f664a54a6e0a6ea6501d3437cc2"
+SELECTION_SEED = "nexus-athena-vnext-pilot-2026-10-09"
 ARMS = ("codex", "codex_athena", "codex_athena_optimizer")
 
 
@@ -31,31 +31,28 @@ def inputs(row: dict) -> dict:
 
 
 def acceptance(row: dict) -> dict:
-    return {key: row[key] for key in ("FAIL_TO_PASS", "PASS_TO_PASS", "test_patch",
-                                     "image", "eval_script", "environment_setup_commit",
-                                     "eval_type", "log_parser")}
+    return {key: row[key] for key in ("FAIL_TO_PASS", "PASS_TO_PASS", "test_patch")}
 
 
 def select(rows: list[dict]) -> dict:
-    """Select four per eligible repo; reserve one per repo for holdout."""
+    """Select three per repo by stable hash; reserve one per repo for holdout."""
     by_repo: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         by_repo[row["repo"]].append(row)
-    eligible = {repo: group for repo, group in by_repo.items() if len(group) >= 4}
-    if len(eligible) != 10:
-        raise ValueError("expected ten repositories with at least four tasks each")
+    if len(by_repo) != 12 or any(len(group) < 3 for group in by_repo.values()):
+        raise ValueError("expected 12 repositories with at least three tasks each")
     tasks = []
-    for repo, group in sorted(eligible.items()):
+    for repo, group in sorted(by_repo.items()):
         ranked = sorted(group, key=lambda row: (
             hashlib.sha256((SELECTION_SEED + ":" + row["instance_id"]).encode()).hexdigest(),
-            row["instance_id"]))[:4]
+            row["instance_id"]))[:3]
         for index, row in enumerate(ranked):
             tasks.append({"id": row["instance_id"], "repo": repo,
                           "base_commit": row["base_commit"],
-                          "split": "holdout" if index == 3 else "development",
+                          "split": "holdout" if index == 2 else "development",
                           "input_sha256": fingerprint(inputs(row)),
                           "acceptance_sha256": fingerprint(acceptance(row))})
-    return {"schema": "athena.self-improve.corpus/2", "dataset": DATASET,
+    return {"schema": "athena.self-improve.corpus/1", "dataset": DATASET,
             "revision": REVISION, "seed": SELECTION_SEED,
             "arms": list(ARMS), "tasks": tasks}
 
@@ -68,16 +65,14 @@ def verify(manifest: dict, rows: list[dict]) -> None:
 def validate_manifest_shape(manifest: dict) -> None:
     """Refuse a report over an empty or shrunken replacement corpus."""
     tasks = manifest.get("tasks", [])
-    if manifest.get("schema") != "athena.self-improve.corpus/2" or \
-            manifest.get("dataset") != DATASET or \
+    if manifest.get("schema") != "athena.self-improve.corpus/1" or \
             manifest.get("revision") != REVISION or \
-            manifest.get("seed") != SELECTION_SEED or \
-            manifest.get("arms") != list(ARMS) or len(tasks) != 40 or \
-            len({task["id"] for task in tasks}) != 40 or \
-            len({task["repo"] for task in tasks}) != 10 or \
-            sum(task["split"] == "development" for task in tasks) != 30 or \
-            sum(task["split"] == "holdout" for task in tasks) != 10:
-        raise ValueError("not the frozen 40-task Verified pilot corpus")
+            manifest.get("arms") != list(ARMS) or len(tasks) != 36 or \
+            len({task["id"] for task in tasks}) != 36 or \
+            len({task["repo"] for task in tasks}) != 12 or \
+            sum(task["split"] == "development" for task in tasks) != 24 or \
+            sum(task["split"] == "holdout" for task in tasks) != 12:
+        raise ValueError("not the frozen 36-task pilot corpus")
 
 
 def load_pinned() -> list[dict]:
@@ -90,7 +85,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("freeze", "verify"))
     parser.add_argument("--manifest", type=Path,
-                        default=Path(__file__).with_name("manifest.json"))
+                        default=Path(__file__).with_name("manifest_lite_v1.json"))
     args = parser.parse_args()
     rows = load_pinned()
     if args.action == "freeze":
@@ -100,7 +95,7 @@ def main() -> int:
                                            indent=2) + "\n", encoding="utf-8")
     else:
         verify(json.loads(args.manifest.read_text(encoding="utf-8")), rows)
-    print(f"{args.action}: 40 tasks, 30 development, 10 holdout; revision {REVISION}")
+    print(f"{args.action}: 36 tasks, 24 development, 12 holdout; revision {REVISION}")
     return 0
 
 

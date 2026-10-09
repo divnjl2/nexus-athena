@@ -12,8 +12,11 @@ def _rows():
     return [{"instance_id": f"repo{i}__task{j}", "repo": f"org/repo{i}",
              "base_commit": f"sha{i}{j}", "problem_statement": f"bug {i}/{j}",
              "hints_text": "", "FAIL_TO_PASS": [f"test_{i}_{j}"],
-             "PASS_TO_PASS": [], "test_patch": f"diff {i}/{j}"}
-            for i in range(12) for j in range(4)]
+             "PASS_TO_PASS": [], "test_patch": f"diff {i}/{j}",
+             "image": f"image-{i}-{j}", "eval_script": f"pytest test_{i}_{j}",
+             "environment_setup_commit": f"env{i}{j}", "eval_type": "pytest",
+             "log_parser": "pytest"}
+            for i in range(10) for j in range(5)]
 
 
 def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt=1):
@@ -82,7 +85,7 @@ def test_report_refuses_missing_arms_and_charges_failed_attempts(tmp_path):
     failed = _attempt(manifest, tmp_path, passed=False)
     passed = _attempt(manifest, tmp_path, attempt=2)
     report = summarize(manifest, [failed, passed])
-    assert not report["complete"] and len(report["missing"]) == 107
+    assert not report["complete"] and len(report["missing"]) == 119
     assert report["arms"]["codex"]["total_cost_usd"] == 3.0
     assert report["arms"]["codex"]["cost_per_verified_success_usd"] == 3.0
     assert report["arms"]["codex"]["attempts"] == 2
@@ -91,13 +94,13 @@ def test_report_refuses_missing_arms_and_charges_failed_attempts(tmp_path):
 
 
 def test_report_is_complete_only_with_all_three_arms_on_every_task(tmp_path):
-    """C-2.3: a complete report covers all 36 tasks in all three configurations."""
+    """C-2.3: a complete report covers all 40 tasks in all three configurations."""
     manifest = select(_rows())
     records = [_attempt(manifest, tmp_path, arm=arm, task=task)
                for task in manifest["tasks"] for arm in manifest["arms"]]
     report = summarize(manifest, records)
     assert report["complete"] and report["missing"] == []
-    assert all(v["verified_successes"] == 36 for v in report["arms"].values())
+    assert all(v["verified_successes"] == 40 for v in report["arms"].values())
 
 
 def test_baseline_precedes_optimizer_and_requires_both_original_arms(tmp_path):
@@ -108,8 +111,8 @@ def test_baseline_precedes_optimizer_and_requires_both_original_arms(tmp_path):
     baseline = summarize(manifest, records, stage="baseline")
     final = summarize(manifest, records, stage="final")
     assert baseline["complete"] and len(baseline["arms"]) == 2
-    assert not final["complete"] and len(final["missing"]) == 36
-    assert baseline["paired_comparison"]["tasks"] == 36
+    assert not final["complete"] and len(final["missing"]) == 40
+    assert baseline["paired_comparison"]["tasks"] == 40
     assert final["paired_comparison"] is None
     with pytest.raises(ValueError):
         summarize(manifest, records, stage="development")
@@ -135,6 +138,6 @@ def test_paired_report_counts_discordant_tasks_and_failure_reasons(tmp_path):
 
 
 def test_empty_or_shrunken_manifest_cannot_claim_a_complete_pilot():
-    """C-2.6: report completeness requires the frozen 36-task shape."""
+    """C-2.7: report completeness requires the frozen 40-task shape."""
     with pytest.raises(ValueError):
         summarize({"schema": "athena.self-improve.corpus/1", "tasks": []}, [])

@@ -44,7 +44,7 @@ def test_gate_envelope_preserves_official_report_and_patch_hash(tmp_path):
     assert (gate_dir / "official_report.json").read_bytes() == official.read_bytes()
 
 
-def test_harness_reads_a_local_pinned_task_snapshot_and_its_v4_report(tmp_path, monkeypatch):
+def test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report(tmp_path, monkeypatch):
     """C-4.6: the official gate cannot silently reload a changed remote task row."""
     import evals.self_improve.gate_adapter as adapter
     row = {"instance_id": "repo__task-1", "base_commit": "a" * 40,
@@ -54,11 +54,11 @@ def test_harness_reads_a_local_pinned_task_snapshot_and_its_v4_report(tmp_path, 
 
     def fake_run(command, **kwargs):
         if "-c" in command:
-            return subprocess.CompletedProcess(command, 0, stdout="4.1.0\n", stderr="")
+            return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n", stderr="")
         dataset = command[command.index("--dataset_name") + 1]
         assert json.loads(open(dataset, encoding="utf-8").read()) == [row]
         run_id = command[command.index("--run_id") + 1]
-        report_dir = workdir / "logs" / "run_evaluation" / run_id / "codex" / row["instance_id"]
+        report_dir = workdir / "logs" / "evaluation" / run_id / "codex" / row["instance_id"]
         report_dir.mkdir(parents=True)
         (report_dir / "report.json").write_text(json.dumps({row["instance_id"]: {"resolved": True}}))
         return subprocess.CompletedProcess(command, 0, stdout="done", stderr="")
@@ -68,6 +68,6 @@ def test_harness_reads_a_local_pinned_task_snapshot_and_its_v4_report(tmp_path, 
                          model_name="codex", patch=patch, row=row,
                          workdir=workdir, gate_dir=tmp_path / "gate",
                          harness_python="python")
-    assert result["resolved"] is True and result["harness_version"] == "4.1.0"
+    assert result["resolved"] is True and result["harness_version"] == "5.0.2"
     assert result["dataset_sha256"] == hashlib.sha256(
         (workdir / f"{result['run_id']}.dataset.json").read_bytes()).hexdigest()

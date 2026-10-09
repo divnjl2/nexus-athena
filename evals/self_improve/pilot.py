@@ -220,7 +220,7 @@ def main() -> int:
     parser.add_argument("--promotion", type=Path,
                         help="frozen candidate decision required for optimizer holdout runs")
     parser.add_argument("--wsl-distro", help="run the pinned official harness in this WSL distro")
-    parser.add_argument("--harness-python", help="Python executable with SWE-bench 4.1.0")
+    parser.add_argument("--harness-python", help="Python executable with SWE-bench 5.0.2")
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     rows = load_pinned()

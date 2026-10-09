@@ -1,12 +1,12 @@
 # Scenarios: Athena Evaluation Foundation
 
-### S1.1 — stable stratified selection
-- **verifies:** C-1.1
-- **pins:** 39a7c9ac0440f2fc
-- **run_cmd:** `python -m pytest tests/test_self_improve_corpus.py::test_stratified_corpus_has_36_real_task_slots_and_separate_holdout -q`
-- **Given** a source with 12 repositories and at least three tasks each
+### S1.4 — stable Verified selection
+- **verifies:** C-1.4
+- **pins:** 45cd81e0c8b0cfd0
+- **run_cmd:** `python -m pytest tests/test_self_improve_corpus.py::test_stratified_corpus_has_40_real_task_slots_and_separate_holdout -q`
+- **Given** a source with ten eligible repositories and at least four tasks each
 - **When** the corpus is selected
-- **Then** each repository contributes two development tasks and one holdout task.
+- **Then** each repository contributes three development tasks and one holdout task.
 
 ### S1.2 — fingerprinted inputs and acceptance
 - **verifies:** C-1.2
@@ -16,11 +16,11 @@
 - **When** an input, base commit or acceptance artifact changes
 - **Then** verification fails.
 
-### S1.3 — incomplete source refused
-- **verifies:** C-1.3
-- **pins:** ffcf53085ecec985
+### S1.5 — incomplete Verified source refused
+- **verifies:** C-1.5
+- **pins:** 63c9996205014b58
 - **run_cmd:** `python -m pytest tests/test_self_improve_corpus.py::test_corpus_fails_closed_on_insufficient_repository_diversity -q`
-- **Given** fewer than 12 eligible repositories
+- **Given** fewer than ten eligible repositories
 - **When** the corpus is selected
 - **Then** selection fails.
 
@@ -64,9 +64,9 @@
 - **When** baseline is summarized
 - **Then** both discordant directions, an interval and failure causes are shown.
 
-### S2.6 — shrunken corpus refused
-- **verifies:** C-2.6
-- **pins:** 6b8178a4a1440fab
+### S2.7 — shrunken Verified corpus refused
+- **verifies:** C-2.7
+- **pins:** 7988f7797b48a34c
 - **run_cmd:** `python -m pytest tests/test_self_improve_evidence.py::test_empty_or_shrunken_manifest_cannot_claim_a_complete_pilot -q`
 - **Given** an empty replacement manifest
 - **When** completeness is calculated
@@ -170,7 +170,8 @@
 
 ### S4.6 — pinned local task snapshot
 - **verifies:** C-4.6
-- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_harness_reads_a_local_pinned_task_snapshot_and_its_v4_report -q`
+- **pins:** 68160e61f974a4d3
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report -q`
 - **Given** a pinned task row and the compatible harness
 - **When** the independent gate is invoked
 - **Then** it reads a local snapshot and the expected version's per-instance report.

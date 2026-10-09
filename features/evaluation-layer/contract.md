@@ -5,16 +5,24 @@
 
 ## C-1 — Frozen task corpus
 
-- **C-1.1** — WHEN the pilot corpus is frozen THE SYSTEM SHALL select 36 real tasks with
+- **C-1.1** *(superseded-by C-1.4)* — WHEN the pilot corpus is frozen THE SYSTEM SHALL select 36 real tasks with
   two development tasks and one holdout task from each of 12 source repositories by a
   deterministic selection rule.
   - source: design
 - **C-1.2** — WHEN the frozen corpus is verified THE SYSTEM SHALL reject a changed task
   input, base commit or independent acceptance material against the pinned manifest.
   - source: design
-- **C-1.3** — WHEN the source dataset has fewer than 12 repositories with three tasks
+- **C-1.3** *(superseded-by C-1.5)* — WHEN the source dataset has fewer than 12 repositories with three tasks
   each THE SYSTEM SHALL refuse to produce a smaller corpus silently.
   - source: design
+- **C-1.4** *(supersedes C-1.1)* — WHEN the Verified pilot corpus is frozen THE SYSTEM
+  SHALL select 40 real tasks with three development tasks and one holdout task from
+  each of ten eligible source repositories by a deterministic selection rule.
+  - source: audit
+- **C-1.5** *(supersedes C-1.3)* — WHEN the Verified source has fewer than ten
+  repositories with four tasks each THE SYSTEM SHALL refuse to produce a smaller
+  corpus silently.
+  - source: audit
 
 ## C-2 — Run evidence and honest summary
 
@@ -36,9 +44,13 @@
   paired success differences, confidence intervals, discordant tasks and causes
   of failed attempts.
   - source: design
-- **C-2.6** — WHEN report completeness is calculated THE SYSTEM SHALL reject an
+- **C-2.6** *(superseded-by C-2.7)* — WHEN report completeness is calculated THE SYSTEM SHALL reject an
   empty or shrunken replacement for the frozen 36-task pilot corpus.
   - source: review
+- **C-2.7** *(supersedes C-2.6)* — WHEN report completeness is calculated THE SYSTEM
+  SHALL reject an empty or shrunken replacement for the frozen 40-task Verified
+  pilot corpus.
+  - source: audit
 
 ## C-3 — Isolated candidates
 

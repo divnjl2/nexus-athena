@@ -11,7 +11,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T1.1 Freeze and validate the stratified pilot task set
   - success_check: `python -m pytest tests/test_self_improve_corpus.py -q`
   - files: `evals/self_improve/corpus.py, evals/self_improve/manifest.json, tests/test_self_improve_corpus.py`
-  - verifies: S1.1, S1.2, S1.3
+  - verifies: S1.2, S1.4, S1.5
 
 ### Manual Verification
 - `python -m evals.self_improve.corpus verify` checks the committed manifest against the pinned source revision.
@@ -23,7 +23,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T2.1 Validate attempt provenance and calculate the pilot matrix
   - success_check: `python -m pytest tests/test_self_improve_evidence.py -q`
   - files: `evals/self_improve/evidence.py, tests/test_self_improve_evidence.py`
-  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.6
+  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.7
 
 ### Manual Verification
 - `python -m evals.self_improve.evidence --attempts <runs.jsonl> --artifacts <dir>` exits 2 when any task-arm cell is missing.
