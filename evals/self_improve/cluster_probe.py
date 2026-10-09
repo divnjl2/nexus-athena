@@ -35,6 +35,8 @@ def completed_response(stream) -> dict:
         raise ProbeError("gateway did not return an SSE stream")
     data_lines: list[str] = []
     completed = None
+    terminal_status = None
+    terminal_reason = None
     total_bytes = 0
     for raw in stream:
         total_bytes += len(raw)
@@ -58,12 +60,20 @@ def completed_response(stream) -> dict:
                     raise ProbeError("invalid SSE event")
                 if event.get("type") == "response.completed":
                     completed = event.get("response")
+                    if isinstance(completed, dict):
+                        terminal_status = completed.get("status")
+                        details = completed.get("incomplete_details")
+                        if isinstance(details, dict):
+                            terminal_reason = details.get("reason")
                 elif event.get("type") in ("response.failed", "error"):
                     raise ProbeError("gateway emitted a failure event")
             continue
         if line.startswith("data:"):
             data_lines.append(line[5:].lstrip())
-    if not isinstance(completed, dict) or completed.get("status") != "completed":
+    if terminal_status and terminal_status != "completed":
+        reason = terminal_reason if terminal_reason in ("max_output_tokens", "content_filter") else "unknown"
+        raise ProbeError(f"response ended with {terminal_status} ({reason})")
+    if not isinstance(completed, dict):
         raise ProbeError("stream ended without response.completed")
     if not isinstance(completed.get("output"), list) or any(
             not isinstance(item, dict) for item in completed["output"]):
@@ -103,14 +113,20 @@ def request_response(opener, url: str, key: str, body: dict, timeout: int) -> di
 
 
 def probe(base_url: str, model: str, key: str, *, timeout: int = 90,
+          max_output_tokens: int = 2048,
+          reasoning_effort: str | None = None,
           opener=None) -> dict:
-    if not model or not key or timeout < 1:
-        raise ValueError("model, credential and positive timeout are required")
+    if not model or not key or timeout < 1 or not 128 <= max_output_tokens <= 8192:
+        raise ValueError("model, credential, positive timeout and valid output budget are required")
+    if reasoning_effort not in (None, "none", "low", "medium", "high"):
+        raise ValueError("unsupported reasoning effort")
     url = gateway_url(base_url)
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    settings = {"model": model, "max_output_tokens": max_output_tokens}
+    if reasoning_effort is not None:
+        settings["reasoning"] = {"effort": reasoning_effort}
     first = request_response(opener, url, key,
-                             {"model": model, "input": "Reply with one short sentence.",
-                              "max_output_tokens": 128}, timeout)
+                             {**settings, "input": "Reply with one short sentence."}, timeout)
     if not response_text(first).strip():
         raise ProbeError("completed text response had no output")
 
@@ -120,9 +136,9 @@ def probe(base_url: str, model: str, key: str, *, timeout: int = 90,
                            "required": [], "additionalProperties": False}}
     user = {"role": "user", "content": "Call athena_probe_value, then report its value."}
     second = request_response(opener, url, key,
-                              {"model": model, "input": [user], "tools": [tool],
-                               "tool_choice": {"type": "function", "name": tool["name"]},
-                               "max_output_tokens": 128}, timeout)
+                              {**settings, "input": [user], "tools": [tool],
+                               "tool_choice": {"type": "function", "name": tool["name"]}},
+                              timeout)
     calls = [item for item in second.get("output", [])
              if item.get("type") == "function_call"]
     if len(calls) != 1 or calls[0].get("name") != tool["name"] or \
@@ -138,13 +154,15 @@ def probe(base_url: str, model: str, key: str, *, timeout: int = 90,
     tool_output = {"type": "function_call_output", "call_id": calls[0]["call_id"],
                    "output": value}
     third = request_response(opener, url, key,
-                             {"model": model, "input": [user, *second["output"], tool_output],
-                              "max_output_tokens": 128}, timeout)
+                             {**settings, "input": [user, *second["output"], tool_output]},
+                             timeout)
     if value not in response_text(third):
         raise ProbeError("follow-up did not use the function result")
     return {"schema": "athena.cluster-probe/1",
             "checked_at": datetime.now(timezone.utc).isoformat(),
             "gateway": base_url.rstrip("/"), "requested_model": model,
+            "max_output_tokens": max_output_tokens,
+            "reasoning_effort": reasoning_effort,
             "reported_models": [first.get("model"), second.get("model"),
                                 third.get("model")],
             "checks": {"sse_terminal": True, "text": True,
@@ -159,12 +177,16 @@ def main() -> int:
     credential.add_argument("--key-env", help="name of an environment variable")
     credential.add_argument("--key-file", type=Path, help="path to a private key file")
     parser.add_argument("--timeout", type=int, default=90)
+    parser.add_argument("--max-output-tokens", type=int, default=2048)
+    parser.add_argument("--reasoning-effort", choices=("none", "low", "medium", "high"))
     parser.add_argument("--output", type=Path, help="write the non-secret result as JSON")
     args = parser.parse_args()
     try:
         key = (os.environ.get(args.key_env, "") if args.key_env else
                args.key_file.read_text(encoding="utf-8").strip())
-        result = probe(args.base_url, args.model, key, timeout=args.timeout)
+        result = probe(args.base_url, args.model, key, timeout=args.timeout,
+                       max_output_tokens=args.max_output_tokens,
+                       reasoning_effort=args.reasoning_effort)
     except OSError:
         print(json.dumps({"schema": "athena.cluster-probe/1", "passed": False,
                           "reason": "credential file unavailable"}))

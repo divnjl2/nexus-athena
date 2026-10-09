@@ -14,11 +14,26 @@ python -m evals.self_improve.cluster_probe --base-url http://192.168.1.136:30400
 
 The key is read from an environment variable or `--key-file`; neither form puts
 its value on the command line. The probe bypasses the workstation HTTP proxy
-and sends synthetic text only. It does not mark a task accepted or establish
+and sends synthetic text only. Its 2,048-token output budget allows reasoning
+models to complete the short probes; `--max-output-tokens` can change it after
+checking the selected lane's limits. It does not mark a task accepted or establish
 which upstream lane served the request. A gateway administrator must verify
 actual role routing separately. On 2026-10-09, direct gateway readiness was
 HTTP 200, but the workstation's existing `LITELLM_KEY` received HTTP 401; no
 cluster agent result has been recorded.
+For vLLM reasoning lanes, `--reasoning-effort none` requests that setting on
+all three synthetic exchanges; the result records it. Keep the actual candidate
+driver's setting identical to the qualified setting.
+
+The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
+probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.
+This is a local lane check, not a cluster gateway check. A separate Codex CLI
+0.161.0 smoke against that lane failed with HTTP 400: Codex sent a `developer`
+role that its Qwen chat template rejected. A local diagnostic adapter moved
+that content into the request instructions, after which the lane rejected the
+request against its 30,720-token context limit. Neither attempt generated a
+benchmark candidate. The cluster's 64k `agent` role and its gateway still need
+a scoped key and an end-to-end Codex tool-loop smoke before benchmark use.
 
 `manifest.json` freezes 40 real SWE-bench Verified issues from revision
 `78f471bf655a3137b2e8a75af1501690ec009ec3`: four per eligible repository,

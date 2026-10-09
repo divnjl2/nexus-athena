@@ -47,13 +47,15 @@ def test_probe_requires_terminal_sse_and_replayed_tool_result(monkeypatch):
                        Stream(completed([call])),
                        Stream(completed([message("athena-1234567890abcdef")]))])
     result = probe("http://192.168.1.136:30400/v1", "agent", "private-key",
-                   opener=gateway)
+                   reasoning_effort="none", opener=gateway)
     assert result["checks"] == {"sse_terminal": True, "text": True,
                                 "function_call": True, "replayed_tool_result": True}
     assert result["requested_model"] == "agent"
     assert "private-key" not in json.dumps(result)
     bodies = [json.loads(request.data) for request, _ in gateway.requests]
     assert all(body["stream"] for body in bodies)
+    assert all(body["max_output_tokens"] == 2048 for body in bodies)
+    assert all(body["reasoning"] == {"effort": "none"} for body in bodies)
     assert bodies[1]["tool_choice"] == {"type": "function", "name": "athena_probe_value"}
     assert bodies[2]["input"][-1] == {"type": "function_call_output",
                                       "call_id": "call-1", "output": "athena-1234567890abcdef"}
@@ -64,6 +66,10 @@ def test_probe_fails_closed_on_partial_stream_bad_route_and_http_auth():
     """C-5.1: readiness, partial output and rejected credentials are not proof."""
     with pytest.raises(ProbeError, match="response.completed"):
         completed_response(Stream(completed([message("partial")]), terminal=False))
+    incomplete = {"status": "incomplete", "output": [],
+                  "incomplete_details": {"reason": "max_output_tokens"}}
+    with pytest.raises(ProbeError, match="incomplete \\(max_output_tokens\\)"):
+        completed_response(Stream(incomplete))
     with pytest.raises(ValueError):
         gateway_url("http://user:secret@host/v1")
     with pytest.raises(ValueError):
