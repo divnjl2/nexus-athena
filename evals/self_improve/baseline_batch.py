@@ -25,10 +25,15 @@ def cell_action(cell: dict, known: set[tuple[str, str]], root: Path) -> str:
                  cell["arm"] / "1")
     if not candidate.exists():
         return "candidate"
-    required = ("candidate.json", "candidate.patch", "attempt.json", "input.json")
+    required = ("candidate.json", "candidate.patch", "attempt.json", "input.json",
+                "prompt.txt", "invocation.json", "trace.jsonl", "stderr.txt")
     if all((candidate / name).is_file() for name in required):
         if (candidate / "gate").exists():
             raise RuntimeError(f"unfinished gate requires review: {cell['task_id']} {cell['arm']}")
+        saved = json.loads((candidate / "candidate.json").read_text(encoding="utf-8"))
+        if saved.get("candidate_status") not in ("empty_patch", "unverified_candidate") or \
+                saved.get("executor_failure"):
+            raise RuntimeError(f"executor error requires review: {cell['task_id']} {cell['arm']}")
         return "gate"
     raise RuntimeError(f"partial candidate artifacts require review: {cell['task_id']} {cell['arm']}")
 
@@ -43,8 +48,10 @@ def frozen_commit(root: Path, expected: str) -> None:
 
 
 def write_report(manifest: dict, root: Path) -> dict:
-    records = load_attempts(root / "records", manifest, root / "artifacts")
-    report = summarize(manifest, records, stage="baseline")
+    records_dir = root / "records"
+    records = load_attempts(records_dir, manifest, root / "artifacts") \
+        if records_dir.is_dir() else []
+    report = summarize(manifest, records, root / "artifacts", stage="baseline")
     destination = root / "reports" / "partial-baseline.json"
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -66,6 +73,7 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
                                         record["athena_commit"] != athena_commit):
             raise ValueError("existing baseline records use another model or Athena commit")
     planned = cells(manifest, stage="baseline")
+    write_report(manifest, root)
     task_ids = list(dict.fromkeys(cell["task_id"] for cell in planned))
     started_pairs = 0
     for task_id in task_ids:
@@ -82,17 +90,21 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
                 continue
             print(json.dumps({"task_id": task_id, "arm": arm,
                               "action": action}), flush=True)
-            if action == "candidate":
-                result = run_one(manifest=manifest, rows=rows, task_id=task_id,
-                                 arm=arm, attempt=1, root=root,
-                                 athena_root=athena_root, model=model,
-                                 timeout=candidate_timeout, rates=rates)
-                if result["candidate_status"] not in ("empty_patch", "unverified_candidate"):
-                    raise RuntimeError(f"candidate executor error: {task_id} {arm}")
-            record = gate_one(manifest=manifest, row=source[task_id],
-                              task_id=task_id, arm=arm, attempt=1, root=root,
-                              timeout=gate_timeout, wsl_distro=wsl_distro,
-                              harness_python=harness_python)
+            try:
+                if action == "candidate":
+                    result = run_one(manifest=manifest, rows=rows, task_id=task_id,
+                                     arm=arm, attempt=1, root=root,
+                                     athena_root=athena_root, model=model,
+                                     timeout=candidate_timeout, rates=rates)
+                    if result["candidate_status"] not in ("empty_patch", "unverified_candidate"):
+                        raise RuntimeError(f"candidate executor error: {task_id} {arm}")
+                record = gate_one(manifest=manifest, row=source[task_id],
+                                  task_id=task_id, arm=arm, attempt=1, root=root,
+                                  timeout=gate_timeout, wsl_distro=wsl_distro,
+                                  harness_python=harness_python)
+            except Exception:
+                write_report(manifest, root)
+                raise
             known.add((task_id, arm))
             print(json.dumps({"task_id": task_id, "arm": arm,
                               "resolved": record["gate"]["passed"],

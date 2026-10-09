@@ -56,6 +56,11 @@
   trace usage, estimated cost and one-task harness dataset snapshot before
   treating its official gate verdict as benchmark evidence.
   - source: audit
+- **C-2.9** — WHEN a priced comparison finds a candidate without an independent
+  gate THE SYSTEM SHALL list that attempt, include its cost and tokens only when
+  candidate evidence validates, and report unknown totals instead of omitting
+  unmeasured usage; an ungraded attempt SHALL prevent a complete comparison.
+  - source: audit
 
 ## C-3 — Isolated candidates
 

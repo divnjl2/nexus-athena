@@ -220,7 +220,7 @@ def test_report_refuses_missing_arms_and_charges_failed_attempts(tmp_path):
     manifest = select(_rows())
     failed = _attempt(manifest, tmp_path, passed=False)
     passed = _attempt(manifest, tmp_path, attempt=2)
-    report = summarize(manifest, [failed, passed])
+    report = summarize(manifest, [failed, passed], tmp_path / "artifacts")
     assert not report["complete"] and len(report["missing"]) == 119
     assert report["arms"]["codex"]["total_cost_usd"] == 3.0
     assert report["arms"]["codex"]["cost_per_verified_success_usd"] == 3.0
@@ -229,12 +229,66 @@ def test_report_refuses_missing_arms_and_charges_failed_attempts(tmp_path):
     assert report["arms"]["codex"]["input_tokens"] == 200
 
 
+def test_report_prices_ungated_attempts_only_from_complete_candidate_evidence(tmp_path):
+    """Executor and interrupted gate costs cannot disappear from a comparison."""
+    manifest = select(_rows())
+    first = _attempt(manifest, tmp_path, passed=True)
+    _attempt(manifest, tmp_path, attempt=2)
+    report = summarize(manifest, [first], tmp_path / "artifacts", stage="baseline")
+    arm = report["arms"]["codex"]
+    assert report["complete"] is False and report["paired_comparison"] is None
+    assert report["ungraded_attempts"][0]["attempt"] == 2
+    assert report["ungraded_attempts"][0]["observed_cost_usd"] == 1.5
+    assert arm["attempts"] == 2 and arm["total_cost_usd"] == 3.0
+    assert arm["cost_per_verified_success_usd"] == 3.0
+    assert arm["cost_complete"] is True
+    assert arm["input_tokens"] == 200 and arm["output_tokens"] == 100
+
+    task = manifest["tasks"][0]
+    attempt_dir = (tmp_path / "artifacts" / task["split"] / task["id"] / "codex" / "2")
+    (attempt_dir / "stderr.txt").unlink()
+    report = summarize(manifest, [first], tmp_path / "artifacts", stage="baseline")
+    arm = report["arms"]["codex"]
+    assert report["ungraded_attempts"][0]["status"] == "incomplete_or_invalid_artifacts"
+    assert arm["cost_complete"] is False
+    assert arm["cost_lower_bound_usd"] == 1.5
+    assert arm["total_cost_usd"] is None
+    assert arm["cost_per_verified_success_usd"] is None
+    assert arm["input_tokens"] is None and arm["input_tokens_lower_bound"] == 100
+    assert arm["failure_reasons"] == {"ungraded:incomplete_or_invalid_artifacts": 1}
+
+
+def test_report_counts_executor_error_with_completed_usage(tmp_path):
+    """A failed turn still incurs a measured cost if prior turn usage is intact."""
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    task = manifest["tasks"][0]
+    attempt_dir = (tmp_path / "artifacts" / task["split"] / task["id"] / "codex" / "1")
+    trace_path = attempt_dir / "trace.jsonl"
+    trace_path.write_bytes(trace_path.read_bytes() + b'{"type":"turn.failed"}\n')
+    candidate_path = attempt_dir / "candidate.json"
+    candidate = json.loads(candidate_path.read_text())
+    candidate["trace_sha256"] = hashlib.sha256(trace_path.read_bytes()).hexdigest()
+    candidate["candidate_status"] = "executor_error"
+    candidate["executor_failure"] = "turn_failed"
+    candidate_path.write_text(json.dumps(candidate))
+    metadata_path = attempt_dir / "attempt.json"
+    metadata = json.loads(metadata_path.read_text())
+    metadata["candidate_status"] = "executor_error"
+    metadata_path.write_text(json.dumps(metadata))
+    report = summarize(manifest, [], tmp_path / "artifacts", stage="baseline")
+    assert report["ungraded_attempts"][0]["status"] == "executor_error"
+    assert report["ungraded_attempts"][0]["observed_cost_usd"] == record["cost_usd"]
+    assert report["arms"]["codex"]["total_cost_usd"] == record["cost_usd"]
+    assert report["complete"] is False
+
+
 def test_report_is_complete_only_with_all_three_arms_on_every_task(tmp_path):
     """C-2.3: a complete report covers all 40 tasks in all three configurations."""
     manifest = select(_rows())
     records = [_attempt(manifest, tmp_path, arm=arm, task=task)
                for task in manifest["tasks"] for arm in manifest["arms"]]
-    report = summarize(manifest, records)
+    report = summarize(manifest, records, tmp_path / "artifacts")
     assert report["complete"] and report["missing"] == []
     assert all(v["verified_successes"] == 40 for v in report["arms"].values())
 
@@ -244,14 +298,14 @@ def test_baseline_precedes_optimizer_and_requires_both_original_arms(tmp_path):
     manifest = select(_rows())
     records = [_attempt(manifest, tmp_path, arm=arm, task=task)
                for task in manifest["tasks"] for arm in manifest["arms"][:2]]
-    baseline = summarize(manifest, records, stage="baseline")
-    final = summarize(manifest, records, stage="final")
+    baseline = summarize(manifest, records, tmp_path / "artifacts", stage="baseline")
+    final = summarize(manifest, records, tmp_path / "artifacts", stage="final")
     assert baseline["complete"] and len(baseline["arms"]) == 2
     assert not final["complete"] and len(final["missing"]) == 40
     assert baseline["paired_comparison"]["tasks"] == 40
     assert final["paired_comparison"] is None
     with pytest.raises(ValueError):
-        summarize(manifest, records, stage="development")
+        summarize(manifest, records, tmp_path / "artifacts", stage="development")
 
 
 def test_paired_report_counts_discordant_tasks_and_failure_reasons(tmp_path):
@@ -263,7 +317,7 @@ def test_paired_report_counts_discordant_tasks_and_failure_reasons(tmp_path):
                                 passed=index != 0))
         records.append(_attempt(manifest, tmp_path, arm="codex_athena", task=task,
                                 passed=index != 1))
-    result = summarize(manifest, records, stage="baseline")
+    result = summarize(manifest, records, tmp_path / "artifacts", stage="baseline")
     pair = result["paired_comparison"]
     assert pair["control_only_successes"] == 1
     assert pair["treatment_only_successes"] == 1
@@ -273,7 +327,8 @@ def test_paired_report_counts_discordant_tasks_and_failure_reasons(tmp_path):
     assert result["arms"]["codex"]["failure_reasons"] == {"tests failed": 1}
 
 
-def test_empty_or_shrunken_manifest_cannot_claim_a_complete_pilot():
+def test_empty_or_shrunken_manifest_cannot_claim_a_complete_pilot(tmp_path):
     """C-2.7: report completeness requires the frozen 40-task shape."""
     with pytest.raises(ValueError):
-        summarize({"schema": "athena.self-improve.corpus/1", "tasks": []}, [])
+        summarize({"schema": "athena.self-improve.corpus/1", "tasks": []},
+                  [], tmp_path / "artifacts")

@@ -160,6 +160,15 @@
 - **When** completeness is calculated
 - **Then** reporting fails.
 
+### S2.9 — account for ungraded attempts
+- **verifies:** C-2.9
+- **pins:** 4eb3e212f530e040
+- **run_cmd:** `python -m pytest tests/test_self_improve_evidence.py::test_report_prices_ungated_attempts_only_from_complete_candidate_evidence tests/test_self_improve_evidence.py::test_report_counts_executor_error_with_completed_usage tests/test_self_improve_baseline_batch.py::test_partial_baseline_artifacts_are_reported_before_resume_stops -q`
+- **Given** a priced candidate that never reached an independent gate
+- **When** the baseline report is produced or a batch resumes
+- **Then** validated usage is charged, incomplete cost is unknown, and the
+  attempt remains visible without completing the comparison.
+
 ### S2.8 — revalidate every baseline evidence leg
 - **verifies:** C-2.8
 - **pins:** a5670c08858f679e

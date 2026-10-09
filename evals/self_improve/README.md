@@ -128,8 +128,11 @@ executor matrix measure different questions and cannot serve as that report.
 the bytes of its gate artifact. `--stage baseline` requires 80 task-arm cells
 (Codex and Codex plus Athena); `--stage final` requires all 120, including the
 optimizer. A report exits with code 2 while a required cell is absent.
-It charges every failed attempt to the total cost of the
-arm and reports Wilson intervals for success rates. A string naming the official
+It lists candidates that never reached an independent gate and charges their
+cost and tokens when their saved evidence validates. If usage cannot be proven,
+the total is unknown and a verified lower bound is shown; these attempts keep
+the comparison incomplete. It reports Wilson intervals for success rates.
+A string naming the official
 gate does not authenticate a report by itself; the eventual runner must capture
 the independent harness output and preserve its execution logs.
 Complete reports also show a fixed-seed paired bootstrap interval, wins and

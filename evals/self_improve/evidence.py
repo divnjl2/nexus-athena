@@ -199,6 +199,83 @@ def load_attempts(path: Path, manifest: dict, artifacts: Path) -> list[dict]:
     return records
 
 
+def _ungraded_candidate_cost(attempt_dir: Path, task: dict, manifest: dict,
+                             arm: str, attempt: int) -> dict:
+    """Price a candidate only when its saved inputs and usage validate."""
+    candidate = json.loads((attempt_dir / "candidate.json").read_text(encoding="utf-8"))
+    metadata = json.loads((attempt_dir / "attempt.json").read_text(encoding="utf-8"))
+    invocation = json.loads((attempt_dir / "invocation.json").read_text(encoding="utf-8"))
+    source = json.loads((attempt_dir / "input.json").read_text(encoding="utf-8"))
+    patch = (attempt_dir / "candidate.patch").read_bytes()
+    prompt = (attempt_dir / "prompt.txt").read_bytes()
+    trace_bytes = (attempt_dir / "trace.jsonl").read_bytes()
+    stderr_bytes = (attempt_dir / "stderr.txt").read_bytes()
+    trace = trace_bytes.decode("utf-8", "replace")
+    stderr = stderr_bytes.decode("utf-8", "replace")
+    for key, expected in (("task_id", task["id"]), ("arm", arm),
+                          ("attempt", attempt), ("manifest_sha256", fingerprint(manifest)),
+                          ("base_commit", task["base_commit"]),
+                          ("input_sha256", task["input_sha256"]),
+                          ("acceptance_sha256", task["acceptance_sha256"]),
+                          ("dataset_revision", manifest["revision"]),
+                          ("candidate_status", candidate["candidate_status"])):
+        if metadata.get(key) != expected:
+            raise ValueError(f"ungraded candidate has wrong {key}")
+    if fingerprint(source) != task["input_sha256"]:
+        raise ValueError("ungraded candidate input changed")
+    for key, data in (("patch_sha256", patch), ("prompt_sha256", prompt),
+                      ("trace_sha256", trace_bytes), ("stderr_sha256", stderr_bytes)):
+        if candidate.get(key) != hashlib.sha256(data).hexdigest():
+            raise ValueError(f"ungraded candidate {key} changed")
+    config_sha = fingerprint({"argv": invocation["argv"],
+                              "rates": invocation["rates_usd_per_million"],
+                              "timeout": invocation["timeout_seconds"]})
+    if candidate.get("config_sha256") != config_sha or candidate.get("patch_bytes") != len(patch):
+        raise ValueError("ungraded candidate invocation or patch changed")
+    failure = executor_failure(trace, stderr, candidate.get("exit_code"), len(patch))
+    expected_status = "executor_error" if failure else "unverified_candidate" if patch else "empty_patch"
+    if candidate.get("candidate_status") != expected_status or candidate.get("executor_failure") != failure:
+        raise ValueError("ungraded candidate executor status changed")
+    usage = usage_from_trace(trace)
+    cost = price_usd(usage, invocation["rates_usd_per_million"])
+    wall = candidate.get("wall_seconds")
+    if candidate.get("usage") != usage or isinstance(wall, bool) or \
+            not isinstance(wall, (int, float)) or not math.isfinite(wall) or wall < 0 or \
+            not isinstance(candidate.get("cost_usd"), (int, float)) or \
+            not math.isclose(candidate["cost_usd"], cost, rel_tol=0, abs_tol=1e-9):
+        raise ValueError("ungraded candidate usage or cost changed")
+    return {"status": expected_status, "observed_cost_usd": cost,
+            "observed_wall_seconds": wall,
+            "input_tokens": usage["input_tokens"], "output_tokens": usage["output_tokens"]}
+
+
+def ungraded_attempts(manifest: dict, records: list[dict], artifacts: Path,
+                      arms: tuple[str, ...]) -> list[dict]:
+    graded = {(r["task_id"], r["arm"], r["attempt"]) for r in records}
+    found = []
+    for task in manifest["tasks"]:
+        for arm in arms:
+            parent = artifacts / task["split"] / task["id"] / arm
+            if not parent.is_dir():
+                continue
+            for attempt_dir in sorted(parent.iterdir()):
+                if not attempt_dir.is_dir() or not attempt_dir.name.isdecimal():
+                    continue
+                attempt = int(attempt_dir.name)
+                if (task["id"], arm, attempt) in graded:
+                    continue
+                try:
+                    observed = _ungraded_candidate_cost(attempt_dir, task, manifest, arm, attempt)
+                except (ValueError, KeyError, TypeError, OSError, json.JSONDecodeError):
+                    observed = {"status": "incomplete_or_invalid_artifacts",
+                                "observed_cost_usd": None,
+                                "observed_wall_seconds": None,
+                                "input_tokens": None, "output_tokens": None}
+                found.append({"task_id": task["id"], "arm": arm,
+                              "attempt": attempt, **observed})
+    return found
+
+
 def wilson(successes: int, total: int, z: float = 1.96) -> list[float]:
     if total == 0:
         return [0.0, 1.0]
@@ -236,44 +313,76 @@ def paired_success(manifest: dict, cells: dict[tuple[str, str], list[dict]],
             "statistically_positive": boot[250] > 0}
 
 
-def summarize(manifest: dict, records: list[dict], *, stage: str = "final") -> dict:
+def summarize(manifest: dict, records: list[dict], artifacts: Path,
+              *, stage: str = "final") -> dict:
     validate_manifest_shape(manifest)
     if stage not in STAGES:
         raise ValueError(f"unknown comparison stage: {stage}")
     arms = STAGES[stage]
+    for record in records:
+        validate_attempt(record, manifest, artifacts)
+    keys = [(record["task_id"], record["arm"], record["attempt"]) for record in records]
+    if len(keys) != len(set(keys)):
+        raise ValueError("duplicate attempt in report")
     expected = {(task["id"], arm) for task in manifest["tasks"] for arm in arms}
     cells: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for record in records:
         cells[(record["task_id"], record["arm"])].append(record)
     missing = sorted(expected - set(cells))
+    ungraded = ungraded_attempts(manifest, records, artifacts, arms)
     result = {"schema": "athena.self-improve.report/1",
               "manifest_sha256": fingerprint(manifest),
               "stage": stage,
-              "complete": not missing, "missing": [{"task_id": t, "arm": a} for t, a in missing],
+              "complete": not missing and not ungraded,
+              "missing": [{"task_id": t, "arm": a} for t, a in missing],
+              "ungraded_attempts": ungraded,
               "arms": {}}
     for arm in arms:
         arm_cells = [attempts for (task_id, a), attempts in cells.items() if a == arm]
+        arm_ungraded = [item for item in ungraded if item["arm"] == arm]
         completed = sum(any(r["gate"]["passed"] for r in attempts) for attempts in arm_cells)
-        spent = sum(r["cost_usd"] for attempts in arm_cells for r in attempts)
-        elapsed = sum(r["wall_seconds"] for attempts in arm_cells for r in attempts)
-        input_tokens = sum(r["input_tokens"] for attempts in arm_cells for r in attempts)
-        output_tokens = sum(r["output_tokens"] for attempts in arm_cells for r in attempts)
+        graded_cost = sum(r["cost_usd"] for attempts in arm_cells for r in attempts)
+        observed_cost = sum(item["observed_cost_usd"] for item in arm_ungraded
+                            if item["observed_cost_usd"] is not None)
+        cost_complete = all(item["observed_cost_usd"] is not None for item in arm_ungraded)
+        spent = graded_cost + observed_cost if cost_complete else None
+        graded_wall = sum(r["wall_seconds"] for attempts in arm_cells for r in attempts)
+        observed_wall = sum(item["observed_wall_seconds"] for item in arm_ungraded
+                            if item["observed_wall_seconds"] is not None)
+        time_complete = all(item["observed_wall_seconds"] is not None for item in arm_ungraded)
+        elapsed = graded_wall + observed_wall if time_complete else None
         failures = Counter(r["failure_reason"] for attempts in arm_cells
                            for r in attempts if r["failure_reason"])
+        failures.update(f"ungraded:{item['status']}" for item in arm_ungraded)
+        graded_input = sum(r["input_tokens"] for attempts in arm_cells for r in attempts)
+        graded_output = sum(r["output_tokens"] for attempts in arm_cells for r in attempts)
+        observed_input = sum(item["input_tokens"] for item in arm_ungraded
+                             if item["input_tokens"] is not None)
+        observed_output = sum(item["output_tokens"] for item in arm_ungraded
+                              if item["output_tokens"] is not None)
+        tokens_complete = all(item["input_tokens"] is not None and
+                              item["output_tokens"] is not None for item in arm_ungraded)
         result["arms"][arm] = {
             "evaluated_tasks": len(arm_cells), "verified_successes": completed,
-            "attempts": sum(len(attempts) for attempts in arm_cells),
+            "attempts": sum(len(attempts) for attempts in arm_cells) + len(arm_ungraded),
             "total_cost_usd": spent, "total_wall_seconds": elapsed,
-            "input_tokens": input_tokens, "output_tokens": output_tokens,
-            "cost_per_verified_success_usd": spent / completed if completed else None,
-            "seconds_per_verified_success": elapsed / completed if completed else None,
+            "cost_lower_bound_usd": graded_cost + observed_cost,
+            "cost_complete": cost_complete, "time_complete": time_complete,
+            "input_tokens": graded_input + observed_input if tokens_complete else None,
+            "output_tokens": graded_output + observed_output if tokens_complete else None,
+            "input_tokens_lower_bound": graded_input + observed_input,
+            "output_tokens_lower_bound": graded_output + observed_output,
+            "tokens_complete": tokens_complete,
+            "cost_per_verified_success_usd": spent / completed if completed and spent is not None else None,
+            "seconds_per_verified_success": elapsed / completed if completed and elapsed is not None else None,
             "verified_success_rate": completed / len(arm_cells) if arm_cells else None,
             "success_rate_95pct_wilson": wilson(completed, len(arm_cells)),
             "failure_reasons": dict(sorted(failures.items())),
         }
     control, treatment = ("codex", "codex_athena") if stage == "baseline" else \
                          ("codex_athena", "codex_athena_optimizer")
-    result["paired_comparison"] = paired_success(manifest, cells, control, treatment)
+    result["paired_comparison"] = paired_success(manifest, cells, control, treatment) \
+        if result["complete"] else None
     return result
 
 
@@ -287,6 +396,7 @@ def main() -> int:
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     report = summarize(manifest, load_attempts(args.attempts, manifest, args.artifacts),
+                       args.artifacts,
                        stage=args.stage)
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0 if report["complete"] else 2
