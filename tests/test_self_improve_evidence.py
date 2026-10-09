@@ -4,8 +4,10 @@ import json
 
 import pytest
 
-from evals.self_improve.corpus import fingerprint, select
+from evals.self_improve.codex_driver import usage_from_trace
+from evals.self_improve.corpus import fingerprint, inputs, select
 from evals.self_improve.evidence import SCHEMA, load_attempts, summarize
+from evals.self_improve.gate_adapter import HARNESS_VERSION, run_id_for
 
 
 def _rows():
@@ -21,32 +23,74 @@ def _rows():
 
 def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt=1):
     task = task or manifest["tasks"][0]
+    row = next(row for row in _rows() if row["instance_id"] == task["id"])
     prompt = b"frozen prompt\nsecond line\n"
-    prompt_path = (tmp_path / task["split"] / task["id"] / arm /
-                   str(attempt) / "prompt.txt")
-    prompt_path.parent.mkdir(parents=True, exist_ok=True)
-    prompt_path.write_bytes(prompt)
-    patch_hash = "a" * 64
+    patch = b"diff --git a/x b/x\n"
+    patch_hash = hashlib.sha256(patch).hexdigest()
+    run_id = run_id_for(task["id"], arm, attempt, patch)
+    artifact_root = tmp_path / "artifacts"
+    attempt_dir = artifact_root / task["split"] / task["id"] / arm / str(attempt)
+    attempt_dir.mkdir(parents=True, exist_ok=True)
+    (attempt_dir / "prompt.txt").write_bytes(prompt)
+    (attempt_dir / "candidate.patch").write_bytes(patch)
+    (attempt_dir / "input.json").write_text(json.dumps(inputs(row)))
+    rates = {"input_per_million": 10000, "cached_input_per_million": 0,
+             "cache_write_input_per_million": 0, "output_per_million": 10000,
+             "max_request_context_tokens": 272000}
+    invocation = {"argv": ["codex", "exec"], "cwd": str(attempt_dir),
+                  "timeout_seconds": 900, "rates_usd_per_million": rates}
+    config_hash = fingerprint({"argv": invocation["argv"], "rates": rates,
+                               "timeout": invocation["timeout_seconds"]})
+    (attempt_dir / "invocation.json").write_text(json.dumps(invocation))
+    trace = json.dumps({"type": "turn.completed", "usage": {
+        "input_tokens": 100, "output_tokens": 50}}) + "\n"
+    (attempt_dir / "trace.jsonl").write_text(trace)
+    (attempt_dir / "stderr.txt").write_text("")
+    usage = usage_from_trace(trace)
+    athena_commit = None if arm == "codex" else "f" * 40
+    metadata = {"manifest_sha256": fingerprint(manifest),
+                "base_commit": task["base_commit"], "input_sha256": task["input_sha256"],
+                "acceptance_sha256": task["acceptance_sha256"],
+                "dataset_revision": manifest["revision"], "task_id": task["id"],
+                "arm": arm, "attempt": attempt, "athena_commit": athena_commit,
+                "seed": None, "candidate_status": "unverified_candidate"}
+    (attempt_dir / "attempt.json").write_text(json.dumps(metadata))
+    candidate = {"patch_sha256": patch_hash, "patch_bytes": len(patch),
+                 "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
+                 "config_sha256": config_hash, "model": "codex",
+                 "codex_cli_version": "codex-cli 0.161.0",
+                 "cost_basis": "API-equivalent estimate", "usage": usage,
+                 "wall_seconds": 60, "cost_usd": 1.5,
+                 "started_at": "2026-10-09T10:00:00Z",
+                 "ended_at": "2026-10-09T10:01:00Z", "exit_code": 0,
+                 "candidate_status": "unverified_candidate", "verified": False,
+                 "executor_failure": None}
+    (attempt_dir / "candidate.json").write_text(json.dumps(candidate))
     artifact = f"gate-{task['id']}-{arm}-{attempt}.json"
     official_name = f"official-{task['id']}-{arm}-{attempt}.json"
     official_data = json.dumps({task["id"]: {"resolved": passed}}).encode()
-    (tmp_path / official_name).write_bytes(official_data)
+    (artifact_root / official_name).write_bytes(official_data)
+    dataset = tmp_path / "harness" / f"{run_id}.dataset.json"
+    dataset.parent.mkdir(parents=True, exist_ok=True)
+    dataset.write_text(json.dumps([row]))
     report = {"schema": "athena.self-improve.gate/1", "runner": "swebench-harness",
               "instance_id": task["id"], "patch_sha256": patch_hash,
-              "run_id": f"{task['id']}-{arm}-{attempt}", "harness_version": "test-version",
+              "run_id": run_id, "harness_version": HARNESS_VERSION,
               "resolved": passed, "official_report": official_name,
-              "official_report_sha256": hashlib.sha256(official_data).hexdigest()}
+              "official_report_sha256": hashlib.sha256(official_data).hexdigest(),
+              "dataset_sha256": hashlib.sha256(dataset.read_bytes()).hexdigest()}
     data = json.dumps(report).encode()
-    (tmp_path / artifact).write_bytes(data)
-    return {"schema": SCHEMA, "run_id": f"{task['id']}-{arm}-{attempt}",
+    (artifact_root / artifact).write_bytes(data)
+    return {"schema": SCHEMA, "run_id": run_id,
             "task_id": task["id"], "arm": arm, "attempt": attempt,
             "manifest_sha256": fingerprint(manifest), "base_commit": task["base_commit"],
             "input_sha256": task["input_sha256"], "acceptance_sha256": task["acceptance_sha256"],
-            "model": "codex", "model_version": "pinned-version",
+            "model": "codex", "model_version": "codex",
             "model_resolution": "requested_identifier", "codex_cli_version": "codex-cli 0.161.0",
-            "cost_basis": "API-equivalent estimate", "dataset_revision": "pinned-revision",
+            "cost_basis": "API-equivalent estimate", "dataset_revision": manifest["revision"],
             "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
-            "config_sha256": "c" * 64, "seed": None,
+            "config_sha256": config_hash, "seed": None,
+            "athena_commit": athena_commit,
             "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
             "input_tokens": 100, "output_tokens": 50, "wall_seconds": 60, "cost_usd": 1.5,
             "patch_sha256": patch_hash, "failure_reason": None if passed else "tests failed",
@@ -60,16 +104,16 @@ def test_attempt_requires_pinned_provenance_and_matching_gate_artifact(tmp_path)
     record = _attempt(manifest, tmp_path)
     path = tmp_path / "attempts.jsonl"
     path.write_text(json.dumps(record) + "\n")
-    assert load_attempts(path, manifest, tmp_path) == [record]
+    assert load_attempts(path, manifest, tmp_path / "artifacts") == [record]
     record["input_sha256"] = "changed"
     path.write_text(json.dumps(record) + "\n")
     with pytest.raises(ValueError):
-        load_attempts(path, manifest, tmp_path)
+        load_attempts(path, manifest, tmp_path / "artifacts")
     record["input_sha256"] = manifest["tasks"][0]["input_sha256"]
     path.write_text(json.dumps(record) + "\n")
-    (tmp_path / record["gate"]["artifact"]).write_text("{}")
+    (tmp_path / "artifacts" / record["gate"]["artifact"]).write_text("{}")
     with pytest.raises(ValueError):
-        load_attempts(path, manifest, tmp_path)
+        load_attempts(path, manifest, tmp_path / "artifacts")
 
 
 def test_attempt_rejects_changed_official_report_even_if_gate_envelope_is_intact(tmp_path):
@@ -78,11 +122,11 @@ def test_attempt_rejects_changed_official_report_even_if_gate_envelope_is_intact
     record = _attempt(manifest, tmp_path)
     path = tmp_path / "attempts.jsonl"
     path.write_text(json.dumps(record) + "\n")
-    assert load_attempts(path, manifest, tmp_path)
-    envelope = json.loads((tmp_path / record["gate"]["artifact"]).read_text())
-    (tmp_path / envelope["official_report"]).write_text("{}")
+    assert load_attempts(path, manifest, tmp_path / "artifacts")
+    envelope = json.loads((tmp_path / "artifacts" / record["gate"]["artifact"]).read_text())
+    (tmp_path / "artifacts" / envelope["official_report"]).write_text("{}")
     with pytest.raises(ValueError):
-        load_attempts(path, manifest, tmp_path)
+        load_attempts(path, manifest, tmp_path / "artifacts")
 
 
 def test_attempt_rejects_prompt_bytes_that_differ_from_record(tmp_path):
@@ -91,12 +135,57 @@ def test_attempt_rejects_prompt_bytes_that_differ_from_record(tmp_path):
     record = _attempt(manifest, tmp_path)
     path = tmp_path / "attempts.jsonl"
     path.write_text(json.dumps(record) + "\n")
-    assert load_attempts(path, manifest, tmp_path) == [record]
-    prompt_path = (tmp_path / manifest["tasks"][0]["split"] /
+    assert load_attempts(path, manifest, tmp_path / "artifacts") == [record]
+    prompt_path = (tmp_path / "artifacts" / manifest["tasks"][0]["split"] /
                    record["task_id"] / record["arm"] / "1" / "prompt.txt")
     prompt_path.write_bytes(prompt_path.read_bytes().replace(b"\n", b"\r\n"))
     with pytest.raises(ValueError, match="prompt bytes"):
-        load_attempts(path, manifest, tmp_path)
+        load_attempts(path, manifest, tmp_path / "artifacts")
+
+
+@pytest.mark.parametrize("changed,reason", [
+    ("input", "candidate input"),
+    ("patch", "candidate patch"),
+    ("invocation", "invocation"),
+    ("trace", "candidate trace"),
+    ("cost", "candidate trace"),
+    ("dataset", "dataset snapshot"),
+    ("missing_candidate", "line 1"),
+])
+def test_attempt_rejects_changed_candidate_or_dataset_evidence(tmp_path, changed, reason):
+    """A gate verdict cannot conceal tampering in the runner's other evidence."""
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    task = manifest["tasks"][0]
+    attempt = (tmp_path / "artifacts" / task["split"] / task["id"] /
+               record["arm"] / "1")
+    if changed == "input":
+        source = json.loads((attempt / "input.json").read_text())
+        source["problem_statement"] = "changed"
+        (attempt / "input.json").write_text(json.dumps(source))
+    elif changed == "patch":
+        (attempt / "candidate.patch").write_bytes(b"different patch")
+    elif changed == "invocation":
+        invocation = json.loads((attempt / "invocation.json").read_text())
+        invocation["timeout_seconds"] += 1
+        (attempt / "invocation.json").write_text(json.dumps(invocation))
+    elif changed == "trace":
+        (attempt / "trace.jsonl").write_text(json.dumps({
+            "type": "turn.completed", "usage": {"input_tokens": 101,
+                                                   "output_tokens": 50}}))
+    elif changed == "cost":
+        candidate = json.loads((attempt / "candidate.json").read_text())
+        candidate["cost_usd"] = 0.5
+        (attempt / "candidate.json").write_text(json.dumps(candidate))
+    elif changed == "dataset":
+        dataset = tmp_path / "harness" / f"{record['run_id']}.dataset.json"
+        dataset.write_text("[]")
+    elif changed == "missing_candidate":
+        (attempt / "candidate.json").unlink()
+    path = tmp_path / "attempts.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    with pytest.raises(ValueError, match=reason):
+        load_attempts(path, manifest, tmp_path / "artifacts")
 
 
 def test_report_refuses_missing_arms_and_charges_failed_attempts(tmp_path):

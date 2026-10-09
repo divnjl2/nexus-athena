@@ -51,6 +51,11 @@
   SHALL reject an empty or shrunken replacement for the frozen 40-task Verified
   pilot corpus.
   - source: audit
+- **C-2.8** — WHEN a baseline attempt record is loaded THE SYSTEM SHALL
+  independently recheck its saved issue input, candidate patch, invocation,
+  trace usage, estimated cost and one-task harness dataset snapshot before
+  treating its official gate verdict as benchmark evidence.
+  - source: audit
 
 ## C-3 — Isolated candidates
 

@@ -5,7 +5,8 @@ import hashlib
 import json
 
 from evals.self_improve.corpus import acceptance, fingerprint, inputs
-from evals.self_improve.gate_adapter import attest
+from evals.self_improve.codex_driver import usage_from_trace
+from evals.self_improve.gate_adapter import HARNESS_VERSION, attest, run_id_for
 from evals.self_improve.pilot import authorize_split, gate_one, prompt_for
 
 
@@ -80,25 +81,49 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
     (attempt_dir / "candidate.patch").write_bytes(patch)
     prompt = b"frozen prompt\n"
     (attempt_dir / "prompt.txt").write_bytes(prompt)
+    (attempt_dir / "input.json").write_text(json.dumps(inputs(row)))
+    rates = {"input_per_million": 10000, "cached_input_per_million": 0,
+             "cache_write_input_per_million": 0, "output_per_million": 10000,
+             "max_request_context_tokens": 272000}
+    invocation = {"argv": ["codex", "exec"], "cwd": str(attempt_dir),
+                  "timeout_seconds": 900, "rates_usd_per_million": rates}
+    (attempt_dir / "invocation.json").write_text(json.dumps(invocation))
+    trace = json.dumps({"type": "turn.completed", "usage": {
+        "input_tokens": 100, "output_tokens": 50}}) + "\n"
+    (attempt_dir / "trace.jsonl").write_text(trace)
+    (attempt_dir / "stderr.txt").write_text("")
     (attempt_dir / "candidate.json").write_text(json.dumps({
         "patch_sha256": hashlib.sha256(patch).hexdigest(), "model": "snapshot",
+        "patch_bytes": len(patch), "exit_code": 0, "verified": False,
         "candidate_status": "unverified_candidate",
         "codex_cli_version": "codex-cli test", "cost_basis": "API-equivalent estimate",
         "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
-        "config_sha256": "e" * 64,
+        "config_sha256": fingerprint({"argv": invocation["argv"], "rates": rates,
+                                       "timeout": invocation["timeout_seconds"]}),
         "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
-        "usage": {"input_tokens": 100, "output_tokens": 50},
+        "usage": usage_from_trace(trace),
         "wall_seconds": 60, "cost_usd": 1.5}))
     (attempt_dir / "attempt.json").write_text(json.dumps({
         "manifest_sha256": fingerprint(manifest), "task_id": task["id"],
-        "arm": "codex", "athena_commit": None, "seed": None}))
+        "arm": "codex", "attempt": 1, "athena_commit": None, "seed": None,
+        "base_commit": task["base_commit"], "input_sha256": task["input_sha256"],
+        "acceptance_sha256": task["acceptance_sha256"],
+        "dataset_revision": manifest["revision"],
+        "candidate_status": "unverified_candidate"}))
 
     def fake_harness(**kwargs):
         official = tmp_path / "official.json"
         official.write_text(json.dumps({task["id"]: {"resolved": True}}))
-        return attest(task_id=task["id"], patch=patch, official_report=official,
-                      gate_dir=kwargs["gate_dir"], run_id="unique-run",
-                      harness_version="test-version")
+        run_id = run_id_for(task["id"], "codex", 1, patch)
+        kwargs["workdir"].mkdir(parents=True, exist_ok=True)
+        dataset = kwargs["workdir"] / f"{run_id}.dataset.json"
+        dataset.write_text(json.dumps([row]))
+        envelope = attest(task_id=task["id"], patch=patch, official_report=official,
+                          gate_dir=kwargs["gate_dir"], run_id=run_id,
+                          harness_version=HARNESS_VERSION)
+        envelope["dataset_sha256"] = hashlib.sha256(dataset.read_bytes()).hexdigest()
+        (kwargs["gate_dir"] / "gate.json").write_text(json.dumps(envelope))
+        return envelope
 
     monkeypatch.setattr(pilot, "run_harness", fake_harness)
     candidate_path = attempt_dir / "candidate.json"

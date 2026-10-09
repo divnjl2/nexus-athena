@@ -152,6 +152,14 @@
 - **When** completeness is calculated
 - **Then** reporting fails.
 
+### S2.8 — revalidate every baseline evidence leg
+- **verifies:** C-2.8
+- **pins:** a5670c08858f679e
+- **run_cmd:** `python -m pytest tests/test_self_improve_evidence.py -q`
+- **Given** an official gate record with preserved candidate artifacts
+- **When** an input, patch, invocation, trace, estimate or dataset changes
+- **Then** loading the attempt fails before it can enter a benchmark report.
+
 ### S3.1 — baseline planned before optimizer
 - **verifies:** C-3.1
 - **pins:** 4958de38b73df3b3

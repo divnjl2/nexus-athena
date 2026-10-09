@@ -12,7 +12,9 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from .corpus import ARMS, fingerprint, validate_manifest_shape
+from .codex_driver import executor_failure, price_usd, usage_from_trace
+from .corpus import ARMS, acceptance, fingerprint, inputs, validate_manifest_shape
+from .gate_adapter import HARNESS_VERSION, run_id_for
 
 SCHEMA = "athena.self-improve.attempt/1"
 STAGES = {"baseline": ARMS[:2], "final": ARMS}
@@ -42,11 +44,67 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
                 "patch_sha256"):
         if not isinstance(record.get(key), str) or not record[key]:
             raise ValueError(f"missing {key}")
-    prompt_path = (artifacts / task["split"] / record["task_id"] /
-                   record["arm"] / str(record["attempt"]) / "prompt.txt").resolve()
-    if not prompt_path.is_relative_to(artifacts.resolve()) or \
-            not prompt_path.is_file() or file_sha256(prompt_path) != record["prompt_sha256"]:
+    attempt_dir = (artifacts / task["split"] / record["task_id"] /
+                   record["arm"] / str(record["attempt"])).resolve()
+    if not attempt_dir.is_relative_to(artifacts.resolve()):
+        raise ValueError("candidate artifacts escaped the run root")
+    prompt_path = attempt_dir / "prompt.txt"
+    if not prompt_path.is_file() or file_sha256(prompt_path) != record["prompt_sha256"]:
         raise ValueError("saved prompt bytes do not match the recorded hash")
+    candidate = json.loads((attempt_dir / "candidate.json").read_text(encoding="utf-8"))
+    metadata = json.loads((attempt_dir / "attempt.json").read_text(encoding="utf-8"))
+    invocation = json.loads((attempt_dir / "invocation.json").read_text(encoding="utf-8"))
+    source = json.loads((attempt_dir / "input.json").read_text(encoding="utf-8"))
+    patch = (attempt_dir / "candidate.patch").read_bytes()
+    trace = (attempt_dir / "trace.jsonl").read_text(encoding="utf-8")
+    stderr = (attempt_dir / "stderr.txt").read_text(encoding="utf-8")
+    if fingerprint(source) != task["input_sha256"] or \
+            metadata.get("manifest_sha256") != record["manifest_sha256"] or \
+            metadata.get("base_commit") != task["base_commit"] or \
+            metadata.get("input_sha256") != task["input_sha256"] or \
+            metadata.get("acceptance_sha256") != task["acceptance_sha256"] or \
+            metadata.get("dataset_revision") != manifest["revision"] or \
+            metadata.get("task_id") != record["task_id"] or \
+            metadata.get("arm") != record["arm"] or \
+            metadata.get("attempt") != record["attempt"] or \
+            metadata.get("athena_commit") != record.get("athena_commit") or \
+            metadata.get("seed") != record.get("seed") or \
+            metadata.get("candidate_status") != candidate.get("candidate_status"):
+        raise ValueError("saved candidate input or framework revision changed")
+    patch_sha = hashlib.sha256(patch).hexdigest()
+    config_sha = fingerprint({"argv": invocation["argv"],
+                              "rates": invocation["rates_usd_per_million"],
+                              "timeout": invocation["timeout_seconds"]})
+    if patch_sha != record["patch_sha256"] or \
+            candidate.get("patch_sha256") != patch_sha or \
+            candidate.get("patch_bytes") != len(patch) or \
+            config_sha != record["config_sha256"] or \
+            candidate.get("config_sha256") != config_sha:
+        raise ValueError("saved candidate patch or invocation changed")
+    usage = usage_from_trace(trace)
+    estimated_cost = price_usd(usage, invocation["rates_usd_per_million"])
+    if candidate.get("usage") != usage or \
+            record.get("input_tokens") != usage["input_tokens"] or \
+            record.get("output_tokens") != usage["output_tokens"] or \
+            not math.isclose(record.get("cost_usd", -1), estimated_cost,
+                             rel_tol=0, abs_tol=1e-9) or \
+            not math.isclose(candidate.get("cost_usd", -1), estimated_cost,
+                             rel_tol=0, abs_tol=1e-9) or \
+            executor_failure(trace, stderr, candidate.get("exit_code"), len(patch)) is not None:
+        raise ValueError("saved candidate trace, cost or executor status changed")
+    expected_status = "unverified_candidate" if patch else "empty_patch"
+    for key in ("model", "codex_cli_version", "prompt_sha256", "cost_basis",
+                "wall_seconds", "started_at", "ended_at"):
+        if candidate.get(key) != record.get(key):
+            raise ValueError(f"saved candidate {key} changed")
+    if candidate.get("candidate_status") != expected_status or \
+            candidate.get("executor_failure") is not None or \
+            candidate.get("verified") is not False or \
+            record.get("model_version") != record["model"] or \
+            record.get("dataset_revision") != manifest["revision"] or \
+            record.get("run_id") != run_id_for(record["task_id"], record["arm"],
+                                               record["attempt"], patch):
+        raise ValueError("candidate identity or run id changed")
     try:
         started = datetime.fromisoformat(record["started_at"])
         ended = datetime.fromisoformat(record["ended_at"])
@@ -81,8 +139,20 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
             envelope.get("instance_id") != record["task_id"] or \
             envelope.get("patch_sha256") != record["patch_sha256"] or \
             envelope.get("run_id") != record["run_id"] or \
-            not envelope.get("harness_version"):
+            envelope.get("harness_version") != HARNESS_VERSION:
         raise ValueError("gate envelope does not bind this task and patch")
+    dataset_path = (artifacts.parent / "harness" /
+                    f"{record['run_id']}.dataset.json").resolve()
+    if not dataset_path.is_relative_to(artifacts.parent.resolve()) or \
+            not dataset_path.is_file() or \
+            file_sha256(dataset_path) != envelope.get("dataset_sha256"):
+        raise ValueError("official dataset snapshot changed")
+    snapshot = json.loads(dataset_path.read_text(encoding="utf-8"))
+    if not isinstance(snapshot, list) or len(snapshot) != 1 or \
+            snapshot[0].get("instance_id") != record["task_id"] or \
+            fingerprint(inputs(snapshot[0])) != task["input_sha256"] or \
+            fingerprint(acceptance(snapshot[0])) != task["acceptance_sha256"]:
+        raise ValueError("official gate used a different task row")
     official_relative = Path(envelope.get("official_report", ""))
     official_path = (path.parent / official_relative).resolve()
     if not official_relative.parts or official_relative.is_absolute() or \
@@ -110,7 +180,7 @@ def load_attempts(path: Path, manifest: dict, artifacts: Path) -> list[dict]:
         record = json.loads(line)
         try:
             validate_attempt(record, manifest, artifacts)
-        except (ValueError, KeyError, TypeError) as exc:
+        except (ValueError, KeyError, TypeError, OSError) as exc:
             raise ValueError(f"line {line_no}: {exc}") from exc
         key = (record["task_id"], record["arm"], record["attempt"])
         if key in keys or record["run_id"] in run_ids:

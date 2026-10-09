@@ -232,6 +232,10 @@ stricter validator now rejects all four records, so **none count toward the
 for audit; do not rewrite them to make the check pass. The runner now saves and
 sends identical UTF-8 bytes. Under the current sandbox, WSL and Docker access
 are denied, preventing a fresh official gate run.
+The attempt loader now also checks the saved issue input, candidate diff,
+invocation, completed-turn usage, price calculation and exact one-task harness
+dataset against each record. An official verdict cannot compensate for a
+changed or missing leg of that evidence.
 
 To extend the benchmark to 50 or more tasks, publish a new manifest version with a
 new selection seed before running candidates. Retain each older manifest
