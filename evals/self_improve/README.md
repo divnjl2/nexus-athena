@@ -103,6 +103,8 @@ that content into the request instructions, after which the lane rejected the
 request against its 30,720-token context limit. Neither attempt generated a
 benchmark candidate. The cluster route has since passed those transport checks,
 but has not yet produced a graded task in a separate cluster evaluation lane.
+Cluster candidate provenance fingerprints the raw trace and stderr files; even
+a line-ending change invalidates the candidate before official grading.
 
 `manifest.json` freezes 40 real SWE-bench Verified issues from revision
 `78f471bf655a3137b2e8a75af1501690ec009ec3`: four per eligible repository,

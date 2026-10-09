@@ -88,6 +88,27 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert b"marker.txt" in (artifact_dir / "candidate.patch").read_bytes()
     assert "private-client-token" not in (artifact_dir / "invocation.json").read_text()
 
+    trace_path = artifact_dir / "trace.jsonl"
+    original_trace = trace_path.read_bytes()
+    assert candidate["trace_sha256"] == hashlib.sha256(original_trace).hexdigest()
+    altered_trace = (original_trace.replace(b"\r\n", b"\n") if b"\r\n" in original_trace
+                     else original_trace.replace(b"\n", b"\r\n"))
+    assert altered_trace != original_trace
+    trace_path.write_bytes(altered_trace)
+    with pytest.raises(ValueError, match="trace"):
+        cluster_pilot.run_gate(manifest=manifest, row=row, task_id=row["instance_id"],
+                               arm="codex", attempt=1, root=root)
+    trace_path.write_bytes(original_trace)
+
+    stderr_path = artifact_dir / "stderr.txt"
+    original_stderr = stderr_path.read_bytes()
+    assert candidate["stderr_sha256"] == hashlib.sha256(original_stderr).hexdigest()
+    stderr_path.write_bytes(original_stderr + b"\r\n")
+    with pytest.raises(ValueError, match="trace"):
+        cluster_pilot.run_gate(manifest=manifest, row=row, task_id=row["instance_id"],
+                               arm="codex", attempt=1, root=root)
+    stderr_path.write_bytes(original_stderr)
+
     original_prompt = (artifact_dir / "prompt.txt").read_bytes()
     (artifact_dir / "prompt.txt").write_bytes(b"changed prompt")
     with pytest.raises(ValueError, match="prompt"):
@@ -123,6 +144,12 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert record["gate"]["passed"] is True and record["cost_usd"] is None
     assert record["probe_reported_models"] == ["cluster-model-v1"] * 3
     assert (root / "records" / "cluster-demo-1.json").is_file()
+    trace_path.write_bytes(altered_trace)
+    with pytest.raises(ValueError, match="trace_sha256"):
+        cluster_pilot.validate_cluster_attempt(record, manifest, root)
+    with pytest.raises(ValueError, match="invalid cluster record"):
+        cluster_report.load_records(root, manifest)
+    trace_path.write_bytes(original_trace)
     report = cluster_report.summarize_cluster(
         manifest, cluster_report.load_records(root, manifest), root)
     assert report["complete"] is False and report["paired_comparison"] is None

@@ -120,7 +120,8 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
     workspace = prepare(cell, attempt=attempt, root=root)
     artifacts = root / "artifacts" / task["split"] / task_id / arm / str(attempt)
     artifacts.mkdir(parents=True, exist_ok=False)
-    (artifacts / "prompt.txt").write_bytes(prompt.encode("utf-8"))
+    prompt_bytes = prompt.encode("utf-8")
+    (artifacts / "prompt.txt").write_bytes(prompt_bytes)
     (artifacts / "input.json").write_text(json.dumps(inputs(source[task_id]),
                                                ensure_ascii=False, indent=2) + "\n",
                                           encoding="utf-8")
@@ -145,7 +146,7 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=trace_stream,
                                 stderr=stderr_stream, cwd=workspace, env=env)
         try:
-            proc.communicate(input=prompt.encode("utf-8"), timeout=timeout)
+            proc.communicate(input=prompt_bytes, timeout=timeout)
             exit_code = proc.returncode
         except subprocess.TimeoutExpired:
             proc.kill()
@@ -153,8 +154,10 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
             exit_code = 124
     elapsed = time.monotonic() - start
     ended_at = datetime.now(timezone.utc).isoformat()
-    stdout = trace_path.read_text(encoding="utf-8", errors="replace")
-    stderr = stderr_path.read_text(encoding="utf-8", errors="replace")
+    trace_bytes = trace_path.read_bytes()
+    stderr_bytes = stderr_path.read_bytes()
+    stdout = trace_bytes.decode("utf-8", "replace")
+    stderr = stderr_bytes.decode("utf-8", "replace")
     patch = candidate_patch(workspace)
     (artifacts / "candidate.patch").write_bytes(patch)
     failure = executor_failure(stdout, stderr, exit_code, len(patch))
@@ -170,10 +173,10 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
                  "probe_checked_at": probe_evidence["checked_at"],
                  "probe_reported_models": probe_evidence.get("reported_models"),
                  "config_sha256": fingerprint(config),
-                 "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+                 "prompt_sha256": hashlib.sha256(prompt_bytes).hexdigest(),
                  "patch_sha256": hashlib.sha256(patch).hexdigest(),
-                 "trace_sha256": hashlib.sha256(stdout.encode("utf-8")).hexdigest(),
-                 "stderr_sha256": hashlib.sha256(stderr.encode("utf-8")).hexdigest(),
+                 "trace_sha256": hashlib.sha256(trace_bytes).hexdigest(),
+                 "stderr_sha256": hashlib.sha256(stderr_bytes).hexdigest(),
                  "patch_bytes": len(patch), "usage": usage,
                  "wall_seconds": elapsed, "started_at": started_at,
                  "ended_at": ended_at, "exit_code": exit_code,
@@ -226,10 +229,12 @@ def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
             candidate.get("bridge_url") != invocation.get("bridge_url") or \
             candidate.get("cost_usd", "missing") is not None:
         raise ValueError("cluster prompt, configuration or cost basis changed")
-    trace = (attempt_dir / "trace.jsonl").read_text(encoding="utf-8")
-    stderr = (attempt_dir / "stderr.txt").read_text(encoding="utf-8")
-    if candidate.get("trace_sha256") != hashlib.sha256(trace.encode("utf-8")).hexdigest() or \
-            candidate.get("stderr_sha256") != hashlib.sha256(stderr.encode("utf-8")).hexdigest() or \
+    trace_bytes = (attempt_dir / "trace.jsonl").read_bytes()
+    stderr_bytes = (attempt_dir / "stderr.txt").read_bytes()
+    trace = trace_bytes.decode("utf-8", "replace")
+    stderr = stderr_bytes.decode("utf-8", "replace")
+    if candidate.get("trace_sha256") != hashlib.sha256(trace_bytes).hexdigest() or \
+            candidate.get("stderr_sha256") != hashlib.sha256(stderr_bytes).hexdigest() or \
             candidate.get("usage") != usage_from_trace(trace) or \
             executor_failure(trace, stderr, candidate.get("exit_code"), len(patch)) is not None:
         raise ValueError("cluster executor trace or usage changed")
@@ -328,8 +333,10 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
     metadata = json.loads(_contained_file(attempt_dir, "attempt.json").read_text(encoding="utf-8"))
     invocation = json.loads(_contained_file(attempt_dir, "invocation.json").read_text(encoding="utf-8"))
     patch = _contained_file(attempt_dir, "candidate.patch").read_bytes()
-    trace = _contained_file(attempt_dir, "trace.jsonl").read_text(encoding="utf-8")
-    stderr = _contained_file(attempt_dir, "stderr.txt").read_text(encoding="utf-8")
+    trace_bytes = _contained_file(attempt_dir, "trace.jsonl").read_bytes()
+    stderr_bytes = _contained_file(attempt_dir, "stderr.txt").read_bytes()
+    trace = trace_bytes.decode("utf-8", "replace")
+    stderr = stderr_bytes.decode("utf-8", "replace")
     prompt = _contained_file(attempt_dir, "prompt.txt").read_bytes()
     probe = _contained_file(attempt_dir, "route_probe.json")
     source = json.loads(_contained_file(attempt_dir, "input.json").read_text(encoding="utf-8"))
@@ -345,8 +352,8 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
         raise ValueError("cluster candidate input or framework revision changed")
     for field, expected in (("patch_sha256", hashlib.sha256(patch).hexdigest()),
                             ("prompt_sha256", hashlib.sha256(prompt).hexdigest()),
-                            ("trace_sha256", hashlib.sha256(trace.encode()).hexdigest()),
-                            ("stderr_sha256", hashlib.sha256(stderr.encode()).hexdigest()),
+                            ("trace_sha256", hashlib.sha256(trace_bytes).hexdigest()),
+                            ("stderr_sha256", hashlib.sha256(stderr_bytes).hexdigest()),
                             ("config_sha256", fingerprint(invocation)),
                             ("route_probe_sha256", file_sha256(probe))):
         if candidate.get(field) != expected or (field != "stderr_sha256" and

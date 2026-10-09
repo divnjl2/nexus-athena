@@ -1,5 +1,13 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.10 — exact cluster trace bytes
+- **verifies:** C-5.10
+- **pins:** b695330d29610a40
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a cluster candidate whose trace and stderr are preserved
+- **When** line endings or diagnostic bytes change without changing parsed events
+- **Then** the candidate fails provenance checks before its independent gate.
+
 ### S5.9 — fail-closed cluster continuation
 - **verifies:** C-5.9
 - **pins:** 503941c35a58bafa

@@ -184,3 +184,7 @@
   and stop on partial artifacts, executor errors or unfinished gates without
   automatically retrying an attempt.
   - source: incident
+- **C-5.10** — WHEN a cluster candidate records or validates its trace and
+  stderr THE SYSTEM SHALL fingerprint their exact file bytes, and reject any
+  changed bytes before independent grading or report acceptance.
+  - source: audit
