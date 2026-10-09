@@ -87,6 +87,12 @@ paired comparison. Its USD cost fields stay `null` until cluster cost is
 measured. It lists model identifiers reported by the synthetic preflight probe;
 these do not establish the model or GPU lane of every benchmark request. This
 exploratory report does not enter the priced three-arm pilot.
+`cluster_batch.py` runs at most one development task pair per invocation by
+default. It fixes the Athena commit, model role, bridge URL and context window
+across existing records, grades a complete preserved candidate, and stops for
+review when an attempt or gate is partial. A fresh passing probe and private
+client key are required before a new candidate. Its output report is
+`<cluster-run-root>/reports/development.json`; an incomplete run exits 2.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.

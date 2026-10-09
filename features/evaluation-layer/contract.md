@@ -166,3 +166,8 @@
   every independent record, list missing and ungraded attempts, and leave USD
   cost unknown until measured.
   - source: design
+- **C-5.9** — WHEN a cluster batch resumes THE SYSTEM SHALL skip only
+  independently validated records, gate a complete candidate at most once,
+  and stop on partial artifacts, executor errors or unfinished gates without
+  automatically retrying an attempt.
+  - source: incident

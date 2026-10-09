@@ -1,5 +1,14 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.9 — fail-closed cluster continuation
+- **verifies:** C-5.9
+- **pins:** 503941c35a58bafa
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_batch.py -q`
+- **Given** an interrupted cluster candidate or an unfinished official gate
+- **When** the paired development batch resumes
+- **Then** it records the partial state and stops before launching another
+  model attempt or accepting a result without independent evidence.
+
 ### S5.8 — honest cluster report
 - **verifies:** C-5.8
 - **pins:** 5faf7d8590a9ccff
