@@ -108,6 +108,10 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert (artifacts / "prompt.txt").read_bytes() == expected
     assert received.read_bytes() == expected
     assert candidate["prompt_sha256"] == hashlib.sha256(expected).hexdigest()
+    assert candidate["trace_sha256"] == hashlib.sha256(
+        (artifacts / "trace.jsonl").read_bytes()).hexdigest()
+    assert candidate["stderr_sha256"] == hashlib.sha256(
+        (artifacts / "stderr.txt").read_bytes()).hexdigest()
     assert candidate["candidate_status"] == "unverified_candidate"
 
 

@@ -46,6 +46,8 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
         "input_tokens": 100, "output_tokens": 50}}) + "\n"
     (attempt_dir / "trace.jsonl").write_text(trace)
     (attempt_dir / "stderr.txt").write_text("")
+    trace_hash = hashlib.sha256((attempt_dir / "trace.jsonl").read_bytes()).hexdigest()
+    stderr_hash = hashlib.sha256((attempt_dir / "stderr.txt").read_bytes()).hexdigest()
     usage = usage_from_trace(trace)
     athena_commit = None if arm == "codex" else "f" * 40
     metadata = {"manifest_sha256": fingerprint(manifest),
@@ -57,6 +59,7 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
     (attempt_dir / "attempt.json").write_text(json.dumps(metadata))
     candidate = {"patch_sha256": patch_hash, "patch_bytes": len(patch),
                  "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
+                 "trace_sha256": trace_hash, "stderr_sha256": stderr_hash,
                  "config_sha256": config_hash, "model": "codex",
                  "codex_cli_version": "codex-cli 0.161.0",
                  "cost_basis": "API-equivalent estimate", "usage": usage,
@@ -89,6 +92,7 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
             "model_resolution": "requested_identifier", "codex_cli_version": "codex-cli 0.161.0",
             "cost_basis": "API-equivalent estimate", "dataset_revision": manifest["revision"],
             "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
+            "trace_sha256": trace_hash, "stderr_sha256": stderr_hash,
             "config_sha256": config_hash, "seed": None,
             "athena_commit": athena_commit,
             "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
@@ -143,11 +147,34 @@ def test_attempt_rejects_prompt_bytes_that_differ_from_record(tmp_path):
         load_attempts(path, manifest, tmp_path / "artifacts")
 
 
+def test_attempt_rejects_semantically_identical_trace_with_changed_bytes(tmp_path):
+    """A newline rewrite cannot silently alter the evidence behind usage."""
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    path = tmp_path / "attempts.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    assert load_attempts(path, manifest, tmp_path / "artifacts") == [record]
+    trace_path = (tmp_path / "artifacts" / manifest["tasks"][0]["split"] /
+                  record["task_id"] / record["arm"] / "1" / "trace.jsonl")
+    original = trace_path.read_bytes()
+    changed = original.replace(b"\r\n", b"\n") if b"\r\n" in original else \
+        original.replace(b"\n", b"\r\n")
+    assert changed != original
+    trace_path.write_bytes(changed)
+    with pytest.raises(ValueError, match="trace.jsonl bytes"):
+        load_attempts(path, manifest, tmp_path / "artifacts")
+    trace_path.write_bytes(original)
+    stderr_path = trace_path.with_name("stderr.txt")
+    stderr_path.write_bytes(b"late diagnostic\r\n")
+    with pytest.raises(ValueError, match="stderr.txt bytes"):
+        load_attempts(path, manifest, tmp_path / "artifacts")
+
+
 @pytest.mark.parametrize("changed,reason", [
     ("input", "candidate input"),
     ("patch", "candidate patch"),
     ("invocation", "invocation"),
-    ("trace", "candidate trace"),
+    ("trace", "trace.jsonl bytes"),
     ("cost", "candidate trace"),
     ("dataset", "dataset snapshot"),
     ("missing_candidate", "line 1"),

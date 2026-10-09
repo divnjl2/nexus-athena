@@ -159,6 +159,10 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
         raise ValueError("candidate patch is altered")
     if file_sha256(attempt_dir / "prompt.txt") != candidate.get("prompt_sha256"):
         raise ValueError("candidate prompt bytes are altered")
+    for name, key in (("trace.jsonl", "trace_sha256"),
+                      ("stderr.txt", "stderr_sha256")):
+        if file_sha256(attempt_dir / name) != candidate.get(key):
+            raise ValueError(f"candidate {name} bytes are altered")
     expected_status = "unverified_candidate" if patch else "empty_patch"
     if candidate.get("candidate_status") != expected_status or candidate.get("executor_failure"):
         raise ValueError("candidate status disagrees with patch")
@@ -185,6 +189,8 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
               "athena_commit": metadata["athena_commit"],
               "cost_basis": candidate["cost_basis"],
               "prompt_sha256": candidate["prompt_sha256"],
+              "trace_sha256": candidate["trace_sha256"],
+              "stderr_sha256": candidate["stderr_sha256"],
               "config_sha256": candidate["config_sha256"],
               "seed": metadata["seed"],
               "started_at": candidate["started_at"],

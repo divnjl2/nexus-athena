@@ -237,7 +237,7 @@ are denied, preventing a fresh official gate run. The runner writes stdout and
 stderr directly to artifact files while Codex runs. A timeout retains partial
 diagnostics and classifies the candidate as an executor error.
 The attempt loader now also checks the saved issue input, candidate diff,
-invocation, completed-turn usage, price calculation and exact one-task harness
+invocation, exact trace and stderr bytes, completed-turn usage, price calculation and exact one-task harness
 dataset against each record. An official verdict cannot compensate for a
 changed or missing leg of that evidence.
 

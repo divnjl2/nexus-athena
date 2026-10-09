@@ -112,6 +112,10 @@
   stdout trace and stderr as they arrive so a timeout retains partial diagnostics;
   timed-out candidates SHALL remain executor errors, never verified results.
   - source: incident
+- **C-3.16** — WHEN a baseline candidate is independently graded or reported
+  THE SYSTEM SHALL bind its trace and stderr to exact saved file bytes and reject
+  any changed bytes, including semantically equivalent newline rewrites.
+  - source: audit
 
 ## C-4 — Independent acceptance
 

@@ -1,10 +1,10 @@
 {
-  "contract_version": "8ae2a9b53f4ade65",
+  "contract_version": "c5456b49c135350a",
   "results": [
     {
       "clause": "C-5.10",
       "clause_version": "b695330d29610a40",
-      "duration_ms": 3422,
+      "duration_ms": 4073,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-5.9",
       "clause_version": "503941c35a58bafa",
-      "duration_ms": 23,
+      "duration_ms": 22,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -24,7 +24,7 @@
     {
       "clause": "C-5.8",
       "clause_version": "5faf7d8590a9ccff",
-      "duration_ms": 3422,
+      "duration_ms": 4073,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-5.6",
       "clause_version": "1167f673e3b2da65",
-      "duration_ms": 3425,
+      "duration_ms": 4076,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-5.7",
       "clause_version": "bf140793a31c3d5c",
-      "duration_ms": 3422,
+      "duration_ms": 4073,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -74,7 +74,7 @@
     {
       "clause": "C-5.2",
       "clause_version": "bec492b8fbfe8b17",
-      "duration_ms": 1036,
+      "duration_ms": 1031,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -94,7 +94,7 @@
     {
       "clause": "C-5.1",
       "clause_version": "5279fec8b3cf482d",
-      "duration_ms": 122,
+      "duration_ms": 109,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -144,7 +144,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "c5c3fb2d3d0b425b",
-      "duration_ms": 16,
+      "duration_ms": 17,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -154,7 +154,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "a75910948b86c287",
-      "duration_ms": 6214,
+      "duration_ms": 6188,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -164,7 +164,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "8d8a52abf9251a2c",
-      "duration_ms": 1382,
+      "duration_ms": 3645,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -174,7 +174,7 @@
     {
       "clause": "C-2.5",
       "clause_version": "d2cc53f01443a234",
-      "duration_ms": 2113,
+      "duration_ms": 1515,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -194,7 +194,7 @@
     {
       "clause": "C-2.8",
       "clause_version": "a5670c08858f679e",
-      "duration_ms": 9697,
+      "duration_ms": 14250,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -214,7 +214,7 @@
     {
       "clause": "C-3.2",
       "clause_version": "c5f6c954fd07503d",
-      "duration_ms": 1530,
+      "duration_ms": 1209,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -244,7 +244,7 @@
     {
       "clause": "C-3.5",
       "clause_version": "beb162706c41ab87",
-      "duration_ms": 624,
+      "duration_ms": 650,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -274,7 +274,7 @@
     {
       "clause": "C-3.9",
       "clause_version": "4380d6880bf6a226",
-      "duration_ms": 118,
+      "duration_ms": 121,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -284,7 +284,7 @@
     {
       "clause": "C-3.10",
       "clause_version": "316d3e2e8430bb00",
-      "duration_ms": 119,
+      "duration_ms": 122,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -294,7 +294,7 @@
     {
       "clause": "C-3.11",
       "clause_version": "88eed663dadf9010",
-      "duration_ms": 2298,
+      "duration_ms": 3866,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -304,7 +304,7 @@
     {
       "clause": "C-3.12",
       "clause_version": "9dfb6d99410c7f88",
-      "duration_ms": 233,
+      "duration_ms": 126,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -314,7 +314,7 @@
     {
       "clause": "C-3.14",
       "clause_version": "a016a6ab4856dfb5",
-      "duration_ms": 3390,
+      "duration_ms": 3149,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -324,12 +324,22 @@
     {
       "clause": "C-3.15",
       "clause_version": "92d2d4df0b3b5d67",
-      "duration_ms": 3216,
+      "duration_ms": 2567,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_timed_out_candidate_keeps_streamed_trace_and_fails_closed -q",
       "scenario": "S3.15"
+    },
+    {
+      "clause": "C-3.16",
+      "clause_version": "b5ca872906d415e9",
+      "duration_ms": 3091,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_candidate_prompt_hash_matches_saved_and_submitted_bytes tests/test_self_improve_evidence.py::test_attempt_rejects_semantically_identical_trace_with_changed_bytes tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q",
+      "scenario": "S3.16"
     },
     {
       "clause": "C-3.13",
@@ -354,7 +364,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "031ca1911ac30a2e",
-      "duration_ms": 4,
+      "duration_ms": 126,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -364,7 +374,7 @@
     {
       "clause": "C-4.4",
       "clause_version": "659da23f2fdec25a",
-      "duration_ms": 141,
+      "duration_ms": 23,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -374,7 +384,7 @@
     {
       "clause": "C-4.5",
       "clause_version": "128ac47a3504b741",
-      "duration_ms": 24,
+      "duration_ms": 28,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -384,7 +394,7 @@
     {
       "clause": "C-4.6",
       "clause_version": "68160e61f974a4d3",
-      "duration_ms": 9,
+      "duration_ms": 10,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -404,7 +414,7 @@
     {
       "clause": "C-4.7",
       "clause_version": "94199369ad4d69c9",
-      "duration_ms": 8,
+      "duration_ms": 9,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -414,7 +424,7 @@
     {
       "clause": "C-4.8",
       "clause_version": "19a5118f74325fd4",
-      "duration_ms": 99,
+      "duration_ms": 93,
       "exit_code": 1,
       "output_tail": "skipped: a skipped spec is not proof (C-1.2)",
       "passed": false,
@@ -422,13 +432,13 @@
       "scenario": "S4.9"
     }
   ],
-  "scenario_version": "0057d8eb840b9147",
+  "scenario_version": "5e9ffb2abb0d1d83",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 46162,
+    "duration_ms": 58317,
     "failed": 1,
-    "passed": 41,
-    "total": 42
+    "passed": 42,
+    "total": 43
   },
-  "ts": "2026-10-09T21:49:13+00:00"
+  "ts": "2026-10-09T21:56:17+00:00"
 }

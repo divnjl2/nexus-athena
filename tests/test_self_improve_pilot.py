@@ -92,12 +92,15 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
         "input_tokens": 100, "output_tokens": 50}}) + "\n"
     (attempt_dir / "trace.jsonl").write_text(trace)
     (attempt_dir / "stderr.txt").write_text("")
+    trace_hash = hashlib.sha256((attempt_dir / "trace.jsonl").read_bytes()).hexdigest()
+    stderr_hash = hashlib.sha256((attempt_dir / "stderr.txt").read_bytes()).hexdigest()
     (attempt_dir / "candidate.json").write_text(json.dumps({
         "patch_sha256": hashlib.sha256(patch).hexdigest(), "model": "snapshot",
         "patch_bytes": len(patch), "exit_code": 0, "verified": False,
         "candidate_status": "unverified_candidate",
         "codex_cli_version": "codex-cli test", "cost_basis": "API-equivalent estimate",
         "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
+        "trace_sha256": trace_hash, "stderr_sha256": stderr_hash,
         "config_sha256": fingerprint({"argv": invocation["argv"], "rates": rates,
                                        "timeout": invocation["timeout_seconds"]}),
         "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
@@ -142,6 +145,13 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
         gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
                  attempt=1, root=tmp_path)
     (attempt_dir / "prompt.txt").write_bytes(prompt)
+    trace_path = attempt_dir / "trace.jsonl"
+    original_trace = trace_path.read_bytes()
+    trace_path.write_bytes(original_trace + b"\r\n")
+    with pytest.raises(ValueError, match="trace.jsonl bytes"):
+        gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
+                 attempt=1, root=tmp_path)
+    trace_path.write_bytes(original_trace)
     record = gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
                       attempt=1, root=tmp_path)
     assert record["gate"]["passed"] is True

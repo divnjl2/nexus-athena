@@ -273,6 +273,14 @@
 - **When** the candidate times out
 - **Then** those bytes remain in artifacts and the candidate is an executor error.
 
+### S3.16 — exact baseline trace bytes
+- **verifies:** C-3.16
+- **pins:** b5ca872906d415e9
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_candidate_prompt_hash_matches_saved_and_submitted_bytes tests/test_self_improve_evidence.py::test_attempt_rejects_semantically_identical_trace_with_changed_bytes tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q`
+- **Given** a candidate trace, stderr and an independent acceptance gate
+- **When** trace line endings or diagnostic bytes are changed
+- **Then** their saved fingerprints reject the attempt before grading or reporting.
+
 ### S3.13 — resume without duplicate attempts
 - **verifies:** C-3.13
 - **pins:** 3c0cebbdefe1e338

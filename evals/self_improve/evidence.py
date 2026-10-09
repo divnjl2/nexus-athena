@@ -40,7 +40,8 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
             raise ValueError(f"attempt has wrong {key}")
     for key in ("run_id", "model", "model_version", "model_resolution",
                 "codex_cli_version", "cost_basis", "dataset_revision",
-                "prompt_sha256", "config_sha256", "started_at", "ended_at",
+                "prompt_sha256", "trace_sha256", "stderr_sha256",
+                "config_sha256", "started_at", "ended_at",
                 "patch_sha256"):
         if not isinstance(record.get(key), str) or not record[key]:
             raise ValueError(f"missing {key}")
@@ -51,6 +52,11 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
     prompt_path = attempt_dir / "prompt.txt"
     if not prompt_path.is_file() or file_sha256(prompt_path) != record["prompt_sha256"]:
         raise ValueError("saved prompt bytes do not match the recorded hash")
+    for name, key in (("trace.jsonl", "trace_sha256"),
+                      ("stderr.txt", "stderr_sha256")):
+        path = attempt_dir / name
+        if not path.is_file() or file_sha256(path) != record[key]:
+            raise ValueError(f"saved {name} bytes do not match the recorded hash")
     candidate = json.loads((attempt_dir / "candidate.json").read_text(encoding="utf-8"))
     metadata = json.loads((attempt_dir / "attempt.json").read_text(encoding="utf-8"))
     invocation = json.loads((attempt_dir / "invocation.json").read_text(encoding="utf-8"))
@@ -78,6 +84,8 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
     if patch_sha != record["patch_sha256"] or \
             candidate.get("patch_sha256") != patch_sha or \
             candidate.get("patch_bytes") != len(patch) or \
+            candidate.get("trace_sha256") != record["trace_sha256"] or \
+            candidate.get("stderr_sha256") != record["stderr_sha256"] or \
             config_sha != record["config_sha256"] or \
             candidate.get("config_sha256") != config_sha:
         raise ValueError("saved candidate patch or invocation changed")
