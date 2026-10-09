@@ -199,3 +199,11 @@
 - **Given** an agent attempt with no patch
 - **When** the official v5 harness reports it as empty
 - **Then** the task is recorded as unresolved with that report preserved.
+
+### S4.9 — Unicode WSL path round trip
+- **verifies:** C-4.8
+- **pins:** 19a5118f74325fd4
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_wsl_path_preserves_non_ascii_workspace_names -q`
+- **Given** a Windows task path with Cyrillic components
+- **When** the path is mapped into Ubuntu WSL
+- **Then** the Linux process can access that exact directory.

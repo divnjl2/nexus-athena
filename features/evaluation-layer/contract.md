@@ -111,3 +111,7 @@
   empty patch as unresolved only when the pinned v5 harness's single-task summary
   names that task as its sole submitted empty patch without an error.
   - source: audit
+- **C-4.8** — WHEN a Windows task snapshot is passed to the WSL harness THE
+  SYSTEM SHALL preserve non-ASCII path components in UTF-8 so the harness reads
+  the same local files that were fingerprinted.
+  - source: incident

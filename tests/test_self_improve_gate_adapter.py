@@ -1,11 +1,27 @@
 """Executable specs for independent SWE-bench evidence binding."""
 import hashlib
 import json
+import os
+import shutil
 import subprocess
 
 import pytest
 
 from evals.self_improve.gate_adapter import attest, official_verdict, prediction, run_harness, run_id_for
+
+
+def test_wsl_path_preserves_non_ascii_workspace_names(tmp_path):
+    """C-4.8: WSL must receive the actual UTF-8 path to a Windows task snapshot."""
+    if os.name != "nt" or not shutil.which("wsl") or \
+            subprocess.run(["wsl", "-d", "Ubuntu", "--", "true"], capture_output=True).returncode:
+        pytest.skip("Ubuntu WSL is unavailable")
+    from evals.self_improve.gate_adapter import _wsl_path
+    source = tmp_path / "проверка"
+    source.mkdir()
+    mapped = _wsl_path(source, "Ubuntu")
+    assert mapped.endswith("/проверка")
+    assert subprocess.run(["wsl", "-d", "Ubuntu", "--", "test", "-d", mapped],
+                          capture_output=True).returncode == 0
 
 
 def test_official_report_shape_is_required():

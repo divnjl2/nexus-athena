@@ -14,7 +14,8 @@ HARNESS_VERSION = "5.0.2"
 
 def _wsl_path(path: Path, distro: str) -> str:
     proc = subprocess.run(["wsl", "-d", distro, "--", "wslpath", "-a",
-                           path.resolve().as_posix()], text=True, capture_output=True)
+                           path.resolve().as_posix()], text=True, capture_output=True,
+                          encoding="utf-8")
     if proc.returncode or not proc.stdout.strip():
         raise RuntimeError(f"cannot map path into WSL: {path}")
     return proc.stdout.strip()
