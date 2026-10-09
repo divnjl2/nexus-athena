@@ -1,0 +1,74 @@
+{
+  "contract_version": "da3201bb5a8a8362",
+  "results": [
+    {
+      "clause": "C-1.1",
+      "clause_version": "39a7c9ac0440f2fc",
+      "duration_ms": 106,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_corpus.py::test_stratified_corpus_has_36_real_task_slots_and_separate_holdout -q",
+      "scenario": "S1.1"
+    },
+    {
+      "clause": "C-1.2",
+      "clause_version": "ec00ab0724938b98",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_corpus.py::test_pinned_corpus_rejects_changed_inputs_and_acceptance -q",
+      "scenario": "S1.2"
+    },
+    {
+      "clause": "C-1.3",
+      "clause_version": "ffcf53085ecec985",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_corpus.py::test_corpus_fails_closed_on_insufficient_repository_diversity -q",
+      "scenario": "S1.3"
+    },
+    {
+      "clause": "C-2.1",
+      "clause_version": "7e00d7d4c26e89cd",
+      "duration_ms": 8,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_attempt_requires_pinned_provenance_and_matching_gate_artifact -q",
+      "scenario": "S2.1"
+    },
+    {
+      "clause": "C-2.2",
+      "clause_version": "c5c3fb2d3d0b425b",
+      "duration_ms": 5,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_report_refuses_missing_arms_and_charges_failed_attempts -q",
+      "scenario": "S2.2"
+    },
+    {
+      "clause": "C-2.3",
+      "clause_version": "a75910948b86c287",
+      "duration_ms": 60,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_report_is_complete_only_with_all_three_arms_on_every_task -q",
+      "scenario": "S2.3"
+    }
+  ],
+  "scenario_version": "a282ef7c6307ea1d",
+  "schema": "athena.spec_ledger/1",
+  "totals": {
+    "duration_ms": 184,
+    "failed": 0,
+    "passed": 6,
+    "total": 6
+  },
+  "ts": "2026-10-09T16:34:17+00:00"
+}
