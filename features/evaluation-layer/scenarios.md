@@ -267,6 +267,14 @@
 - **When** a holdout run is requested
 - **Then** matching complete baseline and development reports are required.
 
+### S3.17 — self-declared reports cannot unlock holdout
+- **verifies:** C-3.17
+- **pins:** 7b7867b3757cd6df
+- **run_cmd:** `python -m pytest tests/test_self_improve_pilot.py::test_optimizer_holdout_requires_matching_frozen_instructions_and_evidence -q`
+- **Given** matching report hashes and self-declared completion without verified attempt records
+- **When** an optimizer holdout run is requested
+- **Then** the promotion is refused.
+
 ### S3.9 — native Windows sandbox pinned
 - **verifies:** C-3.9
 - **pins:** 4380d6880bf6a226

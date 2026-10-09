@@ -92,6 +92,10 @@ def authorize_split(manifest: dict, task: dict, arm: str,
             raise ValueError("baseline evidence is from the wrong stage")
         if name == "development" and report.get("instructions_sha256") != expected["instructions_sha256"]:
             raise ValueError("development evidence is for another candidate")
+    # Report hashes only prove that the referenced bytes did not change. Until
+    # both reports can be recomputed from independently gated attempt records,
+    # their self-declared `complete` fields cannot authorize holdout access.
+    raise ValueError("holdout promotion requires independently verified attempt evidence")
 
 
 def run_one(*, manifest: dict, rows: list[dict], task_id: str, arm: str,

@@ -163,6 +163,9 @@ runs exactly one Codex task-arm attempt after fetching and verifying the pinned
 source row. It writes only a candidate patch and trace. The optimizer arm is a
 separate stage; a holdout attempt requires a promotion file matching the frozen
 instruction text and the hashes of complete baseline and development reports.
+Report hashes and self-declared completion alone are insufficient evidence, so
+the holdout gate currently refuses promotion until independent attempt-record
+revalidation is implemented. No optimizer holdout result can be claimed yet.
 
 `baseline_batch.py` resumes the two-arm matrix one task at a time. It validates
 all existing independent records before skipping them, gates a complete

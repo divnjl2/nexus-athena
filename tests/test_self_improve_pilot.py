@@ -51,7 +51,8 @@ def test_optimizer_holdout_requires_matching_frozen_instructions_and_evidence(tm
         (tmp_path / f"{name}.json").write_bytes(data)
         promotion[f"{name}_report"] = f"{name}.json"
         promotion[f"{name}_report_sha256"] = hashlib.sha256(data).hexdigest()
-    authorize_split(manifest, task, "codex_athena_optimizer", text, promotion, tmp_path)
+    with pytest.raises(ValueError, match="independently verified attempt evidence"):
+        authorize_split(manifest, task, "codex_athena_optimizer", text, promotion, tmp_path)
     with pytest.raises(ValueError):
         authorize_split(manifest, task, "codex_athena_optimizer", "changed", promotion, tmp_path)
     (tmp_path / "baseline.json").write_text("{}")

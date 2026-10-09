@@ -94,6 +94,10 @@
 - **C-3.7** — BEFORE an optimizer candidate is run on holdout THE SYSTEM SHALL require
   a frozen instruction fingerprint bound to complete baseline and development reports.
   - source: design
+- **C-3.17** — WHEN a holdout promotion presents report hashes and completion claims
+  without independently revalidated attempt evidence THE SYSTEM SHALL refuse the
+  optimizer holdout run.
+  - source: audit
 - **C-3.8** *(superseded-by C-3.12)* — WHEN the Codex process, tool policy or turn fails THE SYSTEM SHALL mark
   the candidate as an executor error and refuse to score its empty patch as a task
   failure in the official acceptance matrix.
