@@ -69,6 +69,15 @@ source row. It writes only a candidate patch and trace. The optimizer arm is a
 separate stage; a holdout attempt requires a promotion file matching the frozen
 instruction text and the hashes of complete baseline and development reports.
 
+`baseline_batch.py` resumes the two-arm matrix one task at a time. It validates
+all existing independent records before skipping them, gates a complete
+ungraded candidate, and stops for review on partial candidate or gate data.
+It never retries an executor error automatically. Pin `--athena-root` and
+`--athena-commit` to one clean framework checkout for the whole batch; pass
+`--max-pairs 1` for a bounded continuation. Its exit code is 2 while the
+40-task baseline is incomplete, and its partial report is written under
+`<root>/reports/partial-baseline.json`.
+
 Local runner smoke on 2026-10-09: `codex exec --json` returned exit code 0 and
 31,707 input tokens (28,160 cached), but produced a zero-byte patch. Its trace
 reported that nested filesystem tool calls were blocked by the current host

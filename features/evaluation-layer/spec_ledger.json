@@ -1,5 +1,5 @@
 {
-  "contract_version": "cff064b18702b5ab",
+  "contract_version": "3c174db4e9babdd7",
   "results": [
     {
       "clause": "C-5.1",
@@ -44,7 +44,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "7e00d7d4c26e89cd",
-      "duration_ms": 10,
+      "duration_ms": 11,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -64,7 +64,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "a75910948b86c287",
-      "duration_ms": 278,
+      "duration_ms": 275,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -74,7 +74,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "8d8a52abf9251a2c",
-      "duration_ms": 321,
+      "duration_ms": 293,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -84,7 +84,7 @@
     {
       "clause": "C-2.5",
       "clause_version": "d2cc53f01443a234",
-      "duration_ms": 227,
+      "duration_ms": 228,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-3.1",
       "clause_version": "4958de38b73df3b3",
-      "duration_ms": 117,
+      "duration_ms": 111,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -114,7 +114,7 @@
     {
       "clause": "C-3.2",
       "clause_version": "c5f6c954fd07503d",
-      "duration_ms": 1310,
+      "duration_ms": 1336,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -144,7 +144,7 @@
     {
       "clause": "C-3.5",
       "clause_version": "beb162706c41ab87",
-      "duration_ms": 687,
+      "duration_ms": 674,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -194,7 +194,7 @@
     {
       "clause": "C-3.11",
       "clause_version": "88eed663dadf9010",
-      "duration_ms": 687,
+      "duration_ms": 674,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,12 +204,22 @@
     {
       "clause": "C-3.12",
       "clause_version": "9dfb6d99410c7f88",
-      "duration_ms": 133,
+      "duration_ms": 120,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_executor_failures_cannot_be_scored_as_empty_agent_patches tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q",
       "scenario": "S3.12"
+    },
+    {
+      "clause": "C-3.13",
+      "clause_version": "3c0cebbdefe1e338",
+      "duration_ms": 6,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_baseline_batch.py -q",
+      "scenario": "S3.13"
     },
     {
       "clause": "C-4.2",
@@ -244,7 +254,7 @@
     {
       "clause": "C-4.5",
       "clause_version": "128ac47a3504b741",
-      "duration_ms": 15,
+      "duration_ms": 13,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -284,7 +294,7 @@
     {
       "clause": "C-4.8",
       "clause_version": "19a5118f74325fd4",
-      "duration_ms": 520,
+      "duration_ms": 516,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -292,13 +302,13 @@
       "scenario": "S4.9"
     }
   ],
-  "scenario_version": "9ef8751a18b34ead",
+  "scenario_version": "05cb41ee7fbb02ff",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 4481,
+    "duration_ms": 4433,
     "failed": 0,
-    "passed": 29,
-    "total": 29
+    "passed": 30,
+    "total": 30
   },
-  "ts": "2026-10-09T19:17:29+00:00"
+  "ts": "2026-10-09T19:31:49+00:00"
 }

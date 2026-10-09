@@ -169,6 +169,15 @@
 - **When** the candidate is classified
 - **Then** the gate may judge it while fatal executor errors remain excluded.
 
+### S3.13 — resume without duplicate attempts
+- **verifies:** C-3.13
+- **pins:** 3c0cebbdefe1e338
+- **run_cmd:** `python -m pytest tests/test_self_improve_baseline_batch.py -q`
+- **Given** a partial baseline batch
+- **When** the batch resumes
+- **Then** proved cells are skipped, complete candidates proceed to the gate,
+  and incomplete candidates or gates require review.
+
 ### S4.2 — unique prediction and run id
 - **verifies:** C-4.2
 - **pins:** c1b0f1a81cea3f71

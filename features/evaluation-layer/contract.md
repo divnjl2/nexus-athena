@@ -95,6 +95,10 @@
   an isolated tool denial after a completed turn with a patch SHALL remain
   eligible for independent grading.
   - source: audit
+- **C-3.13** — WHEN an interrupted baseline batch resumes THE SYSTEM SHALL
+  skip independently verified attempts, gate complete ungraded candidates,
+  and refuse to repeat incomplete candidates or unfinished gates.
+  - source: audit
 
 ## C-4 — Independent acceptance
 
