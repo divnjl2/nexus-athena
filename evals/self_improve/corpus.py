@@ -62,6 +62,19 @@ def verify(manifest: dict, rows: list[dict]) -> None:
         raise ValueError("corpus differs from the pinned revision or selection rule")
 
 
+def validate_manifest_shape(manifest: dict) -> None:
+    """Refuse a report over an empty or shrunken replacement corpus."""
+    tasks = manifest.get("tasks", [])
+    if manifest.get("schema") != "athena.self-improve.corpus/1" or \
+            manifest.get("revision") != REVISION or \
+            manifest.get("arms") != list(ARMS) or len(tasks) != 36 or \
+            len({task["id"] for task in tasks}) != 36 or \
+            len({task["repo"] for task in tasks}) != 12 or \
+            sum(task["split"] == "development" for task in tasks) != 24 or \
+            sum(task["split"] == "holdout" for task in tasks) != 12:
+        raise ValueError("not the frozen 36-task pilot corpus")
+
+
 def load_pinned() -> list[dict]:
     from datasets import load_dataset
     return list(load_dataset(DATASET, split="test", revision=REVISION))

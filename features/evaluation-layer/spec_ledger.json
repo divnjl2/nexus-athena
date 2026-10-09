@@ -1,10 +1,10 @@
 {
-  "contract_version": "da3201bb5a8a8362",
+  "contract_version": "f6e5175655656ffc",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "39a7c9ac0440f2fc",
-      "duration_ms": 106,
+      "duration_ms": 108,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "7e00d7d4c26e89cd",
-      "duration_ms": 8,
+      "duration_ms": 10,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "c5c3fb2d3d0b425b",
-      "duration_ms": 5,
+      "duration_ms": 6,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -54,21 +54,181 @@
     {
       "clause": "C-2.3",
       "clause_version": "a75910948b86c287",
-      "duration_ms": 60,
+      "duration_ms": 235,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_report_is_complete_only_with_all_three_arms_on_every_task -q",
       "scenario": "S2.3"
+    },
+    {
+      "clause": "C-2.4",
+      "clause_version": "8d8a52abf9251a2c",
+      "duration_ms": 282,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_baseline_precedes_optimizer_and_requires_both_original_arms -q",
+      "scenario": "S2.4"
+    },
+    {
+      "clause": "C-2.5",
+      "clause_version": "d2cc53f01443a234",
+      "duration_ms": 272,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_paired_report_counts_discordant_tasks_and_failure_reasons -q",
+      "scenario": "S2.5"
+    },
+    {
+      "clause": "C-2.6",
+      "clause_version": "6b8178a4a1440fab",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_empty_or_shrunken_manifest_cannot_claim_a_complete_pilot -q",
+      "scenario": "S2.6"
+    },
+    {
+      "clause": "C-3.1",
+      "clause_version": "4958de38b73df3b3",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_workspaces.py::test_stage_plans_original_arms_before_optimizer -q",
+      "scenario": "S3.1"
+    },
+    {
+      "clause": "C-3.2",
+      "clause_version": "c5f6c954fd07503d",
+      "duration_ms": 1217,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_workspaces.py::test_worktree_is_fresh_and_pinned_to_the_source_commit -q",
+      "scenario": "S3.2"
+    },
+    {
+      "clause": "C-3.3",
+      "clause_version": "6d50d921f1f68d24",
+      "duration_ms": 110,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_workspaces.py::test_workspace_paths_reject_untrusted_identifiers -q",
+      "scenario": "S3.3"
+    },
+    {
+      "clause": "C-3.4",
+      "clause_version": "e4fa23f17e9d7196",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_completed_codex_turns_account_for_cached_and_output_tokens -q",
+      "scenario": "S3.4"
+    },
+    {
+      "clause": "C-3.5",
+      "clause_version": "beb162706c41ab87",
+      "duration_ms": 850,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_candidate_patch_contains_untracked_files_without_a_gate_verdict -q",
+      "scenario": "S3.5"
+    },
+    {
+      "clause": "C-3.6",
+      "clause_version": "a998fa2c6a8dc828",
+      "duration_ms": 2,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_pilot.py::test_prompts_expose_only_issue_inputs_and_keep_optimizer_out_of_baselines -q",
+      "scenario": "S3.6"
+    },
+    {
+      "clause": "C-3.7",
+      "clause_version": "01c015fd6451bc4c",
+      "duration_ms": 5,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_pilot.py::test_optimizer_holdout_requires_matching_frozen_instructions_and_evidence -q",
+      "scenario": "S3.7"
+    },
+    {
+      "clause": "C-4.1",
+      "clause_version": "535917bcb7e30330",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_gate_adapter.py::test_official_report_shape_is_required -q",
+      "scenario": "S4.1"
+    },
+    {
+      "clause": "C-4.2",
+      "clause_version": "c1b0f1a81cea3f71",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_gate_adapter.py::test_prediction_and_run_id_bind_exact_patch_and_attempt -q",
+      "scenario": "S4.2"
+    },
+    {
+      "clause": "C-4.3",
+      "clause_version": "031ca1911ac30a2e",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_gate_adapter.py::test_gate_envelope_preserves_official_report_and_patch_hash -q",
+      "scenario": "S4.3"
+    },
+    {
+      "clause": "C-4.4",
+      "clause_version": "659da23f2fdec25a",
+      "duration_ms": 7,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_evidence.py::test_attempt_rejects_changed_official_report_even_if_gate_envelope_is_intact -q",
+      "scenario": "S4.4"
+    },
+    {
+      "clause": "C-4.5",
+      "clause_version": "128ac47a3504b741",
+      "duration_ms": 11,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q",
+      "scenario": "S4.5"
+    },
+    {
+      "clause": "C-4.6",
+      "clause_version": "",
+      "duration_ms": 8,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_gate_adapter.py::test_harness_reads_a_local_pinned_task_snapshot_and_its_v4_report -q",
+      "scenario": "S4.6"
     }
   ],
-  "scenario_version": "a282ef7c6307ea1d",
+  "scenario_version": "dd0d66f279856d5d",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 184,
+    "duration_ms": 3137,
     "failed": 0,
-    "passed": 6,
-    "total": 6
+    "passed": 22,
+    "total": 22
   },
-  "ts": "2026-10-09T16:34:17+00:00"
+  "ts": "2026-10-09T17:53:01+00:00"
 }
