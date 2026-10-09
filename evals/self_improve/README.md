@@ -142,6 +142,8 @@ the independent harness output and preserve its execution logs.
 Complete reports also show a fixed-seed paired bootstrap interval, wins and
 regressions on the same tasks, and counts of failure reasons. They reject a
 smaller replacement corpus.
+Every reported failure needs a nonempty reason; an official success cannot be
+counted in the failure reasons.
 
 `workspaces.py` plans baseline attempts before optimizer attempts and creates fresh
 Git worktrees at the exact issue base commits. `codex_driver.py` records the

@@ -233,6 +233,19 @@ def test_attempt_rejects_rehashed_harness_command_for_another_task(tmp_path):
         load_attempts(path, manifest, tmp_path / "artifacts")
 
 
+@pytest.mark.parametrize("passed,reason", [
+    (True, "invented failure"), (False, None), (False, ""), (False, "   "),
+])
+def test_attempt_failure_reason_matches_official_verdict(tmp_path, passed, reason):
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path, passed=passed)
+    record["failure_reason"] = reason
+    path = tmp_path / "attempts.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    with pytest.raises(ValueError, match="failure reason disagrees"):
+        load_attempts(path, manifest, tmp_path / "artifacts")
+
+
 @pytest.mark.parametrize("changed,reason", [
     ("input", "candidate input"),
     ("patch", "candidate patch"),

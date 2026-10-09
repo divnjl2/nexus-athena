@@ -188,6 +188,9 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     altered_record = {**record, "total_wall_seconds": record["wall_seconds"]}
     with pytest.raises(ValueError, match="gate duration or total attempt time"):
         cluster_pilot.validate_cluster_attempt(altered_record, manifest, root)
+    altered_record = {**record, "failure_reason": "invented failure"}
+    with pytest.raises(ValueError, match="failure reason"):
+        cluster_pilot.validate_cluster_attempt(altered_record, manifest, root)
     command_path = root / "harness" / f"{record['run_id']}.command.json"
     original_command = command_path.read_bytes()
     command_path.write_bytes(original_command + b"changed\n")
@@ -245,3 +248,16 @@ time.sleep(60)
     assert report["ungraded_attempts"] == [{"task_id": row["instance_id"],
                                              "arm": "codex", "attempt": 2,
                                              "status": "executor_error"}]
+
+    official_path = artifact_dir / "gate" / "official_report.json"
+    official_path.write_text(json.dumps({row["instance_id"]: {"resolved": False}}))
+    gate_path = artifact_dir / "gate" / "gate.json"
+    envelope = json.loads(gate_path.read_text())
+    envelope["resolved"] = False
+    envelope["official_report_sha256"] = hashlib.sha256(official_path.read_bytes()).hexdigest()
+    gate_path.write_text(json.dumps(envelope))
+    false_record = {**record, "failure_reason": "",
+                    "gate": {**record["gate"], "passed": False,
+                             "sha256": hashlib.sha256(gate_path.read_bytes()).hexdigest()}}
+    with pytest.raises(ValueError, match="failure reason"):
+        cluster_pilot.validate_cluster_attempt(false_record, manifest, root)

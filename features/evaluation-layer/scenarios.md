@@ -195,6 +195,14 @@
 - **Then** gate duration is bound to the envelope and included in total time,
   while an unfinished gate leaves total time unknown.
 
+### S2.11 — failure reasons match official verdicts
+- **verifies:** C-2.11
+- **pins:** efac08ac5f35f138
+- **run_cmd:** `python -m pytest tests/test_self_improve_evidence.py::test_attempt_failure_reason_matches_official_verdict tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** an official success or failure in either evaluation lane
+- **When** its attempt record is loaded
+- **Then** success has no failure reason and failure has a nonempty reason.
+
 ### S2.8 — revalidate every baseline evidence leg
 - **verifies:** C-2.8
 - **pins:** a5670c08858f679e

@@ -23,7 +23,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T2.1 Validate attempt provenance and calculate the pilot matrix
   - success_check: `python -m pytest tests/test_self_improve_evidence.py -q`
   - files: `evals/self_improve/evidence.py, tests/test_self_improve_evidence.py`
-  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.7, S2.8, S2.9, S2.10
+  - verifies: S2.1, S2.2, S2.3, S2.4, S2.5, S2.7, S2.8, S2.9, S2.10, S2.11
 
 ### Manual Verification
 - `python -m evals.self_improve.evidence --attempts <runs.jsonl> --artifacts <dir>` exits 2 when any task-arm cell is missing.

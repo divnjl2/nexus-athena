@@ -429,8 +429,10 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
     if file_sha256(official) != envelope.get("official_report_sha256"):
         raise ValueError("official cluster report changed")
     resolved = official_verdict(json.loads(official.read_text(encoding="utf-8")), task_id)
+    reason = record.get("failure_reason")
     if gate.get("passed") is not resolved or envelope.get("resolved") is not resolved or \
-            (record.get("failure_reason") is None) is not resolved:
+            (resolved and reason is not None) or \
+            (not resolved and (not isinstance(reason, str) or not reason.strip())):
         raise ValueError("cluster gate verdict or failure reason changed")
     dataset_path = _contained_file(root / "harness", f"{record['run_id']}.dataset.json")
     if file_sha256(dataset_path) != envelope.get("dataset_sha256"):

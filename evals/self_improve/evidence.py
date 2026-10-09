@@ -187,8 +187,10 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
                                 record["task_id"])
     if gate.get("passed") is not resolved or envelope.get("resolved") is not resolved:
         raise ValueError("gate verdict mismatch")
-    if record["failure_reason"] is None and not gate["passed"]:
-        raise ValueError("failed attempt needs a failure reason")
+    reason = record["failure_reason"]
+    if (resolved and reason is not None) or \
+            (not resolved and (not isinstance(reason, str) or not reason.strip())):
+        raise ValueError("failure reason disagrees with official verdict")
 
 
 def load_attempts(path: Path, manifest: dict, artifacts: Path) -> list[dict]:

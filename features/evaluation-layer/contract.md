@@ -66,6 +66,10 @@
   it with candidate time in the verified-success time metric; unfinished gates
   SHALL leave total time unknown.
   - source: audit
+- **C-2.11** — WHEN an attempt is reported THE SYSTEM SHALL require no failure
+  reason for an official success and a nonempty reason for an official failure,
+  including attempts in the separate cluster lane.
+  - source: audit
 
 ## C-3 — Isolated candidates
 
