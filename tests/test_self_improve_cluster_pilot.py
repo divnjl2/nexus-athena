@@ -73,6 +73,7 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     probe_file.write_text(json.dumps({
         "schema": "athena.cluster-probe/1", "checked_at": datetime.now(timezone.utc).isoformat(),
         "passed": True, "requested_model": "agent", "gateway": "http://127.0.0.1:8777/v1",
+        "reported_models": ["cluster-model-v1"] * 3,
         "checks": {name: True for name in ("sse_terminal", "text", "function_call",
                                             "replayed_tool_result")}}))
     root = tmp_path / "cluster-root"
@@ -120,6 +121,7 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
                                     arm="codex", attempt=1, root=root)
     assert record["schema"] == cluster_pilot.CLUSTER_SCHEMA
     assert record["gate"]["passed"] is True and record["cost_usd"] is None
+    assert record["probe_reported_models"] == ["cluster-model-v1"] * 3
     assert (root / "records" / "cluster-demo-1.json").is_file()
     report = cluster_report.summarize_cluster(
         manifest, cluster_report.load_records(root, manifest), root)
@@ -127,8 +129,13 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert report["missing"] == [{"task_id": row["instance_id"],
                                    "arm": "codex_athena"}]
     assert report["total_cost_usd"] is None
+    assert report["probe_reported_models"] == ["cluster-model-v1"]
+    assert report["model_identity_basis"] == "synthetic preflight probe only"
     assert report["arms"]["codex"]["verified_successes"] == 1
     assert report["arms"]["codex"]["cost_per_verified_success_usd"] is None
+    altered_record = {**record, "probe_reported_models": ["invented"]}
+    with pytest.raises(ValueError, match="probe model observation"):
+        cluster_pilot.validate_cluster_attempt(altered_record, manifest, root)
     (artifact_dir / "gate" / "official_report.json").write_text("{}")
     with pytest.raises(ValueError, match="official cluster report"):
         cluster_pilot.validate_cluster_attempt(record, manifest, root)

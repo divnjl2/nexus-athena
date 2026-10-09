@@ -84,7 +84,9 @@ candidate is never submitted to the gate automatically.
 every official record before summarizing it. Missing cells and interrupted
 attempts remain visible; either one keeps the report incomplete and prevents a
 paired comparison. Its USD cost fields stay `null` until cluster cost is
-measured. This exploratory report does not enter the priced three-arm pilot.
+measured. It lists model identifiers reported by the synthetic preflight probe;
+these do not establish the model or GPU lane of every benchmark request. This
+exploratory report does not enter the priced three-arm pilot.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.

@@ -80,10 +80,15 @@ def summarize_cluster(manifest: dict, records: list[dict], root: Path,
     graded = {(record["task_id"], record["arm"], record["attempt"])
               for record in records}
     ungraded = ungraded_attempts(root, tasks, graded)
+    probe_models = sorted({model for record in records if record["task_id"] in selected
+                           for model in (record.get("probe_reported_models") or [])
+                           if isinstance(model, str) and model})
     result = {"schema": "athena.self-improve.cluster-report/1",
               "manifest_sha256": fingerprint(manifest), "split": split,
               "scope": "exploratory owner-cluster inference",
               "requested_model": next(iter(models)) if models else None,
+              "probe_reported_models": probe_models,
+              "model_identity_basis": "synthetic preflight probe only",
               "complete": not missing and not ungraded,
               "missing": [{"task_id": task_id, "arm": arm} for task_id, arm in missing],
               "ungraded_attempts": ungraded,

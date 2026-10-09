@@ -101,7 +101,7 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
     if task_id not in tasks or arm not in ARMS or attempt < 1 or timeout < 1:
         raise ValueError("task, arm, attempt or timeout is outside the cluster lane")
     base_url = bridge_url(base_url)
-    probe_bytes, _ = _qualifying_probe(probe_report, model, base_url)
+    probe_bytes, probe_evidence = _qualifying_probe(probe_report, model, base_url)
     key = key_file.read_text(encoding="utf-8").strip()
     if not key:
         raise ValueError("bridge client key is empty")
@@ -167,6 +167,8 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
                  "model_resolution": "requested_identifier",
                  "codex_cli_version": version, "provider": "athena_cluster_bridge",
                  "bridge_url": base_url, "route_probe_sha256": config["probe_sha256"],
+                 "probe_checked_at": probe_evidence["checked_at"],
+                 "probe_reported_models": probe_evidence.get("reported_models"),
                  "config_sha256": fingerprint(config),
                  "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
                  "patch_sha256": hashlib.sha256(patch).hexdigest(),
@@ -261,6 +263,8 @@ def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
               "model": candidate["model"], "model_resolution": "requested_identifier",
               "provider": candidate["provider"], "bridge_url": candidate["bridge_url"],
               "route_probe_sha256": candidate["route_probe_sha256"],
+              "probe_checked_at": candidate["probe_checked_at"],
+              "probe_reported_models": candidate["probe_reported_models"],
               "codex_cli_version": candidate["codex_cli_version"],
               "prompt_sha256": candidate["prompt_sha256"],
               "config_sha256": candidate["config_sha256"],
@@ -356,6 +360,11 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
             not all(probe_report.get("checks", {}).get(key) is True for key in
                     ("sse_terminal", "text", "function_call", "replayed_tool_result")):
         raise ValueError("cluster route probe does not establish the recorded model")
+    if candidate.get("probe_checked_at") != probe_report.get("checked_at") or \
+            record.get("probe_checked_at") != probe_report.get("checked_at") or \
+            candidate.get("probe_reported_models") != probe_report.get("reported_models") or \
+            record.get("probe_reported_models") != probe_report.get("reported_models"):
+        raise ValueError("cluster probe model observation changed")
     if candidate.get("schema") != "athena.cluster-candidate/1" or \
             candidate.get("model_resolution") != record["model_resolution"] or \
             candidate.get("provider") != record["provider"] or \
