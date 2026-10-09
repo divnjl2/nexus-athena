@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 
 from evals.self_improve.cluster_bridge import make_server, normalize_request
+from evals.self_improve.cluster_bridge_pod import pod_manifest
 
 
 def test_bridge_keeps_instruction_text_and_rejects_late_developer():
@@ -87,3 +88,21 @@ def test_bridge_authenticates_and_preserves_sse_bytes():
             server.server_close()
         for thread in threads:
             thread.join(timeout=3)
+
+
+def test_pod_manifest_uses_secret_refs_and_no_service_exposure():
+    """C-5.4: a port-forwarded pod contains code and references external keys."""
+    manifest = pod_manifest(name="athena-bridge", namespace="agents",
+                            secret_name="bridge-keys",
+                            upstream="http://192.168.1.136:30400/v1")
+    config, pod = manifest["items"]
+    assert [item["kind"] for item in manifest["items"]] == ["ConfigMap", "Pod"]
+    assert "normalize_request" in config["data"]["cluster_bridge.py"]
+    assert pod["spec"]["automountServiceAccountToken"] is False
+    container = pod["spec"]["containers"][0]
+    assert container["securityContext"]["readOnlyRootFilesystem"] is True
+    assert {entry["valueFrom"]["secretKeyRef"]["key"] for entry in container["env"]
+            if "valueFrom" in entry} == {"upstream-key", "client-key"}
+    assert all("value" not in entry for entry in container["env"]
+               if "valueFrom" in entry)
+    assert "Bearer " not in json.dumps(pod)

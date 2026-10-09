@@ -1,5 +1,14 @@
 # Scenarios: Athena Evaluation Foundation
 
+### S5.4 — private bridge pod
+- **verifies:** C-5.4
+- **pins:** 9d472fb9d496bc92
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_bridge.py::test_pod_manifest_uses_secret_refs_and_no_service_exposure -q`
+- **Given** a namespace, upstream URL and pre-existing Secret name
+- **When** the bridge pod manifest is rendered
+- **Then** the code is mounted from a ConfigMap, both credentials are read from
+  Secret keys, and no Service exposes the bridge.
+
 ### S5.2 — authenticated loopback stream
 - **verifies:** C-5.2
 - **pins:** bec492b8fbfe8b17

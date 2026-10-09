@@ -146,3 +146,7 @@
   SYSTEM SHALL preserve that text in the upstream instructions and reject a
   developer message that follows conversation input or contains non-text content.
   - source: design
+- **C-5.4** — WHEN a bridge pod manifest is rendered THE SYSTEM SHALL carry its
+  source in a ConfigMap, refer to separate Kubernetes Secret keys for the two
+  credentials, and expose access only through pod port-forwarding.
+  - source: design

@@ -40,6 +40,26 @@ Its role adaptation changes request shape but does not change task acceptance.
 Run a real Codex tool-loop smoke through the bridge before using it for the
 cluster benchmark; a local unit test alone does not qualify the gateway.
 
+The same bridge can run as a small private Kubernetes Pod without building an
+image. `cluster_bridge_pod` renders a ConfigMap with the two Python modules
+and a Pod that reads two keys from an existing Secret. It creates no Service.
+With a working kubeconfig and namespace, the operator can render and apply it:
+
+```text
+python -m evals.self_improve.cluster_bridge_pod --namespace agents --secret-name athena-bridge-keys --upstream http://192.168.1.136:30400/v1 > cluster-bridge.json
+kubectl apply -f cluster-bridge.json
+kubectl -n agents port-forward pod/athena-cluster-bridge 8777:8777
+```
+
+The Secret must contain `upstream-key` and `client-key`; create it from private
+files using `kubectl create secret generic ... --from-file` and keep those files
+outside Git. Point Codex at the forwarded `http://127.0.0.1:8777/v1` endpoint.
+The Pod uses a stock Python image, a read-only filesystem and no service account
+token. After source changes, regenerate the manifest, delete that one Pod and
+reapply it so the Python process loads the new code. Deployment is
+pending a valid gateway key and kubeconfig; rendering the manifest is not a
+live cluster check.
+
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.
 This is a local lane check, not a cluster gateway check. A separate Codex CLI
