@@ -257,6 +257,14 @@
 - **Then** saved, submitted and fingerprinted bytes agree, and newline
   conversion invalidates the attempt.
 
+### S3.15 — streamed trace survives timeout
+- **verifies:** C-3.15
+- **pins:** 92d2d4df0b3b5d67
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_timed_out_candidate_keeps_streamed_trace_and_fails_closed -q`
+- **Given** a Codex process that emits partial trace and diagnostic bytes
+- **When** the candidate times out
+- **Then** those bytes remain in artifacts and the candidate is an executor error.
+
 ### S3.13 — resume without duplicate attempts
 - **verifies:** C-3.13
 - **pins:** 3c0cebbdefe1e338

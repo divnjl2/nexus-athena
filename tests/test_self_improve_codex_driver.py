@@ -109,3 +109,37 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
     assert received.read_bytes() == expected
     assert candidate["prompt_sha256"] == hashlib.sha256(expected).hexdigest()
     assert candidate["candidate_status"] == "unverified_candidate"
+
+
+def test_timed_out_candidate_keeps_streamed_trace_and_fails_closed(tmp_path, monkeypatch):
+    """An interrupted Codex run leaves diagnostic bytes but no gate-ready candidate."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    subprocess.run(["git", "init", "-q", str(workspace)], check=True)
+    subprocess.run(["git", "-C", str(workspace), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(workspace), "config", "user.name", "Test"], check=True)
+    subprocess.run(["git", "-C", str(workspace), "config", "commit.gpgsign", "false"], check=True)
+    (workspace / "README").write_text("base\n")
+    subprocess.run(["git", "-C", str(workspace), "add", "README"], check=True)
+    subprocess.run(["git", "-C", str(workspace), "commit", "-qm", "base"], check=True)
+    fake = tmp_path / "slow_codex.py"
+    fake.write_text("import sys, time\n"
+                    "sys.stdin.buffer.read()\n"
+                    "sys.stdout.buffer.write(b'{\"type\":\"turn.started\"}\\n')\n"
+                    "sys.stdout.buffer.flush()\n"
+                    "sys.stderr.buffer.write(b'partial diagnostic\\n')\n"
+                    "sys.stderr.buffer.flush()\n"
+                    "time.sleep(10)\n")
+    monkeypatch.setattr("evals.self_improve.codex_driver.codex_argv",
+                        lambda *_: [sys.executable, str(fake)])
+    artifacts = tmp_path / "artifacts"
+    rates = {"input_per_million": 2, "cached_input_per_million": 0.1,
+             "cache_write_input_per_million": 2.5, "output_per_million": 10,
+             "max_request_context_tokens": 272_000}
+    candidate = run_codex(workspace, prompt="test\n", model="test", timeout=1,
+                          artifacts=artifacts, rates=rates, codex_bin=sys.executable)
+    assert candidate["exit_code"] == 124
+    assert candidate["candidate_status"] == "executor_error"
+    assert candidate["verified"] is False
+    assert (artifacts / "trace.jsonl").read_bytes() == b'{"type":"turn.started"}\n'
+    assert (artifacts / "stderr.txt").read_bytes() == b"partial diagnostic\n"

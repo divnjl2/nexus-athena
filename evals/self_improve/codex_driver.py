@@ -140,20 +140,26 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
          "rates_usd_per_million": rates}, indent=2) + "\n", encoding="utf-8")
     started_at = datetime.now(timezone.utc).isoformat()
     start = time.monotonic()
-    try:
-        proc = subprocess.run(cmd, input=prompt_bytes, capture_output=True,
-                              cwd=workspace, timeout=timeout)
-        exit_code, stdout_bytes, stderr_bytes = proc.returncode, proc.stdout, proc.stderr
-    except subprocess.TimeoutExpired as exc:
-        exit_code = 124
-        stdout_bytes = exc.stdout or b""
-        stderr_bytes = exc.stderr or b""
-    except OSError as exc:
-        exit_code, stdout_bytes, stderr_bytes = 127, b"", str(exc).encode("utf-8", "replace")
+    trace_path = artifacts / "trace.jsonl"
+    stderr_path = artifacts / "stderr.txt"
+    with trace_path.open("wb") as trace_file, stderr_path.open("wb") as stderr_file:
+        try:
+            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=trace_file,
+                                    stderr=stderr_file, cwd=workspace)
+            try:
+                proc.communicate(input=prompt_bytes, timeout=timeout)
+                exit_code = proc.returncode
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.communicate()
+                exit_code = 124
+        except OSError as exc:
+            exit_code = 127
+            stderr_file.write(str(exc).encode("utf-8", "replace"))
     elapsed = time.monotonic() - start
     ended_at = datetime.now(timezone.utc).isoformat()
-    (artifacts / "trace.jsonl").write_bytes(stdout_bytes)
-    (artifacts / "stderr.txt").write_bytes(stderr_bytes)
+    stdout_bytes = trace_path.read_bytes()
+    stderr_bytes = stderr_path.read_bytes()
     stdout = stdout_bytes.decode("utf-8", "replace")
     stderr = stderr_bytes.decode("utf-8", "replace")
     patch = candidate_patch(workspace)

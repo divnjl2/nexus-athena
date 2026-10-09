@@ -108,6 +108,10 @@
   SHALL use identical bytes for both and reject any attempt whose saved prompt
   bytes differ from its recorded fingerprint before accepting a gate verdict.
   - source: incident
+- **C-3.15** — WHEN a baseline Codex candidate runs THE SYSTEM SHALL persist
+  stdout trace and stderr as they arrive so a timeout retains partial diagnostics;
+  timed-out candidates SHALL remain executor errors, never verified results.
+  - source: incident
 
 ## C-4 — Independent acceptance
 

@@ -231,7 +231,9 @@ stricter validator now rejects all four records, so **none count toward the
 40-task baseline**. Their original files remain under ignored `.athena/pilot-v3`
 for audit; do not rewrite them to make the check pass. The runner now saves and
 sends identical UTF-8 bytes. Under the current sandbox, WSL and Docker access
-are denied, preventing a fresh official gate run.
+are denied, preventing a fresh official gate run. The runner writes stdout and
+stderr directly to artifact files while Codex runs. A timeout retains partial
+diagnostics and classifies the candidate as an executor error.
 The attempt loader now also checks the saved issue input, candidate diff,
 invocation, completed-turn usage, price calculation and exact one-task harness
 dataset against each record. An official verdict cannot compensate for a
