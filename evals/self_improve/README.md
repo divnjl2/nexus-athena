@@ -77,6 +77,9 @@ python -m evals.self_improve.cluster_pilot gate --task psf__requests-5414 --arm 
 A candidate patch and completed Codex turn are still unverified until `gate`
 preserves the official report. This separate lane is not a cell in the frozen
 three-arm `gpt-6.1-sol` comparison, and it cannot make a USD cost claim yet.
+The runner writes Codex JSONL and stderr to disk during execution, so a timeout
+or interrupted parent leaves the partial trace for diagnosis. An incomplete
+candidate is never submitted to the gate automatically.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.

@@ -144,3 +144,19 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
         cluster_pilot.validate_cluster_attempt(record, manifest, root)
     metadata_path.write_text(original_metadata)
     cluster_pilot.validate_cluster_attempt(record, manifest, root)
+
+    fake.write_text("""import json, sys, time
+print(json.dumps({'type': 'turn.started'}), flush=True)
+print('executor reached model', file=sys.stderr, flush=True)
+time.sleep(60)
+""")
+    timed_out = cluster_pilot.run_candidate(
+        manifest=manifest, rows=[row], task_id=row["instance_id"], arm="codex",
+        attempt=2, root=root, athena_root=tmp_path, model="agent",
+        base_url="http://127.0.0.1:8777/v1", key_file=key_file,
+        probe_report=probe_file, codex_bin=sys.executable, timeout=1)
+    timed_out_dir = Path(timed_out["artifacts"])
+    assert timed_out["exit_code"] == 124
+    assert timed_out["candidate_status"] == "executor_error"
+    assert "turn.started" in (timed_out_dir / "trace.jsonl").read_text()
+    assert "executor reached model" in (timed_out_dir / "stderr.txt").read_text()

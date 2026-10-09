@@ -139,19 +139,22 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
     env["ATHENA_BRIDGE_CLIENT_KEY"] = key
     started_at = datetime.now(timezone.utc).isoformat()
     start = time.monotonic()
-    try:
-        proc = subprocess.run(cmd, input=prompt, text=True, capture_output=True,
-                              cwd=workspace, env=env, timeout=timeout,
-                              encoding="utf-8", errors="replace")
-        exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
-    except subprocess.TimeoutExpired as exc:
-        exit_code = 124
-        stdout = exc.stdout.decode("utf-8", "replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
-        stderr = exc.stderr.decode("utf-8", "replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+    trace_path = artifacts / "trace.jsonl"
+    stderr_path = artifacts / "stderr.txt"
+    with trace_path.open("wb") as trace_stream, stderr_path.open("wb") as stderr_stream:
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=trace_stream,
+                                stderr=stderr_stream, cwd=workspace, env=env)
+        try:
+            proc.communicate(input=prompt.encode("utf-8"), timeout=timeout)
+            exit_code = proc.returncode
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            exit_code = 124
     elapsed = time.monotonic() - start
     ended_at = datetime.now(timezone.utc).isoformat()
-    (artifacts / "trace.jsonl").write_text(stdout, encoding="utf-8")
-    (artifacts / "stderr.txt").write_text(stderr, encoding="utf-8")
+    stdout = trace_path.read_text(encoding="utf-8", errors="replace")
+    stderr = stderr_path.read_text(encoding="utf-8", errors="replace")
     patch = candidate_patch(workspace)
     (artifacts / "candidate.patch").write_bytes(patch)
     failure = executor_failure(stdout, stderr, exit_code, len(patch))
