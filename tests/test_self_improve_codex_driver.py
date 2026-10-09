@@ -1,11 +1,13 @@
 """Executable specs for Codex trace and candidate evidence."""
 import json
+import hashlib
 import subprocess
+import sys
 
 import pytest
 
 from evals.self_improve.codex_driver import (candidate_patch, codex_argv,
-                                             executor_failure, price_usd,
+                                             executor_failure, price_usd, run_codex,
                                              usage_from_trace)
 
 
@@ -73,3 +75,37 @@ def test_windows_candidate_pins_the_native_elevated_workspace_sandbox(tmp_path):
     assert "--ignore-user-config" in windows and "workspace-write" in windows
     assert "model_context_window=272000" in windows
     assert "windows.sandbox=elevated" not in linux and "workspace-write" in linux
+
+
+def test_candidate_prompt_hash_matches_saved_and_submitted_bytes(tmp_path, monkeypatch):
+    """Windows newline translation must not change the prompt after hashing it."""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    subprocess.run(["git", "init", "-q", str(workspace)], check=True)
+    subprocess.run(["git", "-C", str(workspace), "config", "user.email", "test@example.invalid"], check=True)
+    subprocess.run(["git", "-C", str(workspace), "config", "user.name", "Test"], check=True)
+    subprocess.run(["git", "-C", str(workspace), "config", "commit.gpgsign", "false"], check=True)
+    (workspace / "README").write_text("base\n")
+    subprocess.run(["git", "-C", str(workspace), "add", "README"], check=True)
+    subprocess.run(["git", "-C", str(workspace), "commit", "-qm", "base"], check=True)
+    fake = tmp_path / "fake_codex.py"
+    fake.write_text("""import json, pathlib, sys
+pathlib.Path(sys.argv[1]).write_bytes(sys.stdin.buffer.read())
+pathlib.Path(sys.argv[2], 'marker.txt').write_text('candidate\\n')
+print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tokens':2}}))
+""")
+    received = tmp_path / "received.bin"
+    monkeypatch.setattr("evals.self_improve.codex_driver.codex_argv",
+                        lambda *_: [sys.executable, str(fake), str(received), str(workspace)])
+    rates = {"input_per_million": 2, "cached_input_per_million": 0.1,
+             "cache_write_input_per_million": 2.5, "output_per_million": 10,
+             "max_request_context_tokens": 272_000}
+    prompt = "first line\nsecond line\n"
+    artifacts = tmp_path / "artifacts"
+    candidate = run_codex(workspace, prompt=prompt, model="test", timeout=5,
+                          artifacts=artifacts, rates=rates, codex_bin=sys.executable)
+    expected = prompt.encode("utf-8")
+    assert (artifacts / "prompt.txt").read_bytes() == expected
+    assert received.read_bytes() == expected
+    assert candidate["prompt_sha256"] == hashlib.sha256(expected).hexdigest()
+    assert candidate["candidate_status"] == "unverified_candidate"

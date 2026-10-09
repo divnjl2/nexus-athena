@@ -240,6 +240,15 @@
 - **When** the candidate is classified
 - **Then** the gate may judge it while fatal executor errors remain excluded.
 
+### S3.14 — exact prompt bytes
+- **verifies:** C-3.14
+- **pins:** a016a6ab4856dfb5
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_candidate_prompt_hash_matches_saved_and_submitted_bytes tests/test_self_improve_evidence.py::test_attempt_rejects_prompt_bytes_that_differ_from_record -q`
+- **Given** a multiline candidate prompt on Windows
+- **When** the runner sends it or an attempt record is loaded
+- **Then** saved, submitted and fingerprinted bytes agree, and newline
+  conversion invalidates the attempt.
+
 ### S3.13 — resume without duplicate attempts
 - **verifies:** C-3.13
 - **pins:** 3c0cebbdefe1e338

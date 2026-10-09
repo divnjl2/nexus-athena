@@ -157,6 +157,8 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
     patch = (attempt_dir / "candidate.patch").read_bytes()
     if candidate["patch_sha256"] != hashlib.sha256(patch).hexdigest():
         raise ValueError("candidate patch is altered")
+    if file_sha256(attempt_dir / "prompt.txt") != candidate.get("prompt_sha256"):
+        raise ValueError("candidate prompt bytes are altered")
     expected_status = "unverified_candidate" if patch else "empty_patch"
     if candidate.get("candidate_status") != expected_status or candidate.get("executor_failure"):
         raise ValueError("candidate status disagrees with patch")

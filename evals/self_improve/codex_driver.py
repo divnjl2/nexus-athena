@@ -125,7 +125,8 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
     if not workspace.is_dir() or not model or timeout < 1:
         raise ValueError("workspace, model and positive timeout are required")
     artifacts.mkdir(parents=True, exist_ok=False)
-    (artifacts / "prompt.txt").write_text(prompt, encoding="utf-8")
+    prompt_bytes = prompt.encode("utf-8")
+    (artifacts / "prompt.txt").write_bytes(prompt_bytes)
     resolved_bin = shutil.which(codex_bin) or codex_bin
     try:
         version_proc = subprocess.run([resolved_bin, "--version"], text=True,
@@ -140,19 +141,21 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
     started_at = datetime.now(timezone.utc).isoformat()
     start = time.monotonic()
     try:
-        proc = subprocess.run(cmd, input=prompt, text=True, capture_output=True,
-                              cwd=workspace, timeout=timeout, encoding="utf-8", errors="replace")
-        exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
+        proc = subprocess.run(cmd, input=prompt_bytes, capture_output=True,
+                              cwd=workspace, timeout=timeout)
+        exit_code, stdout_bytes, stderr_bytes = proc.returncode, proc.stdout, proc.stderr
     except subprocess.TimeoutExpired as exc:
         exit_code = 124
-        stdout = exc.stdout.decode("utf-8", "replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
-        stderr = exc.stderr.decode("utf-8", "replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        stdout_bytes = exc.stdout or b""
+        stderr_bytes = exc.stderr or b""
     except OSError as exc:
-        exit_code, stdout, stderr = 127, "", str(exc)
+        exit_code, stdout_bytes, stderr_bytes = 127, b"", str(exc).encode("utf-8", "replace")
     elapsed = time.monotonic() - start
     ended_at = datetime.now(timezone.utc).isoformat()
-    (artifacts / "trace.jsonl").write_text(stdout, encoding="utf-8")
-    (artifacts / "stderr.txt").write_text(stderr, encoding="utf-8")
+    (artifacts / "trace.jsonl").write_bytes(stdout_bytes)
+    (artifacts / "stderr.txt").write_bytes(stderr_bytes)
+    stdout = stdout_bytes.decode("utf-8", "replace")
+    stderr = stderr_bytes.decode("utf-8", "replace")
     patch = candidate_patch(workspace)
     (artifacts / "candidate.patch").write_bytes(patch)
     try:
@@ -167,7 +170,7 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
     result = {"exit_code": exit_code, "wall_seconds": elapsed,
               "started_at": started_at, "ended_at": ended_at,
               "model": model, "codex_cli_version": codex_cli_version,
-              "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+              "prompt_sha256": hashlib.sha256(prompt_bytes).hexdigest(),
               "config_sha256": fingerprint({"argv": cmd, "rates": rates, "timeout": timeout}),
               "patch_sha256": hashlib.sha256(patch).hexdigest(), "patch_bytes": len(patch),
               "usage": usage, "cost_basis": "API-equivalent estimate; subscription billing may differ",

@@ -99,6 +99,10 @@
   skip independently verified attempts, gate complete ungraded candidates,
   and refuse to repeat incomplete candidates or unfinished gates.
   - source: audit
+- **C-3.14** — WHEN a baseline candidate prompt is saved and sent THE SYSTEM
+  SHALL use identical bytes for both and reject any attempt whose saved prompt
+  bytes differ from its recorded fingerprint before accepting a gate verdict.
+  - source: incident
 
 ## C-4 — Independent acceptance
 

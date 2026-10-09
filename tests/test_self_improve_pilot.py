@@ -78,11 +78,14 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
     attempt_dir.mkdir(parents=True)
     patch = b"diff --git a/x b/x\n"
     (attempt_dir / "candidate.patch").write_bytes(patch)
+    prompt = b"frozen prompt\n"
+    (attempt_dir / "prompt.txt").write_bytes(prompt)
     (attempt_dir / "candidate.json").write_text(json.dumps({
         "patch_sha256": hashlib.sha256(patch).hexdigest(), "model": "snapshot",
         "candidate_status": "unverified_candidate",
         "codex_cli_version": "codex-cli test", "cost_basis": "API-equivalent estimate",
-        "prompt_sha256": "d" * 64, "config_sha256": "e" * 64,
+        "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
+        "config_sha256": "e" * 64,
         "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
         "usage": {"input_tokens": 100, "output_tokens": 50},
         "wall_seconds": 60, "cost_usd": 1.5}))
@@ -109,6 +112,11 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
     failed_candidate["candidate_status"] = "unverified_candidate"
     failed_candidate["executor_failure"] = None
     candidate_path.write_text(json.dumps(failed_candidate))
+    (attempt_dir / "prompt.txt").write_bytes(b"changed")
+    with pytest.raises(ValueError, match="prompt bytes"):
+        gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
+                 attempt=1, root=tmp_path)
+    (attempt_dir / "prompt.txt").write_bytes(prompt)
     record = gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
                       attempt=1, root=tmp_path)
     assert record["gate"]["passed"] is True

@@ -42,6 +42,11 @@ def validate_attempt(record: dict, manifest: dict, artifacts: Path) -> None:
                 "patch_sha256"):
         if not isinstance(record.get(key), str) or not record[key]:
             raise ValueError(f"missing {key}")
+    prompt_path = (artifacts / task["split"] / record["task_id"] /
+                   record["arm"] / str(record["attempt"]) / "prompt.txt").resolve()
+    if not prompt_path.is_relative_to(artifacts.resolve()) or \
+            not prompt_path.is_file() or file_sha256(prompt_path) != record["prompt_sha256"]:
+        raise ValueError("saved prompt bytes do not match the recorded hash")
     try:
         started = datetime.fromisoformat(record["started_at"])
         ended = datetime.fromisoformat(record["ended_at"])

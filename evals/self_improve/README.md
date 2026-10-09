@@ -221,17 +221,17 @@ model and acceptance tests, with one common context limit and a candidate patch
 rule that excludes generated `.athena` caches for every arm. The original
 calibration records remain in the local `pilot-v2` artifact directory.
 
-Interim baseline status on 2026-10-10: `pilot-v3` contains four revalidated
-official harness records, forming two complete pairs from the same Astropy
-repository (`astropy__astropy-13579` and `astropy__astropy-8872`). All four
-patches resolved. Across these two tasks, the API-equivalent cost estimate is
-$0.1466868 for Codex and $0.37549 for Codex + Athena; executor wall time is
-219.375 and 611.907 seconds respectively. The remaining 76 baseline cells are
-absent. Two tasks from one repository cannot establish a general quality or
-cost advantage. The raw run artifacts are still local under ignored
-`.athena/pilot-v3`, so these figures are an interim observation rather than a
-published reproducible benchmark result. Under the current sandbox, WSL and
-Docker access are denied, preventing another official gate run.
+The 2026-10-10 prompt-byte audit reclassified local `pilot-v3` as protocol
+calibration. Its four official harness reports resolved two Astropy task pairs,
+with API-equivalent cost estimates of $0.1466868 for Codex and $0.37549 for
+Codex + Athena. However, Windows saved each `prompt.txt` with CRLF while the
+recorded SHA-256 was computed from LF text. Normalizing CRLF to LF reproduces
+each hash, but the saved bytes do not match the recorded fingerprint. The
+stricter validator now rejects all four records, so **none count toward the
+40-task baseline**. Their original files remain under ignored `.athena/pilot-v3`
+for audit; do not rewrite them to make the check pass. The runner now saves and
+sends identical UTF-8 bytes. Under the current sandbox, WSL and Docker access
+are denied, preventing a fresh official gate run.
 
 To extend the benchmark to 50 or more tasks, publish a new manifest version with a
 new selection seed before running candidates. Retain each older manifest

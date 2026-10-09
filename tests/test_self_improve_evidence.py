@@ -21,6 +21,11 @@ def _rows():
 
 def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt=1):
     task = task or manifest["tasks"][0]
+    prompt = b"frozen prompt\nsecond line\n"
+    prompt_path = (tmp_path / task["split"] / task["id"] / arm /
+                   str(attempt) / "prompt.txt")
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_bytes(prompt)
     patch_hash = "a" * 64
     artifact = f"gate-{task['id']}-{arm}-{attempt}.json"
     official_name = f"official-{task['id']}-{arm}-{attempt}.json"
@@ -40,7 +45,8 @@ def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt
             "model": "codex", "model_version": "pinned-version",
             "model_resolution": "requested_identifier", "codex_cli_version": "codex-cli 0.161.0",
             "cost_basis": "API-equivalent estimate", "dataset_revision": "pinned-revision",
-            "prompt_sha256": "b" * 64, "config_sha256": "c" * 64, "seed": None,
+            "prompt_sha256": hashlib.sha256(prompt).hexdigest(),
+            "config_sha256": "c" * 64, "seed": None,
             "started_at": "2026-10-09T10:00:00Z", "ended_at": "2026-10-09T10:01:00Z",
             "input_tokens": 100, "output_tokens": 50, "wall_seconds": 60, "cost_usd": 1.5,
             "patch_sha256": patch_hash, "failure_reason": None if passed else "tests failed",
@@ -76,6 +82,20 @@ def test_attempt_rejects_changed_official_report_even_if_gate_envelope_is_intact
     envelope = json.loads((tmp_path / record["gate"]["artifact"]).read_text())
     (tmp_path / envelope["official_report"]).write_text("{}")
     with pytest.raises(ValueError):
+        load_attempts(path, manifest, tmp_path)
+
+
+def test_attempt_rejects_prompt_bytes_that_differ_from_record(tmp_path):
+    """C-3.14: Windows newline conversion cannot pass as exact prompt provenance."""
+    manifest = select(_rows())
+    record = _attempt(manifest, tmp_path)
+    path = tmp_path / "attempts.jsonl"
+    path.write_text(json.dumps(record) + "\n")
+    assert load_attempts(path, manifest, tmp_path) == [record]
+    prompt_path = (tmp_path / manifest["tasks"][0]["split"] /
+                   record["task_id"] / record["arm"] / "1" / "prompt.txt")
+    prompt_path.write_bytes(prompt_path.read_bytes().replace(b"\n", b"\r\n"))
+    with pytest.raises(ValueError, match="prompt bytes"):
         load_attempts(path, manifest, tmp_path)
 
 
