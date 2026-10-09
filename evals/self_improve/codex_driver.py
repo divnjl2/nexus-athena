@@ -46,6 +46,23 @@ def usage_from_trace(trace: str) -> dict[str, int]:
     return totals
 
 
+def executor_failure(trace: str, stderr: str, exit_code: int) -> str | None:
+    """Keep transport and tool-policy failures out of task quality scores."""
+    if exit_code:
+        return f"process_exit_{exit_code}"
+    if "blocked by policy" in stderr.lower():
+        return "tool_blocked_by_policy"
+    try:
+        events = [json.loads(line) for line in trace.splitlines() if line.strip()]
+    except json.JSONDecodeError:
+        return "invalid_trace"
+    if any(event.get("type") == "turn.failed" for event in events):
+        return "turn_failed"
+    if not any(event.get("type") == "turn.completed" for event in events):
+        return "missing_completed_turn"
+    return None
+
+
 def price_usd(usage: dict[str, int], rates: dict[str, float]) -> float:
     """Estimate API-equivalent token cost with a versioned rate card."""
     required = ("input_per_million", "cached_input_per_million", "output_per_million")
@@ -120,6 +137,7 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
         estimated_cost = price_usd(usage, rates) if "error" not in usage else None
     except ValueError:
         estimated_cost = None
+    failure = executor_failure(stdout, stderr, exit_code)
     result = {"exit_code": exit_code, "wall_seconds": elapsed,
               "started_at": started_at, "ended_at": ended_at,
               "model": model, "codex_cli_version": codex_cli_version,
@@ -128,7 +146,8 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
               "patch_sha256": hashlib.sha256(patch).hexdigest(), "patch_bytes": len(patch),
               "usage": usage, "cost_basis": "API-equivalent estimate; subscription billing may differ",
               "cost_usd": estimated_cost,
-              "candidate_status": ("codex_error" if exit_code else
+              "executor_failure": failure,
+              "candidate_status": ("executor_error" if failure else
                                    "empty_patch" if not patch else "unverified_candidate"),
               "verified": False}
     (artifacts / "candidate.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

@@ -98,6 +98,17 @@ def test_official_gate_creates_one_valid_immutable_attempt_record(tmp_path, monk
                       harness_version="test-version")
 
     monkeypatch.setattr(pilot, "run_harness", fake_harness)
+    candidate_path = attempt_dir / "candidate.json"
+    failed_candidate = json.loads(candidate_path.read_text())
+    failed_candidate["candidate_status"] = "executor_error"
+    failed_candidate["executor_failure"] = "tool_blocked_by_policy"
+    candidate_path.write_text(json.dumps(failed_candidate))
+    with pytest.raises(ValueError):
+        gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
+                 attempt=1, root=tmp_path)
+    failed_candidate["candidate_status"] = "unverified_candidate"
+    failed_candidate["executor_failure"] = None
+    candidate_path.write_text(json.dumps(failed_candidate))
     record = gate_one(manifest=manifest, row=row, task_id=task["id"], arm="codex",
                       attempt=1, root=tmp_path)
     assert record["gate"]["passed"] is True

@@ -75,6 +75,10 @@
 - **C-3.7** — BEFORE an optimizer candidate is run on holdout THE SYSTEM SHALL require
   a frozen instruction fingerprint bound to complete baseline and development reports.
   - source: design
+- **C-3.8** — WHEN the Codex process, tool policy or turn fails THE SYSTEM SHALL mark
+  the candidate as an executor error and refuse to score its empty patch as a task
+  failure in the official acceptance matrix.
+  - source: audit
 
 ## C-4 — Independent acceptance
 

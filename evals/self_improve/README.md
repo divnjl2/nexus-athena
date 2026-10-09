@@ -45,8 +45,13 @@ instruction text and the hashes of complete baseline and development reports.
 Local runner smoke on 2026-10-09: `codex exec --json` returned exit code 0 and
 31,707 input tokens (28,160 cached), but produced a zero-byte patch. Its trace
 reported that nested filesystem tool calls were blocked by the current host
-policy. This is an environment finding, not a benchmark result. Candidate records
-now label empty patches separately from accepted fixes, and task attempts retain
+policy. A separate scratch run with `danger-full-access` created the requested
+file, but that mode grants too much host access for untrusted benchmark tasks.
+Codex CLI 0.161.0 under WSL `workspace-write` reached HTTP 403 from the model
+service. These are environment findings, not benchmark results. The runner now
+classifies failed turns, process exits and tool-policy blocks as executor errors;
+such attempts cannot be sent to the acceptance matrix. A completed run that
+chooses to make no change remains a measurable empty patch. Task attempts retain
 the issue input, timestamps, source revision, and Athena commit when used.
 
 `pilot.py gate` writes a one-task snapshot from the pinned dataset and feeds the

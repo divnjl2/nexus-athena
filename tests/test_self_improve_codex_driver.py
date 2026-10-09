@@ -4,7 +4,8 @@ import subprocess
 
 import pytest
 
-from evals.self_improve.codex_driver import candidate_patch, price_usd, usage_from_trace
+from evals.self_improve.codex_driver import (candidate_patch, executor_failure,
+                                             price_usd, usage_from_trace)
 
 
 def test_completed_codex_turns_account_for_cached_and_output_tokens():
@@ -38,3 +39,14 @@ def test_candidate_patch_contains_untracked_files_without_a_gate_verdict(tmp_pat
     (tmp_path / "added.py").write_text("new file\n")
     patch = candidate_patch(tmp_path)
     assert b"existing.py" in patch and b"added.py" in patch
+
+
+def test_executor_failures_cannot_be_scored_as_empty_agent_patches():
+    """C-3.8: a failed tool or transport is not a verified task failure."""
+    completed = json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1,
+                            "output_tokens": 1}})
+    failed = json.dumps({"type": "turn.failed", "error": {"message": "routing failed"}})
+    assert executor_failure(completed, "", 0) is None
+    assert executor_failure(completed, "exec_command blocked by policy", 0) == "tool_blocked_by_policy"
+    assert executor_failure(failed, "", 0) == "turn_failed"
+    assert executor_failure(completed, "", 124) == "process_exit_124"

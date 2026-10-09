@@ -35,7 +35,7 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
 - [ ] T3.1 Plan and create task worktrees and capture Codex candidates
   - success_check: `python -m pytest tests/test_self_improve_workspaces.py tests/test_self_improve_codex_driver.py tests/test_self_improve_pilot.py -q`
   - files: `evals/self_improve/workspaces.py, evals/self_improve/codex_driver.py, evals/self_improve/pilot.py, tests/test_self_improve_workspaces.py, tests/test_self_improve_codex_driver.py, tests/test_self_improve_pilot.py`
-  - verifies: S3.1, S3.2, S3.3, S3.4, S3.5, S3.6, S3.7
+  - verifies: S3.1, S3.2, S3.3, S3.4, S3.5, S3.6, S3.7, S3.8
 
 ## Phase 4: Bind official acceptance
 **Goal:** preserve the official test result independently of the agent's claim.

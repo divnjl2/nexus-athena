@@ -157,8 +157,8 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
     patch = (attempt_dir / "candidate.patch").read_bytes()
     if candidate["patch_sha256"] != hashlib.sha256(patch).hexdigest():
         raise ValueError("candidate patch is altered")
-    allowed_status = ("unverified_candidate", "codex_error") if patch else ("empty_patch", "codex_error")
-    if candidate.get("candidate_status") not in allowed_status:
+    expected_status = "unverified_candidate" if patch else "empty_patch"
+    if candidate.get("candidate_status") != expected_status or candidate.get("executor_failure"):
         raise ValueError("candidate status disagrees with patch")
     if metadata["manifest_sha256"] != fingerprint(manifest) or \
             metadata["task_id"] != task_id or metadata["arm"] != arm:
@@ -261,7 +261,7 @@ def main() -> int:
                      promotion=(json.loads(args.promotion.read_text(encoding="utf-8"))
                                 if args.promotion else None))
     print(json.dumps(result, indent=2))
-    return 0 if result["exit_code"] == 0 else 1
+    return 0 if result["candidate_status"] in ("empty_patch", "unverified_candidate") else 1
 
 
 if __name__ == "__main__":

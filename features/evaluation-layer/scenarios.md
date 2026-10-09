@@ -128,6 +128,14 @@
 - **When** a holdout run is requested
 - **Then** matching complete baseline and development reports are required.
 
+### S3.8 — executor errors stay out of task quality scores
+- **verifies:** C-3.8
+- **pins:** 433a01132aabd821
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_executor_failures_cannot_be_scored_as_empty_agent_patches tests/test_self_improve_pilot.py::test_official_gate_creates_one_valid_immutable_attempt_record -q`
+- **Given** a Codex trace with a tool policy, process or turn failure
+- **When** a candidate is classified and submitted for grading
+- **Then** the attempt is marked as an executor error and cannot enter the official task matrix.
+
 ### S4.2 — unique prediction and run id
 - **verifies:** C-4.2
 - **pins:** c1b0f1a81cea3f71
