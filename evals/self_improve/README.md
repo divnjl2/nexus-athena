@@ -103,6 +103,15 @@ that content into the request instructions, after which the lane rejected the
 request against its 30,720-token context limit. Neither attempt generated a
 benchmark candidate. The cluster route has since passed those transport checks,
 but has not yet produced a graded task in a separate cluster evaluation lane.
+On 2026-10-11, the ignored local `.athena/cluster-pilot-v3` root contains two
+independently graded development pairs (four attempts). Neither arm solved
+either task: the plain Codex arm saved two empty patches; the Athena arm saved
+one nonempty unresolved patch and one empty patch. The report still has 56
+missing development cells, no paired comparison, and no measured cluster USD
+cost. The second Athena candidate consumed 7,260,632 input tokens and 1,258
+seconds end to end without a patch. These are exploratory observations, not a
+completed benchmark or evidence that the framework improves coding quality.
+
 Cluster candidate provenance fingerprints the raw trace and stderr files; even
 a line-ending change invalidates the candidate before official grading.
 Cluster graded-attempt time includes the independent gate. If an ungraded
