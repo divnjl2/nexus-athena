@@ -7,7 +7,9 @@ for review. No attempt is silently retried.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 from pathlib import Path
 
 from .baseline_batch import frozen_commit
@@ -59,12 +61,20 @@ def write_report(manifest: dict, root: Path) -> dict:
 def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path,
               athena_commit: str, model: str, bridge_url: str, key_file: Path,
               probe_report: Path, context_window: int, candidate_timeout: int,
-              gate_timeout: int, wsl_distro: str, harness_python: str,
+              gate_timeout: int, wsl_distro: str | None = None,
+              harness_python: str | None = None, docker_image: str | None = None,
+              model_catalog: Path | None = None,
               max_pairs: int = 1) -> dict:
     verify(manifest, rows)
     frozen_commit(athena_root, athena_commit)
     if max_pairs < 1:
         raise ValueError("max_pairs must be positive")
+    if docker_image:
+        if wsl_distro or harness_python or not re.fullmatch(r"sha256:[0-9a-f]{64}", docker_image):
+            raise ValueError("Docker gate needs an immutable image ID and no WSL settings")
+    elif not wsl_distro or not harness_python:
+        raise ValueError("WSL gate needs a distro and harness Python")
+    catalog_sha = hashlib.sha256(model_catalog.read_bytes()).hexdigest() if model_catalog else None
     bridge_url = normalize_bridge_url(bridge_url)
     source = {row["instance_id"]: row for row in rows}
     records = load_records(root, manifest)
@@ -76,9 +86,15 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
                                  "invocation.json").read_text(encoding="utf-8"))
         if record["model"] != model or record["bridge_url"] != bridge_url or \
                 invocation["context_window"] != context_window or \
+                invocation.get("model_catalog_sha256") != catalog_sha or \
                 (record["arm"] == "codex_athena" and
                  record["athena_commit"] != athena_commit):
             raise ValueError("existing cluster records use another fixed configuration")
+        if docker_image:
+            gate_command = json.loads((root / "harness" /
+                                       f"{record['run_id']}.command.json").read_text())
+            if docker_image not in gate_command:
+                raise ValueError("existing cluster gate used another Docker image")
     tasks = [task for task in manifest["tasks"] if task["split"] == "development"]
     write_report(manifest, root)
     started_pairs = 0
@@ -102,6 +118,7 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
                                        root=root, athena_root=athena_root, model=model,
                                        base_url=bridge_url, key_file=key_file,
                                        probe_report=probe_report,
+                                       model_catalog=model_catalog,
                                        context_window=context_window,
                                        timeout=candidate_timeout)
                 if result["candidate_status"] not in ("empty_patch", "unverified_candidate"):
@@ -109,7 +126,8 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
             record = run_gate(manifest=manifest, row=source[task["id"]],
                               task_id=task["id"], arm=arm, attempt=1, root=root,
                               timeout=gate_timeout, wsl_distro=wsl_distro,
-                              harness_python=harness_python)
+                              harness_python=harness_python,
+                              docker_image=docker_image)
             known.add((task["id"], arm))
             print(json.dumps({"task_id": task["id"], "arm": arm,
                               "resolved": record["gate"]["passed"],
@@ -131,8 +149,10 @@ def main() -> int:
     parser.add_argument("--context-window", type=int, default=65536)
     parser.add_argument("--candidate-timeout", type=int, default=900)
     parser.add_argument("--gate-timeout", type=int, default=1800)
-    parser.add_argument("--wsl-distro", required=True)
-    parser.add_argument("--harness-python", required=True)
+    parser.add_argument("--wsl-distro")
+    parser.add_argument("--harness-python")
+    parser.add_argument("--docker-image")
+    parser.add_argument("--model-catalog", type=Path)
     parser.add_argument("--max-pairs", type=int, default=1)
     args = parser.parse_args()
     result = run_batch(manifest=json.loads(args.manifest.read_text(encoding="utf-8")),
@@ -141,10 +161,12 @@ def main() -> int:
                        athena_commit=args.athena_commit, model=args.model,
                        bridge_url=args.bridge_url, key_file=args.client_key_file,
                        probe_report=args.probe_report,
+                       model_catalog=args.model_catalog,
                        context_window=args.context_window,
                        candidate_timeout=args.candidate_timeout,
                        gate_timeout=args.gate_timeout, wsl_distro=args.wsl_distro,
-                       harness_python=args.harness_python, max_pairs=args.max_pairs)
+                       harness_python=args.harness_python,
+                       docker_image=args.docker_image, max_pairs=args.max_pairs)
     print(json.dumps({"complete": result["complete"],
                       "missing_cells": len(result["missing"]),
                       "ungraded_attempts": len(result["ungraded_attempts"])}), flush=True)

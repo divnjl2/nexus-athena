@@ -68,8 +68,8 @@ Athena plus an optimizer. The corpus, run evidence and report are separate artif
   - verifies: S5.5
 - [ ] T5.5 Capture and independently gate a separate cluster candidate
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
-  - files: `evals/self_improve/cluster_pilot.py, tests/test_self_improve_cluster_pilot.py`
-  - verifies: S5.6, S5.7, S5.10, S5.11, S5.12
+  - files: `evals/self_improve/cluster_pilot.py, evals/self_improve/agent_catalog_codex_0.161.0.json, tests/test_self_improve_cluster_pilot.py`
+  - verifies: S5.6, S5.7, S5.10, S5.11, S5.12, S5.13
 - [ ] T5.6 Summarize only revalidated cluster attempts
   - success_check: `python -m pytest tests/test_self_improve_cluster_pilot.py -q`
   - files: `evals/self_improve/cluster_report.py, tests/test_self_improve_cluster_pilot.py`

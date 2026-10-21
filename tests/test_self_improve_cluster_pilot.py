@@ -23,6 +23,12 @@ def test_cluster_provider_is_loopback_and_key_stays_out_of_argv(tmp_path):
     assert "model_auto_compact_token_limit=49152" in cmd
     assert "windows.sandbox=elevated" in cmd
     assert "workspace-write" in cmd
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text('{"models":[{"slug":"agent"}]}')
+    configured = cluster_pilot.cluster_argv(
+        "codex", tmp_path, model="agent", base_url="http://127.0.0.1:8777/v1",
+        context_window=65536, model_catalog=catalog)
+    assert "model_catalog_json=" + json.dumps(str(catalog.resolve())) in configured
     with pytest.raises(ValueError, match="loopback"):
         cluster_pilot.cluster_argv("codex", tmp_path, model="agent",
                                   base_url="http://192.168.1.136:30400/v1",
@@ -76,17 +82,22 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
         "reported_models": ["cluster-model-v1"] * 3,
         "checks": {name: True for name in ("sse_terminal", "text", "function_call",
                                             "replayed_tool_result")}}))
+    catalog_file = tmp_path / "catalog.json"
+    catalog_file.write_text('{"models":[{"slug":"agent"}]}')
     root = tmp_path / "cluster-root"
     candidate = cluster_pilot.run_candidate(
         manifest=manifest, rows=[row], task_id=row["instance_id"], arm="codex",
         attempt=1, root=root, athena_root=tmp_path, model="agent",
         base_url="http://127.0.0.1:8777/v1", key_file=key_file,
-        probe_report=probe_file, codex_bin=sys.executable)
+        probe_report=probe_file, codex_bin=sys.executable,
+        model_catalog=catalog_file)
     assert candidate["candidate_status"] == "unverified_candidate"
     assert candidate["verified"] is False and candidate["cost_usd"] is None
     artifact_dir = Path(candidate["artifacts"])
     assert b"marker.txt" in (artifact_dir / "candidate.patch").read_bytes()
     assert "private-client-token" not in (artifact_dir / "invocation.json").read_text()
+    assert candidate["model_catalog_sha256"] == hashlib.sha256(catalog_file.read_bytes()).hexdigest()
+    assert (artifact_dir / "model_catalog.json").read_bytes() == catalog_file.read_bytes()
 
     trace_path = artifact_dir / "trace.jsonl"
     original_trace = trace_path.read_bytes()
@@ -122,8 +133,15 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
         cluster_pilot.run_gate(manifest=manifest, row=row, task_id=row["instance_id"],
                                arm="codex", attempt=1, root=root)
     (artifact_dir / "candidate.patch").write_bytes(original_patch)
+    catalog_snapshot = artifact_dir / "model_catalog.json"
+    catalog_snapshot.write_text("{}")
+    with pytest.raises(ValueError, match="model catalog"):
+        cluster_pilot.run_gate(manifest=manifest, row=row, task_id=row["instance_id"],
+                               arm="codex", attempt=1, root=root)
+    catalog_snapshot.write_bytes(catalog_file.read_bytes())
 
     def official_gate(**kwargs):
+        assert kwargs["docker_image"] == "sha256:" + "a" * 64
         run_id = "cluster-demo-1"
         kwargs["workdir"].mkdir(parents=True, exist_ok=True)
         dataset = kwargs["workdir"] / f"{run_id}.dataset.json"
@@ -157,11 +175,13 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':10,'output_tok
 
     monkeypatch.setattr(cluster_pilot, "run_harness", official_gate)
     record = cluster_pilot.run_gate(manifest=manifest, row=row, task_id=row["instance_id"],
-                                    arm="codex", attempt=1, root=root)
+                                    arm="codex", attempt=1, root=root,
+                                    docker_image="sha256:" + "a" * 64)
     assert record["schema"] == cluster_pilot.CLUSTER_SCHEMA
     assert record["gate"]["passed"] is True and record["cost_usd"] is None
     assert record["total_wall_seconds"] == pytest.approx(record["wall_seconds"] + 20)
     assert record["probe_reported_models"] == ["cluster-model-v1"] * 3
+    assert record["model_catalog_sha256"] == candidate["model_catalog_sha256"]
     assert (root / "records" / "cluster-demo-1.json").is_file()
     trace_path.write_bytes(altered_trace)
     with pytest.raises(ValueError, match="trace_sha256"):

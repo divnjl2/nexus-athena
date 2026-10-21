@@ -93,6 +93,28 @@ across existing records, grades a complete preserved candidate, and stops for
 review when an attempt or gate is partial. A fresh passing probe and private
 client key are required before a new candidate. Its output report is
 `<cluster-run-root>/reports/development.json`; an incomplete run exits 2.
+For Codex 0.161.0, `--model-catalog
+evals/self_improve/agent_catalog_codex_0.161.0.json` gives the local `agent`
+role explicit context, tool and reasoning metadata. The runner snapshots the
+catalog for each attempt, checks its hash on resume and independent grading,
+and leaves the full catalog override scoped to that Codex process. A local
+loopback bridge can be used with the same private client key and a fresh probe;
+`--bridge-url` must match that probe. `--docker-image <immutable-sha256-id>`
+selects the same pinned Linux SWE-bench harness backend as the cloud baseline.
+The old WSL gate remains available with `--wsl-distro` and `--harness-python`.
+The catalog format is version-sensitive; the
+[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
+documents `model_catalog_json` as a full catalog override.
+
+On 2026-10-21, a direct `agent` route probe and a local bridge probe passed
+SSE completion, function call and replay. The response reported
+`qwopus3.5-9b-v3`; that preflight observation does not establish the lane of
+every future request. A bounded Codex coding smoke with the explicit catalog
+completed two shell commands without the missing-metadata warning, but failed
+an exact-byte acceptance check: PowerShell `echo >` wrote UTF-16LE with CRLF
+instead of the requested UTF-8 with LF. This is a coding-quality observation,
+not a completed SWE-bench task. The SSH/pod-forward path truncated some SSE
+streams during diagnosis; the direct local bridge passed its full probe.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.

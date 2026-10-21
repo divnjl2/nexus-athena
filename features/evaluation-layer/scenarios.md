@@ -25,6 +25,14 @@
 - **When** its saved harness command changes after grading
 - **Then** report validation rejects the attempt.
 
+### S5.13 — cluster model catalog and Docker gate provenance
+- **verifies:** C-5.13
+- **pins:** bf898a4b4913f4ce
+- **run_cmd:** `python -m pytest tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a custom catalog for the cluster role and a pinned Linux gate image
+- **When** the candidate is captured and graded
+- **Then** the catalog snapshot and image are bound to the attempt; altered catalog bytes are refused.
+
 ### S5.9 — fail-closed cluster continuation
 - **verifies:** C-5.9
 - **pins:** 503941c35a58bafa
