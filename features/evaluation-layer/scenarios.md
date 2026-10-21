@@ -437,3 +437,11 @@
 - **Given** a pinned Linux SWE-bench image and an LF candidate patch
 - **When** Docker Desktop runs the official harness
 - **Then** the prediction preserves those bytes and the gate reads the v5 report.
+
+### S4.14 — Docker harness requires cleanup capability
+- **verifies:** C-4.13
+- **pins:** d40536a378ef366b
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_docker_harness_refuses_image_without_cleanup_cli -q`
+- **Given** a pinned harness image without the Docker CLI
+- **When** the gate probes its runtime before running a task
+- **Then** no verdict is accepted and the started attempt remains visible.

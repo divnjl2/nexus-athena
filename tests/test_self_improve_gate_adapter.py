@@ -175,7 +175,7 @@ def test_docker_harness_keeps_linux_patch_bytes_and_reads_v5_report(tmp_path, mo
         assert f"type=bind,source={workdir.resolve()},target=/work" in command
         assert "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock" in command
         if "-c" in command:
-            return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n", stderr="")
+            return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n/usr/local/bin/docker\n", stderr="")
         prediction_arg = command[command.index("--predictions_path") + 1]
         assert prediction_arg.startswith("/work/")
         saved = json.loads((workdir / prediction_arg.removeprefix("/work/")).read_text())
@@ -197,3 +197,22 @@ def test_docker_harness_keeps_linux_patch_bytes_and_reads_v5_report(tmp_path, mo
                     model_name="codex", patch=patch, row=row,
                     workdir=workdir, gate_dir=tmp_path / "bad-gate",
                     docker_image="athena-swebench:5.0.2")
+
+
+def test_docker_harness_refuses_image_without_cleanup_cli(tmp_path, monkeypatch):
+    """C-4.13: a runtime that cannot clean up its containers cannot issue a verdict."""
+    import evals.self_improve.gate_adapter as adapter
+
+    def fake_run(command, **kwargs):
+        assert "-c" in command
+        return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n", stderr="")
+
+    monkeypatch.setattr(adapter.subprocess, "run", fake_run)
+    with pytest.raises(RuntimeError, match="Docker CLI for cleanup"):
+        run_harness(task_id="repo__task-1", arm="codex", attempt=1,
+                    model_name="codex", patch=b"diff --git a/x b/x\n",
+                    row={"instance_id": "repo__task-1"},
+                    workdir=tmp_path / "harness", gate_dir=tmp_path / "gate",
+                    docker_image="sha256:" + "a" * 64)
+    assert not (tmp_path / "gate").exists()
+    assert (tmp_path / "gate_started.json").is_file()

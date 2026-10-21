@@ -1,3 +1,8 @@
+FROM docker:29.5.3-cli@sha256:11e1133c30f3ceb73c6bdc7dfb78b3f9ed8e8e0d1d0400e91c5ec2eb240bf2ff AS docker_cli
+
 FROM python:3.10-slim@sha256:6ff506466f8b1e981719b468cc0023b8ef000b983cdec0eafe119d01f379e31d
 
 RUN python -m pip install --no-cache-dir swebench==5.0.2
+
+COPY --from=docker_cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker_cli /lib/ld-musl-x86_64.so.1 /lib/ld-musl-x86_64.so.1

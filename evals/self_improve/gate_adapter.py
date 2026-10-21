@@ -159,11 +159,18 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
         dataset_arg = str(dataset_path.resolve())
         prediction_arg = str(prediction_path.resolve())
         cwd = workdir
-    version_cmd = [*prefix, "-c", "import importlib.metadata as m; print(m.version('swebench'))"]
+    version_code = "import importlib.metadata as m; print(m.version('swebench'))"
+    if docker_image:
+        version_code += "; import shutil; print(shutil.which('docker') or '')"
+    version_cmd = [*prefix, "-c", version_code]
     version_proc = subprocess.run(version_cmd, cwd=cwd, text=True, capture_output=True)
-    installed_version = version_proc.stdout.strip()
+    version_lines = version_proc.stdout.splitlines()
+    installed_version = version_lines[0].strip() if version_lines else ""
     if version_proc.returncode or installed_version != HARNESS_VERSION:
         raise RuntimeError(f"SWE-bench {HARNESS_VERSION} required; found {installed_version or 'none'}")
+    if docker_image and (len(version_lines) < 2 or
+                         not version_lines[1].strip().endswith("/docker")):
+        raise RuntimeError("Docker harness image needs the Docker CLI for cleanup")
     command = [*prefix, "-m", "swebench.harness.run_evaluation",
                "--dataset_name", dataset_arg, "--split", "test",
                "--predictions_path", prediction_arg,
@@ -176,6 +183,8 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     with stdout_path.open("xb") as stdout_file, stderr_path.open("xb") as stderr_file:
         proc = subprocess.run(command, cwd=cwd, stdout=stdout_file,
                               stderr=stderr_file, timeout=timeout + 1800)
+    if proc.returncode:
+        raise RuntimeError(f"official harness exited with status {proc.returncode}")
     report_path = workdir / "logs" / "run_evaluation" / run_id / model_name / task_id / "report.json"
     if not patch and not report_path.is_file():
         report_path = workdir / "logs" / "run_evaluation" / run_id / "results.json"

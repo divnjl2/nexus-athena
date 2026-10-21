@@ -196,13 +196,27 @@ python -m evals.self_improve.baseline_batch --root <fresh-run-root> --athena-roo
 
 The runner accepts only an immutable image ID for this backend, mounts the
 private harness work directory and Docker socket, and runs the unchanged
-SWE-bench 5.0.2 package inside Linux. Record the image ID for every batch.
+SWE-bench 5.0.2 package inside Linux. Its image includes a pinned Docker CLI:
+the official package calls that binary to stop and remove evaluation
+containers. A missing CLI or nonzero harness exit leaves the gate unproved.
+Record the image ID for every batch.
 The gate reads v5 reports from `logs/run_evaluation/`. A direct Windows run
 of the same package rewrote an LF candidate patch as CRLF before applying it
 inside Linux; the local `.athena/pilot-v4` run on 2026-10-21 is diagnostic and
 must not be included in the baseline matrix. Its first gate also exposed the
 old adapter's incorrect `logs/evaluation/` lookup. The failed gate marker is
 retained, so that attempt must not be silently retried.
+The next `pilot-v5` diagnostic used a Docker image with the correct report
+path, but that image lacked the Docker CLI required by the official cleanup
+routine. Its first two development pairs were independently graded, with
+both arms resolving both tasks; the Codex arm cost $0.1228876 and the Athena
+arm $0.3043696 in API-equivalent estimates. Those four reports are preserved
+as calibration, not combined with the next fixed-image baseline. The four
+leftover evaluation containers (five across the two diagnostic roots) were
+removed by exact name after their reports were validated, and the two task
+images were removed. The Docker Desktop VHD
+on D: has limited host free space; check and clean only completed benchmark
+objects after each bounded batch.
 
 Local runner smoke on 2026-10-09: `codex exec --json` returned exit code 0 and
 31,707 input tokens (28,160 cached), but produced a zero-byte patch. Its trace
@@ -235,11 +249,11 @@ validation detects changes to those artifacts. Stdout and stderr are saved as
 the harness runs, so a timeout leaves partial diagnostics without a verdict.
 An attempt-bound start marker also prevents a timed-out gate from being treated
 as a candidate that has never entered acceptance testing.
-Its per-instance reports are under
-`logs/evaluation/`. It uses a one-task local JSON snapshot so
-the harness cannot silently fetch changed acceptance data. On Windows, pass
-`--wsl-distro Ubuntu --harness-python /path/to/venv/bin/python` to `pilot.py gate`;
-the Ubuntu WSL Docker daemon is available on the development host.
+Its per-instance reports are under `logs/run_evaluation/`. It uses a one-task
+local JSON snapshot so the harness cannot silently fetch changed acceptance
+data. On this Windows host, pass `--docker-image <sha256-image-id>` to
+`pilot.py gate`. A provisioned WSL harness remains an alternative via
+`--wsl-distro Ubuntu --harness-python /path/to/venv/bin/python`.
 
 The official v5 harness skips execution for an empty patch and lists it in
 `results.json`. Such a task-arm cell is unresolved only when its one-task summary

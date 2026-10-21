@@ -185,6 +185,12 @@
   from its actual output directory before accepting a verdict.
   - source: incident
 
+- **C-4.13** — BEFORE a Docker-hosted official gate runs THE SYSTEM SHALL
+  verify that its pinned Linux image has the Docker CLI required by the
+  harness to stop and remove evaluation containers; a missing CLI or failed
+  harness process SHALL leave the attempt without an accepted verdict.
+  - source: incident
+
 ## C-5 — Cluster inference qualification
 
 - **C-5.1** — WHEN a cluster inference route is probed THE SYSTEM SHALL verify
