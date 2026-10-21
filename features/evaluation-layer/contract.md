@@ -247,3 +247,8 @@
   revalidate the saved harness command, prediction and process output bytes
   against its gate envelope before counting the attempt.
   - source: audit
+- **C-5.13** — WHEN a cluster candidate uses a custom Codex model catalog THE
+  SYSTEM SHALL snapshot and fingerprint its bytes with the attempt, reject a
+  changed snapshot, and permit grading through the same pinned Linux Docker
+  harness used by the cloud baseline.
+  - source: incident

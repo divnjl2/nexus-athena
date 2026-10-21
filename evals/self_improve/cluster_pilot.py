@@ -50,7 +50,8 @@ def bridge_url(base_url: str) -> str:
 
 
 def cluster_argv(codex_bin: str, workspace: Path, *, model: str,
-                 base_url: str, context_window: int, platform: str | None = None) -> list[str]:
+                 base_url: str, context_window: int, platform: str | None = None,
+                 model_catalog: Path | None = None) -> list[str]:
     """Keep a custom provider and its context separate from the cloud baseline."""
     base_url = bridge_url(base_url)
     if not model or context_window < 8192:
@@ -65,6 +66,8 @@ def cluster_argv(codex_bin: str, workspace: Path, *, model: str,
            "-c", "model_providers.athena_cluster_bridge.supports_websockets=false",
            "-c", f"model_context_window={context_window}",
            "-c", f"model_auto_compact_token_limit={compact}"]
+    if model_catalog is not None:
+        cmd.extend(["-c", "model_catalog_json=" + json.dumps(str(model_catalog.resolve()))])
     if (platform or os.name) == "nt":
         cmd.extend(["-c", "windows.sandbox=elevated"])
     return [*cmd, "--sandbox", "workspace-write", "--model", model,
@@ -93,6 +96,7 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
                   attempt: int, root: Path, athena_root: Path, model: str,
                   base_url: str, key_file: Path, probe_report: Path,
                   context_window: int = 65536, timeout: int = 900,
+                  model_catalog: Path | None = None,
                   codex_bin: str = "codex") -> dict:
     """Capture a cluster candidate without assigning an acceptance verdict."""
     verify(manifest, rows)
@@ -126,14 +130,27 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
                                                ensure_ascii=False, indent=2) + "\n",
                                           encoding="utf-8")
     (artifacts / "route_probe.json").write_bytes(probe_bytes)
+    catalog_snapshot = None
+    catalog_sha256 = None
+    if model_catalog is not None:
+        catalog_bytes = model_catalog.read_bytes()
+        catalog = json.loads(catalog_bytes)
+        if not isinstance(catalog, dict) or not any(
+                isinstance(entry, dict) and entry.get("slug") == model
+                for entry in catalog.get("models", [])):
+            raise ValueError("model catalog does not declare the requested route")
+        catalog_snapshot = artifacts / "model_catalog.json"
+        catalog_snapshot.write_bytes(catalog_bytes)
+        catalog_sha256 = hashlib.sha256(catalog_bytes).hexdigest()
     resolved_bin = shutil.which(codex_bin) or codex_bin
     version = subprocess.run([resolved_bin, "--version"], capture_output=True,
                              text=True, check=False).stdout.strip()
     cmd = cluster_argv(resolved_bin, workspace, model=model, base_url=base_url,
-                       context_window=context_window)
+                       context_window=context_window, model_catalog=catalog_snapshot)
     config = {"argv": cmd, "cwd": str(workspace), "timeout_seconds": timeout,
               "provider": "athena_cluster_bridge", "bridge_url": base_url,
-              "context_window": context_window, "probe_sha256": hashlib.sha256(probe_bytes).hexdigest()}
+              "context_window": context_window, "probe_sha256": hashlib.sha256(probe_bytes).hexdigest(),
+              "model_catalog_sha256": catalog_sha256}
     (artifacts / "invocation.json").write_text(json.dumps(config, indent=2) + "\n",
                                                   encoding="utf-8")
     env = os.environ.copy()
@@ -170,6 +187,7 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
                  "model_resolution": "requested_identifier",
                  "codex_cli_version": version, "provider": "athena_cluster_bridge",
                  "bridge_url": base_url, "route_probe_sha256": config["probe_sha256"],
+                 "model_catalog_sha256": catalog_sha256,
                  "probe_checked_at": probe_evidence["checked_at"],
                  "probe_reported_models": probe_evidence.get("reported_models"),
                  "config_sha256": fingerprint(config),
@@ -199,7 +217,8 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
 
 def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
              attempt: int, root: Path, timeout: int = 1800,
-             wsl_distro: str | None = None, harness_python: str | None = None) -> dict:
+             wsl_distro: str | None = None, harness_python: str | None = None,
+             docker_image: str | None = None) -> dict:
     """Grade one preserved cluster patch with the unchanged official harness."""
     tasks = {task["id"]: task for task in manifest["tasks"]}
     if task_id not in tasks or arm not in ARMS or attempt < 1:
@@ -229,6 +248,10 @@ def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
             candidate.get("bridge_url") != invocation.get("bridge_url") or \
             candidate.get("cost_usd", "missing") is not None:
         raise ValueError("cluster prompt, configuration or cost basis changed")
+    catalog_sha = invocation.get("model_catalog_sha256")
+    if candidate.get("model_catalog_sha256") != catalog_sha or \
+            (catalog_sha is not None and file_sha256(attempt_dir / "model_catalog.json") != catalog_sha):
+        raise ValueError("cluster model catalog changed")
     trace_bytes = (attempt_dir / "trace.jsonl").read_bytes()
     stderr_bytes = (attempt_dir / "stderr.txt").read_bytes()
     trace = trace_bytes.decode("utf-8", "replace")
@@ -253,7 +276,7 @@ def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
                            model_name=f"cluster_{arm}_{attempt}", patch=patch, row=row,
                            workdir=root / "harness", gate_dir=attempt_dir / "gate",
                            timeout=timeout, wsl_distro=wsl_distro,
-                           harness_python=harness_python)
+                           harness_python=harness_python, docker_image=docker_image)
     gate_path = attempt_dir / "gate" / "gate.json"
     official = attempt_dir / "gate" / envelope["official_report"]
     resolved = official_verdict(json.loads(official.read_text(encoding="utf-8")), task_id)
@@ -268,6 +291,7 @@ def run_gate(*, manifest: dict, row: dict, task_id: str, arm: str,
               "model": candidate["model"], "model_resolution": "requested_identifier",
               "provider": candidate["provider"], "bridge_url": candidate["bridge_url"],
               "route_probe_sha256": candidate["route_probe_sha256"],
+              "model_catalog_sha256": catalog_sha,
               "probe_checked_at": candidate["probe_checked_at"],
               "probe_reported_models": candidate["probe_reported_models"],
               "codex_cli_version": candidate["codex_cli_version"],
@@ -342,6 +366,12 @@ def validate_cluster_attempt(record: dict, manifest: dict, root: Path) -> None:
     stderr = stderr_bytes.decode("utf-8", "replace")
     prompt = _contained_file(attempt_dir, "prompt.txt").read_bytes()
     probe = _contained_file(attempt_dir, "route_probe.json")
+    catalog_sha = invocation.get("model_catalog_sha256")
+    if record.get("model_catalog_sha256") != catalog_sha or \
+            candidate.get("model_catalog_sha256") != catalog_sha or \
+            (catalog_sha is not None and
+             file_sha256(_contained_file(attempt_dir, "model_catalog.json")) != catalog_sha):
+        raise ValueError("cluster model catalog evidence changed")
     source = json.loads(_contained_file(attempt_dir, "input.json").read_text(encoding="utf-8"))
     if metadata.get("manifest_sha256") != record["manifest_sha256"] or \
             metadata.get("base_commit") != task["base_commit"] or \
@@ -461,9 +491,11 @@ def main() -> int:
     parser.add_argument("--client-key-file", type=Path)
     parser.add_argument("--probe-report", type=Path)
     parser.add_argument("--context-window", type=int, default=65536)
+    parser.add_argument("--model-catalog", type=Path)
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--wsl-distro")
     parser.add_argument("--harness-python")
+    parser.add_argument("--docker-image")
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     rows = load_pinned()
@@ -477,7 +509,8 @@ def main() -> int:
                                athena_root=args.athena_root.resolve(), model=args.model,
                                base_url=args.bridge_url, key_file=args.client_key_file,
                                probe_report=args.probe_report,
-                               context_window=args.context_window, timeout=args.timeout)
+                               context_window=args.context_window, timeout=args.timeout,
+                               model_catalog=args.model_catalog)
         print(json.dumps(result, indent=2))
         return 0 if result["candidate_status"] in ("empty_patch", "unverified_candidate") else 2
     source = {row["instance_id"]: row for row in rows}
@@ -485,7 +518,8 @@ def main() -> int:
         parser.error("task is outside pinned dataset")
     result = run_gate(manifest=manifest, row=source[args.task], task_id=args.task,
                       arm=args.arm, attempt=args.attempt, root=root, timeout=args.timeout,
-                      wsl_distro=args.wsl_distro, harness_python=args.harness_python)
+                      wsl_distro=args.wsl_distro, harness_python=args.harness_python,
+                      docker_image=args.docker_image)
     print(json.dumps(result, indent=2))
     return 0 if result["gate"]["passed"] else 1
 

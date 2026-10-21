@@ -1,0 +1,34 @@
+{
+  "models": [
+    {
+      "slug": "agent",
+      "display_name": "Athena cluster agent",
+      "description": "Owner-cluster Qwen coding lane",
+      "default_reasoning_level": "none",
+      "supported_reasoning_levels": [
+        {"effort": "none", "description": "No explicit reasoning budget"}
+      ],
+      "shell_type": "unified_exec",
+      "visibility": "list",
+      "supported_in_api": true,
+      "priority": 1,
+      "availability_nux": null,
+      "upgrade": null,
+      "support_verbosity": false,
+      "default_verbosity": null,
+      "apply_patch_tool_type": "freeform",
+      "truncation_policy": {"mode": "tokens", "limit": 10000},
+      "context_window": 65536,
+      "max_context_window": 65536,
+      "auto_compact_token_limit": 49152,
+      "experimental_supported_tools": ["shell", "apply_patch"],
+      "input_modalities": ["text"],
+      "supports_reasoning_summary_parameter": false,
+      "model_messages": {
+        "instructions_template": "You are Codex, a coding agent. Inspect the repository, make the requested changes, run relevant checks, and report the result. Follow AGENTS.md and use the available shell and patch tools."
+      },
+      "use_responses_lite": false,
+      "tool_mode": "direct"
+    }
+  ]
+}
