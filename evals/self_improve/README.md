@@ -116,6 +116,18 @@ instead of the requested UTF-8 with LF. This is a coding-quality observation,
 not a completed SWE-bench task. The SSH/pod-forward path truncated some SSE
 streams during diagnosis; the direct local bridge passed its full probe.
 
+The first real Codex candidate through that local bridge, for development task
+`psf__requests-5414` on 2026-10-21, timed out at the fixed 900-second limit.
+Its preserved trace contains 30 completed shell commands but no completed
+Codex turn and no patch. The agent repeatedly requested lines beyond the end
+of an 817-line file, including requests starting at line 2500. The runner
+recorded `executor_error` with exit code 124; the official acceptance harness
+was not invoked, and this attempt contributes no verified result. The probe
+and shell loop establish transport for that run, while the observed failure
+concerns the agent's task execution. This single task does not establish an
+overall cluster model success rate. Any revised prompt or route needs a new
+attempt with its own provenance and independent gate.
+
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.
 This is a local lane check, not a cluster gateway check. A separate Codex CLI
