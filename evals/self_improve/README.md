@@ -173,8 +173,15 @@ source row. It writes only a candidate patch and trace. The optimizer arm is a
 separate stage; a holdout attempt requires a promotion file matching the frozen
 instruction text and the hashes of complete baseline and development reports.
 Report hashes and self-declared completion alone are insufficient evidence, so
-the holdout gate currently refuses promotion until independent attempt-record
-revalidation is implemented. No optimizer holdout result can be claimed yet.
+the holdout gate reloads every attempt and official harness artifact, recomputes
+the complete baseline and optimizer development reports, and checks every
+development prompt against the selected instruction bytes and Athena commit.
+The promotion file must also name that commit and the two exact report files
+under the run root's `reports/` directory. Generate report bodies with
+`python -m evals.self_improve.evidence --stage baseline` and
+`--stage development --optimizer-instructions <frozen-text-file>` using the
+same `records/` and `artifacts/` paths; save their exact stdout bytes and
+SHA-256 in the promotion file. A partial or altered report keeps holdout closed.
 
 `baseline_batch.py` resumes the two-arm matrix one task at a time. It validates
 all existing independent records before skipping them, gates a complete

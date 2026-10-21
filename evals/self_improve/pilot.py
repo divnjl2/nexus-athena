@@ -12,7 +12,8 @@ from pathlib import Path
 
 from .codex_driver import run_codex
 from .corpus import ARMS, acceptance, fingerprint, inputs, load_pinned, verify
-from .evidence import file_sha256, validate_attempt
+from .evidence import (file_sha256, load_attempts, summarize,
+                       summarize_optimizer_development, validate_attempt)
 from .gate_adapter import run_harness
 from .workspaces import cells, prepare
 
@@ -62,7 +63,7 @@ def prompt_for(row: dict, arm: str, *, athena_root: Path,
 
 def authorize_split(manifest: dict, task: dict, arm: str,
                     optimizer_instructions: str, promotion: dict | None,
-                    evidence_root: Path) -> None:
+                    evidence_root: Path, athena_root: Path | None = None) -> None:
     """A holdout optimizer run needs a frozen, matching candidate decision."""
     if arm != "codex_athena_optimizer" or task["split"] != "holdout":
         return
@@ -74,6 +75,7 @@ def authorize_split(manifest: dict, task: dict, arm: str,
         raise ValueError("holdout requires a matching frozen optimizer promotion")
     expected_reports = (("baseline", "athena.self-improve.report/1"),
                         ("development", "athena.self-improve.development/1"))
+    reports = {}
     for name, schema in expected_reports:
         relative = Path(promotion.get(f"{name}_report", ""))
         if not relative.parts or relative.is_absolute() or ".." in relative.parts:
@@ -92,10 +94,45 @@ def authorize_split(manifest: dict, task: dict, arm: str,
             raise ValueError("baseline evidence is from the wrong stage")
         if name == "development" and report.get("instructions_sha256") != expected["instructions_sha256"]:
             raise ValueError("development evidence is for another candidate")
-    # Report hashes only prove that the referenced bytes did not change. Until
-    # both reports can be recomputed from independently gated attempt records,
-    # their self-declared `complete` fields cannot authorize holdout access.
-    raise ValueError("holdout promotion requires independently verified attempt evidence")
+        reports[name] = report
+    if athena_root is None:
+        raise ValueError("holdout promotion requires independently verified attempt evidence")
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"],
+                                     cwd=athena_root, text=True).strip()
+    if promotion.get("athena_commit") != commit:
+        raise ValueError("holdout promotion requires the frozen Athena commit")
+    root = evidence_root.resolve().parent
+    artifacts = root / "artifacts"
+    try:
+        records = load_attempts(root / "records", manifest, artifacts)
+        baseline = summarize(manifest, records, artifacts, stage="baseline")
+        development = summarize_optimizer_development(
+            manifest, records, artifacts, expected["instructions_sha256"])
+        for record in records:
+            if record["arm"] != "codex_athena_optimizer" or \
+                    next(item["split"] for item in manifest["tasks"]
+                         if item["id"] == record["task_id"]) != "development":
+                continue
+            if record["athena_commit"] != commit:
+                raise ValueError("optimizer attempts use another Athena commit")
+            task_row = next(item for item in manifest["tasks"]
+                            if item["id"] == record["task_id"])
+            prompt_path = (artifacts / "development" / record["task_id"] /
+                           "codex_athena_optimizer" / str(record["attempt"]) /
+                           "prompt.txt")
+            input_path = prompt_path.parent / "input.json"
+            source = json.loads(input_path.read_text(encoding="utf-8"))
+            expected_prompt = prompt_for({"repo": task_row["repo"], **source},
+                                         "codex_athena_optimizer",
+                                         athena_root=athena_root,
+                                         optimizer_instructions=optimizer_instructions)
+            if prompt_path.read_bytes() != expected_prompt.encode("utf-8"):
+                raise ValueError("optimizer prompt does not bind the frozen instructions")
+    except (ValueError, KeyError, TypeError, OSError, StopIteration) as exc:
+        raise ValueError("holdout promotion requires independently verified attempt evidence") from exc
+    if not baseline["complete"] or not development["complete"] or \
+            reports["baseline"] != baseline or reports["development"] != development:
+        raise ValueError("holdout promotion requires independently verified attempt evidence")
 
 
 def run_one(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
@@ -109,8 +146,6 @@ def run_one(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
     if task_id not in tasks or arm not in ARMS:
         raise ValueError("task or arm is outside the frozen matrix")
     task = tasks[task_id]
-    authorize_split(manifest, task, arm, optimizer_instructions, promotion,
-                    root / "reports")
     athena_version = None
     if arm != "codex":
         status = subprocess.run(["git", "status", "--porcelain"], cwd=athena_root,
@@ -119,6 +154,8 @@ def run_one(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
             raise ValueError("Athena source tree must be clean before a comparison run")
         athena_version = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=athena_root, text=True).strip()
+    authorize_split(manifest, task, arm, optimizer_instructions, promotion,
+                    root / "reports", athena_root)
     cell = {"task_id": task_id, "repo": task["repo"],
             "base_commit": task["base_commit"], "split": task["split"], "arm": arm}
     prompt = prompt_for(source[task_id], arm, athena_root=athena_root,

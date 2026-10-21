@@ -275,6 +275,14 @@
 - **When** an optimizer holdout run is requested
 - **Then** the promotion is refused.
 
+### S3.18 — independently reconstructed holdout promotion
+- **verifies:** C-3.18
+- **pins:** 161892ab00073d41
+- **run_cmd:** `python -m pytest tests/test_self_improve_evidence.py::test_holdout_promotion_rebuilds_both_reports_and_checks_optimizer_prompts -q`
+- **Given** all baseline and development attempts with official gate artifacts
+- **When** the exact selected instruction is promoted for holdout
+- **Then** the holdout opens only when both reports match reconstructed evidence; a forged report is refused.
+
 ### S3.9 — native Windows sandbox pinned
 - **verifies:** C-3.9
 - **pins:** 4380d6880bf6a226

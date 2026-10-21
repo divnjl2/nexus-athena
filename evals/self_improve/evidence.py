@@ -413,18 +413,67 @@ def summarize(manifest: dict, records: list[dict], artifacts: Path,
     return result
 
 
+def summarize_optimizer_development(manifest: dict, records: list[dict],
+                                    artifacts: Path, instructions_sha256: str) -> dict:
+    """Rebuild the optimizer's development evidence from official attempts."""
+    validate_manifest_shape(manifest)
+    if not isinstance(instructions_sha256, str) or len(instructions_sha256) != 64 or \
+            any(char not in "0123456789abcdef" for char in instructions_sha256):
+        raise ValueError("invalid instruction fingerprint")
+    for record in records:
+        validate_attempt(record, manifest, artifacts)
+    task_ids = [task["id"] for task in manifest["tasks"]
+                if task["split"] == "development"]
+    by_task = defaultdict(list)
+    for record in records:
+        if record["arm"] == "codex_athena_optimizer" and record["task_id"] in task_ids:
+            by_task[record["task_id"]].append(record)
+    ungraded = [item for item in ungraded_attempts(
+        manifest, records, artifacts, ("codex_athena_optimizer",))
+        if item["task_id"] in task_ids]
+    tasks = [{"task_id": task_id,
+              "run_ids": [record["run_id"] for record in sorted(
+                  by_task[task_id], key=lambda item: item["attempt"])],
+              "verified_success": any(record["gate"]["passed"]
+                                      for record in by_task[task_id]),
+              "cost_usd": sum(record["cost_usd"] for record in by_task[task_id]),
+              "wall_seconds": sum(record["total_wall_seconds"]
+                                  for record in by_task[task_id])}
+             for task_id in task_ids]
+    missing = [task_id for task_id in task_ids if not by_task[task_id]]
+    return {"schema": "athena.self-improve.development/1",
+            "manifest_sha256": fingerprint(manifest),
+            "instructions_sha256": instructions_sha256,
+            "complete": not missing and not ungraded,
+            "missing": missing, "ungraded_attempts": ungraded,
+            "evaluated_tasks": len(task_ids) - len(missing),
+            "verified_successes": sum(task["verified_success"] for task in tasks),
+            "total_cost_usd": sum(task["cost_usd"] for task in tasks),
+            "total_wall_seconds": sum(task["wall_seconds"] for task in tasks),
+            "tasks": tasks}
+
+
 def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=Path(__file__).with_name("manifest.json"))
     parser.add_argument("--attempts", type=Path, required=True)
     parser.add_argument("--artifacts", type=Path, required=True)
-    parser.add_argument("--stage", choices=tuple(STAGES), default="final")
+    parser.add_argument("--stage", choices=(*STAGES, "development"), default="final")
+    parser.add_argument("--optimizer-instructions", type=Path,
+                        help="required to fingerprint the selected development instructions")
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
-    report = summarize(manifest, load_attempts(args.attempts, manifest, args.artifacts),
-                       args.artifacts,
-                       stage=args.stage)
+    records = load_attempts(args.attempts, manifest, args.artifacts)
+    if args.stage == "development":
+        if args.optimizer_instructions is None:
+            parser.error("development report requires --optimizer-instructions")
+        instructions = args.optimizer_instructions.read_text(encoding="utf-8")
+        report = summarize_optimizer_development(
+            manifest, records, args.artifacts,
+            hashlib.sha256(instructions.encode("utf-8")).hexdigest())
+    else:
+        report = summarize(manifest, records, args.artifacts, stage=args.stage)
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0 if report["complete"] else 2
 

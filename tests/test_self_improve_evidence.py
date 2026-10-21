@@ -6,8 +6,10 @@ import pytest
 
 from evals.self_improve.codex_driver import usage_from_trace
 from evals.self_improve.corpus import fingerprint, inputs, select
-from evals.self_improve.evidence import SCHEMA, load_attempts, summarize
+from evals.self_improve.evidence import (SCHEMA, load_attempts, summarize,
+                                         summarize_optimizer_development)
 from evals.self_improve.gate_adapter import HARNESS_VERSION, prediction, run_id_for
+from evals.self_improve.pilot import authorize_split, prompt_for
 
 
 def _rows():
@@ -21,10 +23,11 @@ def _rows():
             for i in range(10) for j in range(5)]
 
 
-def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True, attempt=1):
+def _attempt(manifest, tmp_path, *, arm="codex", task=None, passed=True,
+             attempt=1, prompt=None):
     task = task or manifest["tasks"][0]
     row = next(row for row in _rows() if row["instance_id"] == task["id"])
-    prompt = b"frozen prompt\nsecond line\n"
+    prompt = prompt if prompt is not None else b"frozen prompt\nsecond line\n"
     patch = b"diff --git a/x b/x\n"
     patch_hash = hashlib.sha256(patch).hexdigest()
     run_id = run_id_for(task["id"], arm, attempt, patch)
@@ -420,3 +423,68 @@ def test_empty_or_shrunken_manifest_cannot_claim_a_complete_pilot(tmp_path):
     with pytest.raises(ValueError):
         summarize({"schema": "athena.self-improve.corpus/1", "tasks": []},
                   [], tmp_path / "artifacts")
+
+
+def test_holdout_promotion_rebuilds_both_reports_and_checks_optimizer_prompts(
+        tmp_path, monkeypatch):
+    """C-3.18: only full official records with the selected prompt unlock holdout."""
+    manifest = select(_rows())
+    rows = {row["instance_id"]: row for row in _rows()}
+    instructions = "Prefer a small, task-specific context packet."
+    instructions_hash = hashlib.sha256(instructions.encode()).hexdigest()
+    records = []
+    record_dir = tmp_path / "records"
+    record_dir.mkdir()
+    for task in manifest["tasks"]:
+        for arm in ("codex", "codex_athena"):
+            record = _attempt(manifest, tmp_path, arm=arm, task=task)
+            records.append(record)
+            (record_dir / f"{record['run_id']}.json").write_text(json.dumps(record))
+        if task["split"] == "development":
+            prompt = prompt_for(rows[task["id"]], "codex_athena_optimizer",
+                                athena_root=tmp_path,
+                                optimizer_instructions=instructions).encode()
+            record = _attempt(manifest, tmp_path, arm="codex_athena_optimizer",
+                              task=task, prompt=prompt)
+            records.append(record)
+            (record_dir / f"{record['run_id']}.json").write_text(json.dumps(record))
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    baseline = summarize(manifest, records, tmp_path / "artifacts", stage="baseline")
+    development = summarize_optimizer_development(
+        manifest, records, tmp_path / "artifacts", instructions_hash)
+    assert baseline["complete"] and development["complete"]
+    promotion = {"schema": "athena.self-improve.promotion/1",
+                 "manifest_sha256": fingerprint(manifest),
+                 "instructions_sha256": instructions_hash,
+                 "athena_commit": "f" * 40}
+    for name, report in (("baseline", baseline), ("development", development)):
+        data = json.dumps(report, indent=2).encode()
+        (reports / f"{name}.json").write_bytes(data)
+        promotion[f"{name}_report"] = f"{name}.json"
+        promotion[f"{name}_report_sha256"] = hashlib.sha256(data).hexdigest()
+    monkeypatch.setattr("evals.self_improve.pilot.subprocess.check_output",
+                        lambda *args, **kwargs: "f" * 40)
+    holdout = next(task for task in manifest["tasks"] if task["split"] == "holdout")
+    authorize_split(manifest, holdout, "codex_athena_optimizer", instructions,
+                    promotion, reports, tmp_path)
+    # A forged development report can match its promotion hash yet differ from
+    # what the independent attempt records actually prove.
+    development["verified_successes"] += 1
+    forged = json.dumps(development, indent=2).encode()
+    (reports / "development.json").write_bytes(forged)
+    promotion["development_report_sha256"] = hashlib.sha256(forged).hexdigest()
+    with pytest.raises(ValueError, match="independently verified attempt evidence"):
+        authorize_split(manifest, holdout, "codex_athena_optimizer", instructions,
+                        promotion, reports, tmp_path)
+    altered_instructions = "Use no context packet."
+    altered_hash = hashlib.sha256(altered_instructions.encode()).hexdigest()
+    promotion["instructions_sha256"] = altered_hash
+    development["verified_successes"] -= 1
+    development["instructions_sha256"] = altered_hash
+    altered = json.dumps(development, indent=2).encode()
+    (reports / "development.json").write_bytes(altered)
+    promotion["development_report_sha256"] = hashlib.sha256(altered).hexdigest()
+    with pytest.raises(ValueError, match="independently verified attempt evidence"):
+        authorize_split(manifest, holdout, "codex_athena_optimizer",
+                        altered_instructions, promotion, reports, tmp_path)

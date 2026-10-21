@@ -98,6 +98,11 @@
   without independently revalidated attempt evidence THE SYSTEM SHALL refuse the
   optimizer holdout run.
   - source: audit
+- **C-3.18** — BEFORE an optimizer candidate is run on holdout THE SYSTEM SHALL
+  reconstruct complete baseline and development reports from independently gated
+  attempts, verify every development prompt contains the frozen instructions, and
+  reject any report or source revision that differs from those records.
+  - source: design
 - **C-3.8** *(superseded-by C-3.12)* — WHEN the Codex process, tool policy or turn fails THE SYSTEM SHALL mark
   the candidate as an executor error and refuse to score its empty patch as a task
   failure in the official acceptance matrix.
