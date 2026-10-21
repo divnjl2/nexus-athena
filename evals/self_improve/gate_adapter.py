@@ -113,9 +113,13 @@ def attest(*, task_id: str, patch: bytes, official_report: Path,
 def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
                 patch: bytes, row: dict, workdir: Path, gate_dir: Path,
                 timeout: int = 1800, wsl_distro: str | None = None,
-                harness_python: str | None = None) -> dict:
+                harness_python: str | None = None,
+                docker_image: str | None = None) -> dict:
     """Run the official harness once; an absent report stays unproved."""
     gate_start = time.monotonic()
+    if docker_image and (wsl_distro or harness_python or
+                         not re.fullmatch(r"sha256:[0-9a-f]{64}", docker_image)):
+        raise ValueError("Docker harness requires an immutable image ID and no other backend")
     if gate_dir.exists():
         raise FileExistsError(gate_dir)
     run_id = run_id_for(task_id, arm, attempt, patch)
@@ -134,7 +138,15 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     prediction_path = workdir / f"{run_id}.jsonl"
     with prediction_path.open("xb") as stream:
         stream.write(prediction_bytes)
-    if wsl_distro:
+    if docker_image:
+        prefix = ["docker", "run", "--rm", "--mount",
+                  f"type=bind,source={workdir.resolve()},target=/work",
+                  "--mount", "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+                  "--workdir", "/work", docker_image, "python"]
+        dataset_arg = f"/work/{dataset_path.name}"
+        prediction_arg = f"/work/{prediction_path.name}"
+        cwd = None
+    elif wsl_distro:
         if not harness_python or not harness_python.startswith("/"):
             raise ValueError("WSL harness needs an absolute Linux Python path")
         prefix = ["wsl", "-d", wsl_distro, "--cd", _wsl_path(workdir, wsl_distro),
@@ -164,9 +176,9 @@ def run_harness(*, task_id: str, arm: str, attempt: int, model_name: str,
     with stdout_path.open("xb") as stdout_file, stderr_path.open("xb") as stderr_file:
         proc = subprocess.run(command, cwd=cwd, stdout=stdout_file,
                               stderr=stderr_file, timeout=timeout + 1800)
-    report_path = workdir / "logs" / "evaluation" / run_id / model_name / task_id / "report.json"
+    report_path = workdir / "logs" / "run_evaluation" / run_id / model_name / task_id / "report.json"
     if not patch and not report_path.is_file():
-        report_path = workdir / "logs" / "evaluation" / run_id / "results.json"
+        report_path = workdir / "logs" / "run_evaluation" / run_id / "results.json"
     if not report_path.is_file():
         raise RuntimeError(f"official harness produced no per-instance report (exit {proc.returncode})")
     envelope = attest(task_id=task_id, patch=patch, official_report=report_path,

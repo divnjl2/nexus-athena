@@ -80,7 +80,7 @@ def test_harness_reads_a_local_pinned_task_snapshot_and_its_v5_report(tmp_path, 
         dataset = command[command.index("--dataset_name") + 1]
         assert json.loads(open(dataset, encoding="utf-8").read()) == [row]
         run_id = command[command.index("--run_id") + 1]
-        report_dir = workdir / "logs" / "evaluation" / run_id / "codex" / row["instance_id"]
+        report_dir = workdir / "logs" / "run_evaluation" / run_id / "codex" / row["instance_id"]
         report_dir.mkdir(parents=True)
         (report_dir / "report.json").write_text(json.dumps({row["instance_id"]: {"resolved": True}}))
         kwargs["stdout"].write(b"done\n")
@@ -112,7 +112,7 @@ def test_empty_patch_is_bound_to_official_v5_results(tmp_path, monkeypatch):
         if "-c" in command:
             return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n", stderr="")
         run_id = command[command.index("--run_id") + 1]
-        path = workdir / "logs" / "evaluation" / run_id / "results.json"
+        path = workdir / "logs" / "run_evaluation" / run_id / "results.json"
         path.parent.mkdir(parents=True)
         path.write_text(json.dumps({"schema_version": 2, "total_instances": 1,
                                     "submitted_instances": 1, "empty_patch_instances": 1,
@@ -157,3 +157,43 @@ def test_harness_timeout_retains_streamed_diagnostics_without_verdict(tmp_path, 
     assert (workdir / f"{run_id}.stderr.txt").read_bytes() == b"container timed out\n"
     assert not gate_dir.exists()
     assert json.loads((tmp_path / "gate_started.json").read_text())["run_id"] == run_id
+
+
+def test_docker_harness_keeps_linux_patch_bytes_and_reads_v5_report(tmp_path, monkeypatch):
+    """C-4.12: Docker backend runs the official Linux package on exact LF patch bytes."""
+    import evals.self_improve.gate_adapter as adapter
+
+    row = {"instance_id": "repo__task-1", "base_commit": "a" * 40,
+           "problem_statement": "fix it", "FAIL_TO_PASS": ["test_fix"]}
+    patch = b"diff --git a/x b/x\n+one\n"
+    workdir = tmp_path / "harness"
+    image = "sha256:" + "a" * 64
+
+    def fake_run(command, **kwargs):
+        assert command[:3] == ["docker", "run", "--rm"]
+        assert command[command.index("--workdir") + 2:command.index("--workdir") + 4] == [image, "python"]
+        assert f"type=bind,source={workdir.resolve()},target=/work" in command
+        assert "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock" in command
+        if "-c" in command:
+            return subprocess.CompletedProcess(command, 0, stdout="5.0.2\n", stderr="")
+        prediction_arg = command[command.index("--predictions_path") + 1]
+        assert prediction_arg.startswith("/work/")
+        saved = json.loads((workdir / prediction_arg.removeprefix("/work/")).read_text())
+        assert saved["model_patch"].encode() == patch
+        run_id = command[command.index("--run_id") + 1]
+        report_dir = workdir / "logs" / "run_evaluation" / run_id / "codex" / row["instance_id"]
+        report_dir.mkdir(parents=True)
+        (report_dir / "report.json").write_text(json.dumps({row["instance_id"]: {"resolved": True}}))
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(adapter.subprocess, "run", fake_run)
+    result = run_harness(task_id=row["instance_id"], arm="codex", attempt=1,
+                         model_name="codex", patch=patch, row=row,
+                         workdir=workdir, gate_dir=tmp_path / "gate",
+                         docker_image=image)
+    assert result["resolved"] is True
+    with pytest.raises(ValueError, match="immutable image ID"):
+        run_harness(task_id=row["instance_id"], arm="codex", attempt=2,
+                    model_name="codex", patch=patch, row=row,
+                    workdir=workdir, gate_dir=tmp_path / "bad-gate",
+                    docker_image="athena-swebench:5.0.2")

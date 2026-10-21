@@ -66,8 +66,9 @@ def write_report(manifest: dict, root: Path) -> dict:
 
 def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path,
               athena_commit: str, model: str, rates: dict[str, float],
-              candidate_timeout: int, gate_timeout: int, wsl_distro: str,
-              harness_python: str, max_pairs: int | None = None) -> dict:
+              candidate_timeout: int, gate_timeout: int, wsl_distro: str | None,
+              harness_python: str | None, max_pairs: int | None = None,
+              docker_image: str | None = None) -> dict:
     verify(manifest, rows)
     frozen_commit(athena_root, athena_commit)
     source = {row["instance_id"]: row for row in rows}
@@ -109,7 +110,8 @@ def run_batch(*, manifest: dict, rows: list[dict], root: Path, athena_root: Path
                 record = gate_one(manifest=manifest, row=source[task_id],
                                   task_id=task_id, arm=arm, attempt=1, root=root,
                                   timeout=gate_timeout, wsl_distro=wsl_distro,
-                                  harness_python=harness_python)
+                                  harness_python=harness_python,
+                                  docker_image=docker_image)
             except Exception:
                 write_report(manifest, root)
                 raise
@@ -134,8 +136,9 @@ def main() -> int:
     parser.add_argument("--price-card", type=Path, required=True)
     parser.add_argument("--candidate-timeout", type=int, default=900)
     parser.add_argument("--gate-timeout", type=int, default=600)
-    parser.add_argument("--wsl-distro", required=True)
-    parser.add_argument("--harness-python", required=True)
+    parser.add_argument("--wsl-distro")
+    parser.add_argument("--harness-python")
+    parser.add_argument("--docker-image", help="immutable Linux harness image ID (sha256:...)")
     parser.add_argument("--max-pairs", type=int)
     args = parser.parse_args()
     if args.max_pairs is not None and args.max_pairs < 1:
@@ -147,7 +150,8 @@ def main() -> int:
                        rates=json.loads(args.price_card.read_text(encoding="utf-8")),
                        candidate_timeout=args.candidate_timeout,
                        gate_timeout=args.gate_timeout, wsl_distro=args.wsl_distro,
-                       harness_python=args.harness_python, max_pairs=args.max_pairs)
+                       harness_python=args.harness_python, max_pairs=args.max_pairs,
+                       docker_image=args.docker_image)
     print(json.dumps({"complete": report["complete"],
                       "missing_cells": len(report["missing"])}), flush=True)
     return 0 if report["complete"] else 2

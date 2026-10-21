@@ -429,3 +429,11 @@
 - **Given** a candidate whose official gate has started
 - **When** the harness times out or the batch resumes
 - **Then** a start marker remains and the candidate cannot be silently gated again.
+
+### S4.13 — Docker harness preserves patch bytes and reads v5 report
+- **verifies:** C-4.12
+- **pins:** 3e76a6f36754231a
+- **run_cmd:** `python -m pytest tests/test_self_improve_gate_adapter.py::test_docker_harness_keeps_linux_patch_bytes_and_reads_v5_report -q`
+- **Given** a pinned Linux SWE-bench image and an LF candidate patch
+- **When** Docker Desktop runs the official harness
+- **Then** the prediction preserves those bytes and the gate reads the v5 report.

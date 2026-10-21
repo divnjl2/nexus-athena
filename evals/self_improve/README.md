@@ -186,6 +186,24 @@ skipping a pair. It never retries an executor error automatically. Pin `--athena
 40-task baseline is incomplete, and its partial report is written under
 `<root>/reports/partial-baseline.json`.
 
+On Windows, use the pinned Linux SWE-bench harness image with Docker Desktop:
+
+```text
+docker build -f evals/self_improve/Dockerfile.swebench -t athena-swebench:5.0.2 evals/self_improve
+docker image inspect athena-swebench:5.0.2 --format '{{.Id}}'
+python -m evals.self_improve.baseline_batch --root <fresh-run-root> --athena-root <clean-framework-checkout> --athena-commit <commit> --model gpt-6.1-sol --price-card evals/self_improve/price_card_gpt-6.1-sol_2026-10-09.json --docker-image <sha256-image-id> --max-pairs 1
+```
+
+The runner accepts only an immutable image ID for this backend, mounts the
+private harness work directory and Docker socket, and runs the unchanged
+SWE-bench 5.0.2 package inside Linux. Record the image ID for every batch.
+The gate reads v5 reports from `logs/run_evaluation/`. A direct Windows run
+of the same package rewrote an LF candidate patch as CRLF before applying it
+inside Linux; the local `.athena/pilot-v4` run on 2026-10-21 is diagnostic and
+must not be included in the baseline matrix. Its first gate also exposed the
+old adapter's incorrect `logs/evaluation/` lookup. The failed gate marker is
+retained, so that attempt must not be silently retried.
+
 Local runner smoke on 2026-10-09: `codex exec --json` returned exit code 0 and
 31,707 input tokens (28,160 cached), but produced a zero-byte patch. Its trace
 reported that nested filesystem tool calls were blocked by the current host

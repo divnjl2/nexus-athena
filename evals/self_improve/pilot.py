@@ -144,7 +144,8 @@ def run_one(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
 
 def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
              root: Path, timeout: int = 1800, wsl_distro: str | None = None,
-             harness_python: str | None = None) -> dict:
+             harness_python: str | None = None,
+             docker_image: str | None = None) -> dict:
     """Use official harness outside the agent workspace and freeze one attempt record."""
     tasks = {task["id"]: task for task in manifest["tasks"]}
     if task_id not in tasks or arm not in ARMS or attempt < 1:
@@ -178,7 +179,8 @@ def gate_one(*, manifest: dict, row: dict, task_id: str, arm: str, attempt: int,
                            model_name=model_name, patch=patch, row=row,
                            workdir=root / "harness", gate_dir=attempt_dir / "gate",
                            timeout=timeout, wsl_distro=wsl_distro,
-                           harness_python=harness_python)
+                           harness_python=harness_python,
+                           docker_image=docker_image)
     gate_path = attempt_dir / "gate" / "gate.json"
     record = {"schema": "athena.self-improve.attempt/1",
               "run_id": envelope["run_id"], "task_id": task_id, "arm": arm,
@@ -239,6 +241,7 @@ def main() -> int:
                         help="frozen candidate decision required for optimizer holdout runs")
     parser.add_argument("--wsl-distro", help="run the pinned official harness in this WSL distro")
     parser.add_argument("--harness-python", help="Python executable with SWE-bench 5.0.2")
+    parser.add_argument("--docker-image", help="immutable Linux harness image ID (sha256:...)")
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     rows = load_pinned()
@@ -257,7 +260,8 @@ def main() -> int:
                           task_id=args.task, arm=args.arm,
                           attempt=args.attempt, root=args.root, timeout=args.timeout,
                           wsl_distro=args.wsl_distro,
-                          harness_python=args.harness_python)
+                          harness_python=args.harness_python,
+                          docker_image=args.docker_image)
         print(json.dumps(record, indent=2))
         return 0 if record["gate"]["passed"] else 1
     if not all((args.task, args.arm, args.root, args.model, args.price_card)):

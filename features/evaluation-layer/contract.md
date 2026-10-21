@@ -179,6 +179,12 @@
   be mistaken for an ungated candidate or silently retried.
   - source: audit
 
+- **C-4.12** — WHEN the official SWE-bench harness runs through Docker Desktop
+  THE SYSTEM SHALL execute the pinned Linux harness image, preserve the exact
+  candidate patch bytes across the container boundary, and read the v5 report
+  from its actual output directory before accepting a verdict.
+  - source: incident
+
 ## C-5 — Cluster inference qualification
 
 - **C-5.1** — WHEN a cluster inference route is probed THE SYSTEM SHALL verify
