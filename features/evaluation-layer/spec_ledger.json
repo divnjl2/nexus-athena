@@ -1,10 +1,10 @@
 {
-  "contract_version": "99091402d6a1197c",
+  "contract_version": "d47f9cd52b9e812d",
   "results": [
     {
       "clause": "C-5.10",
       "clause_version": "b695330d29610a40",
-      "duration_ms": 5497,
+      "duration_ms": 3843,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-5.11",
       "clause_version": "644d6dff9f6ca694",
-      "duration_ms": 5497,
+      "duration_ms": 3843,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -24,7 +24,7 @@
     {
       "clause": "C-5.12",
       "clause_version": "7e50390de27768ab",
-      "duration_ms": 5497,
+      "duration_ms": 3843,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-5.13",
       "clause_version": "bf898a4b4913f4ce",
-      "duration_ms": 5497,
+      "duration_ms": 3843,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-5.9",
       "clause_version": "503941c35a58bafa",
-      "duration_ms": 289,
+      "duration_ms": 180,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -54,7 +54,7 @@
     {
       "clause": "C-5.8",
       "clause_version": "5faf7d8590a9ccff",
-      "duration_ms": 5497,
+      "duration_ms": 3843,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -64,7 +64,7 @@
     {
       "clause": "C-5.6",
       "clause_version": "1167f673e3b2da65",
-      "duration_ms": 5500,
+      "duration_ms": 3847,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -74,7 +74,7 @@
     {
       "clause": "C-5.7",
       "clause_version": "bf140793a31c3d5c",
-      "duration_ms": 5497,
+      "duration_ms": 3843,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -84,7 +84,7 @@
     {
       "clause": "C-5.5",
       "clause_version": "114d139c0004633d",
-      "duration_ms": 125,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-5.2",
       "clause_version": "bec492b8fbfe8b17",
-      "duration_ms": 1043,
+      "duration_ms": 1031,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -124,7 +124,7 @@
     {
       "clause": "C-5.1",
       "clause_version": "5279fec8b3cf482d",
-      "duration_ms": 2,
+      "duration_ms": 3,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -144,7 +144,7 @@
     {
       "clause": "C-1.2",
       "clause_version": "ec00ab0724938b98",
-      "duration_ms": 8,
+      "duration_ms": 7,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -154,7 +154,7 @@
     {
       "clause": "C-1.5",
       "clause_version": "63c9996205014b58",
-      "duration_ms": 1,
+      "duration_ms": 124,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -164,7 +164,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "7e00d7d4c26e89cd",
-      "duration_ms": 159,
+      "duration_ms": 20,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -174,7 +174,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "c5c3fb2d3d0b425b",
-      "duration_ms": 49,
+      "duration_ms": 31,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -184,7 +184,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "a75910948b86c287",
-      "duration_ms": 17495,
+      "duration_ms": 3782,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -194,7 +194,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "8d8a52abf9251a2c",
-      "duration_ms": 6697,
+      "duration_ms": 2189,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,7 +204,7 @@
     {
       "clause": "C-2.5",
       "clause_version": "d2cc53f01443a234",
-      "duration_ms": 6481,
+      "duration_ms": 1836,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -224,7 +224,7 @@
     {
       "clause": "C-2.9",
       "clause_version": "4eb3e212f530e040",
-      "duration_ms": 260,
+      "duration_ms": 173,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -234,7 +234,7 @@
     {
       "clause": "C-2.10",
       "clause_version": "0de767d8110aaa1f",
-      "duration_ms": 256,
+      "duration_ms": 107,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -244,7 +244,7 @@
     {
       "clause": "C-2.11",
       "clause_version": "efac08ac5f35f138",
-      "duration_ms": 13359,
+      "duration_ms": 3265,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -254,7 +254,7 @@
     {
       "clause": "C-2.8",
       "clause_version": "a5670c08858f679e",
-      "duration_ms": 33931,
+      "duration_ms": 17811,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -274,7 +274,7 @@
     {
       "clause": "C-3.2",
       "clause_version": "c5f6c954fd07503d",
-      "duration_ms": 1573,
+      "duration_ms": 1750,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -304,7 +304,7 @@
     {
       "clause": "C-3.5",
       "clause_version": "beb162706c41ab87",
-      "duration_ms": 1415,
+      "duration_ms": 1925,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -314,7 +314,7 @@
     {
       "clause": "C-3.6",
       "clause_version": "a998fa2c6a8dc828",
-      "duration_ms": 3,
+      "duration_ms": 38,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -324,7 +324,7 @@
     {
       "clause": "C-3.7",
       "clause_version": "01c015fd6451bc4c",
-      "duration_ms": 135,
+      "duration_ms": 6,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -334,7 +334,7 @@
     {
       "clause": "C-3.17",
       "clause_version": "7b7867b3757cd6df",
-      "duration_ms": 135,
+      "duration_ms": 6,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -344,7 +344,7 @@
     {
       "clause": "C-3.18",
       "clause_version": "161892ab00073d41",
-      "duration_ms": 24650,
+      "duration_ms": 11486,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -374,7 +374,7 @@
     {
       "clause": "C-3.11",
       "clause_version": "88eed663dadf9010",
-      "duration_ms": 1988,
+      "duration_ms": 1925,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -384,7 +384,7 @@
     {
       "clause": "C-3.12",
       "clause_version": "9dfb6d99410c7f88",
-      "duration_ms": 176,
+      "duration_ms": 33,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -394,7 +394,7 @@
     {
       "clause": "C-3.14",
       "clause_version": "a016a6ab4856dfb5",
-      "duration_ms": 3360,
+      "duration_ms": 1500,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -404,7 +404,7 @@
     {
       "clause": "C-3.15",
       "clause_version": "92d2d4df0b3b5d67",
-      "duration_ms": 7782,
+      "duration_ms": 3575,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -414,7 +414,7 @@
     {
       "clause": "C-3.16",
       "clause_version": "b5ca872906d415e9",
-      "duration_ms": 8007,
+      "duration_ms": 1454,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -422,9 +422,19 @@
       "scenario": "S3.16"
     },
     {
+      "clause": "C-3.19",
+      "clause_version": "896da6cc8fbb1d89",
+      "duration_ms": 6029,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_self_improve_codex_driver.py::test_timeout_stops_launcher_and_descendant_before_evidence_is_sealed tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q",
+      "scenario": "S3.19"
+    },
+    {
       "clause": "C-3.13",
       "clause_version": "3c0cebbdefe1e338",
-      "duration_ms": 272,
+      "duration_ms": 63,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -444,7 +454,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "031ca1911ac30a2e",
-      "duration_ms": 4,
+      "duration_ms": 130,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -454,7 +464,7 @@
     {
       "clause": "C-4.4",
       "clause_version": "659da23f2fdec25a",
-      "duration_ms": 27,
+      "duration_ms": 25,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -464,7 +474,7 @@
     {
       "clause": "C-4.5",
       "clause_version": "128ac47a3504b741",
-      "duration_ms": 327,
+      "duration_ms": 32,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -474,7 +484,7 @@
     {
       "clause": "C-4.6",
       "clause_version": "68160e61f974a4d3",
-      "duration_ms": 60,
+      "duration_ms": 11,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -484,7 +494,7 @@
     {
       "clause": "C-4.7",
       "clause_version": "94199369ad4d69c9",
-      "duration_ms": 124,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -494,7 +504,7 @@
     {
       "clause": "C-4.7",
       "clause_version": "94199369ad4d69c9",
-      "duration_ms": 12,
+      "duration_ms": 10,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -504,7 +514,7 @@
     {
       "clause": "C-4.8",
       "clause_version": "19a5118f74325fd4",
-      "duration_ms": 33208,
+      "duration_ms": 30782,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -514,7 +524,7 @@
     {
       "clause": "C-4.9",
       "clause_version": "d275f72ebed0b076",
-      "duration_ms": 460,
+      "duration_ms": 28,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -524,7 +534,7 @@
     {
       "clause": "C-4.10",
       "clause_version": "c5317348006e5f7d",
-      "duration_ms": 314,
+      "duration_ms": 12,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -534,7 +544,7 @@
     {
       "clause": "C-4.11",
       "clause_version": "ad7d51a2d90d8c18",
-      "duration_ms": 344,
+      "duration_ms": 127,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -544,7 +554,7 @@
     {
       "clause": "C-4.12",
       "clause_version": "3e76a6f36754231a",
-      "duration_ms": 14,
+      "duration_ms": 9,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -562,13 +572,13 @@
       "scenario": "S4.14"
     }
   ],
-  "scenario_version": "e45d6c1ed02a1ba8",
+  "scenario_version": "e0ff8405e739535c",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 203047,
+    "duration_ms": 118442,
     "failed": 0,
-    "passed": 56,
-    "total": 56
+    "passed": 57,
+    "total": 57
   },
-  "ts": "2026-10-21T19:22:55+00:00"
+  "ts": "2026-10-22T16:47:50+00:00"
 }

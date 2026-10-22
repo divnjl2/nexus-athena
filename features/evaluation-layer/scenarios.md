@@ -348,6 +348,14 @@
 - **When** trace line endings or diagnostic bytes are changed
 - **Then** their saved fingerprints reject the attempt before grading or reporting.
 
+### S3.19 — timed-out CLI leaves no descendant writing evidence
+- **verifies:** C-3.19
+- **pins:** 896da6cc8fbb1d89
+- **run_cmd:** `python -m pytest tests/test_self_improve_codex_driver.py::test_timeout_stops_launcher_and_descendant_before_evidence_is_sealed tests/test_self_improve_cluster_pilot.py::test_cluster_candidate_is_unpriced_and_only_official_gate_accepts_it -q`
+- **Given** a Codex launcher that starts a child worker
+- **When** its attempt reaches the runtime budget
+- **Then** both processes stop before evidence is sealed and the attempt has no acceptance verdict.
+
 ### S3.13 — resume without duplicate attempts
 - **verifies:** C-3.13
 - **pins:** 3c0cebbdefe1e338

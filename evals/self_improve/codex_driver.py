@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import os
+import signal
 import shutil
 import subprocess
 import time
@@ -19,6 +20,28 @@ from .corpus import fingerprint
 
 MODEL_CONTEXT_WINDOW = 272_000
 AUTO_COMPACT_LIMIT = 240_000
+
+
+def process_isolation() -> dict:
+    """Start the CLI in a group that can be stopped with all its descendants."""
+    if os.name == "nt":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
+
+def stop_process_tree(proc: subprocess.Popen) -> None:
+    """A timed-out Node launcher must not leave its Codex child writing evidence."""
+    if os.name == "nt":
+        stopped = subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                                 capture_output=True, check=False)
+        if stopped.returncode:
+            if proc.poll() is None:
+                proc.kill()
+                proc.communicate()
+            raise RuntimeError("could not stop the complete timed-out Codex process tree")
+    else:
+        os.killpg(proc.pid, signal.SIGKILL)
+    proc.communicate()
 
 
 def usage_from_trace(trace: str) -> dict[str, int]:
@@ -145,13 +168,13 @@ def run_codex(workspace: Path, *, prompt: str, model: str, timeout: int,
     with trace_path.open("wb") as trace_file, stderr_path.open("wb") as stderr_file:
         try:
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=trace_file,
-                                    stderr=stderr_file, cwd=workspace)
+                                    stderr=stderr_file, cwd=workspace,
+                                    **process_isolation())
             try:
                 proc.communicate(input=prompt_bytes, timeout=timeout)
                 exit_code = proc.returncode
             except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.communicate()
+                stop_process_tree(proc)
                 exit_code = 124
         except OSError as exc:
             exit_code = 127

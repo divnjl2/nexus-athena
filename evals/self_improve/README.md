@@ -118,7 +118,8 @@ streams during diagnosis; the direct local bridge passed its full probe.
 
 The first real Codex candidate through that local bridge, for development task
 `psf__requests-5414` on 2026-10-21, timed out at the fixed 900-second limit.
-Its preserved trace contains 53 completed shell commands but no completed
+At the time the runner sealed its record, its trace contained 53 completed
+shell commands but no completed
 Codex turn and no patch. The agent repeatedly requested lines beyond the end
 of an 817-line file, including requests starting at line 2500. The runner
 recorded `executor_error` with exit code 124; the official acceptance harness
@@ -128,11 +129,30 @@ concerns the agent's task execution. This single task does not establish an
 overall cluster model success rate. Any revised prompt or route needs a new
 attempt with its own provenance and independent gate.
 The paired `codex_athena` candidate reached the same 900-second limit with
-62 completed shell commands, 27 of them failing, no completed Codex turn and
+62 completed shell commands at sealing, 27 of them failing, no completed Codex turn and
 no patch. It reproduced the URL error but spent many commands on malformed
 PowerShell/Python one-liners. Both candidates are `executor_error`; neither
 entered the official gate. This paired failure does not support a quality
 comparison between the two prompts.
+On 2026-10-22, a follow-up audit found that the timed-out Windows Node launcher
+had left its Codex child alive after the local bridge stopped. Both local trace
+files gained additional events after their candidate hashes were written; the
+second trace reached 1,169 events, mostly reconnect errors. The two candidates
+are therefore also invalid as immutable evidence. The orphaned process was
+stopped, and candidate timeout handling now stops the complete process tree
+before hashing artifacts. A runtime budget ends one attempt; it is not a
+task-level judgment that the issue cannot be solved by another executor or
+later attempt.
+
+The fixed-image `pilot-v6` cloud baseline reached eight independently validated
+task pairs before its ninth task's official Docker gate exited 125 with
+`error waiting for container: unexpected EOF` on 2026-10-21. The candidate
+patch and gate-start marker remain, but there is no official verdict for that
+cell. Docker Desktop was stopped at the next audit and the host D: volume had
+about 0.11 GiB free; its shared `docker_data.vhdx` was 89.74 GiB. The run is
+incomplete (16 of 80 baseline cells). The completed pairs remain evidence;
+the interrupted gate must not be retried as though it never started, and disk
+recovery must account for unrelated Docker data.
 
 The local Windows vLLM lane at `127.0.0.1:8001` passed that three-exchange
 probe with `qwen3.5-9b`, 2,048 output tokens and reasoning effort `none`.

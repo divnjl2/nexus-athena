@@ -3,11 +3,13 @@ import json
 import hashlib
 import subprocess
 import sys
+import time
 
 import pytest
 
 from evals.self_improve.codex_driver import (candidate_patch, codex_argv,
-                                             executor_failure, price_usd, run_codex,
+                                             executor_failure, price_usd, process_isolation,
+                                             run_codex, stop_process_tree,
                                              usage_from_trace)
 
 
@@ -147,3 +149,30 @@ def test_timed_out_candidate_keeps_streamed_trace_and_fails_closed(tmp_path, mon
     assert candidate["verified"] is False
     assert (artifacts / "trace.jsonl").read_bytes() == b'{"type":"turn.started"}\n'
     assert (artifacts / "stderr.txt").read_bytes() == b"partial diagnostic\n"
+
+
+def test_timeout_stops_launcher_and_descendant_before_evidence_is_sealed(tmp_path):
+    """A CLI wrapper may spawn the real worker; neither may outlive the attempt."""
+    marker = tmp_path / "late-write.txt"
+    child = tmp_path / "child.py"
+    child.write_text("import pathlib, sys, time\n"
+                     "time.sleep(2)\n"
+                     "pathlib.Path(sys.argv[1]).write_text('late')\n")
+    parent = tmp_path / "parent.py"
+    parent.write_text("import subprocess, sys, time\n"
+                      "subprocess.Popen([sys.executable, sys.argv[1], sys.argv[2]], "
+                      "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, "
+                      "stderr=subprocess.DEVNULL)\n"
+                      "print('ready', flush=True)\n"
+                      "time.sleep(30)\n")
+    proc = subprocess.Popen([sys.executable, str(parent), str(child), str(marker)],
+                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, **process_isolation())
+    try:
+        assert proc.stdout.readline().strip() == b"ready"
+        stop_process_tree(proc)
+        time.sleep(2.2)
+        assert not marker.exists()
+    finally:
+        if proc.poll() is None:
+            stop_process_tree(proc)

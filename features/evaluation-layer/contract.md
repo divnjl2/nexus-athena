@@ -139,6 +139,10 @@
   THE SYSTEM SHALL bind its trace and stderr to exact saved file bytes and reject
   any changed bytes, including semantically equivalent newline rewrites.
   - source: audit
+- **C-3.19** — WHEN a Codex candidate reaches its runtime budget THE SYSTEM
+  SHALL stop its launcher and descendants before sealing trace evidence.
+  The attempt has no task acceptance verdict without an independent gate.
+  - source: incident
 
 ## C-4 — Independent acceptance
 

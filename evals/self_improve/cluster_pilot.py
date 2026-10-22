@@ -18,7 +18,8 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .codex_driver import candidate_patch, executor_failure, usage_from_trace
+from .codex_driver import (candidate_patch, executor_failure, process_isolation,
+                           stop_process_tree, usage_from_trace)
 from .corpus import acceptance, fingerprint, inputs, load_pinned, verify
 from .evidence import file_sha256
 from .gate_adapter import official_verdict, run_harness, validate_harness_io
@@ -161,13 +162,13 @@ def run_candidate(*, manifest: dict, rows: list[dict], task_id: str, arm: str,
     stderr_path = artifacts / "stderr.txt"
     with trace_path.open("wb") as trace_stream, stderr_path.open("wb") as stderr_stream:
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=trace_stream,
-                                stderr=stderr_stream, cwd=workspace, env=env)
+                                stderr=stderr_stream, cwd=workspace, env=env,
+                                **process_isolation())
         try:
             proc.communicate(input=prompt_bytes, timeout=timeout)
             exit_code = proc.returncode
         except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.communicate()
+            stop_process_tree(proc)
             exit_code = 124
     elapsed = time.monotonic() - start
     ended_at = datetime.now(timezone.utc).isoformat()
