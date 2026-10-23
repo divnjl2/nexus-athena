@@ -8,6 +8,8 @@ Turn a one-line intent into a **complete, traceable, compilable plan** — and a
 **provenance graph** where every task's success check is a *proof that a requirement holds*,
 not just "a test passed."
 
+For an existing project on the owner's machine, use the [project factory entrypoint](docs/factory-workflow.md): record an intent, let the frontier author the proof artifacts, dispatch a committed task through the cluster Pi harness in an isolated worktree, then review the independent gate.
+
 **v3.3 adds the requirement contract**: numbered clauses with immutable ids that are
 *superseded, never edited in place*, so a reference written months ago keeps resolving. Each
 clause is bound to an executable spec, which makes three questions a linear scan instead of a

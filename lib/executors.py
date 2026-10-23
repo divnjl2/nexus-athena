@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import pathlib
 
-EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b", "pi-k3s9")
+EXECUTORS = ("local-27b", "local-9b", "openhands", "claude", "pi-27b", "pi-9b", "pi-omni9", "pi-4b", "pi-3b", "pi-2b", "pi-k3s9", "pi-cluster-agent", "pi-cluster-worker")
 LANE_MODELS = {"local-27b": "qwopus-27b", "local-9b": "qwable-9b"}
 LOCAL_GATEWAY = "http://127.0.0.1:8413"
 EDIT_TOOLS = "Read,Glob,Grep,Edit,Write"
@@ -49,12 +49,16 @@ PI_PROVIDERS = {"pi-27b": ("lane27", "qwen3.8-27b"), "pi-9b": ("lane9", "qwen3.5
                 # 29.09: the first lane off this box — ai-server lane a (RTX 3060 Ti, llama.cpp in k3s, 6 x 28k,
                 # Qwopus3.5-9B-v3 Q4_K_M) at 192.168.1.136:8024; the strict variant goes through the loopback fence
                 # relay on 60085, since the OS sandbox permits loopback only
-                "pi-k3s9": ("k3s9", "qwopus35-9b-v3")}
+                "pi-k3s9": ("k3s9", "qwopus35-9b-v3"),
+                # Role-based gateway route. The owner's Pi models.json already registers
+                # this provider; the gateway decides the live lane and its fallback.
+                "pi-cluster-agent": ("k3s9b", "agent"),
+                "pi-cluster-worker": ("k3s9b", "worker")}
 PI_TOOLS = "read,bash,edit,write"
 #: reasoning effort per lane. Measured on the vanilla 27B, one coding prompt: its default
 #: (xhigh) spent 6000 tokens on reasoning in 214 s and never answered; low answered in 13 s,
 #: medium in 46 s; "high" the lane rejects with a 400.
-PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-omni9": "low", "pi-4b": "low", "pi-3b": "low", "pi-2b": "low", "pi-k3s9": "low"}
+PI_THINKING = {"pi-27b": "low", "pi-9b": "medium", "pi-omni9": "low", "pi-4b": "low", "pi-3b": "low", "pi-2b": "low", "pi-k3s9": "low", "pi-cluster-agent": "low", "pi-cluster-worker": "low"}
 #: hashline (C-3.7): the pi-hashline-edit-pro extension registers read / replace / insert /
 #: anchor_grep / undo_last_change and disables the string-replace edit. Lines come back as
 #: `Dafo│content`; an edit names anchors; a stale anchor is refused ([E_RANGE_STALE]) instead
