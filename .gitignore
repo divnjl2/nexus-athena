@@ -32,3 +32,7 @@ evals/swebench/results/
 # athena working dir: seams.jsonl, the clause-map build tree, ledgers in flight.
 # The committed PROOF artifacts live in features/<feature>/ instead.
 .athena/
+
+# Beads / Dolt files (added by bd init)
+.beads/proxieddb/
+*.gate.lock*

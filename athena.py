@@ -630,11 +630,8 @@ def cmd_mutate(a) -> int:
         unrun = sum(1 for sid in spec_cmds if sid not in seen)
 
     def runner(cmd):
-        try:
-            return subprocess.run(cmd.split(), cwd=a.cwd, capture_output=True, text=True,
-                                  timeout=a.timeout).returncode
-        except subprocess.TimeoutExpired:
-            return 124
+        from lib.verification import run_command
+        return run_command(cmd, cwd=a.cwd, timeout=a.timeout)
 
     def writer(path, text):
         pathlib.Path(path).write_text(text, encoding="utf-8")
@@ -648,11 +645,8 @@ def cmd_mutate(a) -> int:
             (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
 
         def runner(cmd):                                          # noqa: F811
-            try:
-                return subprocess.run(cmd.split(), cwd=mirror, capture_output=True,
-                                      text=True, timeout=a.timeout).returncode
-            except subprocess.TimeoutExpired:
-                return 124
+            from lib.verification import run_command
+            return run_command(cmd, cwd=mirror, timeout=a.timeout)
     else:
         snapshot(targets, lock_path=a.lock)
     try:
@@ -663,7 +657,7 @@ def cmd_mutate(a) -> int:
             excluded = measure_baseline(spec_cmds, sorted(candidates), runner=runner)
         res = hunt(cmap, spec_cmds, targets, runner=runner, writer=writer,
                    limit_per_line=a.per_line, max_mutants=a.max_mutants,
-                   max_specs=a.max_specs, exclude=tuple(excluded))
+                   max_specs=a.max_specs, exclude=tuple(excluded), verify_baseline=True)
     finally:
         if not a.isolate:
             recover(lock_path=a.lock)
@@ -671,10 +665,10 @@ def cmd_mutate(a) -> int:
     if a.out:
         pathlib.Path(a.out).write_text(json.dumps(rep, indent=2, sort_keys=True) + "\n",
                                        encoding="utf-8")
-    _emit({k: rep[k] for k in ("mutants", "killed", "survived", "score")}
+    _emit({k: rep[k] for k in ("mutants", "killed", "survived", "score", "state", "evaluated", "tool_errors", "unowned", "undetermined", "budget_exhausted")}
           | {"survivors": [f"{s['path']}:{s['line']} ({s['kind']})" for s in rep["survivors"]][:20],
              "out": a.out})
-    return 0
+    return 0 if rep["state"] == "PASS" else 1
 
 
 def cmd_judge_corpus(a) -> int:
@@ -818,6 +812,21 @@ def cmd_init(a) -> int:
     return 0
 
 
+def cmd_trust(a) -> int:
+    from lib.spec_trust import audit
+    try:
+        report = audit(a.cwd, a.manifest, timeout=a.timeout)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        report = {"schema": "athena.spec_trust/1", "state": "FAIL", "passed": False,
+                  "reason": str(exc)}
+    if a.out:
+        out = pathlib.Path(a.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _emit(report)
+    return 0 if report["passed"] else 1
+
+
 def cmd_check(a) -> int:
     """The product surface: the whole loop, one verdict, one exit code."""
     from lib.check import render
@@ -916,6 +925,17 @@ def _check_report(a) -> dict:
         judge = score(tuple(Pair(**p) for p in payload["pairs"]),
                       decisions.get("decisions", decisions))
 
+    trust = None
+    if getattr(a, "trust", "") or getattr(a, "trust_evidence", ""):
+        from lib.spec_trust import check_evidence
+        try:
+            if not a.trust or not a.trust_evidence:
+                raise ValueError("both --trust and --trust-evidence are required")
+            trust = check_evidence(a.cwd, a.trust, json.loads(_read(a.trust_evidence)),
+                                   contract_path=a.contract)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            trust = {"state": "FAIL", "reason": str(exc)}
+
     report = build(missing_inputs=tuple(missing), allow_partial=a.allow_partial,
                    lint_issues=lint(contract), critique_warnings=critique(contract),
                    coverage=cov_report(contract, scenarios),
@@ -923,7 +943,7 @@ def _check_report(a) -> dict:
                    todo=todo_report(contract, scenarios, ledger),
                    drift=drift_report(contract, scenarios, ledger),
                    gates=gates, mutation=mutation, judge=judge, refs=refs,
-                   strict_wording=a.strict)
+                   strict_wording=a.strict, trust=trust)
     return report
 
 
@@ -2861,16 +2881,14 @@ def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants
     mirror = isolate(str(ws), default_mirror(str(ws)))
 
     def runner(cmd):
-        argv = cmd.split()
+        from lib.verification import run_command
+        prefix = []
         if governor_gb:
             # C-5.4: the heavy gate under the process governor, when the host has it
             import shutil as _sh
             from lib.host import governed_argv
-            argv = governed_argv(argv, ceiling_gb=int(governor_gb), which=_sh.which)["argv"]
-        try:
-            return subprocess.run(argv, cwd=mirror, capture_output=True, text=True, timeout=timeout).returncode
-        except subprocess.TimeoutExpired:
-            return 124
+            prefix = governed_argv([], ceiling_gb=int(governor_gb), which=_sh.which)["argv"]
+        return run_command(cmd, cwd=mirror, timeout=timeout, prefix=prefix)
 
     def writer(path, text):
         (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
@@ -2904,13 +2922,14 @@ def _mutation_stage_for(workspace, target: str, *, threshold: float, max_mutants
                 targets[path] = {"source": src.read_text(encoding="utf-8", errors="replace"), "lines": sorted(lines)}
         if not targets:
             continue
-        res = hunt(cmap, spec_cmds, targets, runner=runner, writer=writer, max_mutants=max_mutants)
+        res = hunt(cmap, spec_cmds, targets, runner=runner, writer=writer, max_mutants=max_mutants,
+                   verify_baseline=True)
         v = mutation_stage(changed, cmap, [dict(r) for r in res], threshold=threshold)
         v["contract"] = str(contract_md.parent.name)
         if not v["ok"]:
             s = v.get("survivor") or {}
-            v["reason"] = (f"{v.get('clause')}: survivor {s.get('path')}:{s.get('line')} ({s.get('kind')}) "
-                           f"on an added line, {v['contract']}")
+            v["reason"] = v.get("reason") or (f"{v.get('clause')}: survivor {s.get('path')}:{s.get('line')} ({s.get('kind')}) "
+                                              f"on an added line, {v['contract']}")
             return v
         worst = v
     return worst
@@ -3497,6 +3516,7 @@ def _deep_mutation(a, contract, scenarios) -> dict:
         # and it looked like diligence. A whole-repo sweep is an explicit choice.
         if not a.deep_all:
             return {"mutants": 0, "killed": 0, "survived": 0, "survivors": [],
+                    "state": "NOT_REQUIRED", "score": None, "evaluated": 0,
                     "blocking": a.strict, "scope": [],
                     "note": "no clause drifted — nothing to re-prove (use --deep-all to sweep)"}
         drifted = {c.id for c in contract.live()}
@@ -3510,21 +3530,19 @@ def _deep_mutation(a, contract, scenarios) -> dict:
                if pathlib.Path(p).exists()}
     if not targets:
         return {"mutants": 0, "killed": 0, "survived": 0, "survivors": [],
+                "state": "INCOMPLETE", "score": None, "evaluated": 0,
                 "blocking": a.strict, "scope": sorted(drifted)[:10]}
     mirror = isolate(".", a.mirror or default_mirror("."))
 
     def runner(cmd):
-        try:
-            return subprocess.run(cmd.split(), cwd=mirror, capture_output=True, text=True,
-                                  timeout=a.timeout).returncode
-        except subprocess.TimeoutExpired:
-            return 124
+        from lib.verification import run_command
+        return run_command(cmd, cwd=mirror, timeout=a.timeout)
 
     def writer(path, text):
         (pathlib.Path(mirror) / path).write_text(text, encoding="utf-8")
 
     res = hunt(cmap, _spec_cmds(scenarios), targets, runner=runner, writer=writer,
-               max_mutants=a.max_mutants, max_specs=a.max_specs)
+               max_mutants=a.max_mutants, max_specs=a.max_specs, verify_baseline=True)
     return {**summarize(res), "blocking": a.strict, "scope": sorted(drifted)[:10]}
 
 
@@ -3543,6 +3561,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="version", version=f"athena {__version__}")
     p.add_argument("--speckit", choices=("on", "off", "auto"), default="auto")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    tr = sub.add_parser("trust", help="challenge specs with curated valid alternatives and semantic violations")
+    tr.add_argument("manifest", help="reviewer-owned JSON manifest, relative to --cwd")
+    tr.add_argument("--cwd", default=".")
+    tr.add_argument("--timeout", type=int, default=120)
+    tr.add_argument("-o", "--out", default="")
+    tr.set_defaults(fn=cmd_trust)
 
     v = sub.add_parser("validate"); v.add_argument("front"); v.set_defaults(fn=cmd_validate)
     c = sub.add_parser("compile"); c.add_argument("front"); c.add_argument("--run", action="store_true", help="execute the bd commands: the plan becomes the ready queue"); c.set_defaults(fn=cmd_compile)
@@ -4036,6 +4061,8 @@ def build_parser() -> argparse.ArgumentParser:
     ck.add_argument("--strict", action="store_true", help="wording + mutation findings block too")
     ck.add_argument("--judge", default="", help="judge corpus, to fold in an advisory score")
     ck.add_argument("--judge-decisions", dest="judge_decisions", default="")
+    ck.add_argument("--trust", default="", help="reviewer-owned spec-trust manifest, relative to --cwd")
+    ck.add_argument("--trust-evidence", default="", help="receipt from athena trust; missing or stale evidence blocks")
     ck.add_argument("--skip-tag", dest="skip_tag", action="append", default=[])
     ck.add_argument("--env", action="append", default=[], metavar="KEY=VALUE")
     ck.add_argument("--jobs", type=int, default=0)

@@ -21,6 +21,7 @@ EFFECT_MODULES = ("subprocess", "socket", "urllib", "http", "requests", "ssl", "
 #: The seams: the only lib modules allowed to spawn or dial out.
 EFFECT_ALLOWED = frozenset({
     "lib/spec_runner.py",   # runs the executable specs
+    "lib/verification.py",  # typed local verifier boundary (ADR-0010)
     "lib/clause_map.py",    # runs each spec under coverage
     "lib/adapters.py",      # reads the HEAD sha of a repository
     "lib/bd_client.py",     # the only subprocess boundary to `bd`

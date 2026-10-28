@@ -40,6 +40,7 @@ import os
 import pathlib
 import shlex
 import subprocess
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
@@ -137,6 +138,11 @@ def _spawn(argv: list[str], *, cwd: str, timeout: int, env: dict | None = None) 
     cost 10.3s of the 10.8s a spec took. `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` is a per-project
     decision (a suite may NEED a plugin), so it is a caller knob, never a default.
     """
+    argv = list(argv)
+    if argv and pathlib.Path(argv[0]).name.lower() in ("python", "python3", "python.exe"):
+        argv[0] = sys.executable
+    elif argv and pathlib.Path(argv[0]).name.lower() in ("pytest", "pytest.exe"):
+        argv = [sys.executable, "-m", "pytest", *argv[1:]]
     try:
         p = subprocess.run(argv, shell=False, cwd=cwd, capture_output=True,
                            text=True, timeout=timeout, errors="replace",
@@ -287,12 +293,17 @@ def attribute(sc: Scenario, cases: dict) -> SpecResult:
     for node in nodes:
         cls, name = _node_key(node)
         if name:
-            hit = cases.get((cls, name))
-            if hit:
-                hits.append(hit)
+            found = [c for (k_cls, k_name), c in cases.items()
+                     if k_cls == cls and (k_name == name or ('[' not in name and k_name.startswith(name + '[')))]
         else:
-            hits += [c for (k_cls, _), c in cases.items()
+            found = [c for (k_cls, _), c in cases.items()
                      if k_cls == cls or k_cls.startswith(cls + ".")]
+        if not found:
+            return SpecResult(scenario_id=sc.id, clause_id=sc.requirement_key,
+                              clause_version=sc.clause_version, run_cmd=sc.run_cmd,
+                              passed=False, exit_code=_NOT_REPORTED, duration_ms=0,
+                              output_tail=f"not in the runner's report: {node}")
+        hits.extend(found)
     duration = int(sum(c["time"] for c in hits) * 1000)
     base = dict(scenario_id=sc.id, clause_id=sc.requirement_key,
                 clause_version=sc.clause_version, run_cmd=sc.run_cmd)

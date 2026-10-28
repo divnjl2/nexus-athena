@@ -1,0 +1,831 @@
+{
+  "clauses": [
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.1] _________________________\n\nclause = 'C-1.1'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x0000023D2E339300>('C-1.1')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.1]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n_______________________ test_no_decisions_have_no_score _______________________\n\n    def test_no_decisions_have_no_score():\n        for rows in ((), ({\"status\": \"unowned\", \"killed\": False},),\n                     ({\"status\": \"undetermined\", \"killed\": False},),\n                     ({\"status\": \"tool_error\", \"killed\": False},)):\n            report = summarize(rows)\n>           assert report[\"score\"] is None and report[\"evaluated\"] == 0\nE           assert (1.0 is None)\n\ntests\\test_spec_trust.py:22: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_no_decisions_have_no_score - assert (1....\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.1",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.2] _________________________\n\nclause = 'C-1.2'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x000001E07F0F9300>('C-1.2')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.2]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________ test_missing_mutation_evidence_is_incomplete _________________\n\n    def test_missing_mutation_evidence_is_incomplete():\n        report = build(mutation={**summarize(()), \"blocking\": True}, allow_partial=True)\n>       assert not report[\"passed\"] and report[\"legs\"][\"code_to_specs\"] == \"incomplete\"\nE       assert (not True)\n\ntests\\test_spec_trust.py:31: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_missing_mutation_evidence_is_incomplete\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.2",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.3] _________________________\n\nclause = 'C-1.3'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x00000216B6A99300>('C-1.3')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.3]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n_______________________ test_tool_errors_are_not_kills ________________________\n\n    def test_tool_errors_are_not_kills():\n        for code in (2, 5, 124, 127):\n            row = _hunt(lambda cmd: Outcome(\"TOOL_ERROR\", code))[0]\n>           assert not row[\"killed\"] and row[\"status\"] == \"tool_error\"\nE           assert (not True)\n\ntests\\test_spec_trust.py:46: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_tool_errors_are_not_kills - assert (not...\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.3",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.4] _________________________\n\nclause = 'C-1.4'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x000001A3930C9300>('C-1.4')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.4]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_red_baseline_cannot_kill ________________________\n\n    def test_red_baseline_cannot_kill():\n        calls = []\n        rows = _hunt(lambda cmd: calls.append(cmd) or Outcome(\"ASSERTION_FAIL\", 1), verify_baseline=True)\n>       assert rows[0][\"status\"] == \"baseline_error\" and not rows[0][\"killed\"]\nE       AssertionError: assert ('killed' == 'baseline_error'\nE         \nE         - baseline_error\nE         + killed)\n\ntests\\test_spec_trust.py:59: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_red_baseline_cannot_kill - AssertionErr...\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.4",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.5] _________________________\n\nclause = 'C-1.5'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x000002ADEBEE9300>('C-1.5')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.5]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n___________________ test_per_clause_scores_exclude_unknowns ___________________\n\n    def test_per_clause_scores_exclude_unknowns():\n        from lib.mutgate import clause_scores, mutation_verdict\n        rows = [{\"path\": \"x.py\", \"line\": 2, \"kind\": \"flip\", \"killed\": False, \"status\": \"tool_error\"}]\n        scores = clause_scores(rows, {\"C-1\": {\"x.py\": [2]}})\n>       assert scores[\"C-1\"][\"score\"] is None and scores[\"C-1\"][\"survivors\"] == []\nE       assert (0.0 is None)\n\ntests\\test_spec_trust.py:69: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_per_clause_scores_exclude_unknowns - as...\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.5",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.6] _________________________\n\nclause = 'C-1.6'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x00000245824D9300>('C-1.6')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.6]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n__________ test_a_shared_line_kill_is_not_evidence_for_every_clause ___________\n\n    def test_a_shared_line_kill_is_not_evidence_for_every_clause():\n        from lib.mutgate import clause_scores\n        result = {\"path\": \"x.py\", \"line\": 2, \"kind\": \"flip\", \"killed\": True,\n                  \"status\": \"killed\", \"witness_clauses\": [\"C-1\"]}\n        scores = clause_scores([result], {\"C-1\": {\"x.py\": [2]}, \"C-2\": {\"x.py\": [2]}})\n>       assert scores[\"C-1\"][\"score\"] == 1.0 and scores[\"C-2\"][\"score\"] is None\nE       assert (1.0 == 1.0 and 1.0 is None)\n\ntests\\test_spec_trust.py:79: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_a_shared_line_kill_is_not_evidence_for_every_clause\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.6",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-1.7] _________________________\n\nclause = 'C-1.7'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x0000021A4CB19300>('C-1.7')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-1.7]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "     [100%]\n================================== FAILURES ===================================\n__________________ test_a_capped_sweep_has_only_scoped_score __________________\n\n    def test_a_capped_sweep_has_only_scoped_score():\n        source = \"def f(x):\\n    return x == 1 and x != 2\\n\"\n        rows = hunt({\"clauses\": {\"C-1\": {\"x.py\": [2]}}}, {\"S1\": (\"C-1\", \"check\")},\n                    {\"x.py\": {\"source\": source, \"lines\": [2]}}, runner=lambda c: 1,\n                    writer=lambda p, s: None, max_mutants=1, limit_per_line=10)\n        report = summarize(rows)\n>       assert report[\"score\"] == 1.0 and report[\"state\"] == \"INCOMPLETE\" and report[\"budget_exhausted\"]\nE       AssertionError: assert (1.0 == 1.0 and 'PASS' == 'INCOMPLETE'\nE         \nE         - INCOMPLETE\nE         + PASS)\n\ntests\\test_spec_trust.py:89: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_a_capped_sweep_has_only_scoped_score - ...\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-1.7",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-2.1] _________________________\n\nclause = 'C-2.1'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x0000019C2F139300>('C-2.1')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-2.1]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "                                  [100%]\n================================== FAILURES ===================================\n_______________________ test_manifest_pins_are_enforced _______________________\n\nproject = (WindowsPath('C:/Users/dima_/AppData/Local/Temp/pytest-of-dima_/pytest-792/test_manifest_pins_are_enforce0'), {'schema..., 'inputs': ['impl.py', 'test_spec.py', 'activation.py'], ...}, <function project.<locals>.save at 0x000001C21DA2EA20>)\n\n    def test_manifest_pins_are_enforced(project):\n        root, m, save = project\n        assert prepare(str(root), \"trust.json\")[0] == m\n        m[\"passports\"][0][\"pin\"] = \"0\" * 16\n        save()\n>       with pytest.raises(ValueError, match=\"stale\"):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE ValueError\n\ntests\\test_spec_trust.py:137: Failed\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_manifest_pins_are_enforced - Failed: DI...\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-2.1",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-2.3] _________________________\n\nclause = 'C-2.3'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x00000275E3879300>('C-2.3')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-2.3]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": " {'schema..., 'inputs': ['impl.py', 'test_spec.py', 'activation.py'], ...}, <function project.<locals>.save at 0x000001C7DE6B6A20>)\n\n    def test_bad_oracles_fail_in_both_directions(project):\n        root, _, _ = project\n        def weak(cmd, **kw):\n            return Outcome(\"PASS\", 0)\n        assert audit(str(root), \"trust.json\", runner=weak)[\"state\"] == \"FAIL\"\n        def too_strict(cmd, cwd, **kw):\n            source = (pathlib.Path(cwd) / \"impl.py\").read_text()\n            return Outcome(\"ASSERTION_FAIL\", 1) if \"list(set\" in source else Outcome(\"PASS\", 0)\n        rep = audit(str(root), \"trust.json\", runner=too_strict)\n>       assert rep[\"clauses\"][0][\"challenges\"][0][\"state\"] == \"FAIL\"\nE       AssertionError: assert 'PASS' == 'FAIL'\nE         \nE         - FAIL\nE         + PASS\n\ntests\\test_spec_trust.py:163: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_bad_oracles_fail_in_both_directions - A...\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-2.3",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-2.4] _________________________\n\nclause = 'C-2.4'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x0000022C738C9300>('C-2.4')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-2.4]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "-798/test_activation_and_tool_error0'), {'schema..., 'inputs': ['impl.py', 'test_spec.py', 'activation.py'], ...}, <function project.<locals>.save at 0x000001E3E6B22A20>)\n\n    def test_activation_and_tool_errors_are_inconclusive(project):\n        root, _, _ = project\n        def inactive(cmd, cwd, **kw):\n            if cmd == \"python -m pytest activation.py -q\":\n                source = (pathlib.Path(cwd) / 'impl.py').read_text()\n                return Outcome('TOOL_ERROR', 127) if 'return xs' in source else Outcome('ASSERTION_FAIL', 1)\n            return Outcome('PASS', 0)\n        rep = audit(str(root), \"trust.json\", runner=inactive)\n>       assert rep[\"state\"] == \"INCOMPLETE\"\nE       AssertionError: assert 'FAIL' == 'INCOMPLETE'\nE         \nE         - INCOMPLETE\nE         + FAIL\n\ntests\\test_spec_trust.py:174: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_activation_and_tool_errors_are_inconclusive\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-2.4",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-2.6] _________________________\n\nclause = 'C-2.6'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x0000023B226C9300>('C-2.6')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-2.6]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________ test_protected_input_changes_reject_evidence _________________\n\n    def test_protected_input_changes_reject_evidence():\n        def tamper(cmd, cwd, **kw):\n            (pathlib.Path(cwd) / \"test_spec.py\").write_text(\"pass\")\n            return Outcome(\"PASS\", 0)\n        result = execute({\"test_spec.py\": b\"assert False\"}, {}, \"check\", timeout=1, runner=tamper)\n>       assert result[\"status\"] == \"INTEGRITY_FAIL\"\nE       AssertionError: assert 'PASS' == 'INTEGRITY_FAIL'\nE         \nE         - INTEGRITY_FAIL\nE         + PASS\n\ntests\\test_spec_trust.py:196: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_protected_input_changes_reject_evidence\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-2.6",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    },
+    {
+      "adequacy": "CHALLENGED",
+      "baseline": [
+        {
+          "exit_code": 0,
+          "status": "PASS",
+          "tail": ".                                                                        [100%]\n",
+          "tests": 1
+        }
+      ],
+      "challenges": [
+        {
+          "checks": [
+            {
+              "exit_code": 0,
+              "status": "PASS",
+              "tail": ".                                                                        [100%]\n",
+              "tests": 1
+            }
+          ],
+          "id": "equivalent-expression",
+          "kind": "valid",
+          "state": "PASS"
+        },
+        {
+          "activation": {
+            "exit_code": 0,
+            "status": "PASS",
+            "tail": ".                                                                        [100%]\n",
+            "tests": 1
+          },
+          "activation_baseline": {
+            "exit_code": 1,
+            "status": "ASSERTION_FAIL",
+            "tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n________________________ test_violation_active[C-2.8] _________________________\n\nclause = 'C-2.8'\n\n    @pytest.mark.parametrize('clause', CLAUSES)\n    def test_violation_active(clause):\n        activated = runpy.run_path(str(pathlib.Path(__file__).with_name('activate.py')))['activated']\n>       assert activated(clause), 'violation is not active on this implementation'\nE       AssertionError: violation is not active on this implementation\nE       assert False\nE        +  where False = <function activated at 0x000001882D9E9300>('C-2.8')\n\nfeatures\\spec-trust\\pilot\\test_activation.py:13: AssertionError\n=========================== short test summary info ===========================\nFAILED features/spec-trust/pilot/test_activation.py::test_violation_active[C-2.8]\n",
+            "tests": 1
+          },
+          "checks": [
+            {
+              "exit_code": 1,
+              "status": "ASSERTION_FAIL",
+              "tail": "====== FAILURES ===================================\n______________ test_missing_controls_and_gaps_remain_incomplete _______________\n\nproject = (WindowsPath('C:/Users/dima_/AppData/Local/Temp/pytest-of-dima_/pytest-802/test_missing_controls_and_gaps0'), {'schema..., 'inputs': ['impl.py', 'test_spec.py', 'activation.py'], ...}, <function project.<locals>.save at 0x00000202DCFF2A20>)\n\n    def test_missing_controls_and_gaps_remain_incomplete(project):\n        root, m, save = project\n        m[\"passports\"][0][\"variants\"] = m[\"passports\"][0][\"variants\"][:1]\n        save()\n>       assert audit(str(root), \"trust.json\", runner=lambda *a, **k: Outcome(\"PASS\", 0))[\"state\"] == \"INCOMPLETE\"\nE       AssertionError: assert 'PASS' == 'INCOMPLETE'\nE         \nE         - INCOMPLETE\nE         + PASS\n\ntests\\test_spec_trust.py:215: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_spec_trust.py::test_missing_controls_and_gaps_remain_incomplete\n",
+              "tests": 1
+            }
+          ],
+          "id": "semantic-violation",
+          "kind": "violation",
+          "state": "PASS"
+        }
+      ],
+      "clause": "C-2.8",
+      "controls": {
+        "valid": 1,
+        "violation": 1
+      },
+      "known_gaps": [],
+      "state": "PASS",
+      "validity": "DECLARED_BY_OWNER"
+    }
+  ],
+  "context": {
+    "environment": {
+      "environment_digest": "b28a5b1574603148e22be76628d6f1ba89a21c6dde14afb9ceb45ddbbcec7a71",
+      "executable": "C:\\Users\\dima_\\athena-review\\.venv\\Scripts\\python.exe",
+      "interpreter_digest": "72b29481593c5da37c99248c82777fbfb56217ea7809b771bc760d0a9ecb179b",
+      "packages_digest": "2efd543dad70c418f61a2474a1faac32ccf2b33eb8859ae4ce3493d95ff127df",
+      "python": "3.13.15 (tags/v3.13.15:4061bc4, Aug  5 2026, 13:05:39) [MSC v.1944 64 bit (AMD64)]"
+    },
+    "inputs": {
+      "CORE.md": "72d8198febff12a017eb48b3d1d2b7fd86f63629d339105524a3faf1a80e7e04",
+      "athena.py": "a071abe54cec112dace2314a8aa1e72073054c6e2b98ecd54db5855baffb9092",
+      "docs/adr/0010-spec-trust-is-separate-from-execution.md": "308f155838372d20b6aa8537805973573028a5888dd5878b7f2b0bf1cc38b3b0",
+      "features/spec-trust/contract.md": "98911b619e397bf5a4912ff119fb2696258cef6b93dd569f10d7c25b148f82c6",
+      "features/spec-trust/pilot/activate.py": "017bc992a240b86ad73a6d43efd46f52868d8e16430780d58ed618dd82c1e547",
+      "features/spec-trust/pilot/manifest.json": "32b138411a7f89cd39fffddd3d3dd0e17d6654cb97cd4e77560acb7001d30c9e",
+      "features/spec-trust/pilot/test_activation.py": "0c4aceb5b568b000e572f11141803c68af3b7aae7890eb09b474ab6342baadcb",
+      "features/spec-trust/scenarios.md": "b6fa90ac55487477e17807077393f69213efb691a0000dc52dab75c1f4bfb5f9",
+      "lib/__init__.py": "0850118387f32638899407c69770c55b388ef2a824e463961c86205d305bcb6e",
+      "lib/adapters.py": "2d4f3b30ad0a6c66c66c103ac5f8d8fabc4d9dd8392dcfab7dd7b8de27a6d67e",
+      "lib/adr.py": "f9db4074e61777b96269753571cde3805881ac4a7cfbffc5b42eff746e5678d5",
+      "lib/allocate.py": "869b75217da861cecdab52b0f2004e9ee86a67bf97e429cbd285a1702123bc3c",
+      "lib/archlint.py": "81c0c6f9d6a6f05f0020301aebcfac57020ce67a5fccdf20f86cb9bf851230b4",
+      "lib/ast.py": "b6429085fe16905fbad80b3dec839c55b1c2d9c53d113ce99346227d4e0368dc",
+      "lib/bd_client.py": "522c6e01b3287e77b427f89de5404524194fd9a223ebe8ff6a3deb6ed7f9a962",
+      "lib/bench.py": "2bdd509a8e99b9a0cf840f2fd949d07a0d1a6ace51acc8f48464d07a0e813a40",
+      "lib/brief.py": "4a6395259f10d2d94ff4f8547eb4d76dc54dbbb16e72b27ff5fd90bb8a537f1f",
+      "lib/cases.py": "eb1b0008f7e4ce7495586b158a5ba42364f80fd65d4c3e91daf9006d17b9fd20",
+      "lib/check.py": "0c6845977091d57e4564b44975aaed6437fd1dda801a0e8163436d1defa40609",
+      "lib/clause_map.py": "820f8337c1e34c660fa7956db81b588128ab5820e93d2c0da5e6cc389920ac30",
+      "lib/contract.py": "8f4159376d18759edc0150fcbc10a6eb71d1acaedae56ef011266b7cb3bc5c59",
+      "lib/contract_report.py": "0f57c38fd1f2471c702e6409f1aa45af0c78b3ac5f4ea59be31a453fe84506e7",
+      "lib/coverage_backed.py": "42dcd73e1028a2e74c67a8de9a3328bfa7b2a24dca9e265c1afab6d5972a1907",
+      "lib/daemon.py": "255f72f6b2982ca2cd631caa0252c48f468e99d7b604ecff7a19235e010ecf3f",
+      "lib/dispatch.py": "999a7523292a140073ddd6e11cf488297fbd8b9a6046ec47cb00a806bf740ec3",
+      "lib/docrefs.py": "7890f1b1d9b2af8d2435a5388a8717f77f7388fc05471520d8ced67d610eb65b",
+      "lib/drafts.py": "932dc0374bbc95f38afdfdebb1cb74c7fa269f1ecaf7860a79a0b600b949e1ee",
+      "lib/drift.py": "01b2bc034101b8b37adba85222033ac18a80e836cced1a19336c45373c368ae2",
+      "lib/executor.py": "e72f5bf7529b3f2ca26d6bfc2000cb88a03f241238b0968942e67831256b979f",
+      "lib/executors.py": "07d117e948442d74c74d894120af09fc4a6ef83cea132bc4ea5a9001ee26f881",
+      "lib/export.py": "ee83d246147b9608f694ddecc94cbe85a94da481c9c8e32a6034d8f279cffaf7",
+      "lib/findings.py": "5ceb2db26b95754143cd4bf6212688cf3e18b7ffb4d7fdb92ac8c46a5a4da609",
+      "lib/forge.py": "c1c3dc473db57dd0fca654a5cfd8e315dfdbb3c3191cf926eaf74cd8e66c68c0",
+      "lib/frontend.py": "da3d67120fd6bafdb264cb237f6fdab631c8c6bdcaedfad7f86b70c90c1b48d5",
+      "lib/gate.py": "3c5345088c5286e2e6a162e56ebd6de307ebe4c52da96de8bd61cdd1f40eb088",
+      "lib/hermes_plan.py": "f3e680d06bf795bbbc2d5823cde2f5057f3b25e401ffaf6929cfc5d34950e3db",
+      "lib/hooks.py": "cda198e41915ad2c67c4ffda85bf3c3cf12b87b1241cef4ccf5069e8e806451c",
+      "lib/host.py": "c2be48cd8283827301a1cd7ed90e2b86baf60ff5d6021c24dbb360c856842f84",
+      "lib/intake.py": "b026206d645d517fa5c45ac9334720ca40431cd2b20516be7c6b230a7e373a77",
+      "lib/judge.py": "893d0fb4e23ced4ba7b39108284f60253a237d77f85728cdfb10bb8d29da466e",
+      "lib/judgement_graph.py": "c502a0289210a985c1df8bf973052c3373505f9d6228ea9c39faae83f25c8d5b",
+      "lib/ladder.py": "582b241e1ed6393a4ff3cd8ff1c045d72e49a85e6f3f5946922ff606827fe47a",
+      "lib/lanes.py": "7f849d5461aaf9ae641cd97e27496617de31dd14361db8cb9e3d2ff258478086",
+      "lib/lessons.py": "7076c9812092677f3917140219fbc82bb5fd097b695416b4094f2bc336ad804b",
+      "lib/locate.py": "d7d18b5767a1933206f922423676ac0bf8c5cc69e68119da218d5d50e9dddb77",
+      "lib/markers.py": "3cbd42471a07fc42d06ab85c5ca7c0210c6005084cbdb108db4e43565bead7d4",
+      "lib/memory.py": "72d7ea571949fb21972b8dec3b3cd5fbff1681a48b4d1a8d74f0edeca851c4f9",
+      "lib/metrics.py": "36b710df121871aadc3c9d7cad589b254e5641705532033978fc0f275bd687aa",
+      "lib/mutation.py": "83e11644c13abcbdd7bf46af3aa848694c599b39787f74e3a66c493bef2d8794",
+      "lib/mutgate.py": "d95b5af7585191213aa4bbeda68beb614049c4e6847c0ca9810df94e74e679c9",
+      "lib/oracles.py": "590f857c5369e5108804a46bb3c37c3c0ab133955baaaf9ab90b1915b05b1367",
+      "lib/outline.py": "775a699ee83fe1a6e1e3983be6cb7a16622c5c0d82f8f6c702e630afaaf0654a",
+      "lib/plan2beads.py": "e3b386a8ccda686c9a580c68ed66e157b7b8181abb4d648fcdf9e47194bf610a",
+      "lib/plan_parser.py": "3f3cf2ce4c1a21512a760a21bfb0116303aa63c8e644b37b18805c947f09ebbe",
+      "lib/provenance.py": "35a25cf2ac3471f26286cdd2f54d462608527a522422ba68808dec3099841ec9",
+      "lib/purl.py": "d773f62ba94507711b2a122e1966c5699c1be0f1778df376a367f80394029b34",
+      "lib/queue.py": "d174e213c48272f1cbaba07142e8a4066bdc1d5d63c20b6735dc3866c58d8ff3",
+      "lib/refinery.py": "8a1d86d331ba1c8d079647d7622ad56d90265722709b53b26646371614379b66",
+      "lib/regen.py": "193f627fedd7cda07b5ed26371e6fefa35c40a8f2fc755c389e1f3ed075c7a2c",
+      "lib/sandbox.py": "9fc696118ce78d1a7267510fbc3afcce8176c6e35559d3c9fdf61371a37be23a",
+      "lib/scaffold.py": "ebb241f29db47cdda59db90d98c0424c3cb71577f3ed183d9ebf423bea666681",
+      "lib/scan.py": "9643e811a92978e75e2012605848b0be8245c393cd44aef8c51ac5bc02c18ec8",
+      "lib/scenario_parser.py": "a6cbcc87b81e6bbe51f734ef99d5ccb078ca47a944a32bf4170ee75182e6deaa",
+      "lib/seams.py": "d2288b71217c42e77be3a63fb47259ba5953a146a5bc66d153e4e890ac2d7d2f",
+      "lib/select.py": "efd1a5b665412847e09f756b9a59fb678d51faca203186662cb31cad0cb8db4e",
+      "lib/spec_runner.py": "4b3bdfe1b971873a61eda6fab8628c5083de2222255d89081c2af265435eff70",
+      "lib/spec_trust.py": "e566947e55ad83e790ca2b6a78b70b3c270dfac733329a092f0979d004c6ad53",
+      "lib/speckit_parser.py": "8cf29b010c807b3ba82d0747c2ccd77d86a9194e7fef1458d02be33a5f0d5571",
+      "lib/stands.py": "64150b4ef953575a88fa650b74e3a1e8ab9012aaa533995435389fabdeaaa8b2",
+      "lib/testwriter.py": "a6c2d09f1c02b0d9b1934fbdca6077b1cf6faa9a3683b71620eb3d91c7c9b32e",
+      "lib/toolcalls.py": "00ede8967ede0947332e095a528ec5dff375c54b83d0e7aef1b18b8a365f9b07",
+      "lib/verification.py": "f8dcbcd7b06ec9c20d470fd5ab24fc4bee0d690ce6593504ec34de8bcbd6aa71",
+      "lib/versioning.py": "698f67acb54c85ccb3bfff3573bd14dac0e132b0f5ff8518fe6bf8553a97f784",
+      "pytest.ini": "18b67ce414aa093f0e856fe683d06ff77ec372abf405bf553f47e9dbbd75c0ab",
+      "tests/test_spec_trust.py": "f45c9aaa36e10914092516a9aaccd4e350873015b7c7fa4842b3283640dcc4fa",
+      "tools/build_spec_trust_pilot.py": "2fadf72e97933fd5aaec64f3d2c40ea04ced4318c349cb31681477afd661701e"
+    },
+    "manifest": "af25bbf12fb84b68cce5b9438b88ff256bbe0bdc69c32c0d7f496e667fffacd0"
+  },
+  "limits": [
+    "Curated challenges are not completeness or a correctness probability.",
+    "Fresh filesystem copies are not an OS sandbox for hostile code."
+  ],
+  "metrics": {
+    "activated": 12,
+    "clauses": 12,
+    "evaluated": 24,
+    "false_accepts": 0,
+    "false_rejects": 0,
+    "inconclusive": 0,
+    "valid_controls": 12,
+    "violation_controls": 12
+  },
+  "passed": true,
+  "schema": "athena.spec_trust/1",
+  "scope": [
+    "C-1.1",
+    "C-1.2",
+    "C-1.3",
+    "C-1.4",
+    "C-1.5",
+    "C-1.6",
+    "C-1.7",
+    "C-2.1",
+    "C-2.3",
+    "C-2.4",
+    "C-2.6",
+    "C-2.8"
+  ],
+  "state": "PASS"
+}

@@ -13,6 +13,39 @@ from lib.contract import parse
 from lib.spec_runner import batch_key, plan_batches, run_specs
 
 
+def test_parameterized_nodes_credit_all_variants_and_keep_explicit_selection():
+    """C-6.9 - all selected variants contribute and a failing or skipped variant prevents PASS."""
+    from lib.spec_runner import attribute, parse_junit
+    spec = _s('S-param', node='tests/test_x.py::test_many')
+    cases = parse_junit(_junit([_case('tests/test_x.py::test_many[a]', t='0.01'),
+                               _case('tests/test_x.py::test_many[b]', t='0.02')]))
+    result = attribute(spec, cases)
+    assert result.passed and result.duration_ms == 30
+    cases[('tests.test_x', 'test_many[b]')]['passed'] = False
+    cases[('tests.test_x', 'test_many[b]')]['message'] = 'variant b failed'
+    assert not attribute(spec, cases).passed
+    assert 'variant b failed' in attribute(spec, cases).output_tail
+    explicit = _s('S-explicit', node='tests/test_x.py::test_many[a]')
+    assert attribute(explicit, cases).passed
+    cases[('tests.test_x', 'test_many[b]')]['passed'] = True
+    cases[('tests.test_x', 'test_many[b]')]['skipped'] = True
+    assert not attribute(spec, cases).passed
+    # A similarly prefixed, different test cannot supply evidence for this function.
+    unrelated = parse_junit(_junit([_case('tests/test_x.py::test_many_other[a]')]))
+    assert not attribute(spec, unrelated).passed
+
+
+def test_each_requested_node_requires_its_own_report_evidence():
+    """C-6.10 - the spec remains red until both have execution evidence."""
+    from lib.spec_runner import attribute, parse_junit
+    spec = _s('S-multiple', node='tests/test_x.py::test_one tests/test_x.py::test_two')
+    cases = parse_junit(_junit([_case('tests/test_x.py::test_one')]))
+    result = attribute(spec, cases)
+    assert not result.passed and 'test_two' in result.output_tail
+    cases.update(parse_junit(_junit([_case('tests/test_x.py::test_two')])) )
+    assert attribute(spec, cases).passed
+
+
 def _s(sid, clause="C-1.1", node=None):
     node = node or f"tests/test_x.py::{sid}"
     return Scenario(id=sid, requirement_key=clause, gwt_text="g",

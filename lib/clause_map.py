@@ -473,6 +473,8 @@ def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = "."
 
     if runner is None:
         def runner(argv, cwd):
+            import sys
+            argv = [sys.executable, *argv[1:]]
             return subprocess.run(argv, cwd=cwd, capture_output=True, text=True).returncode
 
     work = pathlib.Path(workdir)

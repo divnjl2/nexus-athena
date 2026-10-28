@@ -386,7 +386,7 @@ def test_a_mutant_whose_spec_budget_ran_out_is_undetermined_not_a_survivor():
 
     rep = summarize(tuple(res))
     assert rep["undetermined"] == 1 and rep["survived"] == 0
-    assert rep["score"] == 1.0, "an undetermined mutant must not drag the score either way"
+    assert rep["score"] is None, "an undetermined mutant provides no score"
 
     # with the full budget the same mutant is a real survivor
     full = hunt(cmap, cmds, {"lib/a.py": {"source": src, "lines": [2]}},
@@ -408,7 +408,7 @@ def test_a_line_no_spec_owns_is_unowned_not_survived():
     assert ran == [], "no spec exists, so nothing should have been executed"
     rep = summarize(tuple(res))
     assert rep["survived"] == 0 and rep["unowned"] == 1
-    assert rep["score"] == 1.0, "an unowned mutant proves nothing either way"
+    assert rep["score"] is None, "an unowned mutant proves nothing either way"
 
 
 def test_a_spec_that_is_already_red_cannot_be_a_witness():
@@ -430,18 +430,17 @@ def test_a_spec_that_is_already_red_cannot_be_a_witness():
     assert res[0]["status"] == "survived" and res[0]["specs_total"] == 1
 
 
-def test_the_mirror_refuses_to_delete_anything_that_is_not_its_own():
+def test_the_mirror_refuses_to_delete_anything_that_is_not_its_own(tmp_path):
     """C-11.17 — `isolate` is rm -rf pointed at a user path. An audit ran
     `mutate --mirror vendor` and it DELETED the vendor directory, reporting success."""
     import pytest as _pytest
 
     from lib.mutation import MIRROR_MARKER, UnsafeMirror, isolate
 
-    repo = pathlib.Path(__file__).resolve().parents[1]
-    scratch = pathlib.Path(
-        r"D:/tmp/claude/C--Users----Desktop/eb1d9f80-8e10-4c2d-854e-213fa77f8048/scratchpad/mirror-spec")
-    import shutil
-    shutil.rmtree(scratch, ignore_errors=True)
+    repo = tmp_path / "repo"
+    (repo / "lib").mkdir(parents=True)
+    (repo / "lib" / "sample.py").write_text("value = 1\n", encoding="utf-8")
+    scratch = tmp_path / "scratch"
     (scratch / "precious").mkdir(parents=True)
     (scratch / "precious" / "keep.txt").write_text("keep me", encoding="utf-8")
 

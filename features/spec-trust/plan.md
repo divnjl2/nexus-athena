@@ -1,0 +1,82 @@
+# Plan: Spec trust
+
+- [ ] T2.12 Exclude volatile orchestration trace metadata from verification
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_receipt_ignores_tool_trace_but_tracks_runtime_settings -q`
+  - verifies: S2.12
+  - files: `lib/verification.py, tests/test_spec_trust.py`
+
+- [ ] T2.11 Require contrastive activation in the core audit
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_activation_probe_must_discriminate_clean_baseline -q`
+  - verifies: S2.11
+  - files: `lib/spec_trust.py, tests/test_spec_trust.py, tools/build_spec_trust_pilot.py, features/spec-trust/pilot/activate.py, features/spec-trust/pilot/test_activation.py`
+
+## Phase 1: Honest evidence and oracle challenges
+### Tasks
+- [ ] T1.17 Bind generic Python commands to the verifier interpreter
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_spec_runner_uses_the_verifier_interpreter -q`
+  - verifies: S2.10
+  - files: `lib/spec_runner.py, tests/test_spec_trust.py`
+- [ ] T1.1 Implement C-1.1
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_no_decisions_have_no_score -q`
+  - verifies: S1.1
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.2 Implement C-1.2
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_missing_mutation_evidence_is_incomplete -q`
+  - verifies: S1.2
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.3 Implement C-1.3
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_tool_errors_are_not_kills -q`
+  - verifies: S1.3
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.4 Implement C-1.4
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_red_baseline_cannot_kill -q`
+  - verifies: S1.4
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.5 Implement C-1.5
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_per_clause_scores_exclude_unknowns -q`
+  - verifies: S1.5
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.6 Implement C-1.6
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_a_shared_line_kill_is_not_evidence_for_every_clause -q`
+  - verifies: S1.6
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.7 Implement C-1.7
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_a_capped_sweep_has_only_scoped_score -q`
+  - verifies: S1.7
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.8 Implement C-2.1
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_manifest_pins_are_enforced -q`
+  - verifies: S2.1
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.9 Implement C-2.2
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_valid_and_violation_controls_run -q`
+  - verifies: S2.2
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.10 Implement C-2.3
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_bad_oracles_fail_in_both_directions -q`
+  - verifies: S2.3
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.11 Implement C-2.4
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_activation_and_tool_errors_are_inconclusive -q`
+  - verifies: S2.4
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.12 Implement C-2.5
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_only_implementation_overlays_are_admitted -q`
+  - verifies: S2.5
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.13 Implement C-2.6
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_protected_input_changes_reject_evidence -q`
+  - verifies: S2.6
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.14 Implement C-2.7
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_context_covers_inputs_manifest_and_environment -q`
+  - verifies: S2.7
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.15 Implement C-2.8
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_missing_controls_and_gaps_remain_incomplete -q`
+  - verifies: S2.8
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`
+- [ ] T1.16 Implement C-2.9
+  - success_check: `python -m pytest tests/test_spec_trust.py::test_requested_receipt_must_be_current_and_for_this_contract -q`
+  - verifies: S2.9
+  - files: `lib/mutation.py, lib/verification.py, lib/spec_trust.py, lib/check.py, lib/mutgate.py, athena.py, tests/test_spec_trust.py`

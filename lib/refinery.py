@@ -323,6 +323,10 @@ def mutation_stage(changed: dict, clause_map: dict, results: list, *, threshold:
     targets, unowned = changed_targets(changed or {}, clause_map or {})
     scores = clause_scores(list(results or []), targets)
     v = mutation_verdict(scores, threshold=threshold, added=changed or {})
+    missing = sorted(cid for cid, files in targets.items() if files and cid not in scores)
+    if v["ok"] and missing:
+        v.update(ok=False, stage="mutation", state="INCOMPLETE", clause=missing[0],
+                 reason="no mutation evidence for " + ", ".join(missing))
     v["stage"] = "mutation"
     v["scores"] = scores
     v["unowned"] = unowned

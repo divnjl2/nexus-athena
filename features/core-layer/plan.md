@@ -80,6 +80,6 @@ Written contract-first: every clause here was red before the code existed.
 - [ ] T6.1 Batch specs that share an invocation and attribute results from the runner's report
   - success_check: `python -m pytest tests/test_spec_batch.py -q`
   - files: `lib/spec_runner.py, athena.py, tests/test_spec_batch.py`
-  - verifies: S6.1, S6.2, S6.3, S6.4, S6.5, S6.6, S6.7, S6.8
+  - verifies: S6.1, S6.2, S6.3, S6.4, S6.5, S6.6, S6.7, S6.8, S6.9, S6.10
 ### Manual Verification
 - `python athena.py spec run features/contract-layer/scenarios.md --skip-tag slow --env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` finishes in seconds with the same verdicts as the per-process lane.

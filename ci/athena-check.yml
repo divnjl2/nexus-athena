@@ -19,7 +19,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install pytest
+      - run: python -m pip install -r requirements-test.txt
+      - name: repository regressions with explicit plugins
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+        run: python -m pytest -p pytest_benchmark.plugin tests
+      - name: spec trust — curated alternatives and semantic violations
+        run: |
+          python tools/build_spec_trust_pilot.py
+          python athena.py trust features/spec-trust/pilot/manifest.json --timeout 90 -o .athena/trust_evidence.json
+          python athena.py check features/spec-trust/contract.md --run --purl '' \
+            --ledger features/spec-trust/spec_ledger.json \
+            --trust features/spec-trust/pilot/manifest.json --trust-evidence .athena/trust_evidence.json
       - name: contract loop (fast lane)
         run: |
           python athena.py --speckit off check features/contract-layer/contract.md \
@@ -35,7 +46,6 @@ jobs:
             --run --text
       - name: contract loop (fast lane) — team layer (v3.11)
         run: |
-          pip install hypothesis
           python athena.py --speckit off check features/team-layer/contract.md \
             --front features/team-layer/plan.md \
             --ledger .athena/team_ledger.json \
@@ -65,7 +75,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
-      - run: pip install pytest coverage
+      - run: python -m pip install -r requirements-test.txt
       - name: rebuild the clause map (incremental)
         run: |
           python athena.py contract map features/contract-layer/contract.md \

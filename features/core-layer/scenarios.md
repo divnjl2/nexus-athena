@@ -1,5 +1,21 @@
 # Scenarios: Athena Core Layer (v3.10)
 
+### S6.9 - Attribute parameterized variants
+- **verifies:** C-6.9
+- **pins:** 59dd9ed9f348b35c
+- **run_cmd:** `python -m pytest tests/test_spec_batch.py::test_parameterized_nodes_credit_all_variants_and_keep_explicit_selection -q`
+- **Given** multiple JUnit variants of one function
+- **When** the function or an exact variant is selected
+- **Then** all selected variants contribute and a failing or skipped variant prevents PASS.
+
+### S6.10 - Require evidence for every selected node
+- **verifies:** C-6.10
+- **pins:** 198ea4b08eb5e34a
+- **run_cmd:** `python -m pytest tests/test_spec_batch.py::test_each_requested_node_requires_its_own_report_evidence -q`
+- **Given** a command selecting two test nodes
+- **When** only one appears in JUnit
+- **Then** the spec remains red until both have execution evidence.
+
 > Executable specs for `contract.md`. One spec per clause, ids `S<group>.<index>`
 > mirroring the clause number. Each `run_cmd` is a real pytest node in this repo.
 > `pins:` is written by `athena contract pin --write`.

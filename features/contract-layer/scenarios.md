@@ -889,6 +889,14 @@
 - **When** the spec `test_a_strengthened_spec_invalidates_the_clause_it_proves` is executed
 - **Then** a changed test body moves that spec's digest and only that one, and a run_cmd naming no node pins nothing.
 
+### S9.25 — coverage subprocesses use the verifier's interpreter
+- **verifies:** C-9.25
+- **pins:** cf2128a2556a987b
+- **run_cmd:** `python -m pytest tests/test_clause_map.py::test_collection_uses_the_verifiers_interpreter_for_run_and_json -q`
+- **Given** a verifier environment with its own coverage installation
+- **When** default collection launches run and JSON export
+- **Then** both use the verifier interpreter and the resulting line evidence is collected.
+
 ### S10.1 — mutations are ast level and skip prose
 - **verifies:** C-10.1
 - **pins:** 2b289d163041f18e

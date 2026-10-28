@@ -1,0 +1,124 @@
+{
+  "contract_version": "23bf3e28f0157488",
+  "results": [
+    {
+      "clause": "C-1.1",
+      "clause_version": "2767d319c0df3dea",
+      "duration_ms": 111,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_intent.py::test_issue_only_model_context_and_charged_frozen_result tests/test_tdd_intent.py -q",
+      "scenario": "S1.1"
+    },
+    {
+      "clause": "C-1.2",
+      "clause_version": "9d58fcc748c48bf9",
+      "duration_ms": 21,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_assertion_support.py::test_unsupported_literal_is_rejected_and_unknown_support_is_incomplete tests/test_tdd_assertion_support.py -q",
+      "scenario": "S1.2"
+    },
+    {
+      "clause": "C-1.3",
+      "clause_version": "9248a91981f5261a",
+      "duration_ms": 1882,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_issue_questions.py::test_nonblocking_question_requires_specific_public_evidence_without_erasing_history tests/test_tdd_issue_questions.py -q",
+      "scenario": "S1.3"
+    },
+    {
+      "clause": "C-2.1",
+      "clause_version": "d9eacc727efe23ee",
+      "duration_ms": 7329,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_cycle.py::test_cycle_repairs_with_fresh_review_preserves_history_and_releases_exact_patch tests/test_tdd_cycle.py -q",
+      "scenario": "S2.1"
+    },
+    {
+      "clause": "C-2.2",
+      "clause_version": "31be79d603d980fc",
+      "duration_ms": 1708,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_cycle_privacy.py::test_repair_feedback_excludes_nonpublic_top_level_fields tests/test_tdd_cycle_privacy.py -q",
+      "scenario": "S2.2"
+    },
+    {
+      "clause": "C-3.1",
+      "clause_version": "3e2118d99e220a23",
+      "duration_ms": 1525,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_semantic_controls.py::test_structurally_unchanged_and_duplicate_controls_cannot_supply_diversity tests/test_tdd_semantic_controls.py -q",
+      "scenario": "S3.1"
+    },
+    {
+      "clause": "C-4.1",
+      "clause_version": "5bc391457964c1bf",
+      "duration_ms": 407,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_lineage.py::test_reservations_block_generation_before_it_spends_review_or_repair tests/test_tdd_lineage.py -q",
+      "scenario": "S4.1"
+    },
+    {
+      "clause": "C-4.2",
+      "clause_version": "cbbc652bb1151993",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_lineage.py::test_audit_forecast_reserves_full_bindings_and_repair_instead_of_narrowing tests/test_tdd_lineage.py::test_planner_refuses_missing_or_invalid_scope -q",
+      "scenario": "S4.2"
+    },
+    {
+      "clause": "C-4.3",
+      "clause_version": "27341b552d4e4474",
+      "duration_ms": 115,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_lineage.py::test_missing_usage_is_not_zero_and_observed_zero_stays_zero tests/test_tdd_lineage.py::test_failures_survive_reopen_and_never_refund_or_leak_messages tests/test_tdd_lineage.py::test_reservations_block_generation_before_it_spends_review_or_repair -q",
+      "scenario": "S4.3"
+    },
+    {
+      "clause": "C-5.1",
+      "clause_version": "46bdf590461a19f6",
+      "duration_ms": 194,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_cycle_assessment.py::test_fresh_partitions_and_immutable_execution_are_required_before_inference tests/test_tdd_cycle_assessment.py -q",
+      "scenario": "S5.1"
+    },
+    {
+      "clause": "C-5.2",
+      "clause_version": "9f4bfec3db8db72d",
+      "duration_ms": 231,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_tdd_cycle_assessment.py::test_sealed_selection_and_missing_grades_never_become_best_of_n_or_success tests/test_tdd_cycle_assessment.py -q",
+      "scenario": "S5.2"
+    }
+  ],
+  "scenario_version": "dbd70ed3a60e80d7",
+  "schema": "athena.spec_ledger/1",
+  "totals": {
+    "duration_ms": 13527,
+    "failed": 0,
+    "passed": 11,
+    "total": 11
+  },
+  "ts": "2026-10-28T15:12:53+00:00"
+}

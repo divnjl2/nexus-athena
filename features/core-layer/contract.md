@@ -122,3 +122,8 @@
   one command at a time.
   - note: the injected executor is the seam every existing runner spec relies on; batching
     is the default path only.
+- **C-6.9** — WHEN a batched spec selects a parameterized test function THE SYSTEM SHALL aggregate all reported variants while retaining exact selection for an explicitly named variant.
+  - source: ledger
+  - note: TDD workspace archive checks passed pytest but were reported absent because JUnit names contain parameter suffixes.
+- **C-6.10** — WHEN a batched spec requests multiple test nodes THE SYSTEM SHALL require execution evidence for every requested node before reporting PASS.
+  - source: audit

@@ -87,8 +87,13 @@ def clause_scores(results, targets):
     
     # Group results by (path, line)
     line_results = {}
+    inconclusive = {}
     for result in results:
         key = (result["path"], result["line"])
+        state = result.get("status", "killed" if result["killed"] else "survived")
+        if state not in ("killed", "survived"):
+            inconclusive.setdefault(key, []).append(result)
+            continue
         if key not in line_results:
             line_results[key] = []
         line_results[key].append(result)
@@ -110,6 +115,8 @@ def clause_scores(results, targets):
             if (path, line) not in target_lines:
                 continue
             for mutant in mut_list:
+                if mutant["killed"] and "witness_clauses" in mutant and clause_id not in mutant["witness_clauses"]:
+                    continue
                 total += 1
                 if mutant["killed"]:
                     killed += 1
@@ -126,10 +133,16 @@ def clause_scores(results, targets):
                         "kind": mutant["kind"]
                     })
         
-        if total == 0:
+        unresolved = [r for key, rows in inconclusive.items() if key in target_lines for r in rows]
+        unresolved += [{**r, "status": "not_witnessed"} for key, rows in line_results.items()
+                       if key in target_lines for r in rows
+                       if r["killed"] and "witness_clauses" in r and clause_id not in r["witness_clauses"]]
+        unresolved += [{**r, "status": "budget_exhausted"} for key, rows in line_results.items()
+                       if key in target_lines for r in rows if r.get("budget_exhausted")]
+        if total == 0 and not unresolved:
             continue
         
-        score = killed / total
+        score = killed / total if total else None
         
         scores[clause_id] = {
             "score": score,
@@ -137,6 +150,10 @@ def clause_scores(results, targets):
             "total": total,
             "survivors": survivors
         }
+        if unresolved:
+            scores[clause_id]["inconclusive"] = [{"path": r["path"], "line": r["line"],
+                                                    "kind": r["kind"], "status": r["status"]}
+                                                   for r in unresolved]
     
     return scores
 
@@ -165,9 +182,14 @@ def mutation_verdict(scores, threshold, added):
     
     for clause_id, data in scores.items():
         score = data.get("score", 1.0)
+        for row in data.get("inconclusive", []):
+            if (row["path"], row["line"]) in added_lines:
+                return {"ok": False, "stage": "mutation", "clause": clause_id,
+                        "survivor": None, "advisory": [], "state": "INCOMPLETE",
+                        "reason": f"inconclusive mutation evidence for {clause_id}"}
         
         # Track clauses under threshold
-        if score < threshold:
+        if score is None or score < threshold:
             clauses_under_threshold.append(clause_id)
         
         # Check if clause has survivors on added lines

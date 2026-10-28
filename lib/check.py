@@ -29,7 +29,8 @@ def _step(name: str, ok: bool, detail: dict, *, leg: str, blocking: bool = True)
 
 def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=None,
           todo=None, drift=None, gates=None, mutation=None, judge=None, refs=None,
-          strict_wording: bool = False, missing_inputs=(), allow_partial: bool = False) -> dict:
+          strict_wording: bool = False, missing_inputs=(), allow_partial: bool = False,
+          trust=None) -> dict:
     """PURE: fold every report into one verdict.
 
     `None` means "not run" — and an audit caught this file breaking its own rule: a step that
@@ -100,14 +101,28 @@ def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=
         # Every outcome the runner can produce is shown. The first cut whitelisted three
         # keys and silently dropped `undetermined` — a run of 20 mutants where NONE was
         # decided rendered as a clean "ok mutation" row.
-        steps.append(_step("mutation", mutation.get("survived", 0) == 0, {
+        not_required = mutation.get("state") == "NOT_REQUIRED" or (
+            "state" not in mutation and mutation.get("scope") == [] and "no clause drifted" in mutation.get("note", ""))
+        evaluated = mutation.get("evaluated", (mutation.get("killed", 0) or 0) + (mutation.get("survived", 0) or 0))
+        inconclusive = any(mutation.get(k, 0) for k in ("undetermined", "unowned", "tool_errors", "budget_exhausted"))
+        ok = not_required or (evaluated > 0 and not inconclusive and mutation.get("survived", 0) == 0)
+        steps.append(_step("mutation", ok, {
             "mutants": mutation.get("mutants"), "killed": mutation.get("killed"),
             "survived": mutation.get("survived"),
             "undetermined": mutation.get("undetermined"),
             "unowned": mutation.get("unowned"),
+            "tool_errors": mutation.get("tool_errors", 0),
+            "evaluated": evaluated,
+            "state": "NOT_REQUIRED" if not_required else mutation.get("state", "PASS" if ok else "INCOMPLETE"),
+            "score": mutation.get("score"),
             "note": mutation.get("note", ""),
             "survivors": [f"{s['path']}:{s['line']}" for s in mutation.get("survivors", [])][:10],
         }, leg="code_to_specs", blocking=bool(mutation.get("blocking"))))
+        steps[-1]["incomplete"] = not ok and not mutation.get("survived", 0)
+
+    if trust is not None:
+        steps.append(_step("spec.trust", trust.get("state") == "PASS", trust, leg="code_to_specs"))
+        steps[-1]["incomplete"] = trust.get("state") == "INCOMPLETE"
 
     if judge is not None:
         # NEVER blocking. The judge is a local model; its verdicts are advisory until a
@@ -123,14 +138,15 @@ def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=
         steps.append(_step("input.missing", False, {"path": path},
                            leg="contract", blocking=True))
 
-    failed = [s for s in steps if not s["ok"] and s["blocking"]]
+    failed = [s for s in steps if not s["ok"] and s["blocking"] and not s.get("incomplete")]
     advisory = [s for s in steps if not s["ok"] and not s["blocking"]]
 
     by_leg: dict = {}
     for leg in LEGS:
         rows = [s for s in steps if s["leg"] == leg and s["blocking"]]
-        by_leg[leg] = (all(s["ok"] for s in rows) if rows else
-                       (True if allow_partial else "incomplete"))
+        by_leg[leg] = (False if any(not s["ok"] and not s.get("incomplete") for s in rows)
+                       else "incomplete" if any(s.get("incomplete") for s in rows)
+                       else True if rows or allow_partial else "incomplete")
     incomplete = [leg for leg, state in by_leg.items() if state == "incomplete"]
 
     return {
@@ -160,7 +176,7 @@ def render(report: dict) -> str:
         state = {True: "ok", False: "FAIL", "incomplete": "????"}[leg_state]
         lines.append(f"[{state}] {leg}")
         for s in rows:
-            tag = mark[s["ok"]] if s["blocking"] else ("ok  " if s["ok"] else "warn")
+            tag = "????" if s.get("incomplete") else (mark[s["ok"]] if s["blocking"] else ("ok  " if s["ok"] else "warn"))
             detail = ", ".join(f"{k}={v}" for k, v in s["detail"].items()
                                if v not in (None, [], {}, 0))
             lines.append(f"   {tag} {s['step']:22} {detail[:96]}")

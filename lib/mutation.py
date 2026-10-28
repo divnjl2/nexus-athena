@@ -147,14 +147,22 @@ def summarize(results: tuple[dict, ...]) -> dict:
     survivors = [r for r in results if status_of(r) == "survived"]
     undetermined = [r for r in results if status_of(r) == "undetermined"]
     unowned = [r for r in results if status_of(r) == "unowned"]
-    decided = len(results) - len(undetermined) - len(unowned)
+    errors = [r for r in results if status_of(r) not in ("killed", "survived", "undetermined", "unowned")]
+    killed = sum(1 for r in results if status_of(r) == "killed")
+    decided = killed + len(survivors)
+    truncated = any(r.get("budget_exhausted") for r in results)
+    state = "FAIL" if survivors else ("INCOMPLETE" if not decided or undetermined or unowned or errors or truncated else "PASS")
     return {
         "mutants": len(results),
-        "killed": sum(1 for r in results if r["killed"]),
+        "killed": killed,
         "survived": len(survivors),
         "undetermined": len(undetermined),
         "unowned": len(unowned),
-        "score": round(sum(1 for r in results if r["killed"]) / decided, 4) if decided else 1.0,
+        "tool_errors": len(errors),
+        "evaluated": decided,
+        "state": state,
+        "budget_exhausted": truncated,
+        "score": round(killed / decided, 4) if decided else None,
         "survivors": survivors,
     }
 
@@ -308,26 +316,30 @@ def baseline(spec_cmds: dict, cmds, *, runner) -> tuple[str, ...]:
     proved the consequence: a mutant was reported killed by a spec that never passed in the
     first place. A spec that is red on clean source cannot be a witness.
     """
-    return tuple(cmd for cmd in dict.fromkeys(cmds) if runner(cmd) != 0)
+    from lib.verification import outcome
+    return tuple(cmd for cmd in dict.fromkeys(cmds) if outcome(runner(cmd)).status != "PASS")
 
 
 def hunt(clause_map: dict, spec_cmds: dict, targets: dict, *, runner, writer,
          limit_per_line: int = 1, max_mutants: int = 0,
-         max_specs: int = 0, exclude: tuple[str, ...] = ()) -> tuple[dict, ...]:
+         max_specs: int = 0, exclude: tuple[str, ...] = (), verify_baseline: bool = False) -> tuple[dict, ...]:
     """EFFECTFUL: build mutants, run each against its owners' specs, stop at first killer.
 
     `runner(cmd) -> int` and `writer(path, text) -> None` are injected, so the caller decides
     WHERE this happens — and the CLI points both at an isolated mirror, never at the repo.
     """
+    from lib.verification import outcome
     results: list[dict] = []
+    clean: dict = {}
     for path, spec in sorted(targets.items()):
         original, lines = spec["source"], spec["lines"]
         per_line: dict[int, int] = {}
         for mut in mutants(original, lines, path=path):
-            if max_mutants and len(results) >= max_mutants:
-                return tuple(results)
             if per_line.get(mut.line, 0) >= limit_per_line:
                 continue
+            if max_mutants and len(results) >= max_mutants:
+                results[0]["budget_exhausted"] = True
+                return tuple(results)
             per_line[mut.line] = per_line.get(mut.line, 0) + 1
             cmds = tuple(c for c in scoped_specs(clause_map, spec_cmds, path, mut.line)
                          if c not in exclude)
@@ -340,22 +352,36 @@ def hunt(clause_map: dict, spec_cmds: dict, targets: dict, *, runner, writer,
                                 "killed": False, "killer": ""})
                 continue
             budget = cmds[:max_specs] if max_specs else cmds
+            if verify_baseline:
+                for cmd in budget:
+                    if cmd not in clean:
+                        clean[cmd] = outcome(runner(cmd))
+                if any(clean[c].status != "PASS" for c in budget):
+                    results.append({"path": path, "line": mut.line, "kind": mut.kind,
+                                    "specs_run": 0, "specs_total": len(cmds), "status": "baseline_error",
+                                    "killed": False, "killer": "", "reason": "baseline not green"})
+                    continue
             killed, killer, ran = False, "", 0
+            errors = []
             try:
                 writer(path, mut.source)
                 for cmd in budget:
                     ran += 1
-                    if runner(cmd) != 0:
+                    result = outcome(runner(cmd))
+                    if result.status == "ASSERTION_FAIL":
                         killed, killer = True, cmd
                         break
+                    if result.status != "PASS":
+                        errors.append({"cmd": cmd, "exit_code": result.exit_code, "tail": result.tail})
             finally:
                 writer(path, original)
             # THREE outcomes, not two. A line owned by 129 clauses cannot be swept inside a
             # CI budget, and calling the leftover "survived" would manufacture vacuity claims
             # nobody checked. Undetermined is the honest third state.
-            status = "killed" if killed else (
-                "survived" if ran >= len(cmds) else "undetermined")
+            status = "killed" if killed else ("tool_error" if errors else (
+                "survived" if ran >= len(cmds) else "undetermined"))
             results.append({"path": path, "line": mut.line, "kind": mut.kind,
                             "specs_run": ran, "specs_total": len(cmds),
-                            "status": status, "killed": killed, "killer": killer})
+                            "status": status, "killed": killed, "killer": killer, "errors": errors,
+                            "witness_clauses": sorted({cid for cid, cmd in spec_cmds.values() if killed and cmd == killer})})
     return tuple(results)

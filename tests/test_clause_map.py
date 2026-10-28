@@ -22,6 +22,31 @@ def _lines(sid, clause, files):
     return SpecLines(scenario_id=sid, clause_id=clause, files=files)
 
 
+def test_collection_uses_the_verifiers_interpreter_for_run_and_json(tmp_path, monkeypatch):
+    """C-9.25 - Coverage collection and JSON export use the verifier's interpreter, not PATH's Python."""
+    import pathlib
+    import subprocess
+    import sys
+    from types import SimpleNamespace
+
+    calls = []
+    def spawn(argv, **kwargs):
+        calls.append(argv)
+        assert argv[0] == sys.executable
+        assert argv[1:3] == ['-m', 'coverage']
+        if argv[3] == 'json':
+            pathlib.Path(argv[argv.index('-o')+1]).write_text(json.dumps({
+                'files': {'lib/example.py': {'executed_lines': [7]}}}), encoding='utf-8')
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(subprocess, 'run', spawn)
+    result = collect((Scenario('S1', 'C-1.1', 'G/W/T', 'python -m pytest t.py::a -q'),),
+                     sources=('lib',), workdir=str(tmp_path/'work'), jobs=1)
+    assert [a[3] for a in calls] == ['run', 'json']
+    assert len(result) == 1 and result[0].collected
+    assert result[0].files == {'lib/example.py': (7,)}
+
+
 def test_a_clause_owns_the_union_of_the_lines_its_specs_execute():
     """C-9.1 — the map is DERIVED from the clause->spec binding, never authored by hand,
     so it cannot drift from the code the way an annotation would."""
@@ -83,7 +108,7 @@ def test_classification_separates_owned_code_from_another_features_code():
     assert rep["lib/seams.py"]["other_coverage_count"] == 17
 
 
-def test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal():
+def test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal(tmp_path):
     """C-9.5 — a partial map still answers most queries; aborting the whole collection
     because one spec misbehaved would make the map unbuildable on any real repo."""
     calls = []
@@ -94,7 +119,7 @@ def test_a_spec_that_produces_no_coverage_data_is_skipped_not_fatal():
 
     scenarios = (Scenario("S1", "C-1.1", "G/W/T", "python -m pytest t.py::a -q"),
                  Scenario("S2", "C-1.2", "G/W/T", "pytest -q; rm -rf /"))
-    got = collect(scenarios, sources=("lib",), workdir="D:/tmp/claude/na", runner=runner, jobs=2)
+    got = collect(scenarios, sources=("lib",), workdir=str(tmp_path / "coverage-work"), runner=runner, jobs=2)
     assert [s.scenario_id for s in got] == ["S1", "S2"]
     assert all(s.files == {} for s in got)
     # the INJECTED runner is the one that ran: without this the suite passes while the

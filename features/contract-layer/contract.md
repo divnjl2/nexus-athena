@@ -352,6 +352,10 @@
     the arms they had been skipping changed the branch evidence, moved no digest, and the
     incremental rebuild answered "every clause still owns the lines it owned".
 
+- **C-9.25** — WHEN coverage collection launches its run or JSON export process THE SYSTEM SHALL use the verifier's current Python interpreter.
+  - source: incident
+  - note: the publication map collected no evidence because Windows resolved generic Python to a system installation without coverage, despite the verifier running in its prepared virtual environment.
+
 ## C-10 — Does a spec prove anything: the deterministic runner and the judge pilot
 
 - **C-10.1** — WHEN mutants are generated THE SYSTEM SHALL mutate the syntax tree and leave

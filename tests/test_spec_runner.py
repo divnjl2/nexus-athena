@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 
 from lib.ast import Scenario
 from lib.contract import parse as parse_contract
@@ -88,7 +89,7 @@ def test_an_accepted_run_cmd_is_tokenized_and_never_shelled(monkeypatch):
                         lambda *a, **kw: calls.append((a, kw)) or _Ok())
     res = run_specs((_scen(1, "C-1.2", cmd="pytest tests/test_x.py::test_y -q"),), jobs=1)
     assert res[0].passed
-    assert calls[0][0][0] == ["pytest", "tests/test_x.py::test_y", "-q"]
+    assert calls[0][0][0] == [sys.executable, "-m", "pytest", "tests/test_x.py::test_y", "-q"]
     assert calls[0][1]["shell"] is False
 
 

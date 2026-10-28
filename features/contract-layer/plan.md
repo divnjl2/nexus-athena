@@ -321,3 +321,10 @@ using the notations that already exist rather than three new ones.
 ### Manual Verification
 - `python evals/judge_twostage.py --limit 6` finishes stage 1 with `stop`, not `length`.
 - `athena judge eval` scores the two-stage decisions the same way it scored the one-call run.
+
+## Phase 17: Reproducible coverage subprocesses
+### Tasks
+- [ ] T17.1 Keep coverage run and JSON export in the verifier environment
+  - success_check: `python -m pytest tests/test_clause_map.py::test_collection_uses_the_verifiers_interpreter_for_run_and_json -q`
+  - files: `lib/clause_map.py, tests/test_clause_map.py`
+  - verifies: S9.25
