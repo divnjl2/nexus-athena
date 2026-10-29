@@ -2258,16 +2258,16 @@
       ]
     }
   },
-  "scenario_version": "7325dac131d921f1",
+  "scenario_version": "47371192d729bd6b",
   "schema": "athena.clause_map/6",
   "spec_digests": {
-    "S1.1": "46b16ffa86f26317",
-    "S1.2": "6f977cb7ccb7aaae",
-    "S1.3": "e77b6b2c405945a1",
-    "S1.4": "2e1dc27e10806dc6",
-    "S1.5": "f0b038057e896b5a",
-    "S1.6": "8bdf84451d5792eb",
-    "S1.7": ""
+    "S1.1": "aec69a837e7b1954",
+    "S1.2": "d97bcc869085580e",
+    "S1.3": "825594d3a1c1f128",
+    "S1.4": "b21c6715d6b61dc0",
+    "S1.5": "e26f4d6fe308f7dd",
+    "S1.6": "ad04e076a6eeb9bd",
+    "S1.7": "7678f9c1a05bbdbc"
   },
   "specs": {
     "S1.1": "C-1.1",
