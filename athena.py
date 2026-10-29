@@ -812,6 +812,24 @@ def cmd_init(a) -> int:
     return 0
 
 
+def cmd_assess(a) -> int:
+    from lib.assurance import assess, render
+    try:
+        report = assess(a.cwd, a.manifest)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        _emit({"schema": "athena.assurance/1", "error": str(exc)})
+        return 2
+    if a.out:
+        pathlib.Path(a.out).write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if a.html:
+        page = pathlib.Path(a.html).resolve()
+        page.write_text(render(report), encoding="utf-8")
+        import webbrowser
+        webbrowser.open(page.as_uri())
+    _emit(report)
+    return 0  # Successful assessment, not a claim that the product is complete.
+
+
 def cmd_trust(a) -> int:
     from lib.spec_trust import audit
     try:
@@ -3561,6 +3579,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="version", version=f"athena {__version__}")
     p.add_argument("--speckit", choices=("on", "off", "auto"), default="auto")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    assurance = sub.add_parser("assess", help="report per-requirement evidence without a release decision")
+    assurance.add_argument("manifest", help="reviewer-supplied assurance manifest, relative to --cwd")
+    assurance.add_argument("--cwd", default=".")
+    assurance.add_argument("-o", "--out", default="")
+    assurance.add_argument("--html", default="", help="write and open an HTML evidence review")
+    assurance.set_defaults(fn=cmd_assess)
 
     tr = sub.add_parser("trust", help="challenge specs with curated valid alternatives and semantic violations")
     tr.add_argument("manifest", help="reviewer-owned JSON manifest, relative to --cwd")

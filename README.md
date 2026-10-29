@@ -1,12 +1,20 @@
-# Athena — a spec-driven planning framework (v3 + v3.1 + v3.3 + v3.10 + v3.11)
+# Athena — requirement evidence for AI-native development
 
 > **Start here:** [`CORE.md`](./CORE.md) (goal, language, priorities, constraints; forty
 > lines), then [`CLAUDE.md`](./CLAUDE.md) (the way in, one screen), then the feature you
 > touch under `features/<name>/`. This README is the long form.
 
-Turn a one-line intent into a **complete, traceable, compilable plan** — and a durable
-**provenance graph** where every task's success check is a *proof that a requirement holds*,
-not just "a test passed."
+Athena connects requirements, executable checks and code so you can inspect what
+has evidence, what is contradicted and what remains unknown. A passing check is
+an observation; its adequacy and the meaning of the code require separate evidence.
+
+The new opt-in [`assess` report](features/assurance/README.md) separates execution,
+check adequacy, implementation support, specification review and code correspondence.
+It reports evidence without deciding whether an answer may be released. The first
+version imports reviewer-declared, fingerprinted observations; it does not yet
+automatically assess the whole repository or authenticate semantic judgments.
+
+The existing planning and contract machinery remains below.
 
 **v3.3 adds the requirement contract**: numbered clauses with immutable ids that are
 *superseded, never edited in place*, so a reference written months ago keeps resolving. Each
