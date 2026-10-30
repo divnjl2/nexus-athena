@@ -9,4 +9,6 @@
 - **C-1.4** — WHEN current observations both support and contradict a dimension THE SYSTEM SHALL report conflict for that dimension.
 - **C-1.5** — WHEN no current code correspondence review exists THE SYSTEM SHALL report code correspondence as unknown.
 - **C-1.6** — WHEN an assessment is rendered THE SYSTEM SHALL describe its counts as evidence coverage rather than probability of correctness.
+- **C-1.7** — WHEN an input or observation artifact changes during an evidence lifecycle THE SYSTEM SHALL require current matching observations before restoring implementation support.
+  - source: review
 

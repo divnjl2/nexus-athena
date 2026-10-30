@@ -8,8 +8,8 @@ and this module is those conditions — not the judge.
 
   step 0  ADVISORY by construction. `is_gate_eligible` is the only thing that could ever
           promote a judge, and it needs a passing score report to say yes.
-  step 1  the labelled corpus is built MECHANICALLY from pairs this repo already proves;
-          the ground truth is never produced by a model.
+  step 1  the corpus mechanically degrades caller-declared baseline pairs;
+          those labels are declarations, not certified semantic ground truth.
   step 2  thresholds are constants here, fixed BEFORE any judge runs, so the decision to
           wire one is a number and not an impression.
   step 3  a verdict without an EXECUTABLE counterexample is discarded. The model proposes;
@@ -34,8 +34,21 @@ from dataclasses import dataclass, replace
 #: Fixed before any judge exists (step 2). A judge below these numbers stays advisory.
 THRESHOLDS = {"recall_min": 0.95, "false_reject_max": 0.02}
 
-#: The mechanical ways a spec stops proving its clause while still exiting 0.
+#: Mechanical transformations used to declare negative corpus examples.
 DEFECTS = ("assert_true", "no_assert", "misbound", "weakened")
+
+
+def label_context() -> dict:
+    """Interpretation shared by corpus exports and label-relative score reports."""
+    return {
+        "label_basis": "declared_baselines_and_mechanical_degradations",
+        "semantic_validity": "NOT_ASSESSED",
+        "limitations": [
+            "The legacy proves and vacuous labels are declared corpus categories, not established requirement truth.",
+            "Recall and false_reject measure agreement with those labels; incorrect baseline labels can produce misleading quality estimates.",
+            "Passing thresholds does not establish intent fidelity, check adequacy or code correspondence.",
+        ],
+    }
 
 _INSTRUCTION_MARKERS = (
     "ignore previous", "ignore all previous", "disregard", "system:", "assistant:",
@@ -49,7 +62,7 @@ def _sha16(text: str) -> str:
 
 @dataclass(frozen=True)
 class Pair:
-    """One clause and one spec, with a label that no model produced."""
+    """One clause and one spec with a caller-declared corpus label."""
     id: str
     clause_id: str
     clause_text: str
@@ -142,10 +155,10 @@ def degrade(pair: Pair, defect: str, *, other_clause: str = "",
 
 def build_corpus(pairs: tuple[Pair, ...], *, defects: tuple[str, ...] = DEFECTS,
                  strip_docs: bool = True) -> tuple[Pair, ...]:
-    """PURE: the labelled set — every proving pair plus one degradation of each kind.
+    """PURE: preserve declared baseline labels and add mechanical variants.
 
-    Balance is deliberate but the labels are not a judgement call: the good half is what the
-    repo's own gates already prove, and the bad half is a mechanical edit of it.
+    This transformation does not execute or validate the baseline oracle, requirement
+    intent or variant labels. Corpus consumers must retain that evidence boundary.
     """
     out: list[Pair] = []
     if strip_docs:
@@ -360,9 +373,9 @@ def adjudicate(verdict: Verdict, *, runner) -> dict:
 
 def score(corpus: tuple[Pair, ...], decisions: dict, *,
           thresholds: dict | None = None) -> dict:
-    """PURE (step 2): recall on the broken half, false rejects on the good half.
+    """PURE: label-relative recall and rejection rates, with explicit missing decisions.
 
-    A pair with no decision counts as "proves" — silence must never be read as a catch.
+    Caller-declared labels are not checked for semantic truth by this reducer.
     """
     th = {**THRESHOLDS, **(thresholds or {})}
     vacuous = [p for p in corpus if p.label == "vacuous"]
@@ -388,6 +401,7 @@ def score(corpus: tuple[Pair, ...], decisions: dict, *,
             and decisions.get(p.id, {}).get("decision") == "vacuous")
         / max(1, sum(1 for p in vacuous if p.defect == d)), 4) for d in DEFECTS}
     return {
+        **label_context(),
         "pairs": len(corpus), "vacuous": len(vacuous), "proves": len(proves),
         "recall": recall, "false_reject": false_reject,
         "recall_by_defect": per_defect,

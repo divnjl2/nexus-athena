@@ -164,5 +164,9 @@ executor's commands can run fenced.
   - success_check: `python -m pytest tests/test_foundry_oracles.py::test_the_merge_metrics_rendering_matches_its_golden_file_and_the_golden_is_a_spec_artefact -q`
   - files: `lib/dispatch.py, features/foundry-layer/golden/merge_metrics.txt`
   - verifies: S9.6
+- [ ] T6.9 Run the real import-linter entry point under coverage
+  - success_check: `python -m pytest tests/test_import_linter_bridge.py -q`
+  - files: `tools/run_import_linter.py, tests/test_import_linter_bridge.py`
+  - verifies: S9.4, S9.7
 ### Manual Verification
 - `python athena.py daemon features/foundry-layer/contract.md --front features/foundry-layer/plan.md --dry-run --text` names the next task and the lane it would take.

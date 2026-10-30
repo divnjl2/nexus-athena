@@ -237,7 +237,9 @@ def seam_contract_bound(contract, scenarios) -> SeamResult:
 
 
 def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "",
-                   clause_digests: dict | None = None, subject: str = "") -> SeamResult:
+                   clause_digests: dict | None = None, subject: str = "",
+                   spec_digests: dict | None = None,
+                   execution_cwd: str = "") -> SeamResult:
     """Seam 13 (v3.3): the clause->file:line map must describe the contract in front of us.
 
     The map is DERIVED, which is its strength and its trap: nothing about a stale one looks
@@ -250,8 +252,12 @@ def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "
     the map points somewhere else. They are per CLAUSE and cover only the lines it owns, so
     editing elsewhere in the same file costs nothing — and the drift list doubles as the
     exact work list for an incremental rebuild.
+
+    Current verifier-input digests are injected by the CLI. Comparing these fingerprints
+    reads no files and runs no scenarios here; their scope is the explicit inputs recorded
+    by the map, not transitive imports or environment state.
     """
-    from lib.clause_map import SCHEMA, staleness
+    from lib.clause_map import SCHEMA, stale_specs, staleness
     rep = staleness(clause_map, contract, scenarios, scenario_version=scenario_version,
                     clause_digests=clause_digests, subject=subject)
     issues: list[str] = []
@@ -271,11 +277,20 @@ def seam_map_fresh(clause_map, contract, scenarios, *, scenario_version: str = "
                for cid in rep["stale_entries"]]
     issues += [f"clause {cid}: the lines it owns changed since the map was built"
                for cid in rep["clause_drift"]]
+    input_drift = stale_specs(clause_map, spec_digests) if spec_digests is not None else ()
+    issues += [f"spec {sid}: executable inputs changed or lack a recorded fingerprint"
+               for sid in input_drift]
+    mapped_cwd = ((clause_map or {}).get("collection_context") or {}).get("cwd", "")
+    if execution_cwd and mapped_cwd != execution_cwd:
+        issues.append("map execution directory differs or lacks a recorded context: "
+                      f"recorded {mapped_cwd!r}, current {execution_cwd!r}")
     # already deterministic: the pins are scalars and both id lists come back sorted
     shape = _hash(repr((rep["map_subject"], rep["map_contract_version"],
                         rep["map_scenario_version"],
                         tuple(rep["unmapped"]), tuple(rep["stale_entries"]),
-                        tuple(rep["clause_drift"]))))
+                        tuple(rep["clause_drift"]), tuple(input_drift),
+                        tuple(sorted(spec_digests.items())) if spec_digests is not None
+                        else None, mapped_cwd, execution_cwd)))
     return SeamResult("seam.map_fresh", not issues, tuple(issues), shape)
 
 

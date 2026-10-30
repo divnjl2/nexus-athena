@@ -55,3 +55,11 @@
 - **Given** an assurance report
 - **When** it is rendered
 - **Then** its scope is evidence coverage and authored HTML is escaped.
+
+### S1.8 - Evidence lifecycle preserves freshness
+- **verifies:** C-1.7
+- **pins:** b959ef787d560bb8
+- **run_cmd:** `python -m pytest tests/test_assurance_stateful.py::test_generated_evidence_lifecycle_preserves_freshness tests/test_assurance_stateful.py::test_lifecycle_oracle_detects_seeded_stale_read tests/test_assurance_stateful.py::test_lifecycle_rerun_recovers_and_counterevidence_stays_visible -q`
+- **Given** declared observations for versioned code, checks and artifacts
+- **When** generated histories change inputs, append observations and rerun checks
+- **Then** stale observations cannot restore support, current reruns may restore it, and a stale-read defect is detected by the independent event-history oracle.

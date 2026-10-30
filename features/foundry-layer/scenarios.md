@@ -1,5 +1,13 @@
 # Scenarios: Athena Foundry Layer (v3.16)
 
+### S9.7 - Native import-linter bridge has a negative control
+- **verifies:** C-9.4
+- **pins:** f51ccfbb67c843bb
+- **run_cmd:** `python -m pytest tests/test_import_linter_bridge.py::test_import_linter_bridge_accepts_clean_imports_and_rejects_a_real_violation -q`
+- **Given** the installed import-linter entry point and an isolated package
+- **When** the package first imports an allowed module and then a forbidden module
+- **Then** the native oracle accepts the former and rejects the latter by the violated rule.
+
 > Executable specs for `contract.md`. One spec per clause, ids `S<group>.<index>`
 > mirroring the clause number. `pins:` is written by `athena contract pin --write`.
 
@@ -298,9 +306,9 @@
 ### S9.4 — the frame's own structure holds under import-linter
 - **verifies:** C-9.4
 - **pins:** f51ccfbb67c843bb
-- **run_cmd:** `lint-imports --config features/foundry-layer/importlinter.ini`
+- **run_cmd:** `python -m tools.run_import_linter --config features/foundry-layer/importlinter.ini`
 - **Given** features/foundry-layer/importlinter.ini, rendered from the clause by lib.oracles.importlinter_config
-- **When** `lint-imports` runs the contracts in it
+  - **When** `lint-imports` runs the contracts in it
 - **Then** every contract is kept: no module under lib imports athena or tests; a broken contract exits non-zero and the clause is red.
 ## C-10 — the sandbox (lib/sandbox.py)
 

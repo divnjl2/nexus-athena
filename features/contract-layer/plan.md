@@ -328,3 +328,32 @@ using the notations that already exist rather than three new ones.
   - success_check: `python -m pytest tests/test_clause_map.py::test_collection_uses_the_verifiers_interpreter_for_run_and_json -q`
   - files: `lib/clause_map.py, tests/test_clause_map.py`
   - verifies: S9.25
+
+## Phase 18: Reusable observations and explicit evidence limits
+**Goal:** incremental maps execute changed obligations and derived summaries distinguish bindings from observations.
+**Depends on:** Phase 17
+### Tasks
+- [ ] T18.1 Recollect changed, new or incomplete observations and remove obsolete attribution
+  - success_check: `python -m pytest tests/test_clause_map.py tests/test_clause_map_incremental.py -q`
+  - files: `lib/clause_map.py, athena.py, tests/test_clause_map.py, tests/test_clause_map_incremental.py`
+  - verifies: S9.26, S9.27, S9.28, S9.29, S9.30, S9.34, S9.35, S9.36, S9.37, S9.38
+- [ ] T18.2 Keep coverage attribution separate from requirement truth
+  - success_check: `python -m pytest tests/test_clause_map_incremental.py::test_executed_lines_are_attributed_without_claiming_semantic_truth tests/test_clause_map_incremental.py::test_partial_branches_report_unobserved_arms tests/test_clause_map_incremental.py::test_complementary_branches_do_not_establish_return_values -q`
+  - files: `lib/clause_map.py, tests/test_clause_map_incremental.py`
+  - verifies: S9.31, S9.32, S9.33
+- [ ] T18.3 Report declared bindings and observed reach in outline and export
+  - success_check: `python -m pytest tests/test_outline.py tests/test_export.py -q`
+  - files: `lib/outline.py, lib/export.py, tests/test_outline.py, tests/test_export.py`
+  - verifies: S11.28, S14.5
+- [ ] T18.4 Identify judge labels and label-relative metrics as declarations
+  - success_check: `python -m pytest tests/test_judge_pilot.py -q`
+  - files: `lib/judge.py, athena.py, tests/test_judge_pilot.py`
+  - verifies: S10.27, S10.28
+- [ ] T18.5 Reject changed verifier inputs during read-only map checks
+  - success_check: `python -m pytest tests/test_map_check_inputs.py -q`
+  - files: `lib/seams.py, athena.py, tests/test_map_check_inputs.py`
+  - verifies: S9.39
+- [ ] T18.6 Keep observations from changing inputs ineligible until stable recollection
+  - success_check: `python -m pytest tests/test_map_input_stability.py -q`
+  - files: `athena.py, tests/test_map_input_stability.py`
+  - verifies: S9.40

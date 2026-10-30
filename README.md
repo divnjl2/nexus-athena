@@ -16,6 +16,12 @@ automatically assess the whole repository or authenticate semantic judgments.
 
 The existing planning and contract machinery remains below.
 
+Optional [`formal` tool receipts](features/formal-evidence/README.md) collect
+CrossHair counterexample searches and Dafny verification results with explicit
+subject, scope and assumptions. The HTML view presents system design, tradeoffs
+and raw observations. These receipts do not automatically validate user intent
+or promote the existing assurance assessment.
+
 **v3.3 adds the requirement contract**: numbered clauses with immutable ids that are
 *superseded, never edited in place*, so a reference written months ago keeps resolving. Each
 clause is bound to an executable spec, which makes three questions a linear scan instead of a

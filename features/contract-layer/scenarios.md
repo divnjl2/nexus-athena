@@ -887,7 +887,7 @@
 - **run_cmd:** `python -m pytest tests/test_clause_map.py::test_a_strengthened_spec_invalidates_the_clause_it_proves -q`
 - **Given** the per-clause line map (lib/clause_map.py)
 - **When** the spec `test_a_strengthened_spec_invalidates_the_clause_it_proves` is executed
-- **Then** a changed test body moves that spec's digest and only that one, and a run_cmd naming no node pins nothing.
+- **Then** a changed test body moves fingerprints for commands naming that complete input file; commands without a named node also pin explicit local files.
 
 ### S9.25 — coverage subprocesses use the verifier's interpreter
 - **verifies:** C-9.25
@@ -896,6 +896,126 @@
 - **Given** a verifier environment with its own coverage installation
 - **When** default collection launches run and JSON export
 - **Then** both use the verifier interpreter and the resulting line evidence is collected.
+
+### S9.26 — incremental changes execute before their pins move
+- **verifies:** C-9.26
+- **pins:** ac170e21eabd3b8b
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_incremental_executes_added_and_changed_commands_but_reuses_unchanged -q`
+- **Given** native coverage observations and execution markers for three clauses
+- **When** a sibling spec is added and a command without a pytest node changes
+- **Then** those clauses execute again while the unchanged clause retains its observations; a prose-only edit causes no execution.
+
+### S9.27 — a failed sibling remains incomplete and is retried
+- **verifies:** C-9.27
+- **pins:** 70b210eb7378fe02
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_incremental_retries_a_failed_sibling_even_when_its_clause_has_lines -q`
+- **Given** one failed command alongside successful siblings and fresh coverage lines
+- **When** the same incremental map is rebuilt after the failure condition is removed
+- **Then** execution markers demonstrate that the affected siblings rerun, while the map remains incomplete until their collection succeeds.
+
+### S9.28 — stale files and process failures cannot become reusable observations
+- **verifies:** C-9.28
+- **pins:** d3f927c2c74b2275
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_collection_cannot_reuse_stale_output_or_accept_a_failed_process -q`
+- **Given** existing coverage data and JSON in a reused work directory
+- **When** a run produces no output or a process fails even while writing a report
+- **Then** prior files are removed and the collection is not marked reusable.
+
+### S9.29 — deleted and rebound specs leave no obsolete attribution
+- **verifies:** C-9.29
+- **pins:** 927149b994cbe7d6
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_incremental_removes_obsolete_bindings_and_recollects_their_siblings -q`
+- **Given** a map containing several specs for one clause
+- **When** a spec is removed, a binding changes, or a clause disappears
+- **Then** affected remaining specs actually rerun and obsolete bindings, pins, branches and line attribution are removed.
+
+### S9.30 — changed requirement versions require new observations
+- **verifies:** C-9.30
+- **pins:** b7204c788610fc9e
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_incremental_recollects_only_the_clause_whose_requirement_version_changed -q`
+- **Given** unchanged source and commands in an existing map
+- **When** one requirement version changes
+- **Then** that clause executes again before its pin moves, while other clauses are reused.
+
+### S9.31 — execution reach is attributed through declared bindings
+- **verifies:** C-9.31
+- **pins:** f1fd31037c4dc7bc
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_executed_lines_are_attributed_without_claiming_semantic_truth -q`
+- **Given** commands with no value assertions and a function returning zero for both inputs
+- **When** coverage observes the commands bound to a clause
+- **Then** their executed lines are attributed to the clause without claiming that a return-one obligation holds.
+
+### S9.32 — the legacy half-proved label measures missing branch observations
+- **verifies:** C-9.32
+- **pins:** aa0525b6ad808aaf
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_partial_branches_report_unobserved_arms -q`
+- **Given** a function with two branch arms
+- **When** one command executes one arm under native coverage
+- **Then** the attributed branch line is partial without asserting requirement truth.
+
+### S9.33 — complementary branch observations do not prove return values
+- **verifies:** C-9.33
+- **pins:** 423129d1662ae64a
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_complementary_branches_do_not_establish_return_values -q`
+- **Given** two commands that call opposite arms without checking their values
+- **When** their coverage is combined for one bound clause
+- **Then** the partial-branch entry disappears although a return-one obligation remains false.
+
+### S9.34 — filtered work cannot refresh deferred observations
+- **verifies:** C-9.26
+- **pins:** ac170e21eabd3b8b
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_filtered_incremental_work_keeps_unexecuted_changes_stale -q`
+- **Given** a changed command outside the selected clause filter
+- **When** an incremental map rebuild executes only selected clauses
+- **Then** the unexecuted command keeps its old pins and runs on a later unfiltered rebuild.
+
+### S9.35 — legacy maps without per-spec outcomes are recollected
+- **verifies:** C-9.27
+- **pins:** 70b210eb7378fe02
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_legacy_map_without_complete_outcomes_is_recollected -q`
+- **Given** a map without per-spec collection outcomes or individual requirement pins
+- **When** it is rebuilt incrementally
+- **Then** execution markers show actual recollection before fresh metadata is written.
+
+### S9.36 — later test nodes and explicit file inputs are fingerprinted
+- **verifies:** C-9.26
+- **pins:** ac170e21eabd3b8b
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_incremental_executes_changed_second_node_and_explicit_config -q`
+- **Given** one command naming two pytest nodes and another reading an explicit configuration file
+- **When** the second test body and configuration bytes change without changing either command
+- **Then** native execution markers show both affected commands rerun while another clause is reused.
+
+### S9.37 — complete file fingerprints include decorators and test helpers
+- **verifies:** C-9.26
+- **pins:** ac170e21eabd3b8b
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_explicit_test_files_include_decorators_and_other_test_helpers -q`
+- **Given** a quoted class-method selector with a parameter suffix
+- **When** its decorator, selected body, shared helper or another test body changes
+- **Then** the complete input-file fingerprint changes, including test functions used as runtime helpers.
+
+### S9.38 — input resolution and reuse follow execution context
+- **verifies:** C-9.26
+- **pins:** ac170e21eabd3b8b
+- **run_cmd:** `python -m pytest tests/test_clause_map_incremental.py::test_incremental_pins_the_execution_cwd_source_roots_and_subject tests/test_clause_map_incremental.py::test_explicit_input_paths_preserve_parent_and_absolute_locations -q`
+- **Given** execution from a target directory different from the launcher, with relative and absolute file arguments
+- **When** explicit inputs, coverage roots or codebase subject change
+- **Then** native markers demonstrate recollection in the execution context, and filtered deferred clauses remain incomplete.
+
+### S9.39 — read-only freshness checks reject changed verifier inputs
+- **verifies:** C-9.34
+- **pins:** edcad1700d9ce880
+- **run_cmd:** `python -m pytest tests/test_map_check_inputs.py::test_check_rejects_changed_explicit_inputs_without_executing_and_refresh_repairs -q`
+- **Given** a map derived from named tests and explicit configuration inputs
+- **When** those inputs change before a read-only check
+- **Then** the check rejects stale observations without executing scenarios, and a later native recollection repairs them.
+
+### S9.40 — edits during collection cannot become fresh post-edit observations
+- **verifies:** C-9.35
+- **pins:** e54a7b23eeb7f588
+- **run_cmd:** `python -m pytest tests/test_map_input_stability.py::test_inputs_changed_during_collection_stay_stale_until_stable_rerun -q`
+- **Given** a native verifier or pinning step that modifies the verifier file or its measured module
+- **When** coverage succeeds but an input changes during collection or pin calculation
+- **Then** both freshness checks reject the observations until another native run observes stable inputs; a subsequent unchanged run can reuse them.
 
 ### S10.1 — mutations are ast level and skip prose
 - **verifies:** C-10.1
@@ -929,13 +1049,13 @@
 - **When** the spec `test_the_summary_names_the_survivors` is executed
 - **Then** the answer wanted is "which specs prove nothing", not a percentage.
 
-### S10.5 — the corpus labels come from mechanical edits not from a model
-- **verifies:** C-10.5
-- **pins:** 334a3e4bcef23727
-- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model -q`
+### S10.5 — mechanical corpus labels retain their declared basis
+- **verifies:** C-10.27
+- **pins:** bbc07982979a046b
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_corpus_retains_declared_labels_without_certifying_them -q`
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
-- **When** the spec `test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model` is executed
-- **Then** ground truth a model produced would make the whole measurement circular.
+- **When** the corpus derives mechanically degraded variants from a caller-declared baseline
+- **Then** baseline and variant labels retain their declared provenance without certifying semantic truth.
 
 ### S10.6 — a misbound spec is labelled vacuous for the clause it names
 - **verifies:** C-10.6
@@ -961,13 +1081,13 @@
 - **When** the spec `test_thresholds_are_fixed_before_any_judge_runs_and_decide_eligibility` is executed
 - **Then** the promotion from advisory to gate is a number, not an impression.
 
-### S10.9 — a false reject costs more than a miss
-- **verifies:** C-10.9
-- **pins:** 9f1572d662e63ff8
-- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_a_false_reject_costs_more_than_a_miss -q`
+### S10.9 — rejection metrics remain relative to declared labels
+- **verifies:** C-10.28
+- **pins:** 9daa410887628b32
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_judge_metrics_are_relative_to_labels_even_for_a_faulty_baseline -q`
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
-- **When** the spec `test_a_false_reject_costs_more_than_a_miss` is executed
-- **Then** rejecting a good spec is what gets a gate switched off, so it is scored separately and per defect kind.
+- **When** the judge rejects a faulty baseline labelled proves
+- **Then** rejection and recall metrics stay explicitly relative to declared labels without establishing that the baseline was correct.
 
 ### S10.10 — the judge is pinned like every other artifact
 - **verifies:** C-10.10
@@ -1092,6 +1212,22 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_a_spec_the_ledger_calls_red_is_not_a_witness` is executed
 - **Then** a spec failing on clean source is disqualified, and a mutant whose only owner is disqualified is unowned rather than survived.
+
+### S10.27 — mechanical corpus labels remain declared assumptions
+- **verifies:** C-10.27
+- **pins:** bbc07982979a046b
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_the_corpus_retains_declared_labels_without_certifying_them -q`
+- **Given** a caller-declared baseline that has not established its requirement
+- **When** mechanically degraded variants form a corpus
+- **Then** its labels retain their declared provenance without becoming certified semantic truth.
+
+### S10.28 — judge metrics describe agreement with declared labels
+- **verifies:** C-10.28
+- **pins:** 9daa410887628b32
+- **run_cmd:** `python -m pytest tests/test_judge_pilot.py::test_judge_metrics_are_relative_to_labels_even_for_a_faulty_baseline -q`
+- **Given** a faulty baseline labelled proves
+- **When** a judge rejects that baseline
+- **Then** the legacy false-reject count is explicitly relative to the declared label rather than establishing that the baseline was correct.
 
 ### S11.1 — the loop answers with one verdict and names the failing leg
 - **verifies:** C-11.1
@@ -1269,13 +1405,13 @@
 - **When** the spec `test_the_outline_names_each_group_home_by_exclusivity_not_by_reach` is executed
 - **Then** the module a group owns is named as its home, and the module every group merely passes through is marked shared.
 
-### S11.23 — the outline separates the four statuses and counts proofs
-- **verifies:** C-11.23
-- **pins:** 31097ea97251ce82
-- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_separates_the_four_statuses_and_counts_proofs -q`
+### S11.23 — the outline separates statuses and declared bindings
+- **verifies:** C-11.28
+- **pins:** b843d977272f1352
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_separates_statuses_and_bindings_without_execution -q`
 - **Given** the derived outline (lib/outline.py)
-- **When** the spec `test_the_outline_separates_the_four_statuses_and_counts_proofs` is executed
-- **Then** a withdrawn clause is not owed a proof and is not counted live; the outline is where this format's status vocabulary becomes visible.
+- **When** the outline receives declared bindings without execution observations
+- **Then** clause statuses and bound or unbound counts stay separate; no requirement is reported proved.
 
 ### S11.24 — the outline says so when there is no map
 - **verifies:** C-11.24
@@ -1316,6 +1452,14 @@
 - **Given** the mutation runner + judge pilot (lib/mutation.py, lib/judge.py)
 - **When** the spec `test_the_default_mirror_is_somewhere_the_guard_will_accept` is executed
 - **Then** the sweep's default scratch tree sits outside the repository, carries the mirror marker and is reusable on the next run.
+
+### S11.28 — declared bindings do not count as execution or proof
+- **verifies:** C-11.28
+- **pins:** b843d977272f1352
+- **run_cmd:** `python -m pytest tests/test_outline.py::test_the_outline_separates_statuses_and_bindings_without_execution -q`
+- **Given** a structurally bound spec with no observed execution
+- **When** the outline summarises its clause group
+- **Then** it reports binding counts separately from clause statuses without a proof claim.
 
 ### S12.1 — a reference carries the fingerprint of what was reviewed
 - **verifies:** C-12.1
@@ -1405,13 +1549,13 @@
 - **When** the spec `test_the_index_is_the_needs_json_shape_a_consumer_already_reads` is executed
 - **Then** the index carries their status vocabulary with ours beside it, and their id links.
 
-### S14.2 — the index carries what a requirements index cannot say
-- **verifies:** C-14.2
-- **pins:** 9490e074a5f28159
-- **run_cmd:** `python -m pytest tests/test_export.py::test_the_index_carries_what_a_requirements_index_cannot_say -q`
+### S14.2 — the index separates declared bindings and observed reach
+- **verifies:** C-14.5
+- **pins:** 47957a0602be74ae
+- **run_cmd:** `python -m pytest tests/test_export.py::test_the_index_reports_bindings_and_reach_without_proof -q`
 - **Given** tests/test_export.py
-- **When** the spec `test_the_index_carries_what_a_requirements_index_cannot_say` is executed
-- **Then** proved-or-not, owned lines and half-proved lines travel with the ids.
+- **When** a binding report and observed coverage are exported
+- **Then** declared spec bindings and observed line or branch reach travel with ids without a requirement-proof claim.
 
 ### S14.3 — the export is byte stable
 - **verifies:** C-14.3
@@ -1428,6 +1572,14 @@
 - **Given** tests/test_export.py
 - **When** the spec `test_the_oft_export_is_specobject_xml_their_tracer_can_ingest` is executed
 - **Then** the export parses as specobject XML, drops withdrawn clauses and escapes its text.
+
+### S14.5 — exported execution reach is not semantic correspondence
+- **verifies:** C-14.5
+- **pins:** 47957a0602be74ae
+- **run_cmd:** `python -m pytest tests/test_export.py::test_the_index_reports_bindings_and_reach_without_proof -q`
+- **Given** declared spec bindings and observed coverage without semantic validation
+- **When** the clause index is exported
+- **Then** it reports those observations without describing requirements as proved.
 
 ### S15.1 — a codebase is named by package url not by a path
 - **verifies:** C-15.1

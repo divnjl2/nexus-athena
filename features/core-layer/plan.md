@@ -22,6 +22,10 @@ Written contract-first: every clause here was red before the code existed.
   - success_check: `python -m pytest tests/test_core.py -q`
   - files: `lib/scaffold.py, athena.py, CORE.md, tests/test_core.py`
   - verifies: S1.1, S1.2, S1.3, S1.4, S1.5
+- [ ] T1.2 Preserve evidence boundaries in core guidance and exercise a covered weak oracle
+  - success_check: `python -m pytest tests/test_core.py -q`
+  - files: `CORE.md, lib/scaffold.py, tests/test_core.py, lib/assurance.py, lib/clause_map.py`
+  - verifies: S1.6, S1.7
 ### Manual Verification
 - `python athena.py init /tmp/demo --title Demo` writes CORE.md; `athena check` on it passes.
 

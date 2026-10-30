@@ -4,14 +4,14 @@
 > requirement, spec and code one linear scan; this layer adds what sat above and around it:
 > a semantic core the clauses cite, the origin of each clause, a rerun of every lesson, one
 > way into the repository, the gate that makes the criterion bite, and a spec lane fast
-> enough to be the inner loop. Every clause below is proved by an executable spec in
+> enough to be the inner loop. Every clause below is bound to an executable check in
 > `scenarios.md`; ids are allocated once and never reused.
 
 ## C-1 — The semantic core
 
 - **C-1.1** — WHEN a feature is scaffolded and no core document exists above it THE SYSTEM
   SHALL write one that names the goal, the language, the priorities and the constraints.
-  - see: ../../CORE.md@72d8198febff12a0
+  - see: ../../CORE.md@30030c5e6bcaee5e
 - **C-1.2** — WHEN a feature is scaffolded THE SYSTEM SHALL cite the core document from the
   first clause together with the fingerprint of the text that was written.
 - **C-1.3** — WHEN the core template is rendered THE SYSTEM SHALL produce at most forty
@@ -24,6 +24,16 @@
   on the contract leg.
   - note: this is how a change to the principles becomes a conscious act: the diff of one
     file plus the list of clauses somebody must re-read before the gate is green again.
+- **C-1.6** — WHEN project guidance is scaffolded THE SYSTEM SHALL describe successful checks
+  as scoped observations distinct from intent fidelity, check adequacy and code correspondence.
+  - source: review
+  - see: ../../docs/adr/0034-bindings-and-execution-are-not-semantic-verdicts.md@6046772ea6a161ca
+- **C-1.7** — WHEN a successful execution and its coverage attribution are the only evidence
+  supplied to an assurance assessment THE SYSTEM SHALL leave implementation support, check
+  adequacy, specification review and code correspondence unknown.
+  - source: review
+  - note: a weak oracle can pass and execute defective code; reachability adds no semantic
+    control or review. This boundary is exercised against an actual failing requirement.
 
 ## C-2 — Where a clause came from
 

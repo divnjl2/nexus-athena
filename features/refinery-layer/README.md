@@ -24,6 +24,15 @@ python athena.py check features/refinery-layer/contract.md --front features/refi
 
 The four stages and what judges each:
 
+Here, a contract "holding" means that its requested executable gates returned PASS;
+it does not establish intent fidelity or semantic correctness beyond those gates.
+The real temporary-repository scenarios C-2.2 and C-2.4 carry `requires-git` tags.
+When Git execution is not authorized, an explicitly partial local run can use
+`--skip-tag requires-git` with `spec run` or `contract map` (and an explicit `--purl`
+for the map, to avoid Git identity inference). Such a run leaves those obligations
+unverified. Full acceptance still requires the actual Git scenarios; mocks or a
+partial lane do not substitute for them.
+
 | stage | judged by | refusal names |
 |---|---|---|
 | admit | the task's last line in `.athena/dispatch.jsonl` | what the record says (not green, no record) |

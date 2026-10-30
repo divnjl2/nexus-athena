@@ -22,6 +22,8 @@ EFFECT_MODULES = ("subprocess", "socket", "urllib", "http", "requests", "ssl", "
 EFFECT_ALLOWED = frozenset({
     "lib/spec_runner.py",   # runs the executable specs
     "lib/verification.py",  # typed local verifier boundary (ADR-0010)
+    "lib/formal_evidence.py",  # optional CrossHair/Dafny collection boundary (ADR-0032)
+    "lib/gsn_case.py",      # optional native gsn2x rendering boundary (ADR-0033)
     "lib/clause_map.py",    # runs each spec under coverage
     "lib/adapters.py",      # reads the HEAD sha of a repository
     "lib/bd_client.py",     # the only subprocess boundary to `bd`

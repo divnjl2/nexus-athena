@@ -24,7 +24,8 @@ import json
 from xml.sax.saxutils import escape
 
 #: sphinx-needs writes a `current_version` plus a versions map; consumers select by version.
-NEEDS_SCHEMA = "needs.json/1"
+#: /2 removes the misleading `proved` field: this input describes bindings, not runs.
+NEEDS_SCHEMA = "needs.json/2"
 
 #: Our clause statuses in sphinx-needs' vocabulary. `open`/`implemented` is the convention
 #: their filters expect; the athena status is kept verbatim alongside so nothing is lost.
@@ -48,9 +49,8 @@ def to_needs(contract, *, project: str = "", version: str = "",
     projects both own a `C-1.1` without a collision — the same trick intersphinx plays with
     documentation labels.
 
-    Coverage and the map are optional and, when present, travel WITH the index: a consumer
-    then sees not only "this requirement exists" but "it is proved, and by this much code".
-    That is the part a plain requirements index cannot say.
+    The optional coverage report describes declared scenario bindings, not execution.
+    The map supplies observed reach. Neither establishes requirement truth or intent.
     """
     covered = set((coverage or {}).get("covered", ()))
     owned = (clause_map or {}).get("clauses") or {}
@@ -72,14 +72,18 @@ def to_needs(contract, *, project: str = "", version: str = "",
             "tags": list(c.tags),
             "links": _needs_links(c),
             "refs": list(c.refs),
-            # what a plain index cannot say
-            "proved": c.id in covered,
+            "spec_bound": c.id in covered,
             "owns_files": sorted(files),
             "owns_lines": sum(len(v) for v in files.values()),
             "half_proved_lines": sum(len(v) for v in (partial.get(c.id) or {}).values()),
         }
     return {
         "schema": NEEDS_SCHEMA,
+        "limitations": [
+            "spec_bound records a declared scenario binding, not successful execution.",
+            "owns_files and owns_lines are legacy names for observed execution reach; half_proved_lines counts lines with unobserved branch arms.",
+            "Execution results, intent fidelity, check adequacy and code correspondence are not assessed by this export.",
+        ],
         "project": project or contract.title,
         "current_version": version or contract.version,
         "versions": {version or contract.version: {

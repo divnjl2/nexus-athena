@@ -9,7 +9,8 @@ owns — and nobody has to author one, because the binding already exists:
     clause --(verifies)--> spec --(run_cmd)--> the lines that command executes
 
 Run each spec ALONE under coverage and the lines it touches are that clause's territory.
-The map is derived, never annotated, so it cannot drift from the code by hand.
+The map is derived, never annotated. Its legacy ownership and half-proved labels describe
+observed execution and branch reach, not semantic correspondence or requirement truth.
 
 What it answers that the file-level report could not:
   * `owners("lib/seams.py", 214)` -> which requirements die if this line changes
@@ -50,14 +51,23 @@ def _sha16(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+def _input_path(path: str) -> str:
+    """Normalize separators without turning ../input or /input into another file."""
+    path = path.replace("\\", "/")
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
 @dataclass(frozen=True)
 class SpecLines:
     """Lines one spec executed, per file. The atom the map is folded from.
 
-    `collected` separates the two ways `files` can be empty. A spec that ran and touched
+    `collected` records a successful run and fresh coverage export. A spec that ran and touched
     none of the source roots (the binding guard reads artifacts, not modules) legitimately
     owns nothing. A spec whose coverage run FAILED also reports nothing — and treating those
-    the same is how a rebuild wiped 25 clauses' ownership without a single warning.
+    the same is how a rebuild wiped 25 clauses' ownership without a single warning. A
+    failed spec may still carry fresh reachability observations while collected is false.
     """
     scenario_id: str
     clause_id: str
@@ -142,7 +152,7 @@ def partial_lines(files: dict, branches: dict) -> dict:
     """PURE: {path: (line, ...)} for OWNED lines with an outgoing branch never taken.
 
     Computed against the clause's whole branch evidence, not one spec's: if spec A takes the
-    true arm and spec B the false one, the clause has proved both and the line is not partial.
+    true arm and spec B the false one, both arms were observed and the line is not partial.
     Only lines the clause owns count — an arm out of a line nobody ran is plain uncovered,
     and saying "half-proved" about it would be flattering.
 
@@ -162,7 +172,9 @@ def partial_lines(files: dict, branches: dict) -> dict:
 
 def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
           scenario_version: str = "", clause_digests: dict | None = None,
-          spec_digests: dict | None = None, subject: str = "") -> dict:
+          spec_digests: dict | None = None, subject: str = "",
+          clause_versions: dict | None = None,
+          collection_context: dict | None = None) -> dict:
     """PURE: fold per-spec line sets into the clause map artifact.
 
     A clause owns the UNION of the lines its specs execute. Two clauses may own the same
@@ -171,11 +183,14 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
     """
     clauses: dict = {}
     collected: set = set()
+    failed: set = set()
     branch_ev: dict = {}
     for sl in spec_lines:
         per_clause = clauses.setdefault(sl.clause_id, {})
         if sl.collected:
             collected.add(sl.clause_id)
+        else:
+            failed.add(sl.clause_id)
         for path, lines in sl.files.items():
             per_clause[path] = sorted(set(per_clause.get(path, ())) | set(lines))
         # Branch evidence unions across the clause's specs BEFORE anything is called partial.
@@ -195,10 +210,17 @@ def build(spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
         # WHICH codebase this describes, as a package URL. Not a path: a path says where
         # somebody checked something out, and that is exactly what must not matter.
         "subject": subject,
-        # The clauses whose coverage actually ran. Owning no lines is a legitimate answer
+        # The clauses whose every observed spec completed successfully. No attributed lines is a legitimate answer
         # for a spec that reads artifacts rather than modules; owning no lines because the
         # run failed is not an answer at all, and the two must stay distinguishable.
-        "collected": sorted(collected),
+        "collected": sorted(collected - failed),
+        # Every sibling must finish successfully before its clause can be reused. Line
+        # reachability from a failing spec is still useful, but is not complete evidence.
+        "spec_collected": {sl.scenario_id: sl.collected for sl in
+                           sorted(spec_lines, key=lambda s: s.scenario_id)},
+        "clause_versions": dict(sorted((clause_versions or {}).items())),
+        "collection_context": dict(collection_context or {}),
+        "pending_clauses": [],
         # Pinning the owned LINES is what closes the last hole: a refactor that shifts a
         # file changes neither the contract nor the specs, so those two pins stay green
         # while every line number in the map silently points somewhere else.
@@ -247,22 +269,57 @@ def node_source(run_cmd: str, text: str) -> str:
     no single function to hash, and pretending otherwise would invent evidence.
     """
     import ast as _ast
-    node = next((tok for tok in run_cmd.split() if "::" in tok), "")
-    func = node.rpartition("::")[2]
-    if not func:
+    try:
+        tokens = shlex.split(run_cmd)
+    except ValueError:
+        return ""
+    node = next((tok for tok in tokens if "::" in tok), "")
+    names = node.split("::")[1:]
+    if not names:
         return ""
     try:
         tree = _ast.parse(text)
     except SyntaxError:
         return ""
-    for n in tree.body:
-        if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and n.name == func:
-            return _ast.get_source_segment(text, n) or ""
-    return ""
+    children = tree.body
+    for name in names:
+        name = name.partition("[")[0]
+        n = next((n for n in children if isinstance(n, (_ast.FunctionDef,
+                  _ast.AsyncFunctionDef, _ast.ClassDef)) and n.name == name), None)
+        if n is None:
+            return ""
+        children = n.body
+    start = min([n.lineno, *(d.lineno for d in n.decorator_list)])
+    return "\n".join(text.splitlines()[start - 1:n.end_lineno])
+
+
+def input_paths(run_cmd: str) -> tuple[str, ...]:
+    """PURE: explicit file arguments and cwd-local Python module candidates.
+
+    This is a bounded input set, not a transitive import, environment or tool attestation.
+    Existence and file reading belong to the caller; absent candidates are also pinned.
+    """
+    try:
+        tokens = shlex.split(run_cmd)
+    except ValueError:
+        return ()
+    paths = set()
+    for index, token in enumerate(tokens[1:], start=1):
+        if tokens[index - 1] == "-m":
+            module = token.replace(".", "/")
+            paths.update((module + ".py", module + "/__main__.py", module + "/__init__.py"))
+            parts = module.split("/")
+            paths.update("/".join(parts[:n]) + "/__init__.py" for n in range(1, len(parts)))
+        elif token.startswith("-"):
+            if "=" in token:
+                paths.add(token.partition("=")[2].partition("::")[0])
+        else:
+            paths.add(token.partition("::")[0])
+    return tuple(sorted({_input_path(p) for p in paths if p}))
 
 
 def spec_digests(scenarios, sources: dict) -> dict:
-    """PURE: {scenario id: digest of the test function that spec runs}.
+    """PURE: pin executable inputs, including commands without a pytest node.
 
     The map is derived from THREE things — the clause, the code, and the spec that connects
     them — and only the first two were pinned. So strengthening a test to cover the arm it
@@ -273,18 +330,51 @@ def spec_digests(scenarios, sources: dict) -> dict:
     """
     out = {}
     for sc in scenarios or ():
-        node = next((tok for tok in sc.run_cmd.split() if "::" in tok), "")
-        path = _norm(node.partition("::")[0])
-        body = node_source(sc.run_cmd, sources.get(path, ""))
-        out[sc.id] = _sha16(path + chr(10) + body) if body else ""
+        try:
+            command = shlex.split(sc.run_cmd)
+        except ValueError:
+            command = [sc.run_cmd]     # invalid commands still have a stable identity
+        # Whole explicit files deliberately include fixtures, setup, decorators and
+        # other test functions used as helpers. Selecting a node does not isolate its
+        # runtime dependencies within that module.
+        inputs = [[path, sources.get(path)] for path in input_paths(sc.run_cmd)]
+        out[sc.id] = _sha16(json.dumps([command, sc.requirement_key, sc.clause_version,
+                                       inputs], ensure_ascii=False))
     return dict(sorted(out.items()))
 
 
 def stale_specs(clause_map: dict, current: dict) -> tuple[str, ...]:
-    """PURE: the scenario ids whose test function no longer holds what it held."""
+    """PURE: added, removed or changed executable inputs require new evidence."""
     pinned = (clause_map or {}).get("spec_digests") or {}
-    return tuple(sorted(sid for sid, d in pinned.items()
-                        if sid in current and current[sid] != d))
+    return tuple(sorted(sid for sid in set(pinned) | set(current)
+                        if sid not in pinned or sid not in current
+                        or current[sid] != pinned[sid]))
+
+
+def rebuild_clauses(base: dict, scenarios, *, current_digests: dict,
+                    clause_versions: dict) -> tuple[str, ...]:
+    """PURE: clauses whose complete evidence cannot be reused.
+
+    The caller supplies all current scenarios, before execution filters. Both ends of a
+    moved binding need rebuilding: otherwise the previous owner keeps obsolete lines.
+    Legacy maps without per-spec outcomes or clause pins are conservatively recollected.
+    """
+    before = base.get("specs") or {}
+    after = {s.id: s.requirement_key for s in scenarios}
+    changed = set(stale_specs(base, current_digests))
+    changed |= {sid for sid in set(before) | set(after) if before.get(sid) != after.get(sid)}
+    needed = {mapping[sid] for sid in changed for mapping in (before, after) if sid in mapping}
+    needed |= set(base.get("pending_clauses") or ())
+    outcomes = base.get("spec_collected") or {}
+    needed |= {s.requirement_key for s in scenarios if outcomes.get(s.id) is not True}
+    pinned_versions = base.get("clause_versions") or {}
+    needed |= {cid for cid, version in clause_versions.items()
+               if pinned_versions.get(cid) != version}
+    mapped = set(base.get("clauses") or {})
+    needed |= mapped - set(base.get("clause_digests") or {})
+    needed |= set(clause_versions) - mapped
+    needed |= mapped - set(clause_versions)
+    return tuple(sorted(needed))
 
 
 def digests(clause_map: dict, sources: dict) -> dict:
@@ -304,7 +394,8 @@ def stale_clauses(clause_map: dict, current: dict) -> tuple[str, ...]:
 def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: str = "",
           scenario_version: str = "", clause_digests: dict | None = None,
           spec_digests: dict | None = None, subject: str = "",
-          rebuilt: tuple[str, ...] = ()) -> dict:
+          rebuilt: tuple[str, ...] = (), clause_versions: dict | None = None,
+          collection_context: dict | None = None) -> dict:
     """PURE: fold freshly collected specs into an existing map, keeping what stayed true.
 
     Only the clauses in `rebuilt` are replaced; the rest of the map is carried over intact.
@@ -314,7 +405,8 @@ def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: st
     fresh = build(spec_lines, contract_version=contract_version,
                   scenario_version=scenario_version)
     clauses = dict((base or {}).get("clauses") or {})
-    specs = dict((base or {}).get("specs") or {})
+    specs = {sid: cid for sid, cid in ((base or {}).get("specs") or {}).items()
+             if cid not in rebuilt}
     for cid in rebuilt:
         clauses.pop(cid, None)
     clauses.update(fresh["clauses"])
@@ -328,16 +420,25 @@ def merge(base: dict, spec_lines: tuple[SpecLines, ...], *, contract_version: st
     # every other clause keeps the one already on record.
     half = {c: v for c, v in ((base or {}).get("partial") or {}).items() if c not in rebuilt}
     half.update(fresh.get("partial") or {})
+    outcomes = {s: ok for s, ok in ((base or {}).get("spec_collected") or {}).items()
+                if s in specs}
+    outcomes.update(fresh["spec_collected"])
+    pins = {**((base or {}).get("spec_digests") or {}), **(spec_digests or {})}
+    versions = {**((base or {}).get("clause_versions") or {}), **(clause_versions or {})}
     return {
         "schema": SCHEMA,
         "contract_version": contract_version,
         "scenario_version": scenario_version,
         "subject": subject or (base or {}).get("subject", ""),
         "collected": sorted(c for c in got if c in clauses),
+        "spec_collected": {s: outcomes[s] for s in sorted(outcomes) if s in specs},
+        "clause_versions": {c: versions[c] for c in sorted(versions) if c in clauses},
+        "collection_context": (dict(collection_context) if collection_context is not None
+                               else dict((base or {}).get("collection_context") or {})),
+        "pending_clauses": sorted(set((base or {}).get("pending_clauses") or ()) - set(rebuilt)),
         "partial": {c: half[c] for c in sorted(half) if c in clauses and half[c]},
         "clause_digests": {c: kept[c] for c in sorted(kept) if c in clauses},
-        "spec_digests": {**((base or {}).get("spec_digests") or {}),
-                         **(spec_digests or {})},
+        "spec_digests": {s: pins[s] for s in sorted(pins) if s in specs},
         "clauses": {c: clauses[c] for c in sorted(clauses)},
         "specs": {s: specs[s] for s in sorted(specs)},
     }
@@ -420,6 +521,16 @@ def staleness(clause_map: dict, contract, scenarios, *, scenario_version: str = 
     # entry that is empty because the run FAILED is in neither set, and stays unmapped.
     owning = {cid for cid, files in mapped.items() if files}
     owning |= set((clause_map or {}).get("collected") or ()) & set(mapped)
+    owning -= set((clause_map or {}).get("pending_clauses") or ())
+    # Coverage from a failed sibling can describe reachability without proving that all
+    # obligations ran successfully. Explicit per-spec outcomes override mere ownership.
+    outcomes = (clause_map or {}).get("spec_collected")
+    if outcomes is not None:
+        bindings = (clause_map or {}).get("specs") or {}
+        owning -= {cid for sid, cid in bindings.items() if outcomes.get(sid) is not True}
+        owning -= {s.requirement_key for s in scenarios or ()
+                   if bindings.get(s.id) != s.requirement_key
+                   or outcomes.get(s.id) is not True}
     unmapped = sorted(live - owning)
     stale_entries = sorted(set(mapped) - known)
 
@@ -465,8 +576,9 @@ def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = "."
     """EFFECTFUL: run every spec alone under coverage and read back the lines it executed.
 
     `runner(argv, cwd) -> int` is injected so the pure folding above can be tested without
-    spawning 79 processes. Specs that fail to produce data are skipped with an empty file
-    map rather than aborting the collection — a partial map still answers most queries.
+    spawning 79 processes. Missing reports produce empty observations rather than aborting
+    the collection. Fresh reachability from a failed command remains available, but its
+    unsuccessful outcome prevents reuse or a fresh-map verdict.
     """
     import subprocess
     from concurrent.futures import ThreadPoolExecutor
@@ -477,7 +589,7 @@ def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = "."
             argv = [sys.executable, *argv[1:]]
             return subprocess.run(argv, cwd=cwd, capture_output=True, text=True).returncode
 
-    work = pathlib.Path(workdir)
+    work = pathlib.Path(workdir).resolve()
     work.mkdir(parents=True, exist_ok=True)
 
     def one(sc) -> SpecLines:
@@ -486,14 +598,17 @@ def collect(scenarios, *, sources: tuple[str, ...], workdir: str, cwd: str = "."
         js = work / f"{stem}.json"
         got = False
         try:
-            runner(run_argv(sc.run_cmd, str(data), sources), cwd)
-            runner(json_argv(str(data), str(js)), cwd)
-            # `js` exists only when coverage had data to report. That file is the whole
-            # difference between "this spec owns no lines" and "we learned nothing".
-            got = js.exists()
-            raw = js.read_text(encoding="utf-8") if got else ""
-            files = lines_from_json(raw) if got else {}
-            arms = branches_from_json(raw) if got else {}
+            # Reusing a work directory must not turn yesterday's report into today's
+            # proof when either subprocess fails or produces no output.
+            data.unlink(missing_ok=True)
+            js.unlink(missing_ok=True)
+            ran = runner(run_argv(sc.run_cmd, str(data), sources), cwd)
+            exported = runner(json_argv(str(data), str(js)), cwd)
+            fresh = exported == 0 and js.exists()
+            raw = js.read_text(encoding="utf-8") if fresh else ""
+            files = lines_from_json(raw) if fresh else {}
+            arms = branches_from_json(raw) if fresh else {}
+            got = ran == 0 and fresh
         except (ValueError, OSError, json.JSONDecodeError):
             files, arms, got = {}, {}, False
         return SpecLines(scenario_id=sc.id, clause_id=sc.requirement_key, files=files,

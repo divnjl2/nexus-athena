@@ -20,6 +20,10 @@
 ## C-3 — Challenge quality
 - **C-3.1** — WHEN semantic review proposes valid controls THE SYSTEM SHALL record their declared mechanism or representation distinction and source justification, reject structurally unchanged controls as diversity evidence, and retain native activation and typed execution rules without attesting semantic equivalence.
   - source: design
+- **C-3.2** — WHEN extracted scope regressions challenge semantic oracles THE SYSTEM SHALL execute controls for equivalent mechanisms, equivalent warning guidance and unrelated files while distinguishing valid-alternative rejection from detection of an activated behavioral violation.
+  - source: review
+- **C-3.3** — WHEN an extracted inherited-collection fixture permits different private helper responsibilities THE SYSTEM SHALL accept both declared implementations of the public behavior, expose a helper-specific oracle's false rejection and detect an independently activated missing-inheritance violation.
+  - source: review
 
 ## C-4 — Shared resource accounting
 - **C-4.1** — WHEN a lineage admits model or test work THE SYSTEM SHALL durably charge one shared journal before execution, protect reserved phases, retain pending and failed charges across restart, and refuse changed bindings, limits or stale concurrent writers.

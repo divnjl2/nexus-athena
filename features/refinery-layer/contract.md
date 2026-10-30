@@ -31,6 +31,7 @@
 - **C-2.2** — WHEN an admitted workspace is rebased onto the target branch and the rebase
   stops THE SYSTEM SHALL abort the rebase, refuse the offer and name the conflicting files.
   - source: review
+  - tags: requires-git
 - **C-2.3** — WHEN the rebase lands THE SYSTEM SHALL run the check of every contract in the
   workspace and refuse the offer when any contract fails, naming the contract and its first
   cause.
@@ -39,6 +40,7 @@
   workspace head, and refuse when the target cannot be fast-forwarded.
   - see: ../../docs/adr/0008-the-refinery-merges-nothing-by-hand.md@243fea567065ac35
   - source: review
+  - tags: requires-git
 - **C-2.5** — WHEN an offer ends THE SYSTEM SHALL append a merge record with its task,
   executor, stage and reason, and for a refusal emit the command that returns the task to bd
   with that reason.

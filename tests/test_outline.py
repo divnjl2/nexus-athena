@@ -55,19 +55,46 @@ def test_the_outline_names_each_group_home_by_exclusivity_not_by_reach():
     assert shared == ["lib/shared.py"], "a module every group reaches is infrastructure"
 
 
-def test_the_outline_separates_the_four_statuses_and_counts_proofs():
-    """C-11.23 — a withdrawn clause is not owed a proof and must not be counted live; the
-    outline is where the status vocabulary of this format is actually visible."""
+def test_the_outline_separates_statuses_and_bindings_without_execution(tmp_path):
+    """C-11.28 — declared bindings have no successful-execution or proof implication."""
+    from lib.ast import Scenario
+
     o = _outline()
     c1 = o["groups"]["C-1 Parsing"]
     assert (c1["live"], c1["withdrawn"]) == (1, 1)
     assert o["live"] == 3 and o["clauses"] == 4
 
-    assert c1["proved"] == 0 and c1["unproved"] == ["C-1.1"], "no specs were supplied"
+    assert c1["bound"] == 0 and c1["unbound"] == ["C-1.1"], "no specs were supplied"
     text = render(o)
-    assert "1 withdrawn" in text and "unproved: C-1.1" in text
+    assert "1 withdrawn" in text and "unbound: C-1.1" in text
     assert "home: lib/parser.py (4 lines)" in text
     assert "shared: lib/shared.py" in text
+
+    missing = tmp_path / "not_created.py"
+    scenario = Scenario("S1.1", "C-1.1", "declared check", f"python {missing}")
+    bound = _outline(scenarios=(scenario,))
+    assert not missing.exists()
+    assert bound["schema"] == "athena.outline/2"
+    assert bound["groups"]["C-1 Parsing"]["bound"] == 1
+    assert bound["groups"]["C-1 Parsing"]["unbound"] == []
+    assert bound["groups"]["C-2 Reporting"]["bound"] == 0
+    assert all("proved" not in group and "unproved" not in group for group in bound["groups"].values())
+    assert "spec-bound 1/1" in render(bound)
+    assert "not successful execution" in render(bound)
+    assert "code correspondence are not assessed" in render(bound)
+
+    mixed = parse_contract("""# Status boundaries
+## C-1 — Examples
+- **C-1.1** — WHEN a value is read THE SYSTEM SHALL return it.
+- **C-1.2** *(draft)* — WHEN another value is read THE SYSTEM SHALL return it.
+- **C-1.3** *(withdrawn)* — WHEN an old value is read THE SYSTEM SHALL return it.
+- **C-1.4** *(superseded-by C-1.1)* — WHEN a former value is read THE SYSTEM SHALL return it.
+""")
+    specs = (Scenario("S1.1", "C-1.1", "declared", f"python {missing}"),
+             Scenario("S1.2", "C-1.2", "draft declared", f"python {missing}"))
+    group, = outline(mixed, coverage(mixed, specs))["groups"].values()
+    assert (group["live"], group["draft"], group["withdrawn"], group["superseded"]) == (1, 1, 1, 1)
+    assert group["bound"] == 1, "a bound draft cannot inflate the live binding ratio"
 
 
 def test_the_outline_says_so_when_there_is_no_map():
@@ -106,8 +133,8 @@ def test_the_outline_names_the_half_proved_lines_of_a_group():
     o = outline(CONTRACT, coverage(CONTRACT, ()), cmap)
     assert o["groups"]["C-1 Parsing"]["half_proved"] == 2
     assert o["groups"]["C-2 Reporting"]["half_proved"] == 1
-    assert "half-proved: 2 owned lines have an arm nothing takes" in render(o)
+    assert "partial branch coverage: 2 executed lines have unobserved arms" in render(o)
 
     clean = outline(CONTRACT, coverage(CONTRACT, ()), CMAP)
     assert clean["groups"]["C-1 Parsing"]["half_proved"] == 0
-    assert "half-proved" not in render(clean), "silence only when there is nothing to say"
+    assert "partial branch coverage:" not in render(clean), "silence only when there is nothing to say"

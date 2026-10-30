@@ -184,7 +184,7 @@
   clause-rooted validates edges accepted by bd's native typed-edge API.
   - note: command SHAPE is not acceptance — v3.1 shipped `bd related`, a command bd does not
     have, and every fake-based test passed. This clause exists so that class cannot repeat.
-  - tags: slow, integration
+  - tags: slow, integration, requires-git
   - source: audit
 - **C-5.10** *(superseded-by C-5.3)* — WHEN scenarios are compiled THE SYSTEM SHALL point
   each spec's validates edge at the spec document.
@@ -265,7 +265,7 @@
 
 ## C-9 — The per-clause file:line map
 
-- **C-9.1** — WHEN each spec is run alone under coverage THE SYSTEM SHALL attribute the lines
+- **C-9.1** *(superseded-by C-9.31)* — WHEN each spec is run alone under coverage THE SYSTEM SHALL attribute the lines
   it executes to the clause that spec proves, deriving the map instead of asking anyone to
   annotate it.
 - **C-9.2** — WHEN a file and line are queried THE SYSTEM SHALL name every clause that owns
@@ -302,7 +302,7 @@
   untouched fresh.
 - **C-9.16** — WHEN a clause owns a line its file no longer has THE SYSTEM SHALL count that
   clause as drifted.
-- **C-9.17** — WHEN a map is rebuilt incrementally THE SYSTEM SHALL re-derive only the
+- **C-9.17** *(superseded-by C-9.26)* — WHEN a map is rebuilt incrementally THE SYSTEM SHALL re-derive only the
   drifted and unseen clauses, carrying the rest of the map over unchanged.
 - **C-9.14** — WHEN a map carries an earlier schema THE SYSTEM SHALL refuse it rather than
   trust pins it does not carry.
@@ -330,7 +330,7 @@
     version. The early return skipped the write, so the map stayed stale to the gate with
     no incremental way back: only a full rebuild, deriving byte-identical ownership.
 
-- **C-9.22** — WHEN a spec is run under coverage THE SYSTEM SHALL record which arms out of
+- **C-9.22** *(superseded-by C-9.32)* — WHEN a spec is run under coverage THE SYSTEM SHALL record which arms out of
   its lines were taken, and report an owned line with an arm nothing took as half-proved.
   - note: a line is a weak unit of proof. `if x:` reads as executed the moment control
     reaches it, so a guard exercised only on its happy path looks fully owned. The judge
@@ -339,7 +339,7 @@
   - note: report it DISTINCT, like the owned count. The first summary summed the per-clause
     figures and printed 2113 half-proved against 1694 owned — more than all of them — by
     comparing a sum-with-repeats to a union. The real number is 229, 14% of the surface.
-- **C-9.23** — WHEN two specs of one clause take opposite arms of a branch THE SYSTEM SHALL
+- **C-9.23** *(superseded-by C-9.33)* — WHEN two specs of one clause take opposite arms of a branch THE SYSTEM SHALL
   count that branch as proved rather than half-proved.
   - note: partiality belongs to the CLAUSE, not to one spec. This is also what makes several
     specs per clause worth writing: the report layer has always accepted them, and now they
@@ -356,6 +356,65 @@
   - source: incident
   - note: the publication map collected no evidence because Windows resolved generic Python to a system installation without coverage, despite the verifier running in its prepared virtual environment.
 
+- **C-9.26** *(supersedes C-9.17)* — WHEN a map is rebuilt incrementally THE SYSTEM SHALL
+  recollect clauses affected by new or changed executable spec inputs while retaining
+  reusable observations for other clauses.
+  - source: incident
+  - note: executable inputs include tokenized commands, clause bindings, clause pins,
+    the complete bytes of explicit local test, module, script and file arguments, plus
+    execution cwd, coverage source roots and codebase subject. Same-file test edits may
+    conservatively rerun sibling clauses because test functions can call one another.
+    Transitive imports, environment variables and tool
+    installations are outside this bounded fingerprint. A new sibling or a changed command without a pytest node cannot
+    be satisfied by updating scenario metadata. Execution filters defer invalidated
+    observations without refreshing their pins; prose-only changes can still re-pin.
+- **C-9.27** — WHEN a clause has a spec with an unsuccessful or unknown collection outcome
+  THE SYSTEM SHALL retry its selected specs before treating its map observations as fresh.
+  - source: incident
+  - note: coverage from a failed command remains an execution observation; another
+    successful sibling cannot make the clause complete. Legacy maps without per-spec
+    outcomes require recollection. Success here records execution, not requirement truth.
+- **C-9.28** — WHEN a coverage run reuses a working directory THE SYSTEM SHALL accept
+  reusable observations only from fresh output produced by successful run and export processes.
+  - source: review
+  - note: prior data and JSON are removed before execution; a stale file cannot hide a
+    failed or empty collection.
+- **C-9.29** — WHEN a clause or spec disappears or a spec changes its binding THE SYSTEM
+  SHALL rebuild affected attribution solely from the remaining specs.
+  - source: review
+- **C-9.30** — WHEN a mapped clause's requirement version changes THE SYSTEM SHALL
+  recollect that clause before refreshing its version pin.
+  - source: review
+  - note: even an invalid edit in place cannot silently acquire fresh execution metadata.
+- **C-9.31** *(supersedes C-9.1)* — WHEN each spec is run alone under coverage THE SYSTEM
+  SHALL attribute the observed executed lines to that spec's bound clause without
+  interpreting execution reach as semantic correspondence.
+  - source: review
+- **C-9.32** *(supersedes C-9.22)* — WHEN a spec is run under coverage THE SYSTEM SHALL
+  record its observed branch arms and report attributed lines with unobserved arms using
+  the legacy half-proved label for incomplete branch coverage.
+  - source: review
+- **C-9.33** *(supersedes C-9.23)* — WHEN two specs bound to one clause take opposite arms
+  of a branch THE SYSTEM SHALL combine their observations and remove that branch from
+  partial coverage without asserting requirement truth.
+  - source: review
+  - note: a test can execute both arms while asserting no return value; complete branch
+    coverage does not establish the clause's behavior.
+- **C-9.34** — WHEN map freshness is checked THE SYSTEM SHALL reject stored execution
+  attribution whose explicit verifier-input fingerprints or execution directory differ
+  from the current bound scenarios and execution context.
+  - source: review
+  - note: the bounded input set is defined by C-9.26. Read-only checks do not execute
+    scenarios; changed inputs require recollection. Transitive imports and the environment
+    are not attested by these fingerprints.
+- **C-9.35** — WHEN explicit verifier inputs, declared local coverage sources or input
+  documents change during collection or pin calculation THE SYSTEM SHALL keep the affected observations
+  ineligible for reuse until a stable recollection completes.
+  - source: review
+  - note: the final snapshots follow pin calculation; an edit restored to identical bytes between
+    snapshots is not detected. Observations from an unstable run remain historical data
+    with pending clauses, rather than acquiring current input pins without execution.
+
 ## C-10 — Does a spec prove anything: the deterministic runner and the judge pilot
 
 - **C-10.1** — WHEN mutants are generated THE SYSTEM SHALL mutate the syntax tree and leave
@@ -366,7 +425,7 @@
   and stop at the first spec that goes red.
 - **C-10.4** — WHEN the hunt is summarised THE SYSTEM SHALL name the surviving mutants with
   their file and line.
-- **C-10.5** — WHEN the judge corpus is built THE SYSTEM SHALL derive its labels from
+- **C-10.5** *(superseded-by C-10.27)* — WHEN the judge corpus is built THE SYSTEM SHALL derive its labels from
   mechanical degradations of pairs this repo already proves.
 - **C-10.6** — WHEN a spec is bound to a different clause THE SYSTEM SHALL label that pair
   vacuous for the clause it names.
@@ -374,7 +433,7 @@
   discard it rather than let it reject a spec.
 - **C-10.8** — WHEN a judge is scored THE SYSTEM SHALL decide gate eligibility from the
   thresholds fixed before the run.
-- **C-10.9** — WHEN a judge rejects a proving pair THE SYSTEM SHALL count it as a false
+- **C-10.9** *(superseded-by C-10.28)* — WHEN a judge rejects a proving pair THE SYSTEM SHALL count it as a false
   reject, separately from its recall.
 - **C-10.10** — WHEN a judge runs THE SYSTEM SHALL record its model id, prompt hash and
   temperature.
@@ -417,6 +476,14 @@
   recorded red, so a spec that fails on clean source cannot witness a mutant.
   - note: the rule was written down, proved in the library, and then passed by no caller.
     `hunt` took an `exclude` argument that both product paths left empty for weeks.
+- **C-10.27** *(supersedes C-10.5)* — WHEN the judge corpus is built THE SYSTEM SHALL
+  derive mechanically degraded variants from caller-declared baseline pairs while
+  identifying their labels as declarations rather than established semantic truth.
+  - source: review
+- **C-10.28** *(supersedes C-10.9)* — WHEN a judge rejects a pair labelled proves THE
+  SYSTEM SHALL count that disagreement separately from recall and state that both metrics
+  are relative to declared corpus labels.
+  - source: review
 - **C-10.23** *(draft)* — WHEN a judge clears the fixed thresholds on the whole corpus THE
   SYSTEM SHALL let it block the code-to-specs leg.
   - note: draft on purpose, and the only honest status for it. The thresholds are recall
@@ -493,7 +560,7 @@
   them by how exclusively that group owns them, and mark the rest as shared.
   - note: ranking by owned line count made the parser the home of every group, because every
     spec runs it on the way to anything else. That is execution reach, not architecture.
-- **C-11.23** — WHEN the outline summarises a clause group THE SYSTEM SHALL report its live,
+- **C-11.23** *(superseded-by C-11.28)* — WHEN the outline summarises a clause group THE SYSTEM SHALL report its live,
   draft, superseded and withdrawn counts separately from the clauses it proves.
 - **C-11.24** — WHEN no clause map is available THE SYSTEM SHALL still outline the contract
   and say that the module column is missing.
@@ -511,6 +578,11 @@
     Counting how many groups touch a FILE called `lib/contract.py` shared for everyone, so
     C-1 (the parser) and C-7 (the wording critique) both came out homeless and the modules
     they merely pass through were promoted in their place.
+
+- **C-11.28** *(supersedes C-11.23)* — WHEN the outline summarises a clause group THE
+  SYSTEM SHALL report its clause statuses separately from declared spec-binding counts
+  without treating an unexecuted binding as proof.
+  - source: review
 
 ## C-12 — Clause to document: the reference that rots
 
@@ -556,7 +628,7 @@
 
 - **C-14.1** — WHEN the clause index is exported THE SYSTEM SHALL emit the shape a
   sphinx-needs consumer already reads.
-- **C-14.2** — WHEN the index is exported with a coverage report and a map THE SYSTEM SHALL
+- **C-14.2** *(superseded-by C-14.5)* — WHEN the index is exported with a coverage report and a map THE SYSTEM SHALL
   carry whether each clause is proved and how much code it owns.
   - note: the only part of this export nobody else's index has. A requirements index says a
     requirement exists; this one says whether anything proves it.
@@ -564,6 +636,10 @@
   byte-identical output.
 - **C-14.4** — WHEN the index is exported for OpenFastTrace THE SYSTEM SHALL emit specobject
   XML its tracer can ingest.
+- **C-14.5** *(supersedes C-14.2)* — WHEN the index is exported with a binding report and a
+  map THE SYSTEM SHALL identify declared spec bindings and observed execution reach
+  without reporting requirements as proved.
+  - source: review
 
 ## C-15 — Which codebase a map describes
 

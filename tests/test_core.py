@@ -81,3 +81,80 @@ def test_a_suspect_core_reference_fails_the_contract_leg():
                                "suspect": [{"clause": "C-1.1", "target": "CORE.md", "pin": "x"}]})
     assert not rep["passed"]
     assert rep["first_cause"] == "contract.refs" and rep["legs"]["contract"] is False
+
+
+def test_scaffold_guidance_keeps_execution_and_semantic_evidence_distinct():
+    """C-1.6 — generated guidance cannot turn an example check into requirement truth."""
+    files = render_files(title="Pay")
+    for name in ("CORE.md", "scenarios.md"):
+        text = files[name]
+        assert "success is an observation within its checked scope" in text
+        assert "intent fidelity" in text.lower()
+        assert "check adequacy" in text.lower()
+        assert "code correspondence" in text.lower()
+    assert "remaining evidence gaps" in files["plan.md"]
+    assert "legacy ownership is not semantic correspondence" in files["CORE.md"]
+    assert not any(phrase in text for text in files.values()
+                   for phrase in ("exit 0 means the clause holds", "exit 0 means the requirement holds",
+                                  "proved by an executable spec"))
+
+
+def test_covered_success_does_not_promote_a_weak_oracle_to_assurance(tmp_path):
+    """C-1.7 — real passing execution and coverage can coexist with a requirement violation."""
+    import json
+    import os
+    import runpy
+    import subprocess
+    import sys
+
+    from lib.assurance import SCHEMA, assess, sha
+    from lib.clause_map import SpecLines, build as build_map, lines_from_json, owners
+
+    contract_text = ("# Contract\n\n- **C-1.1** — WHEN an integer is doubled THE SYSTEM SHALL "
+                     "return twice that integer.\n")
+    sources = {
+        "contract.md": contract_text,
+        "implementation.py": "def twice(value):\n    return 4\n",
+        "checks.py": "from implementation import twice\nassert twice(2) == 4\n",
+    }
+    for name, text in sources.items():
+        (tmp_path / name).write_text(text, encoding="utf-8")
+    env = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    argv = [sys.executable, "-m", "coverage", "run", "--source=implementation", "checks.py"]
+    completed = subprocess.run(argv, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    exported = subprocess.run([sys.executable, "-m", "coverage", "json", "-o", "coverage.json"],
+                              cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert exported.returncode == 0, exported.stdout + exported.stderr
+    reached = lines_from_json((tmp_path / "coverage.json").read_text(encoding="utf-8"))
+    assert 2 in reached["implementation.py"]
+    cmap = build_map((SpecLines("S1.1", "C-1.1", reached),))
+    assert owners(cmap, "implementation.py", 2) == ("C-1.1",)
+    (tmp_path / "clause_map.json").write_text(json.dumps(cmap), encoding="utf-8")
+
+    # The untested input disproves the requirement despite the successful, covered check.
+    actual = runpy.run_path(str(tmp_path / "implementation.py"))["twice"]
+    assert actual(2) == 4
+    assert actual(3) != 6
+    observation = {"argv": argv, "returncode": completed.returncode,
+                   "stdout": completed.stdout, "stderr": completed.stderr,
+                   "coverage": "coverage.json", "map": "clause_map.json"}
+    (tmp_path / "observation.json").write_text(json.dumps(observation), encoding="utf-8")
+    evidence = {"id": "observed-weak-check", "clause": "C-1.1",
+                "pin": parse(contract_text).by_id("C-1.1").version,
+                "kind": "execution", "outcome": "PASS", "scope": "integer input 2 only",
+                "producer": "local Python subprocess", "basis": "retained successful command and executed lines",
+                "inputs": {name: sha((tmp_path / name).read_bytes())
+                           for name in (*sources, "clause_map.json", "coverage.json")},
+                "checks": ["checks.py"], "artifact": "observation.json",
+                "artifact_sha256": sha((tmp_path / "observation.json").read_bytes())}
+    manifest = {"schema": SCHEMA, "contract": "contract.md",
+                "implementation": ["implementation.py"], "evidence": [evidence]}
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    report = assess(tmp_path, "manifest.json")
+    row, = report["requirements"]
+    assert row["execution"] == "SUPPORTED"
+    assert row["evidence"][0]["current"]
+    assert all(row[dimension] == "UNKNOWN" for dimension in
+               ("implementation", "check_adequacy", "specification", "code_correspondence"))
+    assert report["denominator"] == 1

@@ -48,6 +48,22 @@
 - **When** contrastive controls are inspected and executed
 - **Then** structurally unchanged variants do not supply diversity and execution errors remain inconclusive.
 
+### S3.2 - Challenge overstrict oracle assumptions with extracted real-study risks
+- **verifies:** C-3.2
+- **pins:** 25cc82a6f8105880
+- **run_cmd:** `python -m pytest tests/test_semantic_scope_regressions.py::test_semantic_oracles_accept_declared_freedom_and_detect_real_violations -q`
+- **Given** minimal reproductions of equivalent mechanisms, warning guidance and unrelated diagnostic files
+- **When** actual native spec-trust subprocesses execute corrected and deliberately overstrict oracles
+- **Then** corrected oracles accept declared valid alternatives and detect activated violations while overstrict oracles falsely reject the alternatives.
+
+### S3.3 - Keep private helper choices outside a public behavior oracle
+- **verifies:** C-3.3
+- **pins:** 338eb332a54e4229
+- **run_cmd:** `python -m pytest tests/test_semantic_scope_regressions.py::test_public_collection_accepts_a_different_private_helper_boundary -q`
+- **Given** a finite inherited-marker fixture with collector-level and helper-level implementations
+- **When** native spec-trust commands challenge public and deliberately helper-specific oracles
+- **Then** the public oracle accepts both implementations and catches an activated missing inherited marker, while the private oracle falsely rejects the collector-level alternative.
+
 ### S4.1 - Preserve a charged budget across crashes and phases
 - **verifies:** C-4.1
 - **pins:** 5bc391457964c1bf

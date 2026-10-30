@@ -24,6 +24,22 @@
 
 ## C-1 — proved by the scaffold and the document references (lib/scaffold.py, lib/docrefs.py)
 
+### S1.6 — Scaffold guidance preserves evidence boundaries
+- **verifies:** C-1.6
+- **pins:** 5d821ddbc29dda2b
+- **run_cmd:** `python -m pytest tests/test_core.py::test_scaffold_guidance_keeps_execution_and_semantic_evidence_distinct -q`
+- **Given** a fresh scaffold whose example check can execute successfully
+- **When** its core, scenarios and plan describe that result
+- **Then** success is a scoped observation and the guidance retains distinct semantic evidence needs.
+
+### S1.7 — A covered passing oracle can still miss a defect
+- **verifies:** C-1.7
+- **pins:** da3d6159d5cbb05b
+- **run_cmd:** `python -m pytest tests/test_core.py::test_covered_success_does_not_promote_a_weak_oracle_to_assurance -q`
+- **Given** defective code and a passing oracle that checks only one coincidentally correct value
+- **When** coverage attributes its executed line and the retained observation enters assessment
+- **Then** execution is supported while implementation, adequacy, specification review and code correspondence remain unknown.
+
 ### S1.1 — a scaffold writes a core when none exists above
 - **verifies:** C-1.1
 - **pins:** 428732dfeda5522d

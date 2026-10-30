@@ -7,10 +7,9 @@ had to be inferred, because 143 clauses in a flat file answer "what is guarantee
 "what are the parts". The usual fix is an architecture document, which is a claim nobody
 re-derives and everybody outgrows.
 
-There is a better source. The clause map already knows, per clause, which lines of which
-modules its spec actually executed. So the architecture is DERIVABLE: group the clauses, and
-name the modules each group's specs really run. Nobody writes it down and it cannot go stale
-against the code, because it is read out of the code's own execution.
+The clause map records, per clause, which module lines its bound specs executed. Grouping
+those observations helps navigate the implementation; execution reach does not establish
+architecture, semantic correspondence, or completeness of the observed inputs.
 
 Freeze-line: PURE. It folds three artifacts (contract, coverage report, clause map) into a
 structure; reading them from disk is the CLI's job.
@@ -24,9 +23,8 @@ TOP_FILES = 4
 def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> dict:
     """PURE: contract + coverage + map -> a readable structure of the system.
 
-    Per group: how many clauses, how they are split across the four statuses, how many are
-    proved, and which modules the group's clauses own. That last column is the architecture,
-    and it is measured rather than claimed.
+    Per group: clause statuses, declared spec-binding counts, and observed execution reach.
+    No execution ledger or semantic assessment is supplied to this function.
     """
     groups: dict = {}
     owners = (clause_map or {}).get("clauses") or {}
@@ -37,14 +35,14 @@ def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> 
     for c in contract.clauses:
         key = c.group or "(ungrouped)"
         g = groups.setdefault(key, {"clauses": 0, "live": 0, "superseded": 0, "draft": 0,
-                                    "withdrawn": 0, "proved": 0, "unproved": [],
+                                    "withdrawn": 0, "bound": 0, "unbound": [],
                                     "half_proved": set(), "files": {}})
         g["clauses"] += 1
         g[c.status if c.status in ("superseded", "draft", "withdrawn") else "live"] += 1
-        if c.id in covered:
-            g["proved"] += 1
+        if c.is_live and c.id in covered:
+            g["bound"] += 1
         if c.id in uncovered:
-            g["unproved"].append(c.id)
+            g["unbound"].append(c.id)
         for path, lines in (owners.get(c.id) or {}).items():
             g["files"].setdefault(path, set()).update(lines)
         # Depth, not size: lines this group owns whose other arm nothing ever took.
@@ -85,7 +83,12 @@ def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> 
         g["files"] = [{"path": p, "lines": n, "exclusive": e, "shared": not e}
                       for p, n, e in home + visited]
 
-    return {"schema": "athena.outline/1", "title": contract.title,
+    return {"schema": "athena.outline/2", "title": contract.title,
+            "limitations": [
+                "bound counts live clauses with declared scenario bindings, not successful execution.",
+                "home and shared rank observed execution reach; partial branch coverage counts executed lines with unobserved arms.",
+                "Execution results, intent fidelity, check adequacy and code correspondence are not assessed by this outline.",
+            ],
             "clauses": len(contract.clauses), "live": len(contract.live()),
             "groups": groups}
 
@@ -93,18 +96,20 @@ def outline(contract, coverage_report: dict, clause_map: dict | None = None) -> 
 def render(o: dict) -> str:
     """PURE: the terminal view — one block per group, its home modules and its shared ones."""
     lines = [f"# {o['title']} — {o['clauses']} clauses, {o['live']} live", ""]
+    lines.extend(o.get("limitations", ()))
+    lines.append("")
     for name, g in o["groups"].items():
         head = f"{name}  ({g['live']} live"
         for extra in ("superseded", "draft", "withdrawn"):
             if g[extra]:
                 head += f", {g[extra]} {extra}"
-        head += f")  proved {g['proved']}/{g['live']}"
+        head += f")  spec-bound {g['bound']}/{g['live']}"
         lines.append(head)
-        if g["unproved"]:
-            lines.append(f"    unproved: {', '.join(g['unproved'])}")
+        if g["unbound"]:
+            lines.append(f"    unbound: {', '.join(g['unbound'])}")
         if g.get("half_proved"):
-            lines.append(f"    half-proved: {g['half_proved']} owned lines have an arm "
-                         f"nothing takes")
+            lines.append(f"    partial branch coverage: {g['half_proved']} executed lines "
+                         f"have unobserved arms")
         home = [f for f in g["files"] if not f["shared"]]
         shared = [f for f in g["files"] if f["shared"]]
         if home:

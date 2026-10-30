@@ -130,6 +130,9 @@ def build(*, lint_issues=(), critique_warnings=(), coverage=None, ledger_totals=
         steps.append(_step("judge", judge.get("passes", False), {
             "recall": judge.get("recall"), "false_reject": judge.get("false_reject"),
             "gate_eligible": judge.get("passes", False),
+            "label_basis": judge.get("label_basis", "unspecified"),
+            "semantic_validity": judge.get("semantic_validity", "NOT_ASSESSED"),
+            "limitations": list(judge.get("limitations", ())),
         }, leg="code_to_specs", blocking=False))
 
     for path in sorted(missing_inputs):

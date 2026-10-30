@@ -5,7 +5,7 @@ Adoption was the quiet failure mode: everything downstream of `contract.md` is a
 and `contract.md` itself was "write these three files by hand, in a format described in a
 skill". A frame nobody can start is a frame nobody uses.
 
-`init` emits the files already wired to each other — one clause, one spec that proves it,
+`init` emits the files already wired to each other — one clause, one spec that checks it,
 one task that carries it, and (v3.10) the CORE the clause cites — so the very first
 `athena check` on a new project passes and the loop is visible before anything real is
 written. Everything here is PURE text: the CLI owns the writing, so the templates are
@@ -34,20 +34,22 @@ CORE_TEMPLATE = """# CORE: {title}
 | word | means |
 |---|---|
 | clause | one numbered obligation; its id is allocated once and never reused |
-| spec | the executable command bound to a clause by id; exit 0 means the clause holds |
+| spec | an executable check bound to a clause; success is an observation within its checked scope |
 | pin | the fingerprint of the wording a spec, or a reference, was written against |
-| ledger | which specs were green, and when |
-| lesson | a clause whose `source:` is a failure signal; `athena lessons rerun` keeps it |
+| ledger | recorded execution results and their inputs; a green result is not requirement truth |
+| map | observed execution attributed through bound specs; legacy ownership is not semantic correspondence |
+| lesson | a clause whose `source:` is a failure signal; reruns record whether its checks still pass |
 
 ## Priorities, in order
-1. Honesty: silence is never proof; a leg with no evidence is INCOMPLETE, not PASS.
+1. Honesty: missing evidence is INCOMPLETE or UNKNOWN; PASS is scoped to checked gates.
+   Execution, intent fidelity, check adequacy and code correspondence need distinct evidence.
 2. Determinism: the gate holds no model; a judge is advisory until a fixed number says otherwise.
 3. Speed of the three questions: coverage, todo and drift answer from committed artifacts.
 4. Ease of entry: one short document leads to the rest.
 
 ## Constraints
 - A derived artifact is never edited by hand; a hand-written one is never inferred.
-- New behaviour is a clause and an executable spec, or it does not exist.
+- New behaviour requires a clause and an executable spec; unclaimed code remains visible.
 - A requirement that changes is superseded, never edited in place.
 """
 
@@ -67,7 +69,8 @@ CONTRACT_TEMPLATE = """# Contract: {title}
 SCENARIOS_TEMPLATE = """# Scenarios: {title}
 
 > One executable spec per clause. `run_cmd` is a real command in this project's own test
-> runner; exit 0 means the requirement holds. `pins:` is written by
+> runner; success is an observation within its checked scope, not requirement truth.
+> Intent fidelity, check adequacy and code correspondence need distinct evidence. `pins:` is written by
 > `athena contract pin --write` and is what makes drift detectable.
 
 ---
@@ -110,7 +113,7 @@ next:
   2. bind each one to a spec           {path}/scenarios.md
   3. pin them                          athena contract pin --contract {path}/contract.md {path}/scenarios.md --write
   4. run the loop                      athena check {path}/contract.md --front {path}/plan.md --run --text
-  5. line ownership (optional, slow)   athena contract map {path}/contract.md --source <pkg>
+  5. execution map (optional, slow)    athena contract map {path}/contract.md --source <pkg>
 
 migrating an existing spec.md instead:
   athena contract import spec.md -o {path}/contract.md      # keeps the EARS ids verbatim
@@ -155,8 +158,8 @@ def render_files(*, title: str, group: str = "First requirements", run_cmd: str 
     if core == "CORE.md" and not core_pin:
         out["CORE.md"] = CORE_TEMPLATE.format(
             title=title,
-            goal=f"Deliver {title} so that every promise about it is a numbered clause "
-                 f"proved by an executable spec, and 'is it done' is one command.")
+            goal=f"Deliver {title} with declared requirements and current, scoped evidence. "
+                 f"Keep execution, intent fidelity, check adequacy and code correspondence distinct.")
         core_ref = f"\n  - see: CORE.md@{fingerprint(out['CORE.md'])}"
     elif core:
         core_ref = f"\n  - see: {core}" + (f"@{core_pin}" if core_pin else "")
@@ -176,9 +179,9 @@ def render_files(*, title: str, group: str = "First requirements", run_cmd: str 
             then="the reported version matches the packaged one"),
         "plan.md": PLAN_TEMPLATE.format(
             title=title, group=group,
-            overview=f"Deliver {title}: every clause in contract.md proved by an executable "
-                     f"spec, and every spec bound to the code it exercises.",
-            goal="the first requirement is stated, bound and proved",
+            overview=f"Deliver {title}: bind every clause in contract.md to an executable "
+                     f"check and record its scoped observations and remaining evidence gaps.",
+            goal="the first requirement is stated, bound and checked",
             task="implement the first requirement and bind its spec",
             run_cmd=run_cmd, files=files),
     })

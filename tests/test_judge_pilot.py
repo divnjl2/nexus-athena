@@ -92,8 +92,8 @@ def test_the_summary_names_the_survivors():
 
 # --- the pilot conditions (steps 0..7 of the plan) -----------------------------------
 
-def test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model():
-    """C-10.5 — ground truth a model produced would make the whole measurement circular."""
+def test_the_corpus_retains_declared_labels_without_certifying_them(tmp_path, monkeypatch, capsys):
+    """C-10.27 — mechanical corpus construction does not certify baseline oracles."""
     corpus = build_corpus((GOOD,))
     assert [p.label for p in corpus][0] == "proves"
     bad = [p for p in corpus if p.label == "vacuous"]
@@ -111,6 +111,32 @@ def test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model():
     import dataclasses
     with pytest.raises(dataclasses.FrozenInstanceError):
         corpus[0].label = "vacuous"
+
+    # Exercise the native exporter with a demonstrably failing baseline. It labels
+    # the bound source without running it, and must disclose that limitation.
+    import athena
+    import json
+    monkeypatch.chdir(tmp_path)
+    source = "def test_bad():\n    assert False\n"
+    namespace = {}
+    exec(source, namespace)
+    with pytest.raises(AssertionError):
+        namespace["test_bad"]()
+    (tmp_path / "checks.py").write_text(source, encoding="utf-8")
+    (tmp_path / "contract.md").write_text(
+        "# Contract\n- **C-1.1** — WHEN asked THE SYSTEM SHALL answer.\n", encoding="utf-8")
+    (tmp_path / "scenarios.md").write_text(
+        "### S1.1 - Declared baseline\n- **verifies:** C-1.1\n"
+        "- **run_cmd:** `python -m pytest checks.py::test_bad -q`\n", encoding="utf-8")
+    assert athena.main(["judge", "corpus", "contract.md", "-o", "corpus.json"]) == 0
+    payload = json.loads((tmp_path / "corpus.json").read_text(encoding="utf-8"))
+    baseline, = [p for p in payload["pairs"] if not p["defect"]]
+    assert baseline["label"] == "proves" and "assert False" in baseline["spec_source"]
+    assert payload["semantic_validity"] == "NOT_ASSESSED"
+    assert payload["label_basis"] == "declared_baselines_and_mechanical_degradations"
+    assert "not established requirement truth" in " ".join(payload["limitations"])
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["label_basis"] == payload["label_basis"]
 
 
 def test_a_misbound_spec_is_labelled_vacuous_for_the_clause_it_names():
@@ -165,15 +191,35 @@ def test_thresholds_are_fixed_before_any_judge_runs_and_decide_eligibility():
     assert score(corpus, {})["recall"] == 0.0
 
 
-def test_a_false_reject_costs_more_than_a_miss():
-    """C-10.9 — rejecting a good spec is what gets a gate switched off, so it is scored
-    separately and per defect kind."""
+def test_judge_metrics_are_relative_to_labels_even_for_a_faulty_baseline():
+    """C-10.28 — label agreement is not an independent semantic quality measurement."""
     corpus = build_corpus((GOOD,))
     decisions = {p.id: {"decision": "vacuous"} for p in corpus}      # rejects everything
     rep = score(corpus, decisions)
     assert rep["recall"] == 1.0
     assert rep["false_reject"] == 1.0 and not rep["passes"]
     assert set(rep["recall_by_defect"]) == set(DEFECTS)
+
+    from dataclasses import replace
+    bad = replace(GOOD, spec_source="def test_bad():\n    assert False\n")
+    namespace = {}
+    exec(bad.spec_source, namespace)
+    with pytest.raises(AssertionError):
+        namespace["test_bad"]()
+    declared = build_corpus((bad,))
+    agreed = score(declared, {pair.id: {"decision": pair.label} for pair in declared})
+    assert agreed["passes"] and agreed["recall"] == 1.0 and agreed["false_reject"] == 0.0
+    assert agreed["semantic_validity"] == "NOT_ASSESSED"
+    assert "incorrect baseline labels" in " ".join(agreed["limitations"])
+    assert "does not establish intent fidelity" in " ".join(agreed["limitations"])
+
+    from lib.check import build as build_check
+    folded = build_check(judge=agreed)
+    advisory, = [step for step in folded["steps"] if step["step"] == "judge"]
+    assert advisory["ok"] and not advisory["blocking"]
+    for field in ("label_basis", "semantic_validity", "limitations"):
+        assert advisory["detail"][field] == agreed[field]
+    assert not folded["passed"], "perfect label agreement supplies no missing contract evidence"
 
 
 def test_the_judge_is_pinned_like_every_other_artifact():

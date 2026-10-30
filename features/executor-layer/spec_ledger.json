@@ -74,7 +74,7 @@
     {
       "clause": "C-1.8",
       "clause_version": "5231d7701e035e81",
-      "duration_ms": 5,
+      "duration_ms": 8,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -254,7 +254,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "f74bd5482d2aefea",
-      "duration_ms": 78,
+      "duration_ms": 103,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -324,7 +324,7 @@
     {
       "clause": "C-5.6",
       "clause_version": "cfe15fba21bf653d",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -344,7 +344,7 @@
     {
       "clause": "C-5.8",
       "clause_version": "74453e57e8b0d83f",
-      "duration_ms": 5,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -404,7 +404,7 @@
     {
       "clause": "C-6.6",
       "clause_version": "fa01125cbd4a59ee",
-      "duration_ms": 18,
+      "duration_ms": 31,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -414,7 +414,7 @@
     {
       "clause": "C-6.7",
       "clause_version": "429f86bc0d44ea1d",
-      "duration_ms": 43,
+      "duration_ms": 65,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -424,7 +424,7 @@
     {
       "clause": "C-6.8",
       "clause_version": "9f4daeeb67be4e8c",
-      "duration_ms": 46,
+      "duration_ms": 57,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -454,7 +454,7 @@
     {
       "clause": "C-7.1",
       "clause_version": "205a937c21c3725d",
-      "duration_ms": 7,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -464,7 +464,7 @@
     {
       "clause": "C-7.2",
       "clause_version": "10b350af8ac6284e",
-      "duration_ms": 7071,
+      "duration_ms": 7013,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -484,7 +484,7 @@
     {
       "clause": "C-7.4",
       "clause_version": "63102592bae9204d",
-      "duration_ms": 23,
+      "duration_ms": 66,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -494,7 +494,7 @@
     {
       "clause": "C-7.5",
       "clause_version": "b5499f7c48c4c5fe",
-      "duration_ms": 22,
+      "duration_ms": 20,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -504,7 +504,7 @@
     {
       "clause": "C-8.1",
       "clause_version": "58a48946c652784f",
-      "duration_ms": 5,
+      "duration_ms": 7,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -514,7 +514,7 @@
     {
       "clause": "C-8.2",
       "clause_version": "ff1ea612af689740",
-      "duration_ms": 14,
+      "duration_ms": 16,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -524,7 +524,7 @@
     {
       "clause": "C-8.4",
       "clause_version": "7c2a217b8bcae942",
-      "duration_ms": 4,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -535,10 +535,10 @@
   "scenario_version": "e115d402ea5450c5",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 7384,
+    "duration_ms": 7434,
     "failed": 0,
     "passed": 53,
     "total": 53
   },
-  "ts": "2026-10-25T16:15:24+00:00"
+  "ts": "2026-10-29T18:55:10+00:00"
 }

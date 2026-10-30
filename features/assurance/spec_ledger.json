@@ -1,10 +1,10 @@
 {
-  "contract_version": "275db76d00a56f21",
+  "contract_version": "e8ed7bcc8e4c2e5d",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "d00621db7248e599",
-      "duration_ms": 344,
+      "duration_ms": 22,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-1.2",
       "clause_version": "0239946f74ed9c36",
-      "duration_ms": 128,
+      "duration_ms": 72,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -24,7 +24,7 @@
     {
       "clause": "C-1.3",
       "clause_version": "cc8932c24b3bcc39",
-      "duration_ms": 76,
+      "duration_ms": 49,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-1.4",
       "clause_version": "a33b353d88ceb2f6",
-      "duration_ms": 76,
+      "duration_ms": 82,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-1.3",
       "clause_version": "cc8932c24b3bcc39",
-      "duration_ms": 1156,
+      "duration_ms": 1687,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -54,7 +54,7 @@
     {
       "clause": "C-1.5",
       "clause_version": "2999cbd7da3a49c3",
-      "duration_ms": 29,
+      "duration_ms": 32,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -64,21 +64,31 @@
     {
       "clause": "C-1.6",
       "clause_version": "84400973d72b1b84",
-      "duration_ms": 13,
+      "duration_ms": 14,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_assurance.py::test_report_is_bounded_and_escapes_authored_content -q",
       "scenario": "S1.6"
+    },
+    {
+      "clause": "C-1.7",
+      "clause_version": "b959ef787d560bb8",
+      "duration_ms": 44524,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_assurance_stateful.py::test_generated_evidence_lifecycle_preserves_freshness tests/test_assurance_stateful.py::test_lifecycle_oracle_detects_seeded_stale_read tests/test_assurance_stateful.py::test_lifecycle_rerun_recovers_and_counterevidence_stays_visible -q",
+      "scenario": "S1.8"
     }
   ],
-  "scenario_version": "47371192d729bd6b",
+  "scenario_version": "2d4186b0bdad997a",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 1822,
+    "duration_ms": 46482,
     "failed": 0,
-    "passed": 7,
-    "total": 7
+    "passed": 8,
+    "total": 8
   },
-  "ts": "2026-10-29T13:56:02+00:00"
+  "ts": "2026-10-29T18:54:40+00:00"
 }

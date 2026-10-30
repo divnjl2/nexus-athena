@@ -4,7 +4,7 @@
     {
       "clause": "C-1.1",
       "clause_version": "c4f9e5f53a57b658",
-      "duration_ms": 3,
+      "duration_ms": 4,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-1.4",
       "clause_version": "68e21b29f1e7e8bc",
-      "duration_ms": 183,
+      "duration_ms": 224,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -64,7 +64,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "115d28e0d3c06bd0",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -74,7 +74,7 @@
     {
       "clause": "C-2.3",
       "clause_version": "cb87719a06a94d27",
-      "duration_ms": 6140,
+      "duration_ms": 6956,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +104,7 @@
     {
       "clause": "C-2.6",
       "clause_version": "d43f878854af77c8",
-      "duration_ms": 822,
+      "duration_ms": 979,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -114,7 +114,7 @@
     {
       "clause": "C-3.1",
       "clause_version": "396ba1370ba5fb6e",
-      "duration_ms": 3,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -124,7 +124,7 @@
     {
       "clause": "C-3.2",
       "clause_version": "e00afe38c42f2015",
-      "duration_ms": 525,
+      "duration_ms": 667,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -134,7 +134,7 @@
     {
       "clause": "C-3.3",
       "clause_version": "69c53436e4c409c2",
-      "duration_ms": 259,
+      "duration_ms": 352,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -144,7 +144,7 @@
     {
       "clause": "C-3.4",
       "clause_version": "cb5aedcbd6dd9035",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -154,7 +154,7 @@
     {
       "clause": "C-4.1",
       "clause_version": "998a951a48e81e6d",
-      "duration_ms": 7,
+      "duration_ms": 8,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -194,7 +194,7 @@
     {
       "clause": "C-4.5",
       "clause_version": "95888e63fe806396",
-      "duration_ms": 568,
+      "duration_ms": 767,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -204,7 +204,7 @@
     {
       "clause": "C-5.1",
       "clause_version": "e02f0e00311ad772",
-      "duration_ms": 3,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -244,7 +244,7 @@
     {
       "clause": "C-5.5",
       "clause_version": "dc586cf079c2fd82",
-      "duration_ms": 1216,
+      "duration_ms": 1574,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -255,10 +255,10 @@
   "scenario_version": "d4730374dbaeac13",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 9746,
+    "duration_ms": 11554,
     "failed": 0,
     "passed": 25,
     "total": 25
   },
-  "ts": "2026-10-28T15:34:06+00:00"
+  "ts": "2026-10-29T18:54:40+00:00"
 }

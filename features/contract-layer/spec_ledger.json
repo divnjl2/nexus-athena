@@ -1,5 +1,5 @@
 {
-  "contract_version": "8d10d8a3de3de529",
+  "contract_version": "5e068eab77c5d971",
   "results": [
     {
       "clause": "C-1.1",
@@ -74,7 +74,7 @@
     {
       "clause": "C-1.8",
       "clause_version": "0456b2f3efc812d0",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -174,7 +174,7 @@
     {
       "clause": "C-2.4",
       "clause_version": "1606d5a8dbcd9289",
-      "duration_ms": 2,
+      "duration_ms": 3,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -214,7 +214,7 @@
     {
       "clause": "C-3.3",
       "clause_version": "316ab8df31db9329",
-      "duration_ms": 1,
+      "duration_ms": 2,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -224,7 +224,7 @@
     {
       "clause": "C-3.4",
       "clause_version": "78d0566af764a0cc",
-      "duration_ms": 16,
+      "duration_ms": 20,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -244,7 +244,7 @@
     {
       "clause": "C-3.6",
       "clause_version": "8770d7d64c24fe89",
-      "duration_ms": 4,
+      "duration_ms": 5,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -264,7 +264,7 @@
     {
       "clause": "C-3.8",
       "clause_version": "68f7fdb181c35ce5",
-      "duration_ms": 0,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -284,7 +284,7 @@
     {
       "clause": "C-3.13",
       "clause_version": "74b503401465c50a",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -294,7 +294,7 @@
     {
       "clause": "C-3.14",
       "clause_version": "b7799b069c08d8e2",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -314,7 +314,7 @@
     {
       "clause": "C-3.16",
       "clause_version": "d5445ed57dccc77f",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -324,7 +324,7 @@
     {
       "clause": "C-3.18",
       "clause_version": "196a20c19f969f48",
-      "duration_ms": 146,
+      "duration_ms": 148,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -354,7 +354,7 @@
     {
       "clause": "C-4.4",
       "clause_version": "294756121b4a2d2d",
-      "duration_ms": 0,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -404,7 +404,7 @@
     {
       "clause": "C-4.10",
       "clause_version": "a224cb9d1f4b36da",
-      "duration_ms": 1,
+      "duration_ms": 0,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -424,7 +424,7 @@
     {
       "clause": "C-4.12",
       "clause_version": "204d06b75b3ba1aa",
-      "duration_ms": 1,
+      "duration_ms": 0,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -434,7 +434,7 @@
     {
       "clause": "C-4.14",
       "clause_version": "3db3976c55b68287",
-      "duration_ms": 1,
+      "duration_ms": 0,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -562,19 +562,9 @@
       "scenario": "S5.9"
     },
     {
-      "clause": "C-5.11",
-      "clause_version": "5497f7656e1b8dd6",
-      "duration_ms": 19071,
-      "exit_code": 0,
-      "output_tail": "",
-      "passed": true,
-      "run_cmd": "python -m pytest tests/test_bd_integration_contract.py::test_clause_nodes_and_edges_materialize_in_a_real_bd_graph -q",
-      "scenario": "S5.11"
-    },
-    {
       "clause": "C-5.13",
       "clause_version": "4bec28b438f082b4",
-      "duration_ms": 11,
+      "duration_ms": 19,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -594,7 +584,7 @@
     {
       "clause": "C-5.15",
       "clause_version": "df375683915cd369",
-      "duration_ms": 0,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -704,7 +694,7 @@
     {
       "clause": "C-7.6",
       "clause_version": "059cb9d8a49345d9",
-      "duration_ms": 46,
+      "duration_ms": 54,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -724,7 +714,7 @@
     {
       "clause": "C-7.8",
       "clause_version": "edb4562298f63e0f",
-      "duration_ms": 15,
+      "duration_ms": 17,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -774,7 +764,7 @@
     {
       "clause": "C-7.13",
       "clause_version": "ee0de43ecfa1827a",
-      "duration_ms": 1,
+      "duration_ms": 3,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -884,7 +874,7 @@
     {
       "clause": "C-9.5",
       "clause_version": "c9739b92f2e1a8a8",
-      "duration_ms": 4,
+      "duration_ms": 16,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -914,7 +904,7 @@
     {
       "clause": "C-9.8",
       "clause_version": "5e01c4cd2a91792e",
-      "duration_ms": 2,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1064,7 +1054,7 @@
     {
       "clause": "C-9.25",
       "clause_version": "cf2128a2556a987b",
-      "duration_ms": 23,
+      "duration_ms": 29,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1072,9 +1062,159 @@
       "scenario": "S9.25"
     },
     {
+      "clause": "C-9.26",
+      "clause_version": "ac170e21eabd3b8b",
+      "duration_ms": 3669,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_incremental_executes_added_and_changed_commands_but_reuses_unchanged -q",
+      "scenario": "S9.26"
+    },
+    {
+      "clause": "C-9.27",
+      "clause_version": "70b210eb7378fe02",
+      "duration_ms": 3906,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_incremental_retries_a_failed_sibling_even_when_its_clause_has_lines -q",
+      "scenario": "S9.27"
+    },
+    {
+      "clause": "C-9.28",
+      "clause_version": "d3f927c2c74b2275",
+      "duration_ms": 40,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_collection_cannot_reuse_stale_output_or_accept_a_failed_process -q",
+      "scenario": "S9.28"
+    },
+    {
+      "clause": "C-9.29",
+      "clause_version": "927149b994cbe7d6",
+      "duration_ms": 4620,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_incremental_removes_obsolete_bindings_and_recollects_their_siblings -q",
+      "scenario": "S9.29"
+    },
+    {
+      "clause": "C-9.30",
+      "clause_version": "b7204c788610fc9e",
+      "duration_ms": 2530,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_incremental_recollects_only_the_clause_whose_requirement_version_changed -q",
+      "scenario": "S9.30"
+    },
+    {
+      "clause": "C-9.31",
+      "clause_version": "f1fd31037c4dc7bc",
+      "duration_ms": 1299,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_executed_lines_are_attributed_without_claiming_semantic_truth -q",
+      "scenario": "S9.31"
+    },
+    {
+      "clause": "C-9.32",
+      "clause_version": "aa0525b6ad808aaf",
+      "duration_ms": 1327,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_partial_branches_report_unobserved_arms -q",
+      "scenario": "S9.32"
+    },
+    {
+      "clause": "C-9.33",
+      "clause_version": "423129d1662ae64a",
+      "duration_ms": 1249,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_complementary_branches_do_not_establish_return_values -q",
+      "scenario": "S9.33"
+    },
+    {
+      "clause": "C-9.26",
+      "clause_version": "ac170e21eabd3b8b",
+      "duration_ms": 2699,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_filtered_incremental_work_keeps_unexecuted_changes_stale -q",
+      "scenario": "S9.34"
+    },
+    {
+      "clause": "C-9.27",
+      "clause_version": "70b210eb7378fe02",
+      "duration_ms": 3822,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_legacy_map_without_complete_outcomes_is_recollected -q",
+      "scenario": "S9.35"
+    },
+    {
+      "clause": "C-9.26",
+      "clause_version": "ac170e21eabd3b8b",
+      "duration_ms": 4432,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_incremental_executes_changed_second_node_and_explicit_config -q",
+      "scenario": "S9.36"
+    },
+    {
+      "clause": "C-9.26",
+      "clause_version": "ac170e21eabd3b8b",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_explicit_test_files_include_decorators_and_other_test_helpers -q",
+      "scenario": "S9.37"
+    },
+    {
+      "clause": "C-9.26",
+      "clause_version": "ac170e21eabd3b8b",
+      "duration_ms": 8593,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_clause_map_incremental.py::test_incremental_pins_the_execution_cwd_source_roots_and_subject tests/test_clause_map_incremental.py::test_explicit_input_paths_preserve_parent_and_absolute_locations -q",
+      "scenario": "S9.38"
+    },
+    {
+      "clause": "C-9.34",
+      "clause_version": "edcad1700d9ce880",
+      "duration_ms": 4712,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_map_check_inputs.py::test_check_rejects_changed_explicit_inputs_without_executing_and_refresh_repairs -q",
+      "scenario": "S9.39"
+    },
+    {
+      "clause": "C-9.35",
+      "clause_version": "e54a7b23eeb7f588",
+      "duration_ms": 9949,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_map_input_stability.py::test_inputs_changed_during_collection_stay_stale_until_stable_rerun -q",
+      "scenario": "S9.40"
+    },
+    {
       "clause": "C-10.1",
       "clause_version": "2b289d163041f18e",
-      "duration_ms": 3,
+      "duration_ms": 4,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1094,7 +1234,7 @@
     {
       "clause": "C-10.3",
       "clause_version": "d2a6361c6acddce6",
-      "duration_ms": 4,
+      "duration_ms": 3,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1112,13 +1252,13 @@
       "scenario": "S10.4"
     },
     {
-      "clause": "C-10.5",
-      "clause_version": "334a3e4bcef23727",
-      "duration_ms": 1,
+      "clause": "C-10.27",
+      "clause_version": "bbc07982979a046b",
+      "duration_ms": 50,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
-      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_corpus_labels_come_from_mechanical_edits_not_from_a_model -q",
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_corpus_retains_declared_labels_without_certifying_them -q",
       "scenario": "S10.5"
     },
     {
@@ -1134,7 +1274,7 @@
     {
       "clause": "C-10.7",
       "clause_version": "2b781b52ff1e9853",
-      "duration_ms": 0,
+      "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1152,13 +1292,13 @@
       "scenario": "S10.8"
     },
     {
-      "clause": "C-10.9",
-      "clause_version": "9f1572d662e63ff8",
+      "clause": "C-10.28",
+      "clause_version": "9daa410887628b32",
       "duration_ms": 1,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
-      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_a_false_reject_costs_more_than_a_miss -q",
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_judge_metrics_are_relative_to_labels_even_for_a_faulty_baseline -q",
       "scenario": "S10.9"
     },
     {
@@ -1224,7 +1364,7 @@
     {
       "clause": "C-10.16",
       "clause_version": "87f1faf279309a09",
-      "duration_ms": 5,
+      "duration_ms": 6,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1244,7 +1384,7 @@
     {
       "clause": "C-10.18",
       "clause_version": "c3afb2b9f5f7e4fd",
-      "duration_ms": 18,
+      "duration_ms": 19,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1312,6 +1452,26 @@
       "scenario": "S10.26"
     },
     {
+      "clause": "C-10.27",
+      "clause_version": "bbc07982979a046b",
+      "duration_ms": 50,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_corpus_retains_declared_labels_without_certifying_them -q",
+      "scenario": "S10.27"
+    },
+    {
+      "clause": "C-10.28",
+      "clause_version": "9daa410887628b32",
+      "duration_ms": 1,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_judge_metrics_are_relative_to_labels_even_for_a_faulty_baseline -q",
+      "scenario": "S10.28"
+    },
+    {
       "clause": "C-11.1",
       "clause_version": "71c4a265a4d3424a",
       "duration_ms": 1,
@@ -1324,7 +1484,7 @@
     {
       "clause": "C-11.2",
       "clause_version": "07ffe4e92d7f7906",
-      "duration_ms": 1,
+      "duration_ms": 0,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1354,7 +1514,7 @@
     {
       "clause": "C-11.5",
       "clause_version": "10d3688a77159fe5",
-      "duration_ms": 1,
+      "duration_ms": 0,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1474,7 +1634,7 @@
     {
       "clause": "C-11.17",
       "clause_version": "7d04d175efa243c2",
-      "duration_ms": 19,
+      "duration_ms": 16,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1484,7 +1644,7 @@
     {
       "clause": "C-11.18",
       "clause_version": "6bb6d047be8eebbd",
-      "duration_ms": 9,
+      "duration_ms": 5,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1494,7 +1654,7 @@
     {
       "clause": "C-11.19",
       "clause_version": "a03587e191babc34",
-      "duration_ms": 1585,
+      "duration_ms": 2160,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1504,7 +1664,7 @@
     {
       "clause": "C-11.20",
       "clause_version": "f93488578608a0a2",
-      "duration_ms": 30,
+      "duration_ms": 44,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -1532,13 +1692,13 @@
       "scenario": "S11.22"
     },
     {
-      "clause": "C-11.23",
-      "clause_version": "31097ea97251ce82",
-      "duration_ms": 1,
+      "clause": "C-11.28",
+      "clause_version": "b843d977272f1352",
+      "duration_ms": 5,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
-      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_separates_the_four_statuses_and_counts_proofs -q",
+      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_separates_statuses_and_bindings_without_execution -q",
       "scenario": "S11.23"
     },
     {
@@ -1584,12 +1744,22 @@
     {
       "clause": "C-11.27",
       "clause_version": "d3fbb848c4664e15",
-      "duration_ms": 1709,
+      "duration_ms": 2123,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
       "run_cmd": "python -m pytest tests/test_judge_pilot.py::test_the_default_mirror_is_somewhere_the_guard_will_accept -q",
       "scenario": "S11.27"
+    },
+    {
+      "clause": "C-11.28",
+      "clause_version": "b843d977272f1352",
+      "duration_ms": 5,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_outline.py::test_the_outline_separates_statuses_and_bindings_without_execution -q",
+      "scenario": "S11.28"
     },
     {
       "clause": "C-12.1",
@@ -1702,13 +1872,13 @@
       "scenario": "S14.1"
     },
     {
-      "clause": "C-14.2",
-      "clause_version": "9490e074a5f28159",
-      "duration_ms": 1,
+      "clause": "C-14.5",
+      "clause_version": "47957a0602be74ae",
+      "duration_ms": 4,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
-      "run_cmd": "python -m pytest tests/test_export.py::test_the_index_carries_what_a_requirements_index_cannot_say -q",
+      "run_cmd": "python -m pytest tests/test_export.py::test_the_index_reports_bindings_and_reach_without_proof -q",
       "scenario": "S14.2"
     },
     {
@@ -1730,6 +1900,16 @@
       "passed": true,
       "run_cmd": "python -m pytest tests/test_export.py::test_the_oft_export_is_specobject_xml_their_tracer_can_ingest -q",
       "scenario": "S14.4"
+    },
+    {
+      "clause": "C-14.5",
+      "clause_version": "47957a0602be74ae",
+      "duration_ms": 4,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_export.py::test_the_index_reports_bindings_and_reach_without_proof -q",
+      "scenario": "S14.5"
     },
     {
       "clause": "C-15.1",
@@ -1852,13 +2032,13 @@
       "scenario": "S16.9"
     }
   ],
-  "scenario_version": "fa465ec9793da8e7",
+  "scenario_version": "33c70167ed784a61",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 23010,
+    "duration_ms": 57944,
     "failed": 0,
-    "passed": 185,
-    "total": 185
+    "passed": 203,
+    "total": 203
   },
-  "ts": "2026-10-28T15:19:10+00:00"
+  "ts": "2026-10-29T18:59:34+00:00"
 }

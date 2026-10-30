@@ -1,7 +1,7 @@
 # The contract layer, contracting itself
 
 This folder is the frame's own requirement contract. Every rule the contract layer enforces
-was written here first, as a numbered clause, and is proved here by an executable spec that
+was written here first, as a numbered clause, and is checked here by an executable spec that
 runs in this repo's test suite. If you want to know what the layer does, read `contract.md`.
 If you want to know whether it does it, run the loop at the bottom of this page.
 
@@ -15,16 +15,16 @@ artifact said it in one place. This page is that place.
 
 | File | Written by | Answers |
 |---|---|---|
-| `contract.md` | a human | what is guaranteed — numbered clauses, ids never reused |
-| `scenarios.md` | a human; `pins:` by the tool | how each clause is proved — one runnable command per clause |
+| `contract.md` | an author | declared obligations — numbered clauses, ids never reused |
+| `scenarios.md` | an author; `pins:` by the tool | runnable checks bound to clauses |
 | `plan.md` | a human | what work carries which spec |
 | `spec_ledger.json` | `athena spec run` | which specs were green, and when |
-| `clause_map.json` | `athena contract map` | which lines of which files each clause owns |
+| `clause_map.json` | `athena contract map` | execution reach attributed through bound specs |
 | `judge_corpus.json` | `athena judge corpus` | labelled spec pairs for measuring a judge |
 | `judge_decisions.json` | `evals/judge_local.py` | what one judge said about them |
 | `clauses.needs.json` | `athena contract export` | the index another repository references |
 
-The first three are written by hand and are the only source of truth. The last five are
+The first three are authored declarations requiring review. The last five are
 **derived** — delete any of them and one command rebuilds it. That asymmetry is the design:
 a derived artifact may never be edited, and a hand-written one may never be inferred.
 
@@ -99,9 +99,10 @@ athena lessons rerun     <contract> --text   # rerun the proofs of every lesson 
 athena gate --text                           # every contract in the repo, the cheap lane (v3.10)
 ```
 
-`athena contract outline --text` is the fastest way in: it prints each clause group, how many
-of its clauses are live and proved, and which modules its specs actually execute — the
-architecture, measured rather than claimed.
+`athena contract outline --text` prints each clause group, its clause statuses, how many live
+clauses have declared spec bindings, and the execution reach recorded in its map. A binding
+may name a check that has never run; this outline does not assess execution or semantics.
+The `home` and `shared` rankings help navigation and do not establish architecture.
 
 ## Living apart from the code
 
@@ -152,25 +153,34 @@ athena contract export contract.md --project nexus-athena -o clauses.needs.json
 athena contract export contract.md --format oft        # OpenFastTrace specobject XML
 ```
 
-The index carries the one thing a requirements index cannot: whether each clause is **proved**,
-how many lines it owns, and how many of those are half-proved.
+The index records whether each clause has a declared spec binding, the lines reached in the
+supplied map, and lines with unobserved branch arms. It does not receive an execution ledger
+and cannot establish successful execution, intent fidelity, check adequacy or code correspondence.
+
+The `needs.json/2` format replaces the misleading `proved` field with `spec_bound`.
+The `athena.outline/2` format replaces `proved` and `unproved` with `bound` and `unbound`;
+`bound` counts only live clauses, so bound draft clauses cannot inflate the displayed ratio.
+There are no proof aliases. Consumers of version 1 must migrate these field names and their
+interpretation; saved exports must be regenerated. Legacy `owns_*` and `half_proved*` fields
+remain coverage observations, as the output limitations state, and confer no semantic ownership.
 
 **Which codebase a map is about.** Recorded as a package URL (`pkg:github/owner/repo`), derived
 from the git remote by default. A map naming a different project fails the freshness gate — an
 audit once had this repo's map silently judging a scaffolded project elsewhere. Version is
 ignored on purpose: the per-clause digests already answer whether the code moved.
 
-## How deep is a proof? Two measures, cheap then expensive
+## Two evidence measures: branch reach and mutation sensitivity
 
 Counting specs measures nothing — this contract had exactly one per clause for months. Counting
 *owned lines* over-claims: the median clause "owns" 250 of the 1724 lines in the map, because
 coverage credits everything its test executed on the way in. So depth is measured twice:
 
 **Branch evidence (cheap, always on).** The map runs coverage with `--branch`, so a line whose
-other arm no spec of that clause ever took is recorded as **half-proved**. On this contract
-that is **231 of 1724 owned lines (13%)**. Partiality belongs to the clause, not the spec: if
-one spec takes the true arm and another the false one, the branch is proved — which is the
-first real reason to write more than one spec per clause (the report layer always accepted it).
+other arm no spec of that clause ever took retains the legacy label **half-proved**, meaning
+partial observed branch coverage. The historical measurement was **231 of 1724 attributed
+lines (13%)**. Observations combine per clause: when its specs take opposite arms, that
+branch is no longer partial. Both arms can execute while the returned result is wrong;
+complete branch reach does not establish a requirement or the adequacy of its assertions.
 
 **Mutation (expensive, aimed).** Break an owned line and see whether any bound spec goes red.
 The selector is part of the measure, because a full sweep is unaffordable and a line owned by
@@ -199,10 +209,12 @@ the mutant lived on. A test outside the contract is not evidence the contract ca
 
 ## The judge is a local model, and it is not a gate
 
-`athena judge` is a **pilot**, not part of `check`. The corpus is built mechanically — take
-pairs this repo already proves, degrade the spec in a known way (drop the assertion, swallow
-the exception, bind it to the wrong clause), and label the result. A judge is then asked to
-find the broken half.
+`athena judge` is a **pilot** whose score remains advisory. The corpus preserves declared
+baseline labels and mechanically transforms their specs (drop an assertion, weaken a check,
+or bind it to another clause). Corpus construction does not execute or certify the baseline.
+The legacy labels `proves` and `vacuous` are corpus categories; reports carry their declared
+basis and `semantic_validity: NOT_ASSESSED`. Recall and false-reject rates measure agreement
+with those labels. A faulty oracle labelled `proves` can yield perfect label agreement.
 
 Running it needs an OpenAI-compatible endpoint serving a local model:
 
@@ -214,21 +226,23 @@ athena judge eval --corpus ... --decisions ...        # recall / false rejects v
 ```
 
 The thresholds (recall ≥ 0.95, false rejects ≤ 0.02) were fixed **before** the first run and
-live in `lib/judge.py`. Nothing promotes the judge from advisory to gate except those
-numbers. The deterministic mutation runner is the part that works today; the judge is the
-part being measured.
+live in `lib/judge.py`. Eligibility from these numbers is relative to the declared corpus;
+it does not establish intent fidelity, check adequacy or code correspondence. The advisory
+policy and score calculation are unchanged; semantic labels require separate review.
 
 ### What the measurement says so far
 
 A 9B local model, unmuzzled (no token cap, no forced JSON grammar), takes about a minute per
 pair — the full 595-pair corpus is roughly ten hours of GPU time on one RTX 3060. Over the
 first **411 scored pairs**: recall **0.954** (bar: 0.95), false rejects **0.469** (bar: 0.02).
+These are archived agreements with that corpus's declared labels, not independently
+established rates of semantic error. The original results are retained without regrading.
 
 - **Recall is not the problem, false rejects are.** The degraded halves get caught — weakest
-  is the subtlest defect, `weakened`, at 0.87. The failure mode is calling a *valid* spec
-  vacuous, and it does that to nearly half of them. The recurring reason it gives is "the
+  is the subtlest defect, `weakened`, at 0.87. The measured disagreement is calling a baseline
+  labelled `proves` vacuous, for nearly half of those labels. The recurring reason is "the
   test covers one case, the requirement is universal", which no single unit test satisfies;
-  the deterministic answer to that same question is the mutation sweep above.
+  a mutation sweep supplies additional finite evidence, not a universal semantic answer.
 - **A partial run is biased, so it is never eligible.** The judge thinks about twice as long
   when there is nothing to refute (median 259s on a proving pair against 121s on a degraded
   one), so timeouts fall on the good half: three of the first four were proving pairs, which

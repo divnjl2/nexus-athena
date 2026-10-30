@@ -1,10 +1,10 @@
 {
-  "contract_version": "23bf3e28f0157488",
+  "contract_version": "df0d2c150083eff1",
   "results": [
     {
       "clause": "C-1.1",
       "clause_version": "2767d319c0df3dea",
-      "duration_ms": 111,
+      "duration_ms": 131,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -14,7 +14,7 @@
     {
       "clause": "C-1.2",
       "clause_version": "9d58fcc748c48bf9",
-      "duration_ms": 21,
+      "duration_ms": 19,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -24,7 +24,7 @@
     {
       "clause": "C-1.3",
       "clause_version": "9248a91981f5261a",
-      "duration_ms": 1882,
+      "duration_ms": 2105,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -34,7 +34,7 @@
     {
       "clause": "C-2.1",
       "clause_version": "d9eacc727efe23ee",
-      "duration_ms": 7329,
+      "duration_ms": 8562,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -44,7 +44,7 @@
     {
       "clause": "C-2.2",
       "clause_version": "31be79d603d980fc",
-      "duration_ms": 1708,
+      "duration_ms": 2138,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -54,7 +54,7 @@
     {
       "clause": "C-3.1",
       "clause_version": "3e2118d99e220a23",
-      "duration_ms": 1525,
+      "duration_ms": 1712,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -62,9 +62,29 @@
       "scenario": "S3.1"
     },
     {
+      "clause": "C-3.2",
+      "clause_version": "25cc82a6f8105880",
+      "duration_ms": 22259,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_semantic_scope_regressions.py::test_semantic_oracles_accept_declared_freedom_and_detect_real_violations -q",
+      "scenario": "S3.2"
+    },
+    {
+      "clause": "C-3.3",
+      "clause_version": "338eb332a54e4229",
+      "duration_ms": 6562,
+      "exit_code": 0,
+      "output_tail": "",
+      "passed": true,
+      "run_cmd": "python -m pytest tests/test_semantic_scope_regressions.py::test_public_collection_accepts_a_different_private_helper_boundary -q",
+      "scenario": "S3.3"
+    },
+    {
       "clause": "C-4.1",
       "clause_version": "5bc391457964c1bf",
-      "duration_ms": 407,
+      "duration_ms": 451,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -84,7 +104,7 @@
     {
       "clause": "C-4.3",
       "clause_version": "27341b552d4e4474",
-      "duration_ms": 115,
+      "duration_ms": 138,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -94,7 +114,7 @@
     {
       "clause": "C-5.1",
       "clause_version": "46bdf590461a19f6",
-      "duration_ms": 194,
+      "duration_ms": 255,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -104,7 +124,7 @@
     {
       "clause": "C-5.2",
       "clause_version": "9f4bfec3db8db72d",
-      "duration_ms": 231,
+      "duration_ms": 300,
       "exit_code": 0,
       "output_tail": "",
       "passed": true,
@@ -112,13 +132,13 @@
       "scenario": "S5.2"
     }
   ],
-  "scenario_version": "dbd70ed3a60e80d7",
+  "scenario_version": "a22df5e76a82f685",
   "schema": "athena.spec_ledger/1",
   "totals": {
-    "duration_ms": 13527,
+    "duration_ms": 44636,
     "failed": 0,
-    "passed": 11,
-    "total": 11
+    "passed": 13,
+    "total": 13
   },
-  "ts": "2026-10-28T15:12:53+00:00"
+  "ts": "2026-10-29T18:56:39+00:00"
 }

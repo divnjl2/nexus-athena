@@ -50,18 +50,30 @@ def test_the_index_is_the_needs_json_shape_a_consumer_already_reads():
     assert block["needs"]["C-1.9"]["status"] == "withdrawn"
 
 
-def test_the_index_carries_what_a_requirements_index_cannot_say():
-    """C-14.2 - proved-or-not, owned lines, half-proved lines travel WITH the ids; that is
-    the only part of this export nobody else's index has."""
-    block = to_needs(CONTRACT, coverage=COVERAGE, clause_map=CMAP)["versions"]
+def test_the_index_reports_bindings_and_reach_without_proof(tmp_path):
+    """C-14.5 - an unexecuted, even missing, spec is a binding rather than proof."""
+    from lib.ast import Scenario
+    from lib.contract_report import coverage
+
+    missing = tmp_path / "not_created.py"
+    scenario = Scenario("S1.1", "C-1.1", "declared check", f"python {missing}")
+    binding = coverage(CONTRACT, (scenario,))
+    assert not missing.exists()
+    exported = to_needs(CONTRACT, coverage=binding, clause_map=CMAP)
+    assert exported["schema"] == "needs.json/2"
+    block = exported["versions"]
     need = next(iter(block.values()))["needs"]["C-1.1"]
-    assert need["proved"] is True
+    assert need["spec_bound"] is True
+    assert "proved" not in need and "execution" not in need
     assert need["owns_files"] == ["lib/a.py"] and need["owns_lines"] == 3
     assert need["half_proved_lines"] == 1
+    assert "not successful execution" in " ".join(exported["limitations"])
+    assert "code correspondence are not assessed" in " ".join(exported["limitations"])
+    assert next(iter(block.values()))["needs"]["C-1.3"]["spec_bound"] is False
 
     bare = to_needs(CONTRACT)["versions"]
-    unproved = next(iter(bare.values()))["needs"]["C-1.1"]
-    assert unproved["proved"] is False and unproved["owns_lines"] == 0, (
+    unbound = next(iter(bare.values()))["needs"]["C-1.1"]
+    assert unbound["spec_bound"] is False and unbound["owns_lines"] == 0, (
         "with no coverage report and no map, the index claims nothing")
 
 

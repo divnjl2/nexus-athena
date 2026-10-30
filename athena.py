@@ -136,11 +136,13 @@ def cmd_seam(a) -> int:
         except (FileNotFoundError, json.JSONDecodeError):
             cmap = {}
         scen = pathlib.Path(front).parent / "scenarios.md"
-        from lib.clause_map import digests
+        from lib.clause_map import digests, spec_digests
         r = seams.seam_map_fresh(
             cmap, plan.contract, plan.scenarios,
             scenario_version=hash_text(scen.read_text(encoding="utf-8")) if scen.exists() else "",
-            clause_digests=digests(cmap, _sources_of(cmap)))
+            clause_digests=digests(cmap, _sources_of(cmap, cwd=a.cwd)),
+            spec_digests=spec_digests(plan.scenarios, _test_sources(plan.scenarios, cwd=a.cwd)),
+            execution_cwd=str(pathlib.Path(a.cwd).resolve()))
         _emit({"seam": r.name, "passed": r.passed, "issues": list(r.issues),
                "hash": r.artifact_hash, "map": map_path})
         return 0 if r.passed else 1
@@ -433,63 +435,89 @@ def cmd_contract_map(a) -> int:
     # EFFECTFUL: run each spec ALONE under coverage so its lines can be attributed to the
     # clause it proves. This is the artifact that upgrades the reverse leg from file-level
     # ("this contract claims lib/seams.py") to line-level ("it owns these 40 lines of it").
-    from lib.clause_map import (collect, digests, owned_lines, spec_digests,
-                                stale_clauses, stale_specs)
+    from lib.clause_map import (SCHEMA, collect, digests, owned_lines, rebuild_clauses,
+                                spec_digests, stale_clauses, staleness)
     from lib.spec_runner import select
+    from lib.contract import parse as parse_contract
+    from lib.scenario_parser import parse as parse_scenarios
 
-    contract = _load_contract(a)
+    contract_text = _read(a.contract)
+    contract = parse_contract(contract_text)
     scen_path = a.scenarios or _sibling(a.contract, "scenarios.md")
-    scenarios = select(_load_scenarios(a, anchor=a.contract), clause_prefix=a.clause,
+    scenario_text = _read(scen_path)
+    all_scenarios = tuple(s for s in parse_scenarios(scenario_text)
+                          if contract.by_id(s.requirement_key) is not None)
+    scenarios = select(all_scenarios, clause_prefix=a.clause,
                        contract=contract, skip_tags=tuple(a.skip_tag))
-    # the incremental branch narrows `scenarios` to what must be re-derived; the spec-body
-    # pins have to cover ALL of them or a skipped spec would never be seen changing again
-    all_scenarios = scenarios
+    selected_scenarios = scenarios
     # WHICH codebase this map is about. Recorded so a map can never answer about a
     # project it has not seen; derived from the git remote when nobody says.
     subject = a.purl if a.purl != "auto" else _git_purl(a.cwd)
+    collection_context = {"cwd": str(pathlib.Path(a.cwd).resolve()),
+                          "sources": sorted(set(a.source))}
+    before_specs = spec_digests(all_scenarios, _test_sources(all_scenarios, cwd=a.cwd))
+    before_sources = _map_source_snapshot(tuple(a.source), cwd=a.cwd)
 
     # Incremental: re-derive ONLY the clauses whose owned lines moved (plus any clause the
     # map has never seen). Everything else in the map is still true, and re-running its
     # specs would buy nothing but minutes.
-    base, rebuilt = {}, ()
+    base, rebuilt, deferred = {}, (), ()
     if a.incremental and pathlib.Path(a.out).exists():
         base = json.loads(_read(a.out))
-        current = digests(base, _sources_of(base))
+        current = digests(base, _sources_of(base, cwd=a.cwd))
         drifted = set(stale_clauses(base, current))
-        # ...and a clause whose SPEC BODY moved. Pinning only the clause text and the owned
-        # code missed the third input: strengthening a test to cover the arm it had been
-        # skipping changed the branch evidence and moved no digest, so the rebuild said
-        # "nothing to re-derive" and `partial` kept answering from before the fix.
-        now_specs = spec_digests(scenarios, _test_sources(scenarios))
-        moved = set(stale_specs(base, now_specs))
-        drifted |= {s.requirement_key for s in scenarios if s.id in moved}
-        unseen = {c.id for c in contract.live()} - set(base.get("clauses") or {})
-        rebuilt = tuple(sorted(drifted | unseen))
+        needed = drifted | set(rebuild_clauses(
+            base, all_scenarios, current_digests=before_specs,
+            clause_versions={c.id: c.version for c in contract.clauses}))
+        from lib.purl import same_subject
+        old_subject = base.get("subject", "")
+        subject_changed = old_subject != subject and not (
+            old_subject and subject and same_subject(old_subject, subject))
+        if (base.get("schema") != SCHEMA or subject_changed
+                or base.get("collection_context") != collection_context):
+            needed |= set(base.get("clauses") or {}) | {c.id for c in contract.clauses}
+        # Execution filters must not disguise unexecuted changes with fresh global pins.
+        selected = {s.requirement_key for s in selected_scenarios}
+        deferred = tuple(sorted(needed & ({s.requirement_key for s in all_scenarios}
+                                          - selected)))
+        rebuilt = tuple(sorted(needed - set(deferred)))
         scenarios = tuple(s for s in scenarios if s.requirement_key in set(rebuilt))
-        if not scenarios:
-            # Nothing to re-derive, but the CONTRACT pin may still have moved — a note, a
-            # draft clause, any edit that owns no lines changes `contract.version` without
-            # changing what anybody owns. Returning here without re-pinning left the map
-            # permanently stale to `seam.map_fresh`, with no incremental way back: the only
-            # cure was a full rebuild that would have derived byte-identical ownership.
-            cmap = _finish_map((), contract, scen_path, scenarios=all_scenarios,
-                               base=base, rebuilt=(), subject=subject)
-            pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
-                                           encoding="utf-8")
-            _emit({"map": a.out, "rebuilt": [], "kept": len(cmap.get("clauses") or {}),
-                   "repinned": cmap["contract_version"],
-                   "note": "every clause still owns the lines it owned; re-pinned only"})
-            return 0
     spec_lines = collect(scenarios, sources=tuple(a.source), workdir=a.workdir,
                          cwd=a.cwd, jobs=a.jobs)
-    cmap = _finish_map(spec_lines, contract, scen_path, scenarios=all_scenarios,
-                       base=base, rebuilt=rebuilt, subject=subject)
+    cmap = _finish_map(spec_lines, contract, scen_path, scenarios=selected_scenarios,
+                       base=base, rebuilt=rebuilt, subject=subject, deferred=deferred,
+                       cwd=a.cwd, collection_context=collection_context)
+    # Observations cannot be re-pinned to bytes changed by a spec or an editor during
+    # collection or pin calculation. The final samples follow every positive pin read;
+    # edits detected here only revoke eligibility, with no later reads minting new pins.
+    after_specs = spec_digests(all_scenarios, _test_sources(all_scenarios, cwd=a.cwd))
+    unstable = {s.requirement_key for s in all_scenarios
+                if before_specs.get(s.id) != after_specs.get(s.id)}
+    try:
+        documents_changed = (_read(a.contract) != contract_text or _read(scen_path) != scenario_text)
+    except OSError:
+        documents_changed = True
+    if documents_changed or _map_source_snapshot(tuple(a.source), cwd=a.cwd) != before_sources:
+        unstable |= {s.requirement_key for s in selected_scenarios}
+    deferred = tuple(sorted(set(deferred) | unstable))
+    cmap["pending_clauses"] = list(deferred)
+    for sid, cid in cmap["specs"].items():
+        if cid in unstable:
+            cmap["spec_digests"].pop(sid, None)
+    for key in ("clause_digests", "clause_versions"):
+        for cid in unstable:
+            cmap[key].pop(cid, None)
+    if documents_changed:
+        from lib.versioning import hash_text
+        cmap["contract_version"] = contract.version
+        cmap["scenario_version"] = hash_text(scenario_text)
     pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(a.out).write_text(json.dumps(cmap, indent=2, sort_keys=True) + "\n",
                                    encoding="utf-8")
     owned = owned_lines(cmap)
     half = cmap.get("partial") or {}
     _emit({"map": a.out, "clauses_mapped": len(cmap["clauses"]),
+           "rebuilt": list(rebuilt), "deferred": list(deferred),
            "specs": len(spec_lines), "files": len(owned),
            "owned_lines": sum(len(v) for v in owned.values()),
            # Owned lines with an arm never taken: the depth signal the line count hides.
@@ -504,21 +532,44 @@ def cmd_contract_map(a) -> int:
            # no coverage at all were written as `{}` and reported as fully mapped. A spec
            # that ran and honestly touched none of the source roots is the exception, and
            # `collected` is how the map tells the two apart.
-           "unmapped_clauses": sorted(
-               c.id for c in contract.live()
-               if not (cmap["clauses"].get(c.id) or {})
-               and c.id not in set(cmap.get("collected") or ()))})
+           "unmapped_clauses": staleness(cmap, contract, all_scenarios)["unmapped"]})
     return 0
 
 
-def _sources_of(cmap: dict) -> dict:
+def _map_source_snapshot(roots, *, cwd: str = ".") -> dict:
+    """Fingerprint local Python files in the declared coverage roots, without imports.
+
+    This detects changes between samples; an edit restored to identical bytes between
+    samples and dependencies outside these roots are outside this bounded observation.
+    """
+    import hashlib
+    snapshot = {}
+    for root in sorted(set(roots)):
+        direct = pathlib.Path(cwd) / root
+        candidates = [direct] if direct.exists() else [
+            pathlib.Path(cwd) / (root.replace(".", "/") + ".py"),
+            pathlib.Path(cwd) / root.replace(".", "/")]
+        found = False
+        for candidate in candidates:
+            files = candidate.rglob("*") if candidate.is_dir() else (candidate,)
+            for path in files:
+                if path.is_file() and path.suffix.lower() in (".py", ".pyw"):
+                    found = True
+                    snapshot[str(path.resolve())] = hashlib.sha256(path.read_bytes()).hexdigest()
+        if not found:
+            snapshot["<unresolved>:" + root] = ""
+    return snapshot
+
+
+def _sources_of(cmap: dict, *, cwd: str = ".") -> dict:
     """Read every file the map references once: {path: text}. The digest functions are pure,
     so this is where the I/O lives."""
     out = {}
     for files in (cmap.get("clauses") or {}).values():
         for path in files:
-            if path not in out and pathlib.Path(path).exists():
-                out[path] = _read(path)
+            target = pathlib.Path(cwd) / path
+            if path not in out and target.is_file():
+                out[path] = _read(str(target))
     return out
 
 
@@ -548,31 +599,47 @@ def _git_purl(root: str = ".") -> str:
     return f"pkg:{kind}/{path}" if kind != "generic" else f"pkg:generic/{path.split('/')[-1]}"
 
 
-def _test_sources(scenarios) -> dict:
-    """{path: text} for every test module a run_cmd names. I/O, so it lives here."""
+def _test_sources(scenarios, *, cwd: str = ".") -> dict:
+    """Read explicit local inputs; transitive imports and the environment are not attested."""
+    from lib.clause_map import input_paths
     out = {}
     for sc in scenarios or ():
-        node = next((tok for tok in sc.run_cmd.split() if "::" in tok), "")
-        path = node.partition("::")[0].replace("\\", "/").strip().lstrip("./")
-        if path and path not in out and pathlib.Path(path).exists():
-            out[path] = _read(path)
+        for path in input_paths(sc.run_cmd):
+            target = pathlib.Path(cwd) / path
+            if path not in out and target.is_file():
+                raw = target.read_bytes()
+                try:
+                    out[path] = raw.decode("utf-8")
+                except UnicodeDecodeError:
+                    out[path] = "<binary>:" + raw.hex()
     return out
 
 
 def _finish_map(spec_lines, contract, scen_path, *, scenarios=(), base=None,
-                rebuilt=(), subject: str = "") -> dict:
+                rebuilt=(), subject: str = "", deferred=(), cwd: str = ".",
+                collection_context=None) -> dict:
     """Fold the collected lines into a map and pin each clause to the lines it owns."""
     from lib.clause_map import build, digests, merge, spec_digests
     from lib.versioning import hash_text
-    sv = hash_text(_read(str(scen_path)))
-    sd = spec_digests(scenarios, _test_sources(scenarios))
-    draft = (merge(base, spec_lines, contract_version=contract.version, scenario_version=sv,
-                   spec_digests=sd, subject=subject, rebuilt=tuple(rebuilt))
-             if base else build(spec_lines, contract_version=contract.version,
-                                scenario_version=sv, spec_digests=sd, subject=subject))
+    cv = base.get("contract_version", "") if deferred else contract.version
+    sv = base.get("scenario_version", "") if deferred else hash_text(_read(str(scen_path)))
+    eligible = tuple(s for s in scenarios if s.requirement_key not in deferred)
+    sd = spec_digests(eligible, _test_sources(eligible, cwd=cwd))
+    versions = {c.id: c.version for c in contract.clauses if c.id not in deferred}
+    draft = (merge(base, spec_lines, contract_version=cv, scenario_version=sv,
+                   spec_digests=sd, subject=subject, rebuilt=tuple(rebuilt),
+                   clause_versions=versions,
+                   collection_context=None if deferred else collection_context)
+             if base else build(spec_lines, contract_version=cv, scenario_version=sv,
+                                spec_digests=sd, subject=subject, clause_versions=versions,
+                                collection_context=collection_context))
     # second pass: the digests can only be computed once the final line sets are known
-    return merge(draft, (), contract_version=contract.version, scenario_version=sv,
-                 clause_digests=digests(draft, _sources_of(draft)))
+    result = merge(draft, (), contract_version=cv, scenario_version=sv,
+                   clause_digests={c: d for c, d in
+                                   digests(draft, _sources_of(draft, cwd=cwd)).items()
+                                   if c not in deferred})
+    result["pending_clauses"] = list(deferred)
+    return result
 
 
 def cmd_contract_owners(a) -> int:
@@ -672,10 +739,10 @@ def cmd_mutate(a) -> int:
 
 
 def cmd_judge_corpus(a) -> int:
-    # Builds the LABELLED set from pairs this repo already proves, plus mechanical
-    # degradations. No model is involved in producing the ground truth (step 1).
+    # Binds declared baseline labels and mechanical degradations without validating
+    # their semantic truth or executing the baseline checks.
     import re as _re
-    from lib.judge import Pair, build_corpus, spec_function
+    from lib.judge import Pair, build_corpus, label_context, spec_function
 
     contract = _load_contract(a)
     scenarios = _load_scenarios(a, anchor=a.contract)
@@ -693,13 +760,13 @@ def cmd_judge_corpus(a) -> int:
                           clause_text=clause.text, spec_id=s.id, spec_source=src,
                           label="proves"))
     corpus = build_corpus(tuple(pairs))
-    payload = {"schema": "athena.judge_corpus/1", "contract_version": contract.version,
+    payload = {"schema": "athena.judge_corpus/1", **label_context(), "contract_version": contract.version,
                "pairs": [vars(p) for p in corpus]}
     pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(a.out).write_text(json.dumps(payload, indent=2, ensure_ascii=False,
                                               sort_keys=True) + "\n", encoding="utf-8")
     from collections import Counter
-    _emit({"corpus": a.out, "pairs": len(corpus),
+    _emit({"corpus": a.out, "pairs": len(corpus), **label_context(),
            "proves": sum(1 for p in corpus if p.label == "proves"),
            "vacuous": sum(1 for p in corpus if p.label == "vacuous"),
            "by_defect": dict(Counter(p.defect for p in corpus if p.defect))})
@@ -812,6 +879,25 @@ def cmd_init(a) -> int:
     return 0
 
 
+def cmd_formal(a) -> int:
+    from lib.formal_evidence import collect
+    from lib.formal_review import render
+    try:
+        report = collect(a.cwd, a.manifest, python=a.python, dafny=a.dafny, timeout=a.timeout)
+        if a.out:
+            pathlib.Path(a.out).write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if a.html:
+            page = pathlib.Path(a.html).resolve()
+            page.write_text(render(report), encoding="utf-8")
+            import webbrowser
+            webbrowser.open(page.as_uri())
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        _emit({"schema": "athena.formal_evidence/1", "error": str(exc)})
+        return 2
+    _emit(report)
+    return 0  # Receipt generated, not verification success or release approval.
+
+
 def cmd_assess(a) -> int:
     from lib.assurance import assess, render
     try:
@@ -911,14 +997,17 @@ def _check_report(a) -> dict:
             except CompileError as e:
                 gates["compile"] = {"passed": False, "issues": [str(e)]}
             if pathlib.Path(map_path).exists():
-                from lib.clause_map import digests
+                from lib.clause_map import digests, spec_digests
                 cmap = json.loads(_read(map_path))
                 scen = pathlib.Path(a.front).parent / "scenarios.md"
                 mr = seams.seam_map_fresh(
                     cmap, plan.contract, plan.scenarios,
                     scenario_version=hash_text(scen.read_text(encoding="utf-8"))
                     if scen.exists() else "",
-                    clause_digests=digests(cmap, _sources_of(cmap)),
+                    clause_digests=digests(cmap, _sources_of(cmap, cwd=a.cwd)),
+                    spec_digests=spec_digests(plan.scenarios,
+                                              _test_sources(plan.scenarios, cwd=a.cwd)),
+                    execution_cwd=str(pathlib.Path(a.cwd).resolve()),
                     subject=a.purl if a.purl != "auto" else _git_purl(a.cwd))
                 gates["map_fresh"] = {"passed": mr.passed, "issues": list(mr.issues)}
 
@@ -3580,6 +3669,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--speckit", choices=("on", "off", "auto"), default="auto")
     sub = p.add_subparsers(dest="cmd", required=True)
 
+    formal = sub.add_parser("formal", help="collect optional bounded CrossHair/Dafny tool receipts")
+    formal.add_argument("manifest")
+    formal.add_argument("--cwd", default=".")
+    formal.add_argument("--python", default=sys.executable)
+    formal.add_argument("--dafny", default="dafny")
+    formal.add_argument("--timeout", type=int, default=20)
+    formal.add_argument("-o", "--out", default="")
+    formal.add_argument("--html", default="")
+    formal.set_defaults(fn=cmd_formal)
+
     assurance = sub.add_parser("assess", help="report per-requirement evidence without a release decision")
     assurance.add_argument("manifest", help="reviewer-supplied assurance manifest, relative to --cwd")
     assurance.add_argument("--cwd", default=".")
@@ -3605,6 +3704,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--coverage", default="")
     s.add_argument("--map", default="", help="clause map for seam.map_fresh "
                                              "(default .athena/clause_map.json)")
+    s.add_argument("--cwd", default=".", help="working directory for map source and verifier inputs")
     s.set_defaults(fn=cmd_seam)
     tc = sub.add_parser("trace-coverage"); tc.add_argument("front")
     tc.add_argument("--coverage", required=True)

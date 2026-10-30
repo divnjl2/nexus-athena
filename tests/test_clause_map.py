@@ -401,16 +401,20 @@ def test_a_strengthened_spec_invalidates_the_clause_it_proves():
     assert node_source(whole.run_cmd, module) == "", "no node named, nothing to pin"
 
     before = spec_digests((sc, other, whole), {"tests/t.py": module})
-    assert before["S3"] == "" and before["S1"] and before["S1"] != before["S2"]
+    assert before["S3"] and before["S1"] and before["S1"] != before["S2"]
 
     stronger = module.replace("    assert answer() == 1\n",
                               "    assert answer() == 1\n    assert answer() != 0\n")
     after = spec_digests((sc, other, whole), {"tests/t.py": stronger})
-    assert after["S1"] != before["S1"] and after["S2"] == before["S2"]
+    assert after["S1"] != before["S1"] and after["S2"] != before["S2"]
 
     cmap = build((_lines("S1", "C-1.1", {"lib/a.py": (1,)}),), spec_digests=before)
     assert stale_specs(cmap, before) == ()
-    assert stale_specs(cmap, after) == ("S1",), "only the spec that actually moved"
+    assert stale_specs(cmap, after) == ("S1", "S2", "S3"), (
+        "the complete explicit file is pinned: other tests can be runtime helpers")
+
+    changed_command = Scenario("S3", "C-1.3", "G/W/T", "python -m pytest tests/t.py -x")
+    assert spec_digests((changed_command,), {})["S3"] != before["S3"]
 
 
 def test_a_map_from_another_codebase_cannot_answer_about_this_one():

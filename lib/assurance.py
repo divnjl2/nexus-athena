@@ -35,6 +35,13 @@ def read_bound(root: Path, name: str) -> bytes:
 
 
 def combine(support: bool, contradiction: bool) -> str:
+    """Reduce the presence of support and counterevidence without hiding either.
+
+    post: (__return__ == "CONFLICT") == (support and contradiction)
+    post: (__return__ == "SUPPORTED") == (support and not contradiction)
+    post: (__return__ == "CONTRADICTED") == (contradiction and not support)
+    post: (__return__ == "UNKNOWN") == (not support and not contradiction)
+    """
     if support and contradiction:
         return "CONFLICT"
     return "SUPPORTED" if support else "CONTRADICTED" if contradiction else "UNKNOWN"

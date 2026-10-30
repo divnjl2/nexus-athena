@@ -26,6 +26,16 @@
   - verifies: S3.1
   - files: `evals/tddbench/semantic.py, evals/tddbench/trust.py, tests/test_tdd_semantic_controls.py`
 
+- [ ] T3.2 Add extracted acceptance controls from the semantic-scope audit
+  - success_check: `python -m pytest tests/test_semantic_scope_regressions.py -q`
+  - verifies: S3.2
+  - files: `tests/test_semantic_scope_regressions.py`
+
+- [ ] T3.3 Separate public collection requirements from private helper choices
+  - success_check: `python -m pytest tests/test_semantic_scope_regressions.py::test_public_collection_accepts_a_different_private_helper_boundary -q`
+  - verifies: S3.3
+  - files: `tests/test_semantic_scope_regressions.py`
+
 ## Phase 4: Shared budget
 ### Tasks
 - [ ] T4.1 Account for all phases and reserve full-cost verification
